@@ -56,12 +56,22 @@ def genera_qr_base64(testo):
 
 @app.route('/')
 def index():
+    search_query = request.args.get('q', '').strip()
     conn = get_db_connection()
     if not conn:
-        return render_template("index.html", prodotti=[])
+        return render_template("index.html", prodotti=[], search_query=search_query)
     try:
         cur = conn.cursor()
-        cur.execute("SELECT id, qr_code, nome, quantita, posizione FROM prodotti ORDER BY nome ASC;")
+        if search_query:
+            cur.execute("""
+                SELECT id, qr_code, nome, quantita, posizione 
+                FROM prodotti 
+                WHERE qr_code ILIKE %s OR nome ILIKE %s 
+                ORDER BY nome ASC;
+            """, (f"%{search_query}%", f"%{search_query}%"))
+        else:
+            cur.execute("SELECT id, qr_code, nome, quantita, posizione FROM prodotti ORDER BY nome ASC;")
+        
         prodotti_db = cur.fetchall()
         cur.close()
         conn.close()
@@ -69,15 +79,14 @@ def index():
         prodotti = []
         for p in prodotti_db:
             p_dict = dict(p)
-            # Genera il link assoluto o l'azione da mettere dentro il QR code
             url_azione = url_for('gestisci_prodotto', qr_code=p['qr_code'], _external=True)
             p_dict['qr_img'] = genera_qr_base64(url_azione)
             prodotti.append(p_dict)
 
-        return render_template("index.html", prodotti=prodotti)
+        return render_template("index.html", prodotti=prodotti, search_query=search_query)
     except Exception as e:
         print(f"Errore nella rotta index: {e}")
-        return render_template("index.html", prodotti=[])
+        return render_template("index.html", prodotti=[], search_query=search_query)
 
 @app.route('/gestisci/<qr_code>')
 def gestisci_prodotto(qr_code):
