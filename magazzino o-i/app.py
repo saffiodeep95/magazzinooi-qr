@@ -3,7 +3,7 @@ import psycopg2
 from psycopg2.extras import RealDictCursor
 from flask import Flask, render_template, request, redirect, url_for, flash
 
-app = Flask(__name__)
+app = Flask(_name_)
 app.secret_key = os.environ.get("SECRET_KEY", "chiave-segreta-magazzino")
 
 # Recupera l'URL del database dalle variabili d'ambiente
@@ -68,14 +68,67 @@ def aggiungi_prodotto():
         conn = get_db_connection()
         cur = conn.cursor()
         cur.execute(
-            "INSERT INTO prodotti (qr_code, nome, quantita, posizione) VALUES (%s, %s, %s, %s);",
+            "INSERT INTO prodotti (qr_code, nome, quantita, posizione) VALUES (%s, %s, %s, %s) "
+            "ON CONFLICT (qr_code) DO UPDATE SET quantita = prodotti.quantita + EXCLUDED.quantita;",
             (qr_code, nome, quantita, posizione)
         )
         conn.commit()
         cur.close()
         conn.close()
-        flash("Prodotto aggiunto con successo!", "success")
+        flash("Prodotto aggiunto o aggiornato con successo!", "success")
     except Exception as e:
         flash(f"Errore nell'inserimento: {e}", "error")
+
+    return redirect(url_for("index"))
+
+
+@app.route("/carico", methods=["POST"])
+def carico():
+    qr_code = request.form.get("qr_code")
+    quantita = int(request.form.get("quantita", 1))
+
+    if not qr_code:
+        flash("QR Code non valido!", "error")
+        return redirect(url_for("index"))
+
+    try:
+        conn = get_db_connection()
+        cur = conn.cursor()
+        cur.execute("UPDATE prodotti SET quantita = quantita + %s WHERE qr_code = %s;", (quantita, qr_code))
+        if cur.rowcount == 0:
+            flash("Prodotto non trovato! Aggiungilo prima nel database.", "error")
+        else:
+            conn.commit()
+            flash("Carico effettuato con successo!", "success")
+        cur.close()
+        conn.close()
+    except Exception as e:
+        flash(f"Errore durante il carico: {e}", "error")
+
+    return redirect(url_for("index"))
+
+
+@app.route("/scarico", methods=["POST"])
+def scarico():
+    qr_code = request.form.get("qr_code")
+    quantita = int(request.form.get("quantita", 1))
+
+    if not qr_code:
+        flash("QR Code non valido!", "error")
+        return redirect(url_for("index"))
+
+    try:
+        conn = get_db_connection()
+        cur = conn.cursor()
+        cur.execute("UPDATE prodotti SET quantita = GREATEST(0, quantita - %s) WHERE qr_code = %s;", (quantita, qr_code))
+        if cur.rowcount == 0:
+            flash("Prodotto non trovato!", "error")
+        else:
+            conn.commit()
+            flash("Scarico effettuato con successo!", "success")
+        cur.close()
+        conn.close()
+    except Exception as e:
+        flash(f"Errore durante lo scarico: {e}", "error")
 
     return redirect(url_for("index"))
