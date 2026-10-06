@@ -1,4 +1,7 @@
 import os
+import io
+import base64
+import qrcode
 import psycopg2
 from psycopg2.extras import RealDictCursor
 from flask import Flask, render_template, request, redirect, url_for, flash
@@ -42,6 +45,15 @@ def init_db():
 
 init_db()
 
+def genera_qr_base64(testo):
+    qr = qrcode.QRCode(version=1, box_size=5, border=2)
+    qr.add_data(testo)
+    qr.make(fit=True)
+    img = qr.make_image(fill_color="black", back_color="white")
+    buffered = io.BytesIO()
+    img.save(buffered, format="PNG")
+    return base64.b64encode(buffered.getvalue()).decode("utf-8")
+
 @app.route('/')
 def index():
     conn = get_db_connection()
@@ -50,10 +62,19 @@ def index():
     try:
         cur = conn.cursor()
         cur.execute("SELECT id, qr_code, nome, quantita, posizione FROM prodotti ORDER BY nome ASC;")
-        prodotti = cur.fetchall()
+        prodotti_db = cur.fetchall()
         cur.close()
         conn.close()
-        return render_template("index.html", prodotti=prodotti if prodotti else [])
+        
+        prodotti = []
+        for p in prodotti_db:
+            p_dict = dict(p)
+            # Genera il link assoluto o l'azione da mettere dentro il QR code
+            url_azione = url_for('gestisci_prodotto', qr_code=p['qr_code'], _external=True)
+            p_dict['qr_img'] = genera_qr_base64(url_azione)
+            prodotti.append(p_dict)
+
+        return render_template("index.html", prodotti=prodotti)
     except Exception as e:
         print(f"Errore nella rotta index: {e}")
         return render_template("index.html", prodotti=[])
@@ -73,7 +94,12 @@ def gestisci_prodotto(qr_code):
         if not prodotto:
             flash("Prodotto non trovato nel sistema!", "error")
             return redirect(url_for('index'))
-        return render_template("gestisci.html", prodotto=prodotto)
+        
+        prodotto_dict = dict(prodotto)
+        url_azione = url_for('gestisci_prodotto', qr_code=qr_code, _external=True)
+        prodotto_dict['qr_img'] = genera_qr_base64(url_azione)
+
+        return render_template("gestisci.html", prodotto=prodotto_dict)
     except Exception as e:
         flash(f"Errore: {e}", "error")
         return redirect(url_for('index'))
@@ -113,20 +139,13 @@ def aggiungi_prodotto():
         flash(f"Errore nell'inserimento: {e}", "error")
     return redirect(url_for('index'))
 
-@app.route('/carico', methods=['GET', 'POST'])
+@app.route('/carico', methods=['POST'])
 def carico():
-    if request.method == 'POST':
-        qr_code = request.form.get('qr_code')
-        try:
-            quantita = int(request.form.get('quantita', 1))
-        except ValueError:
-            quantita = 1
-    else:
-        qr_code = request.args.get('qr_code')
-        try:
-            quantita = int(request.args.get('args_quantita', 1))
-        except ValueError:
-            quantita = 1
+    qr_code = request.form.get('qr_code')
+    try:
+        quantita = int(request.form.get('quantita', 1))
+    except ValueError:
+        quantita = 1
 
     if not qr_code:
         flash("QR Code non valido o mancante!", "error")
@@ -151,20 +170,13 @@ def carico():
     
     return redirect(url_for('gestisci_prodotto', qr_code=qr_code))
 
-@app.route('/scarico', methods=['GET', 'POST'])
+@app.route('/scarico', methods=['POST'])
 def scarico():
-    if request.method == 'POST':
-        qr_code = request.form.get('qr_code')
-        try:
-            quantita = int(request.form.get('quantita', 1))
-        except ValueError:
-            quantita = 1
-    else:
-        qr_code = request.args.get('qr_code')
-        try:
-            quantita = int(request.args.get('quantita', 1))
-        except ValueError:
-            quantita = 1
+    qr_code = request.form.get('qr_code')
+    try:
+        quantita = int(request.form.get('quantita', 1))
+    except ValueError:
+        quantita = 1
 
     if not qr_code:
         flash("QR Code non valido o mancante!", "error")
