@@ -3,7 +3,7 @@ import psycopg2
 from psycopg2.extras import RealDictCursor
 from flask import Flask, render_template, request, redirect, url_for, flash
 
-app = Flask(__name__)
+app = Flask(_name_)
 app.secret_key = os.environ.get("SECRET_KEY", "chiave-segreta-magazzino")
 
 # Recupera l'URL del database dalle variabili d'ambiente
@@ -11,8 +11,7 @@ DATABASE_URL = os.environ.get("DATABASE_URL")
 
 def get_db_connection():
     """Crea una connessione al database PostgreSQL."""
-    conn = psycopg2.connect(DATABASE_URL, cursor_factory=RealDictCursor)
-    return conn
+    return psycopg2.connect(DATABASE_URL, cursor_factory=RealDictCursor)
 
 def init_db():
     """Crea la tabella 'prodotti' se non esiste già."""
@@ -38,7 +37,7 @@ def init_db():
     except Exception as e:
         print(f"Errore durante l'inizializzazione del database: {e}")
 
-# Inizializza la tabella al caricamento del modulo
+# Inizializza la tabella al caricamento dell'app
 init_db()
 
 
@@ -57,7 +56,7 @@ def index():
 def aggiungi_prodotto():
     qr_code = request.form.get("qr_code")
     nome = request.form.get("nome")
-    quantita = request.form.get("quantita", 0)
+    quantita = int(request.form.get("quantita", 0))
     posizione = request.form.get("posizione", "")
 
     if not qr_code or not nome:
@@ -68,8 +67,14 @@ def aggiungi_prodotto():
         conn = get_db_connection()
         cur = conn.cursor()
         cur.execute(
-            "INSERT INTO prodotti (qr_code, nome, quantita, posizione) VALUES (%s, %s, %s, %s) "
-            "ON CONFLICT (qr_code) DO UPDATE SET quantita = prodotti.quantita + EXCLUDED.quantita;",
+            """
+            INSERT INTO prodotti (qr_code, nome, quantita, posizione) 
+            VALUES (%s, %s, %s, %s)
+            ON CONFLICT (qr_code) 
+            DO UPDATE SET quantita = prodotti.quantita + EXCLUDED.quantita, 
+                          nome = EXCLUDED.nome, 
+                          posizione = EXCLUDED.posizione;
+            """,
             (qr_code, nome, quantita, posizione)
         )
         conn.commit()
@@ -82,13 +87,17 @@ def aggiungi_prodotto():
     return redirect(url_for("index"))
 
 
-@app.route("/carico", methods=["POST"])
+@app.route("/carico", methods=["GET", "POST"])
 def carico():
-    qr_code = request.form.get("qr_code")
-    quantita = int(request.form.get("quantita", 1))
+    if request.method == "POST":
+        qr_code = request.form.get("qr_code")
+        quantita = int(request.form.get("quantita", 1))
+    else:
+        qr_code = request.args.get("qr_code")
+        quantita = int(request.args.get("quantita", 1))
 
     if not qr_code:
-        flash("QR Code non valido!", "error")
+        flash("QR Code non valido o mancante!", "error")
         return redirect(url_for("index"))
 
     try:
@@ -96,7 +105,7 @@ def carico():
         cur = conn.cursor()
         cur.execute("UPDATE prodotti SET quantita = quantita + %s WHERE qr_code = %s;", (quantita, qr_code))
         if cur.rowcount == 0:
-            flash("Prodotto non trovato! Aggiungilo prima nel database.", "error")
+            flash("Prodotto non trovato! Registrarlo prima come nuovo prodotto.", "error")
         else:
             conn.commit()
             flash("Carico effettuato con successo!", "success")
@@ -108,13 +117,17 @@ def carico():
     return redirect(url_for("index"))
 
 
-@app.route("/scarico", methods=["POST"])
+@app.route("/scarico", methods=["GET", "POST"])
 def scarico():
-    qr_code = request.form.get("qr_code")
-    quantita = int(request.form.get("quantita", 1))
+    if request.method == "POST":
+        qr_code = request.form.get("qr_code")
+        quantita = int(request.form.get("quantita", 1))
+    else:
+        qr_code = request.args.get("qr_code")
+        quantita = int(request.args.get("quantita", 1))
 
     if not qr_code:
-        flash("QR Code non valido!", "error")
+        flash("QR Code non valido o mancante!", "error")
         return redirect(url_for("index"))
 
     try:
@@ -132,3 +145,9 @@ def scarico():
         flash(f"Errore durante lo scarico: {e}", "error")
 
     return redirect(url_for("index"))
+
+
+@app.route("/qr/<path:code>")
+def genera_qr(code):
+    """Genera al volo l'immagine del codice QR."""
+    return redirect(f"https://api.qrserver.com/v1/create-qr-code/?size=150x150&data={code}")
