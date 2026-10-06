@@ -3,7 +3,7 @@ import psycopg2
 from psycopg2.extras import RealDictCursor
 from flask import Flask, render_template, request, redirect, url_for, flash
 
-app = Flask(_name_)
+app = Flask(__name__)
 app.secret_key = os.environ.get("SECRET_KEY", "chiave-segreta-magazzino")
 
 # Recupera l'URL del database dalle variabili d'ambiente
@@ -81,5 +81,5 @@ def aggiungi_prodotto():
     return redirect(url_for("index"))
 
 
-if _name_ == "_main_":
+if _name_ == "__main__":
     app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 5000)))
