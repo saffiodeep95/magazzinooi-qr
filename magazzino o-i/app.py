@@ -260,6 +260,6 @@ def api_scarica():
         'message': f'Scaricato 1x "{nome}". Nuova giacenza: {nuova_quantita}'
     })
 
-if _name_ == '_main_':
+if __name__ == '__main__':
     init_db()
     app.run(host='0.0.0.0', port=5000, debug=True)
