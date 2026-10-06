@@ -1,34 +1,9 @@
-[19:05, 06/10/2026] Marco Pavan: import os
+import os
 import psycopg2
 from psycopg2.extras import RealDictCursor
 from flask import Flask, render_template, request, redirect, url_for, flash
 
 app = Flask(__name__)
-app.secret_key = os.environ.get("SECRET_KEY", "chiave-segreta-magazzino")
-
-DATABASE_URL = os.environ.get("DATABASE_URL")
-
-def get_db_connection():
-    return psycopg2.connect(DATABASE_URL, cursor_factory=RealDictCursor)
-
-def init_db():
-    if not DATABASE_URL:
-        print("DATABASE_URL non impostata!")
-        return
-    try:
-        conn = get_db_connection()
-        cur = conn.cursor()
-        cur.execute("""
-            CREATE TABLE IF NOT EXISTS prodotti (
-                id SERIAL PRIMARY KEY,
-                qr_code VARCHAR(255) UNIQUE NOT NULL,
-                nome VARCHAR(255) NOT NULL…
-[19:08, 06/10/2026] Marco Pavan: import os
-import psycopg2
-from psycopg2.extras import RealDictCursor
-from flask import Flask, render_template, request, redirect, url_for, flash
-
-app = Flask(_name_)
 app.secret_key = os.environ.get("SECRET_KEY", "chiave-segreta-magazzino")
 
 DATABASE_URL = os.environ.get("DATABASE_URL")
@@ -156,4 +131,44 @@ def scarico():
         quantita = int(request.form.get("quantita", 1))
     else:
         qr_code = request.args.get("qr_code")
-        quantita = int(request.args.get
+        quantita = int(request.args.get("quantita", 1))
+
+    if not qr_code:
+        flash("QR Code non valido o mancante!", "error")
+        return redirect(url_for("index"))
+
+    try:
+        conn = get_db_connection()
+        cur = conn.cursor()
+        cur.execute("UPDATE prodotti SET quantita = GREATEST(0, quantita - %s) WHERE qr_code = %s;", (quantita, qr_code))
+        if cur.rowcount == 0:
+            flash("Prodotto non trovato!", "error")
+        else:
+            conn.commit()
+            flash(f"Scarico di {quantita} pz effettuato con successo!", "success")
+        cur.close()
+        conn.close()
+    except Exception as e:
+        flash(f"Errore durante lo scarico: {e}", "error")
+
+    return redirect(url_for("gestisci_prodotto", qr_code=qr_code))
+
+@app.route("/elimina", methods=["POST"])
+def elimina_prodotto():
+    qr_code = request.form.get("qr_code")
+    if not qr_code:
+        flash("QR Code non valido per l'eliminazione!", "error")
+        return redirect(url_for("index"))
+
+    try:
+        conn = get_db_connection()
+        cur = conn.cursor()
+        cur.execute("DELETE FROM prodotti WHERE qr_code = %s;", (qr_code,))
+        conn.commit()
+        cur.close()
+        conn.close()
+        flash("Articolo eliminato dal magazzino con successo!", "success")
+    except Exception as e:
+        flash(f"Errore durante l'eliminazione: {e}", "error")
+
+    return redirect(url_for("index"))
