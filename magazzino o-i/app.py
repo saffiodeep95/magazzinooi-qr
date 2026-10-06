@@ -10,7 +10,7 @@ import qrcode
 from PIL import Image, ImageDraw, ImageFont
 from flask import Flask, render_template, request, jsonify, send_file, redirect, url_for
 
-app = Flask(_name_)
+app = Flask(__name__)
 
 DATABASE_URL = os.environ.get('DATABASE_URL')
 
