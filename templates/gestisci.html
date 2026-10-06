@@ -1,4 +1,17 @@
-<!DOCTYPE html>
+[21:45, 06/10/2026] Marco Pavan: <!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gestione Magazzino QR</title>
+    <style>
+        body { font-family: Arial, sans-serif; max-width: 900px; margin: 0 auto; padding: 20px; background: #f4f4f9; }
+        h1, h2 { color: #333; }
+        .flash { background: #d4edda; color: #155724; padding: 10px; margin-bottom: 15px; border-radius: 5px; }
+        form { background: #fff; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); margin-bottom: 20px; }
+        input, button { width: 100%; padding: 10px; margin-top: 8px; margin-bottom: 15px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; }
+        button { bac…
+[21:46, 06/10/2026] Marco Pavan: <!DOCTYPE html>
 <html lang="it">
 <head>
     <meta charset="UTF-8">
@@ -8,18 +21,29 @@
         body { font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; background: #f4f4f9; }
         h1, h2 { color: #333; }
         .flash { background: #d4edda; color: #155724; padding: 10px; margin-bottom: 15px; border-radius: 5px; }
-        .card { background: #fff; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); margin-bottom: 20px; }
+        .card { background: #fff; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); margin-bottom: 20px; text-align: center; }
+        .card-left { text-align: left; }
         input, button { width: 100%; padding: 10px; margin-top: 8px; margin-bottom: 15px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; }
         .btn-carico { background: #28a745; color: white; border: none; font-weight: bold; cursor: pointer; }
         .btn-carico:hover { background: #218838; }
         .btn-scarico { background: #dc3545; color: white; border: none; font-weight: bold; cursor: pointer; }
         .btn-scarico:hover { background: #c82333; }
+        .btn-stampa { background: #6c757d; color: white; border: none; font-weight: bold; cursor: pointer; }
+        .btn-stampa:hover { background: #5a6268; }
+        img { width: 180px; height: 180px; margin: 10px 0; }
         a { display: inline-block; margin-top: 15px; color: #007bff; text-decoration: none; font-weight: bold; }
         a:hover { text-decoration: underline; }
+
+        /* Stili specifici per la stampa */
+        @media print {
+            body * { visibility: hidden; }
+            #etichetta-stampa, #etichetta-stampa * { visibility: visible; }
+            #etichetta-stampa { position: absolute; left: 0; top: 0; width: 100%; text-align: center; box-shadow: none; padding: 0; }
+        }
     </style>
 </head>
 <body>
-    <h1>🔍 Dettaglio Articolo</h1>
+    <h1>🔍 Gestione Articolo</h1>
 
     {% with messages = get_flashed_messages() %}
       {% if messages %}
@@ -29,14 +53,16 @@
       {% endif %}
     {% endwith %}
 
-    <div class="card">
+    <div class="card" id="etichetta-stampa">
         <h2>{{ prodotto.nome }}</h2>
-        <p><strong>QR Code:</strong> {{ prodotto.qr_code }}</p>
-        <p><strong>Quantità Attuale:</strong> <span style="font-size: 1.2em; color: #007bff;">{{ prodotto.quantita }}</span></p>
+        <img src="data:image/png;base64,{{ prodotto.qr_img }}" alt="QR Code">
+        <p><strong>Codice:</strong> {{ prodotto.qr_code }}</p>
         <p><strong>Posizione:</strong> {{ prodotto.posizione }}</p>
+        <p><strong>Quantità Attuale:</strong> <span style="font-size: 1.2em; color: #007bff;">{{ prodotto.quantita }}</span></p>
+        <button type="button" class="btn-stampa" onclick="window.print()">🖨️ Stampa Etichetta QR</button>
     </div>
 
-    <div class="card">
+    <div class="card card-left">
         <h3>➕ Carico (Aggiungi pezzi)</h3>
         <form action="{{ url_for('carico') }}" method="POST">
             <input type="hidden" name="qr_code" value="{{ prodotto.qr_code }}">
@@ -46,7 +72,7 @@
         </form>
     </div>
 
-    <div class="card">
+    <div class="card card-left">
         <h3>➖ Scarico (Rimuovi pezzi)</h3>
         <form action="{{ url_for('scarico') }}" method="POST">
             <input type="hidden" name="qr_code" value="{{ prodotto.qr_code }}">
