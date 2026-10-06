@@ -1,11 +1,24 @@
-<!DOCTYPE html>
+[21:42, 06/10/2026] Marco Pavan: <!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gestisci Prodotto - {{ prodotto.nome }}</title>
+    <style>
+        body { font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; background: #f4f4f9; }
+        h1, h2 { color: #333; }
+        .flash { background: #d4edda; color: #155724; padding: 10px; margin-bottom: 15px; border-radius: 5px; }
+        .card { background: #fff; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); margin-bottom: 20px; }
+        input, button { width: 100%; padding: 10px; margin-top: 8px; margin-bottom: 15px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; }
+ …
+[21:45, 06/10/2026] Marco Pavan: <!DOCTYPE html>
 <html lang="it">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Gestione Magazzino QR</title>
     <style>
-        body { font-family: Arial, sans-serif; max-width: 800px; margin: 0 auto; padding: 20px; background: #f4f4f9; }
+        body { font-family: Arial, sans-serif; max-width: 900px; margin: 0 auto; padding: 20px; background: #f4f4f9; }
         h1, h2 { color: #333; }
         .flash { background: #d4edda; color: #155724; padding: 10px; margin-bottom: 15px; border-radius: 5px; }
         form { background: #fff; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); margin-bottom: 20px; }
@@ -13,8 +26,9 @@
         button { background: #007bff; color: white; border: none; font-weight: bold; cursor: pointer; }
         button:hover { background: #0056b3; }
         table { width: 100%; border-collapse: collapse; background: #fff; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
-        th, td { padding: 12px; text-align: left; border-bottom: 1px solid #ddd; }
+        th, td { padding: 12px; text-align: left; border-bottom: 1px solid #ddd; vertical-align: middle; }
         th { background: #007bff; color: white; }
+        img { width: 70px; height: 70px; display: block; }
         a { color: #007bff; text-decoration: none; font-weight: bold; }
         a:hover { text-decoration: underline; }
     </style>
@@ -52,6 +66,7 @@
         <thead>
             <tr>
                 <th>QR Code</th>
+                <th>Anteprima</th>
                 <th>Nome</th>
                 <th>Quantità</th>
                 <th>Posizione</th>
@@ -62,14 +77,15 @@
             {% for p in prodotti %}
             <tr>
                 <td>{{ p.qr_code }}</td>
+                <td><img src="data:image/png;base64,{{ p.qr_img }}" alt="QR Code"></td>
                 <td>{{ p.nome }}</td>
                 <td>{{ p.quantita }}</td>
                 <td>{{ p.posizione }}</td>
-                <td><a href="{{ url_for('gestisci_prodotto', qr_code=p.qr_code) }}">Gestisci</a></td>
+                <td><a href="{{ url_for('gestisci_prodotto', qr_code=p.qr_code) }}">Gestisci / Stampa</a></td>
             </tr>
             {% else %}
             <tr>
-                <td colspan="5" style="text-align: center;">Nessun prodotto presente in magazzino.</td>
+                <td colspan="6" style="text-align: center;">Nessun prodotto presente in magazzino.</td>
             </tr>
             {% endfor %}
         </tbody>
