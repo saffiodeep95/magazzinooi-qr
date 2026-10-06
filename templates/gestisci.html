@@ -1,155 +1,61 @@
-import os
-import psycopg2
-from psycopg2.extras import RealDictCursor
-from flask import Flask, render_template, request, redirect, url_for, flash
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gestisci Prodotto - {{ prodotto.nome }}</title>
+    <style>
+        body { font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; background: #f4f4f9; }
+        h1, h2 { color: #333; }
+        .flash { background: #d4edda; color: #155724; padding: 10px; margin-bottom: 15px; border-radius: 5px; }
+        .card { background: #fff; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); margin-bottom: 20px; }
+        input, button { width: 100%; padding: 10px; margin-top: 8px; margin-bottom: 15px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; }
+        .btn-carico { background: #28a745; color: white; border: none; font-weight: bold; cursor: pointer; }
+        .btn-carico:hover { background: #218838; }
+        .btn-scarico { background: #dc3545; color: white; border: none; font-weight: bold; cursor: pointer; }
+        .btn-scarico:hover { background: #c82333; }
+        a { display: inline-block; margin-top: 15px; color: #007bff; text-decoration: none; font-weight: bold; }
+        a:hover { text-decoration: underline; }
+    </style>
+</head>
+<body>
+    <h1>🔍 Dettaglio Articolo</h1>
 
-app = Flask(_name_)
-app.secret_key = os.environ.get("SECRET_KEY", "chiave-segreta-magazzino")
+    {% with messages = get_flashed_messages() %}
+      {% if messages %}
+        {% for message in messages %}
+          <div class="flash">{{ message }}</div>
+        {% endfor %}
+      {% endif %}
+    {% endwith %}
 
-DATABASE_URL = os.environ.get("DATABASE_URL")
+    <div class="card">
+        <h2>{{ prodotto.nome }}</h2>
+        <p><strong>QR Code:</strong> {{ prodotto.qr_code }}</p>
+        <p><strong>Quantità Attuale:</strong> <span style="font-size: 1.2em; color: #007bff;">{{ prodotto.quantita }}</span></p>
+        <p><strong>Posizione:</strong> {{ prodotto.posizione }}</p>
+    </div>
 
-def get_db_connection():
-    return psycopg2.connect(DATABASE_URL, cursor_factory=RealDictCursor)
+    <div class="card">
+        <h3>➕ Carico (Aggiungi pezzi)</h3>
+        <form action="{{ url_for('carico') }}" method="POST">
+            <input type="hidden" name="qr_code" value="{{ prodotto.qr_code }}">
+            <label>Quantità da caricare:</label>
+            <input type="number" name="quantita" value="1" min="1" required>
+            <button type="submit" class="btn-carico">Esegui Carico</button>
+        </form>
+    </div>
 
-def init_db():
-    if not DATABASE_URL:
-        print("DATABASE_URL non impostata!")
-        return
-    try:
-        conn = get_db_connection()
-        cur = conn.cursor()
-        cur.execute("""
-            CREATE TABLE IF NOT EXISTS prodotti (
-                id SERIAL PRIMARY KEY,
-                qr_code VARCHAR(255) UNIQUE NOT NULL,
-                nome VARCHAR(255) NOT NULL,
-                quantita INT DEFAULT 0,
-                posizione VARCHAR(255)
-            );
-        """)
-        conn.commit()
-        cur.close()
-        conn.close()
-        print("Inizializzazione tabella prodotti completata con successo.")
-    except Exception as e:
-        print(f"Errore durante l'inizializzazione del database: {e}")
+    <div class="card">
+        <h3>➖ Scarico (Rimuovi pezzi)</h3>
+        <form action="{{ url_for('scarico') }}" method="POST">
+            <input type="hidden" name="qr_code" value="{{ prodotto.qr_code }}">
+            <label>Quantità da scaricare:</label>
+            <input type="number" name="quantita" value="1" min="1" required>
+            <button type="submit" class="btn-scarico">Esegui Scarico</button>
+        </form>
+    </div>
 
-init_db()
-
-@app.route("/")
-def index():
-    conn = get_db_connection()
-    cur = conn.cursor()
-    cur.execute("SELECT id, qr_code, nome, quantita, posizione FROM prodotti ORDER BY nome ASC;")
-    prodotti = cur.fetchall()
-    cur.close()
-    conn.close()
-    return render_template("index.html", prodotti=prodotti)
-
-# Pagina ottimizzata per lo smartphone che si apre scansionando il QR
-@app.route("/gestisci/<qr_code>")
-def gestisci_prodotto(qr_code):
-    conn = get_db_connection()
-    cur = conn.cursor()
-    cur.execute("SELECT id, qr_code, nome, quantita, posizione FROM prodotti WHERE qr_code = %s;", (qr_code,))
-    prodotto = cur.fetchone()
-    cur.close()
-    conn.close()
-    
-    if not prodotto:
-        flash("Prodotto non trovato nel sistema!", "error")
-        return redirect(url_for("index"))
-        
-    return render_template("gestisci.html", prodotto=prodotto)
-
-@app.route("/aggiungi", methods=["POST"])
-def aggiungi_prodotto():
-    qr_code = request.form.get("qr_code")
-    nome = request.form.get("nome")
-    quantita = int(request.form.get("quantita", 0))
-    posizione = request.form.get("posizione", "")
-
-    if not qr_code or not nome:
-        flash("QR Code e Nome sono obbligatori!", "error")
-        return redirect(url_for("index"))
-
-    try:
-        conn = get_db_connection()
-        cur = conn.cursor()
-        cur.execute(
-            """
-            INSERT INTO prodotti (qr_code, nome, quantita, posizione) 
-            VALUES (%s, %s, %s, %s)
-            ON CONFLICT (qr_code) 
-            DO UPDATE SET quantita = prodotti.quantita + EXCLUDED.quantita, 
-                          nome = EXCLUDED.nome, 
-                          posizione = EXCLUDED.posizione;
-            """,
-            (qr_code, nome, quantita, posizione)
-        )
-        conn.commit()
-        cur.close()
-        conn.close()
-        flash("Prodotto aggiunto o aggiornato con successo!", "success")
-    except Exception as e:
-        flash(f"Errore nell'inserimento: {e}", "error")
-
-    return redirect(url_for("index"))
-
-@app.route("/carico", methods=["GET", "POST"])
-def carico():
-    if request.method == "POST":
-        qr_code = request.form.get("qr_code")
-        quantita = int(request.form.get("quantita", 1))
-    else:
-        qr_code = request.args.get("qr_code")
-        quantita = int(request.args.get("quantita", 1))
-
-    if not qr_code:
-        flash("QR Code non valido o mancante!", "error")
-        return redirect(url_for("index"))
-
-    try:
-        conn = get_db_connection()
-        cur = conn.cursor()
-        cur.execute("UPDATE prodotti SET quantita = quantita + %s WHERE qr_code = %s;", (quantita, qr_code))
-        if cur.rowcount == 0:
-            flash("Prodotto non trovato!", "error")
-        else:
-            conn.commit()
-            flash(f"Carico di {quantita} pz effettuato con successo!", "success")
-        cur.close()
-        conn.close()
-    except Exception as e:
-        flash(f"Errore durante il carico: {e}", "error")
-
-    return redirect(url_for("gestisci_prodotto", qr_code=qr_code))
-
-@app.route("/scarico", methods=["GET", "POST"])
-def scarico():
-    if request.method == "POST":
-        qr_code = request.form.get("qr_code")
-        quantita = int(request.form.get("quantita", 1))
-    else:
-        qr_code = request.args.get("qr_code")
-        quantita = int(request.args.get("quantita", 1))
-
-    if not qr_code:
-        flash("QR Code non valido o mancante!", "error")
-        return redirect(url_for("index"))
-
-    try:
-        conn = get_db_connection()
-        cur = conn.cursor()
-        cur.execute("UPDATE prodotti SET quantita = GREATEST(0, quantita - %s) WHERE qr_code = %s;", (quantita, qr_code))
-        if cur.rowcount == 0:
-            flash("Prodotto non trovato!", "error")
-        else:
-            conn.commit()
-            flash(f"Scarico di {quantita} pz effettuato con successo!", "success")
-        cur.close()
-        conn.close()
-    except Exception as e:
-        flash(f"Errore durante lo scarico: {e}", "error")
-
-    return redirect(url_for("gestisci_prodotto", qr_code=qr_code))
+    <a href="{{ url_for('index') }}">⬅️ Torna alla Home / Lista Prodotti</a>
+</body>
+</html>
