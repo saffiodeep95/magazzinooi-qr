@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Magazzino - Giacenze ed Etichette</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; background-color: #f4f6f9; }
+        h1, h2 { color: #333; }
+        .nav { margin-bottom: 20px; }
+        .btn { padding: 12px 20px; color: white; text-decoration: none; border-radius: 5px; font-weight: bold; display: inline-block; margin-right: 10px; }
+        .btn-carico { background: #28a745; }
+        .btn-scarico { background: #dc3545; }
+        table { width: 100%; border-collapse: collapse; background: white; margin-top: 15px; }
+        th, td { padding: 12px; border: 1px solid #ddd; text-align: left; vertical-align: middle; }
+        th { background-color: #343a40; color: white; }
+        tr:nth-child(even) { background-color: #f8f9fa; }
+        .qr-img { width: 120px; height: auto; border: 1px solid #ccc; padding: 3px; background: #fff; }
+        .btn-print { padding: 6px 12px; background: #17a2b8; color: white; border-radius: 4px; text-decoration: none; font-size: 13px; font-weight: bold; }
+    </style>
+</head>
+<body>
+    <h1>Gestione Magazzino</h1>
+    <div class="nav">
+        <a href="/carico" class="btn btn-carico">+ CARICO MERCE (Pistola)</a>
+        <a href="/scarico" class="btn btn-scarico">- SCARICO MERCE (Pistola)</a>
+    </div>
+
+    <h2>Giacenze Attuali</h2>
+    <table>
+        <thead>
+            <tr>
+                <th>Etichetta Completa</th>
+                <th>Codice QR</th>
+                <th>Nome Prodotto</th>
+                <th>Quantità</th>
+                <th>Posizione</th>
+                <th>Azione</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for p in prodotti %}
+            <tr>
+                <td><img src="/qr_label/{{ p[1] }}" class="qr-img" alt="Etichetta QR"></td>
+                <td><strong>{{ p[1] }}</strong></td>
+                <td>{{ p[2] }}</td>
+                <td><strong>{{ p[3] }}</strong></td>
+                <td>{{ p[4] }}</td>
+                <td><a href="/qr_label/{{ p[1] }}" target="_blank" class="btn-print">Apri/Stampa Etichetta</a></td>
+            </tr>
+            {% else %}
+            <tr>
+                <td colspan="6">Nessun prodotto presente nel database.</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</body>
+</html>
