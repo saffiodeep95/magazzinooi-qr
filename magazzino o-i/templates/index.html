@@ -16,7 +16,6 @@
 <div class="container">
     <h1 class="mb-4 font-weight-bold">Gestione Magazzino</h1>
 
-    <!-- Alert Notifiche -->
     {% with messages = get_flashed_messages(with_categories=true) %}
       {% if messages %}
         {% for category, message in messages %}
@@ -59,11 +58,11 @@
         <div class="col-md-7">
             <div class="card-custom border-top border-info border-4">
                 <h5 class="card-title text-info font-weight-bold mb-2">📱 Come Caricare / Scaricare da Smartphone</h5>
-                <p class="mb-2">Per gestire la merce in magazzino senza mouse e tastiera:</p>
+                <p class="mb-2">Gestione rapida tramite fotocamera:</p>
                 <ol class="mb-0 ps-3">
                     <li class="mb-1">Premi il pulsante <strong>🖨️ Stampa Etichetta</strong> sulla riga del prodotto.</li>
-                    <li class="mb-1">Metti l'etichetta sulla scatola o sullo scaffale.</li>
-                    <li>Inquadra il QR Code con la <strong>fotocamera del tuo telefono</strong>: si aprirà direttamente la pagina per effettuare Carico e Scarico rapido.</li>
+                    <li class="mb-1">Incolla l'etichetta sullo scaffale o sulla scatola.</li>
+                    <li>Inquadra il QR Code con la <strong>fotocamera del telefono</strong> per caricare, scaricare o eliminare il prodotto.</li>
                 </ol>
             </div>
         </div>
@@ -91,7 +90,7 @@
                         {% for p in prodotti %}
                         <tr>
                             <td>
-                                <a href="https://{{ request.host }}/gestisci/{{ p.qr_code }}" target="_blank">
+                                <a href="/gestisci/{{ p.qr_code }}" target="_blank">
                                     <img src="https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=https://{{ request.host }}/gestisci/{{ p.qr_code }}" alt="QR Code">
                                 </a>
                             </td>
@@ -104,18 +103,22 @@
                                     <form action="/carico" method="POST" class="d-inline">
                                         <input type="hidden" name="qr_code" value="{{ p.qr_code }}">
                                         <input type="hidden" name="quantita" value="1">
-                                        <button type="submit" class="btn btn-sm btn-outline-success">+1</button>
+                                        <button type="submit" class="btn btn-sm btn-outline-success" title="Carica 1">+1</button>
                                     </form>
                                     <form action="/scarico" method="POST" class="d-inline ms-1">
                                         <input type="hidden" name="qr_code" value="{{ p.qr_code }}">
                                         <input type="hidden" name="quantita" value="1">
-                                        <button type="submit" class="btn btn-sm btn-outline-danger">-1</button>
+                                        <button type="submit" class="btn btn-sm btn-outline-danger" title="Scarica 1">-1</button>
                                     </form>
                                 </div>
                                 <br>
                                 <button onclick="apriStampa('{{ p.nome }}', '{{ p.qr_code }}', '{{ p.posizione }}')" class="btn btn-sm btn-secondary mt-1">
-                                    🖨️ Stampa Etichetta
+                                    🖨️ Stampa
                                 </button>
+                                <form action="/elimina" method="POST" class="d-inline ms-1" onsubmit="return confirm('Vuoi davvero eliminare questo articolo?');">
+                                    <input type="hidden" name="qr_code" value="{{ p.qr_code }}">
+                                    <button type="submit" class="btn btn-sm btn-outline-dark mt-1" title="Elimina articolo">🗑️</button>
+                                </form>
                             </td>
                         </tr>
                         {% endfor %}
