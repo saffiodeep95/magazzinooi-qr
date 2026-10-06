@@ -3,7 +3,7 @@ import psycopg2
 from psycopg2.extras import RealDictCursor
 from flask import Flask, render_template, request, redirect, url_for, flash
 
-app = Flask(__name__)
+app = Flask(_name_)
 app.secret_key = os.environ.get("SECRET_KEY", "chiave-segreta-magazzino")
 
 DATABASE_URL = os.environ.get("DATABASE_URL")
@@ -40,7 +40,6 @@ def init_db():
         except Exception as e:
             print(f"Errore durante l'inizializzazione del database: {e}")
 
-# Inizializza il database all'avvio
 init_db()
 
 @app.route('/')
@@ -125,7 +124,7 @@ def carico():
     else:
         qr_code = request.args.get('qr_code')
         try:
-            quantita = int(request.args.get('quantita', 1))
+            quantita = int(request.args.get('args_quantita', 1))
         except ValueError:
             quantita = 1
 
@@ -190,5 +189,5 @@ def scarico():
 
     return redirect(url_for('gestisci_prodotto', qr_code=qr_code))
 
-if __name__ == '_main_':
+if _name_ == '_main_':
     app.run(host='0.0.0.0', port=5000, debug=True)
