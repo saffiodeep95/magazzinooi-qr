@@ -46,7 +46,6 @@ def index():
     conn.close()
     return render_template("index.html", prodotti=prodotti)
 
-# Pagina ottimizzata per lo smartphone che si apre scansionando il QR
 @app.route("/gestisci/<qr_code>")
 def gestisci_prodotto(qr_code):
     conn = get_db_connection()
