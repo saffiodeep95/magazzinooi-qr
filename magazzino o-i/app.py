@@ -6,15 +6,12 @@ from flask import Flask, render_template, request, redirect, url_for, flash
 app = Flask(__name__)
 app.secret_key = os.environ.get("SECRET_KEY", "chiave-segreta-magazzino")
 
-# Recupera l'URL del database dalle variabili d'ambiente
 DATABASE_URL = os.environ.get("DATABASE_URL")
 
 def get_db_connection():
-    """Crea una connessione al database PostgreSQL."""
     return psycopg2.connect(DATABASE_URL, cursor_factory=RealDictCursor)
 
 def init_db():
-    """Crea la tabella 'prodotti' se non esiste già."""
     if not DATABASE_URL:
         print("DATABASE_URL non impostata!")
         return
@@ -37,9 +34,7 @@ def init_db():
     except Exception as e:
         print(f"Errore durante l'inizializzazione del database: {e}")
 
-# Inizializza la tabella al caricamento dell'app
 init_db()
-
 
 @app.route("/")
 def index():
@@ -51,6 +46,21 @@ def index():
     conn.close()
     return render_template("index.html", prodotti=prodotti)
 
+# Pagina ottimizzata per lo smartphone che si apre scansionando il QR
+@app.route("/gestisci/<qr_code>")
+def gestisci_prodotto(qr_code):
+    conn = get_db_connection()
+    cur = conn.cursor()
+    cur.execute("SELECT id, qr_code, nome, quantita, posizione FROM prodotti WHERE qr_code = %s;", (qr_code,))
+    prodotto = cur.fetchone()
+    cur.close()
+    conn.close()
+    
+    if not prodotto:
+        flash("Prodotto non trovato nel sistema!", "error")
+        return redirect(url_for("index"))
+        
+    return render_template("gestisci.html", prodotto=prodotto)
 
 @app.route("/aggiungi", methods=["POST"])
 def aggiungi_prodotto():
@@ -86,7 +96,6 @@ def aggiungi_prodotto():
 
     return redirect(url_for("index"))
 
-
 @app.route("/carico", methods=["GET", "POST"])
 def carico():
     if request.method == "POST":
@@ -105,17 +114,16 @@ def carico():
         cur = conn.cursor()
         cur.execute("UPDATE prodotti SET quantita = quantita + %s WHERE qr_code = %s;", (quantita, qr_code))
         if cur.rowcount == 0:
-            flash("Prodotto non trovato! Registrarlo prima come nuovo prodotto.", "error")
+            flash("Prodotto non trovato!", "error")
         else:
             conn.commit()
-            flash("Carico effettuato con successo!", "success")
+            flash(f"Carico di {quantita} pz effettuato con successo!", "success")
         cur.close()
         conn.close()
     except Exception as e:
         flash(f"Errore durante il carico: {e}", "error")
 
-    return redirect(url_for("index"))
-
+    return redirect(url_for("gestisci_prodotto", qr_code=qr_code))
 
 @app.route("/scarico", methods=["GET", "POST"])
 def scarico():
@@ -138,16 +146,10 @@ def scarico():
             flash("Prodotto non trovato!", "error")
         else:
             conn.commit()
-            flash("Scarico effettuato con successo!", "success")
+            flash(f"Scarico di {quantita} pz effettuato con successo!", "success")
         cur.close()
         conn.close()
     except Exception as e:
         flash(f"Errore durante lo scarico: {e}", "error")
 
-    return redirect(url_for("index"))
-
-
-@app.route("/qr/<path:code>")
-def genera_qr(code):
-    """Genera al volo l'immagine del codice QR."""
-    return redirect(f"https://api.qrserver.com/v1/create-qr-code/?size=150x150&data={code}")
+    return redirect(url_for("gestisci_prodotto", qr_code=qr_code))
