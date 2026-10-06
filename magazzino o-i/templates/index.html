@@ -6,16 +6,16 @@
     <title>Gestione Magazzino - Giacenze ed Etichette</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <style>
-        body { background-color: #f8f9fa; padding-top: 20px; }
-        .table img { max-width: 70px; height: auto; }
-        .action-card { background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); margin-bottom: 20px; }
+        body { background-color: #f8f9fa; padding: 20px 0; }
+        .card-custom { background: white; border-radius: 10px; padding: 20px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); margin-bottom: 20px; }
+        .table img { max-width: 80px; height: auto; border: 1px solid #ddd; border-radius: 4px; padding: 2px; }
     </style>
 </head>
 <body>
 <div class="container">
-    <h1 class="mb-4">Gestione Magazzino</h1>
+    <h1 class="mb-4 font-weight-bold">Gestione Magazzino</h1>
 
-    <!-- Messaggi di notifica -->
+    <!-- Alert Notifiche -->
     {% with messages = get_flashed_messages(with_categories=true) %}
       {% if messages %}
         {% for category, message in messages %}
@@ -27,23 +27,81 @@
       {% endif %}
     {% endwith %}
 
-    <!-- Pulsanti Azione Rapida -->
-    <div class="action-card d-flex flex-wrap gap-2">
-        <button class="btn btn-success btn-lg" data-bs-toggle="modal" data-bs-target="#modalCarico">+ CARICO MERCE (Pistola)</button>
-        <button class="btn btn-danger btn-lg" data-bs-toggle="modal" data-bs-target="#modalScarico">- SCARICO MERCE (Pistola)</button>
-        <button class="btn btn-primary btn-lg ms-auto" data-bs-toggle="modal" data-bs-target="#modalAggiungi">+ Nuovo Prodotto</button>
+    <!-- Sezione Moduli Operativi diretti -->
+    <div class="row">
+        <!-- Modulo Nuovo Prodotto / Etichetta -->
+        <div class="col-md-4">
+            <div class="card-custom border-top border-primary border-4">
+                <h5 class="card-title text-primary font-weight-bold mb-3">+ Aggiungi Nuovo Prodotto</h5>
+                <form action="/aggiungi" method="POST">
+                    <div class="mb-2">
+                        <label class="form-label small font-weight-bold">Codice QR / EAN</label>
+                        <input type="text" name="qr_code" class="form-control" placeholder="Es. PROD-001" required>
+                    </div>
+                    <div class="mb-2">
+                        <label class="form-label small font-weight-bold">Nome Prodotto</label>
+                        <input type="text" name="nome" class="form-control" placeholder="Es. Cavo HDMI 2m" required>
+                    </div>
+                    <div class="mb-2">
+                        <label class="form-label small font-weight-bold">Quantità Iniziale</label>
+                        <input type="number" name="quantita" class="form-control" value="0" min="0">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label small font-weight-bold">Posizione Magazzino</label>
+                        <input type="text" name="posizione" class="form-control" placeholder="Es. Scaffale A1">
+                    </div>
+                    <button type="submit" class="btn btn-primary w-100">Salva e Genera QR</button>
+                </form>
+            </div>
+        </div>
+
+        <!-- Modulo Carico Rapido -->
+        <div class="col-md-4">
+            <div class="card-custom border-top border-success border-4">
+                <h5 class="card-title text-success font-weight-bold mb-3">+ CARICO MERCE (Pistola)</h5>
+                <form action="/carico" method="POST">
+                    <div class="mb-3">
+                        <label class="form-label small font-weight-bold">Scansiona o Inserisci QR Code</label>
+                        <input type="text" name="qr_code" class="form-control form-control-lg" placeholder="Scansiona qui..." autofocus required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label small font-weight-bold">Quantità da Caricare</label>
+                        <input type="number" name="quantita" class="form-control" value="1" min="1" required>
+                    </div>
+                    <button type="submit" class="btn btn-success w-100 btn-lg">Conferma Carico</button>
+                </form>
+            </div>
+        </div>
+
+        <!-- Modulo Scarico Rapido -->
+        <div class="col-md-4">
+            <div class="card-custom border-top border-danger border-4">
+                <h5 class="card-title text-danger font-weight-bold mb-3">- SCARICO MERCE (Pistola)</h5>
+                <form action="/scarico" method="POST">
+                    <div class="mb-3">
+                        <label class="form-label small font-weight-bold">Scansiona o Inserisci QR Code</label>
+                        <input type="text" name="qr_code" class="form-control form-control-lg" placeholder="Scansiona qui..." required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label small font-weight-bold">Quantità da Scaricare</label>
+                        <input type="number" name="quantita" class="form-control" value="1" min="1" required>
+                    </div>
+                    <button type="submit" class="btn btn-danger w-100 btn-lg">Conferma Scarico</button>
+                </form>
+            </div>
+        </div>
     </div>
 
     <!-- Tabella Giacenze -->
-    <div class="card shadow-sm">
-        <div class="card-header bg-dark text-white">
+    <div class="card shadow-sm mt-3">
+        <div class="card-header bg-dark text-white d-flex justify-content-between align-items-center">
             <h5 class="m-0">Giacenze Attuali</h5>
         </div>
         <div class="card-body p-0">
             <table class="table table-striped table-hover align-middle mb-0">
-                <thead>
+                <thead class="table-light">
                     <tr>
-                        <th>QR Code Immagine</th>
+                        <th>Etichetta QR</th>
                         <th>Codice QR</th>
                         <th>Nome Prodotto</th>
                         <th>Quantità</th>
@@ -55,10 +113,12 @@
                     {% if prodotti %}
                         {% for p in prodotti %}
                         <tr>
-                            <td><img src="/qr/{{ p.qr_code }}" alt="QR Code"></td>
+                            <td>
+                                <img src="https://api.qrserver.com/v1/create-qr-code/?size=150x150&data={{ p.qr_code }}" alt="QR Code">
+                            </td>
                             <td><code>{{ p.qr_code }}</code></td>
                             <td><strong>{{ p.nome }}</strong></td>
-                            <td><span class="badge bg-secondary fs-6">{{ p.quantita }}</span></td>
+                            <td><span class="badge bg-primary fs-6">{{ p.quantita }}</span></td>
                             <td>{{ p.posizione or '-' }}</td>
                             <td>
                                 <form action="/carico" method="POST" class="d-inline">
@@ -83,89 +143,6 @@
             </table>
         </div>
     </div>
-</div>
-
-<!-- Modal Carico -->
-<div class="modal fade" id="modalCarico" tabindex="-1">
-  <div class="modal-dialog">
-    <form class="modal-content" action="/carico" method="POST">
-      <div class="modal-header bg-success text-white">
-        <h5 class="modal-title">Carico Merce (Pistola / QR)</h5>
-        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
-      </div>
-      <div class="modal-body">
-        <div class="mb-3">
-          <label class="form-label">Codice QR / Scansione Pistola</label>
-          <input type="text" name="qr_code" class="form-control" placeholder="Scansiona qui..." autofocus required>
-        </div>
-        <div class="mb-3">
-          <label class="form-label">Quantità da caricare</label>
-          <input type="number" name="quantita" class="form-control" value="1" min="1" required>
-        </div>
-      </div>
-      <div class="modal-footer">
-        <button type="submit" class="btn btn-success">Conferma Carico</button>
-      </div>
-    </form>
-  </div>
-</div>
-
-<!-- Modal Scarico -->
-<div class="modal fade" id="modalScarico" tabindex="-1">
-  <div class="modal-dialog">
-    <form class="modal-content" action="/scarico" method="POST">
-      <div class="modal-header bg-danger text-white">
-        <h5 class="modal-title">Scarico Merce (Pistola / QR)</h5>
-        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
-      </div>
-      <div class="modal-body">
-        <div class="mb-3">
-          <label class="form-label">Codice QR / Scansione Pistola</label>
-          <input type="text" name="qr_code" class="form-control" placeholder="Scansiona qui..." autofocus required>
-        </div>
-        <div class="mb-3">
-          <label class="form-label">Quantità da scaricare</label>
-          <input type="number" name="quantita" class="form-control" value="1" min="1" required>
-        </div>
-      </div>
-      <div class="modal-footer">
-        <button type="submit" class="btn btn-danger">Conferma Scarico</button>
-      </div>
-    </form>
-  </div>
-</div>
-
-<!-- Modal Nuovo Prodotto -->
-<div class="modal fade" id="modalAggiungi" tabindex="-1">
-  <div class="modal-dialog">
-    <form class="modal-content" action="/aggiungi" method="POST">
-      <div class="modal-header bg-primary text-white">
-        <h5 class="modal-title">Aggiungi Nuovo Prodotto</h5>
-        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
-      </div>
-      <div class="modal-body">
-        <div class="mb-3">
-          <label class="form-label">Codice QR (Identificativo unico)</label>
-          <input type="text" name="qr_code" class="form-control" placeholder="Es. PROD-001" required>
-        </div>
-        <div class="mb-3">
-          <label class="form-label">Nome Prodotto</label>
-          <input type="text" name="nome" class="form-control" placeholder="Es. Cavo HDMI" required>
-        </div>
-        <div class="mb-3">
-          <label class="form-label">Quantità Iniziale</label>
-          <input type="number" name="quantita" class="form-control" value="0" min="0">
-        </div>
-        <div class="mb-3">
-          <label class="form-label">Posizione Magazzino</label>
-          <input type="text" name="posizione" class="form-control" placeholder="Es. Scaffale A1">
-        </div>
-      </div>
-      <div class="modal-footer">
-        <button type="submit" class="btn btn-primary">Salva Prodotto</button>
-      </div>
-    </form>
-  </div>
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/bootstrap.bundle.min.js"></script>
