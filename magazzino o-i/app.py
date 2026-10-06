@@ -4,7 +4,7 @@ from psycopg2.extras import RealDictCursor
 from flask import Flask, render_template, request, redirect, url_for, flash
 
 # Configurazione del percorso assoluto per la cartella templates all'interno di magazzino o-i
-template_dir = os.path.abspath(os.path.join(os.path.dirname(_file_), 'magazzino o-i', 'templates'))
+template_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), 'magazzino o-i', 'templates'))
 app = Flask(_name_, template_folder=template_dir)
 app.secret_key = os.environ.get("SECRET_KEY", "chiave-segreta-magazzino")
 
