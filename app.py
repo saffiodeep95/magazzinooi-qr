@@ -53,7 +53,7 @@ def init_db():
             cur.execute("ALTER TABLE prodotti ADD COLUMN IF NOT EXISTS modificato_da VARCHAR(255);")
             cur.execute("ALTER TABLE utenti ADD COLUMN IF NOT EXISTS is_admin BOOLEAN DEFAULT FALSE;")
             
-            # FORZA o CREA l'account admin (Username: admin, Password: admin123)
+            # Forzatura o creazione account admin di default
             admin_pass = generate_password_hash("admin123")
             cur.execute("""
                 INSERT INTO utenti (username, password, is_admin) 
@@ -336,8 +336,9 @@ def aggiungi_prodotto():
 
 @app.route('/cancella/<qr_code>', methods=['POST'])
 def cancella_prodotto(qr_code):
-    if 'user' not in session:
-        return redirect(url_for('login'))
+    if 'user' not in session or not session.get('is_admin'):
+        flash("Accesso negato. Solo gli amministratori possono eliminare gli articoli.", "error")
+        return redirect(url_for('gestisci_prodotto', qr_code=qr_code))
 
     conn = get_db_connection()
     if not conn:
