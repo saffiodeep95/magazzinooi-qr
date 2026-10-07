@@ -4,6 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Gestione Magazzino QR</title>
+    <link rel="manifest" href="{{ url_for('static', filename='manifest.json') if url_for else '/manifest.json' }}">
+    <meta name="theme-color" content="#007bff">
     <style>
         body { font-family: Arial, sans-serif; max-width: 900px; margin: 0 auto; padding: 20px; background: #f4f4f9; }
         h1, h2 { color: #333; }
@@ -12,13 +14,15 @@
         input, button { width: 100%; padding: 10px; margin-top: 8px; margin-bottom: 15px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; }
         button { background: #007bff; color: white; border: none; font-weight: bold; cursor: pointer; }
         button:hover { background: #0056b3; }
+        .btn-camera { background: #17a2b8; margin-top: 5px; margin-bottom: 15px; }
+        .btn-camera:hover { background: #138496; }
         .search-box { display: flex; gap: 10px; margin-bottom: 0; }
         .search-box input { margin-bottom: 0; }
         .search-box button { width: auto; padding: 10px 20px; margin-top: 0; }
         table { width: 100%; border-collapse: collapse; background: #fff; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
         th, td { padding: 12px; text-align: left; border-bottom: 1px solid #ddd; vertical-align: middle; }
         th { background: #007bff; color: white; }
-        img { width: 70px; height: 70px; display: block; }
+        img { width: 60px; height: 60px; object-fit: cover; border-radius: 4px; display: block; }
         a { color: #007bff; text-decoration: none; font-weight: bold; }
         a:hover { text-decoration: underline; }
     </style>
@@ -34,7 +38,6 @@
       {% endif %}
     {% endwith %}
 
-    <!-- Barra di Ricerca -->
     <div class="card">
         <h2>🔍 Cerca Articolo</h2>
         <form method="GET" action="{{ url_for('index') }}" class="search-box">
@@ -47,7 +50,7 @@
     </div>
 
     <h2>Aggiungi / Aggiorna Prodotto</h2>
-    <form action="{{ url_for('aggiungi_prodotto') }}" method="POST">
+    <form action="{{ url_for('aggiungi_prodotto') }}" method="POST" enctype="multipart/form-data">
         <label>Codice QR / ID:</label>
         <input type="text" name="qr_code" required placeholder="Es. QR12345">
         
@@ -59,6 +62,14 @@
         
         <label>Posizione:</label>
         <input type="text" name="posizione" placeholder="Scaffale / Corsia">
+
+        <label>Foto Prodotto:</label>
+        <!-- Input nascosto standard per il file -->
+        <input type="file" name="foto" id="fotoInput" accept="image/*" style="display: none;" onchange="mostraNomeFile(this)">
+        
+        <!-- Pulsante grafico dedicato che apre direttamente la fotocamera posteriore -->
+        <button type="button" class="btn-camera" onclick="document.getElementById('fotoInput').click()">📸 Apri Fotocamera / Scatta Foto</button>
+        <div id="file-name-display" style="font-size: 0.85em; color: #666; margin-top: -10px; margin-bottom: 15px; font-style: italic;">Nessuna foto scattata</div>
         
         <button type="submit">Salva Prodotto</button>
     </form>
@@ -67,10 +78,11 @@
     <table>
         <thead>
             <tr>
+                <th>Foto</th>
                 <th>QR Code</th>
-                <th>Anteprima</th>
+                <th>QR</th>
                 <th>Nome</th>
-                <th>Quantità</th>
+                <th>Qtà</th>
                 <th>Posizione</th>
                 <th>Azione</th>
             </tr>
@@ -78,19 +90,45 @@
         <tbody>
             {% for p in prodotti %}
             <tr>
+                <td>
+                    {% if p.foto %}
+                        <img src="data:image/jpeg;base64,{{ p.foto }}" alt="Foto prodotto">
+                    {% else %}
+                        <span style="color: #999; font-size: 0.9em;">Nessuna</span>
+                    {% endif %}
+                </td>
                 <td>{{ p.qr_code }}</td>
-                <td><img src="data:image/png;base64,{{ p.qr_img }}" alt="QR Code"></td>
+                <td><img src="data:image/png;base64,{{ p.qr_img }}" alt="QR Code" style="width: 50px; height: 50px;"></td>
                 <td>{{ p.nome }}</td>
                 <td>{{ p.quantita }}</td>
                 <td>{{ p.posizione }}</td>
-                <td><a href="{{ url_for('gestisci_prodotto', qr_code=p.qr_code) }}">Gestisci / Stampa</a></td>
+                <td><a href="{{ url_for('gestisci_prodotto', qr_code=p.qr_code) }}">Gestisci</a></td>
             </tr>
             {% else %}
             <tr>
-                <td colspan="6" style="text-align: center;">Nessun prodotto trovato.</td>
+                <td colspan="7" style="text-align: center;">Nessun prodotto trovato.</td>
             </tr>
             {% endfor %}
         </tbody>
     </table>
+
+    <script>
+        function mostraNomeFile(input) {
+            const display = document.getElementById('file-name-display');
+            if (input.files && input.files[0]) {
+                display.textContent = "✅ Foto selezionata: " + input.files[0].name;
+                display.style.color = "#28a745";
+            } else {
+                display.textContent = "Nessuna foto scattata";
+                display.style.color = "#666";
+            }
+        }
+
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('/sw.js').catch(err => console.log('SW fallito: ', err));
+            });
+        }
+    </script>
 </body>
 </html>
