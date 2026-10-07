@@ -1,25 +1,4 @@
-[07:36, 07/10/2026] Marco Pavan: <!DOCTYPE html>
-<html lang="it">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Magazzino OMG</title>
-    <link rel="manifest" href="{{ url_for('static', filename='manifest.json') if url_for else '/manifest.json' }}">
-    <meta name="theme-color" content="#4f46e5">
-    <style>
-        :root {
-            --primary: #4f46e5;
-            --primary-hover: #4338ca;
-            --bg-color: #f8fafc;
-            --card-bg: #ffffff;
-            --text-main: #1e293b;
-            --text-muted: #64748b;
-            --border-color: #e2e8f0;
-        }
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-            max-width: 90…
-[07:37, 07/10/2026] Marco Pavan: <!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="it">
 <head>
     <meta charset="UTF-8">
@@ -43,7 +22,7 @@
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
             max-width: 600px;
             margin: 0 auto;
-            padding: 20px;
+            padding: 12px;
             background: var(--bg-color);
             color: var(--text-main);
             -webkit-font-smoothing: antialiased;
@@ -53,59 +32,60 @@
             color: var(--primary);
             text-decoration: none;
             font-weight: 600;
-            margin-bottom: 20px;
+            margin-bottom: 16px;
             font-size: 0.9rem;
         }
         .back-link:hover { text-decoration: underline; }
         h1 {
-            font-size: 1.5rem;
+            font-size: 1.35rem;
             font-weight: 800;
             margin-top: 0;
-            margin-bottom: 20px;
+            margin-bottom: 16px;
             letter-spacing: -0.5px;
         }
         .flash {
             background: #dcfce7;
             color: #166534;
             padding: 12px 16px;
-            margin-bottom: 20px;
+            margin-bottom: 16px;
             border-radius: 10px;
             font-weight: 500;
             border: 1px solid #bbf7d0;
+            font-size: 0.9rem;
         }
         .card {
             background: var(--card-bg);
-            padding: 24px;
+            padding: 20px;
             border-radius: 16px;
             box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
-            margin-bottom: 20px;
+            margin-bottom: 16px;
             border: 1px solid var(--border-color);
             text-align: center;
         }
         .card form { text-align: left; }
         h2 {
-            font-size: 1.1rem;
+            font-size: 1rem;
             font-weight: 600;
             margin-top: 0;
-            margin-bottom: 14px;
+            margin-bottom: 12px;
             color: var(--text-main);
         }
         label {
             display: block;
-            font-size: 0.85rem;
+            font-size: 0.8rem;
             font-weight: 600;
             color: var(--text-muted);
-            margin-bottom: 6px;
+            margin-bottom: 4px;
         }
         input, button {
             width: 100%;
             padding: 12px;
-            margin-top: 6px;
-            margin-bottom: 14px;
+            margin-top: 4px;
+            margin-bottom: 12px;
             border: 1px solid var(--border-color);
             border-radius: 10px;
             box-sizing: border-box;
-            font-size: 0.95rem;
+            font-size: 1rem;
         }
         button {
             border: none;
@@ -123,9 +103,9 @@
         .btn-print:hover { background: #475569; }
 
         .qr-display {
-            width: 160px;
-            height: 160px;
-            margin: 12px auto;
+            width: 150px;
+            height: 150px;
+            margin: 10px auto;
             display: block;
             border-radius: 8px;
             padding: 4px;
@@ -133,13 +113,13 @@
             border: 1px solid var(--border-color);
         }
         .qty-badge {
-            font-size: 1.8rem;
+            font-size: 1.6rem;
             font-weight: 800;
             color: var(--primary);
-            margin: 6px 0 16px 0;
+            margin: 4px 0 14px 0;
         }
 
-        /* Stampa etichetta pulita con QR e Nome */
+        /* Stampa etichetta pulita con QR, Nome e SAP */
         .print-label {
             display: none;
             text-align: center;
@@ -162,18 +142,18 @@
                 height: 100vh;
             }
             .print-label img {
-                width: 200px;
-                height: 200px;
-                margin: 10px 0;
+                width: 190px;
+                height: 190px;
+                margin: 8px 0;
             }
             .print-label h2 {
-                font-size: 24px;
-                margin: 0 0 5px 0;
+                font-size: 22px;
+                margin: 0 0 4px 0;
                 color: #000;
             }
             .print-label p {
-                font-size: 14px;
-                margin: 3px 0;
+                font-size: 13px;
+                margin: 2px 0;
                 color: #333;
             }
         }
@@ -195,20 +175,24 @@
     <div class="card">
         <h2>Etichetta & Quantità</h2>
         <img src="data:image/png;base64,{{ prodotto.qr_img }}" alt="QR Code" class="qr-display">
-        <p style="margin: 4px 0; color: var(--text-muted); font-size: 0.9rem;"><strong>Codice:</strong> {{ prodotto.qr_code }}</p>
-        <p style="margin: 4px 0 10px 0; color: var(--text-muted); font-size: 0.9rem;"><strong>Posizione:</strong> {{ prodotto.posizione if prodotto.posizione else 'Non specificata' }}</p>
+        <p style="margin: 3px 0; color: var(--text-muted); font-size: 0.85rem;"><strong>Codice QR:</strong> {{ prodotto.qr_code }}</p>
+        {% if prodotto.sap %}
+        <p style="margin: 3px 0; color: var(--text-muted); font-size: 0.85rem;"><strong>SAP:</strong> {{ prodotto.sap }}</p>
+        {% endif %}
+        <p style="margin: 3px 0 8px 0; color: var(--text-muted); font-size: 0.85rem;"><strong>Posizione:</strong> {{ prodotto.posizione if prodotto.posizione else 'Non specificata' }}</p>
         
         <label>Disponibilità Attuale</label>
         <div class="qty-badge">{{ prodotto.quantita }} pz</div>
         
-        <button onclick="window.print()" class="btn-print">🖨️ Stampa Etichetta (QR + Nome)</button>
+        <button onclick="window.print()" class="btn-print">🖨️ Stampa Etichetta (QR + SAP + Nome)</button>
     </div>
 
-    <!-- Etichetta nascosta per la stampa -->
+    <!-- Etichetta nascosta per la stampa con SAP -->
     <div class="print-label">
         <h2>{{ prodotto.nome }}</h2>
         <img src="data:image/png;base64,{{ prodotto.qr_img }}" alt="QR Code">
-        <p><strong>Cod:</strong> {{ prodotto.qr_code }} | <strong>Pos:</strong> {{ prodotto.posizione if prodotto.posizione else '-' }}</p>
+        <p><strong>QR:</strong> {{ prodotto.qr_code }} {% if prodotto.sap %}| <strong>SAP:</strong> {{ prodotto.sap }}{% endif %}</p>
+        <p><strong>Pos:</strong> {{ prodotto.posizione if prodotto.posizione else '-' }}</p>
     </div>
 
     <div class="card">
@@ -234,7 +218,7 @@
     <!-- Sezione Eliminazione Articolo -->
     <div class="card" style="border-color: #fecaca; background: #fff5f5;">
         <h2 style="color: var(--danger);">⚠️ Zona Pericolosa</h2>
-        <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 14px;">L'eliminazione rimuoverà definitivamente l'articolo dal database.</p>
+        <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 12px;">L'eliminazione rimuoverà definitivamente l'articolo dal database.</p>
         <form action="{{ url_for('cancella_prodotto', qr_code=prodotto.qr_code) }}" method="POST" onsubmit="return confirm('Sei sicuro di voler eliminare definitivamente questo prodotto?');">
             <button type="submit" class="btn-red">🗑️ Cancella Prodotto</button>
         </form>
