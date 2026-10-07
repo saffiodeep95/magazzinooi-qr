@@ -4,6 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Magazzino OMG</title>
+    <link rel="manifest" href="{{ url_for('static', filename='manifest.json') }}">
+    <meta name="theme-color" content="#4f46e5">
     <style>
         :root {
             --primary: #4f46e5;
@@ -186,9 +188,9 @@
         </header>
         <div class="user-actions">
             {% if session.get('is_admin') %}
-            <a href="{{ url_for('gestione_utenti') }}" class="admin-btn">⚙️ Pannello Admin</a>
+            <a href="{{ url_for('gestione_utenti') }}" class="admin-btn">⚙️ Admin</a>
             {% endif %}
-            <a href="{{ url_for('logout') }}" class="logout-btn">Esci ({{ session.get('user') }})</a>
+            <a href="{{ url_for('logout') }}" class="logout-btn">Esci</a>
         </div>
     </div>
 
@@ -264,5 +266,13 @@
         </div>
         {% endfor %}
     </div>
+
+    <script>
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('/static/sw.js').catch(err => console.log('SW fallito: ', err));
+            });
+        }
+    </script>
 </body>
 </html>
