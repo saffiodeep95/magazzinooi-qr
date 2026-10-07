@@ -218,6 +218,8 @@
         </form>
     </div>
 
+    <!-- Zona Pericolosa: visibile se Admin o se l'utente ha il permesso specifico -->
+    {% if session.get('is_admin') or session.get('puoi_cancellare') %}
     <div class="card" style="border-color: #fecaca; background: #fff5f5;">
         <h2 style="color: var(--danger);">⚠️ Zona Pericolosa</h2>
         <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 12px;">L'eliminazione rimuoverà definitivamente l'articolo dal database.</p>
@@ -225,5 +227,6 @@
             <button type="submit" class="btn-red">🗑️ Cancella Prodotto</button>
         </form>
     </div>
+    {% endif %}
 </body>
 </html>
