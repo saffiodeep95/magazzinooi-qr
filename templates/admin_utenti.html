@@ -4,6 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Gestione Utenti - Admin | Magazzino OMG</title>
+    <link rel="manifest" href="{{ url_for('static', filename='manifest.json') }}">
+    <meta name="theme-color" content="#4f46e5">
     <style>
         :root {
             --primary: #4f46e5;
@@ -111,16 +113,14 @@
                 {% endif %}
             </div>
             <div style="display: flex; flex-wrap: wrap; gap: 8px;">
-                <!-- Form Reset Password -->
                 <form action="{{ url_for('reset_password', user_id=u.id) }}" method="POST" class="actions-form">
                     <input type="password" name="nuova_password" placeholder="Nuova password" required>
-                    <button type="submit" class="btn-reset">Reset Password</button>
+                    <button type="submit" class="btn-reset">Reset</button>
                 </form>
                 
-                <!-- Form Elimina Utente -->
                 {% if u.username != session.get('user') %}
                 <form action="{{ url_for('elimina_utente', user_id=u.id) }}" method="POST" onsubmit="return confirm('Vuoi davvero eliminare questo utente?');">
-                    <button type="submit" class="btn-delete">Elimina</k>
+                    <button type="submit" class="btn-delete">Elimina</button>
                 </form>
                 {% endif %}
             </div>
