@@ -20,7 +20,7 @@
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
             max-width: 900px;
             margin: 0 auto;
-            padding: 20px;
+            padding: 12px;
             background: var(--bg-color);
             color: var(--text-main);
             -webkit-font-smoothing: antialiased;
@@ -29,10 +29,10 @@
             display: flex;
             align-items: center;
             gap: 12px;
-            margin-bottom: 24px;
+            margin-bottom: 20px;
         }
         header h1 {
-            font-size: 1.75rem;
+            font-size: 1.5rem;
             font-weight: 800;
             color: var(--text-main);
             margin: 0;
@@ -41,9 +41,9 @@
         .logo-badge {
             background: var(--primary);
             color: white;
-            font-size: 1.5rem;
-            width: 44px;
-            height: 44px;
+            font-size: 1.3rem;
+            width: 40px;
+            height: 40px;
             display: flex;
             align-items: center;
             justify-content: center;
@@ -54,43 +54,43 @@
             background: #dcfce7;
             color: #166534;
             padding: 12px 16px;
-            margin-bottom: 20px;
+            margin-bottom: 16px;
             border-radius: 10px;
             font-weight: 500;
             border: 1px solid #bbf7d0;
+            font-size: 0.9rem;
         }
         .card {
             background: var(--card-bg);
-            padding: 20px;
+            padding: 16px;
             border-radius: 16px;
-            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -2px rgba(0, 0, 0, 0.05);
-            margin-bottom: 20px;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+            margin-bottom: 16px;
             border: 1px solid var(--border-color);
         }
         h2 {
-            font-size: 1.1rem;
+            font-size: 1rem;
             font-weight: 600;
             color: var(--text-main);
             margin-top: 0;
-            margin-bottom: 14px;
+            margin-bottom: 12px;
         }
         label {
             display: block;
-            font-size: 0.85rem;
+            font-size: 0.8rem;
             font-weight: 600;
             color: var(--text-muted);
-            margin-bottom: 6px;
+            margin-bottom: 4px;
         }
         input, button {
             width: 100%;
             padding: 12px;
-            margin-bottom: 14px;
+            margin-bottom: 12px;
             border: 1px solid var(--border-color);
             border-radius: 10px;
             box-sizing: border-box;
-            font-size: 0.95rem;
+            font-size: 1rem; /* Dimensione ideale per non fare zoom automatico su iOS/Android */
             background: #fff;
-            transition: all 0.2s;
         }
         input:focus {
             outline: none;
@@ -110,7 +110,7 @@
         }
         .search-box {
             display: flex;
-            gap: 10px;
+            gap: 8px;
             margin-bottom: 0;
         }
         .search-box input {
@@ -118,70 +118,97 @@
         }
         .search-box button {
             width: auto;
-            padding: 0 20px;
+            padding: 0 16px;
         }
         .btn-secondary {
             background: #64748b;
+            color: white;
+            padding: 12px 14px;
+            border-radius: 10px;
+            text-align: center;
+            display: inline-block;
+            text-decoration: none;
+            font-weight: 600;
+            line-height: normal;
+            border: none;
         }
         .btn-secondary:hover {
             background: #475569;
         }
-        .table-container {
+
+        /* Layout a schede (Card mobile-friendly) per gli articoli */
+        .items-grid {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            margin-top: 16px;
+        }
+        .item-card {
             background: var(--card-bg);
-            border-radius: 16px;
-            overflow: hidden;
-            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
             border: 1px solid var(--border-color);
-            margin-top: 24px;
+            border-radius: 14px;
+            padding: 14px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.02);
         }
-        table {
-            width: 100%;
-            border-collapse: collapse;
-            text-align: left;
+        .item-info {
+            flex-grow: 1;
+            padding-right: 12px;
         }
-        th, td {
-            padding: 14px 16px;
-            border-bottom: 1px solid var(--border-color);
-            vertical-align: middle;
-            font-size: 0.9rem;
+        .item-title {
+            font-weight: 700;
+            font-size: 1.05rem;
+            color: var(--text-main);
+            margin-bottom: 4px;
         }
-        th {
-            background: #f1f5f9;
+        .item-details {
+            font-size: 0.85rem;
             color: var(--text-muted);
-            font-weight: 600;
-            text-transform: uppercase;
-            font-size: 0.75rem;
-            letter-spacing: 0.5px;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-bottom: 6px;
         }
-        tr:last-child td {
-            border-bottom: none;
+        .item-badge {
+            background: #f1f5f9;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-family: monospace;
+        }
+        .item-qty {
+            font-weight: 800;
+            color: var(--primary);
+            font-size: 1.1rem;
+        }
+        .item-right {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 8px;
         }
         img.qr-thumb {
-            width: 48px;
-            height: 48px;
+            width: 50px;
+            height: 50px;
             border-radius: 6px;
             background: #fff;
             padding: 2px;
             border: 1px solid var(--border-color);
             display: block;
         }
-        a.action-link {
-            color: var(--primary);
+        a.action-btn {
+            background: var(--primary);
+            color: white;
             text-decoration: none;
             font-weight: 600;
-            background: #eef2ff;
+            font-size: 0.85rem;
             padding: 6px 12px;
             border-radius: 8px;
-            display: inline-block;
-            transition: background 0.2s;
+            text-align: center;
         }
-        a.action-link:hover {
-            background: #e0e7ff;
-        }
-        @media (max-width: 600px) {
-            body { padding: 12px; }
-            .search-box { flex-direction: column; }
-            .search-box button { width: 100%; }
+        a.action-btn:hover {
+            background: var(--primary-hover);
         }
     </style>
 </head>
@@ -203,10 +230,10 @@
     <div class="card">
         <h2>🔍 Cerca Articolo</h2>
         <form method="GET" action="{{ url_for('index') }}" class="search-box">
-            <input type="text" name="q" value="{{ search_query }}" placeholder="Cerca per Codice QR o Nome...">
+            <input type="text" name="q" value="{{ search_query }}" placeholder="Cerca QR, Nome o SAP...">
             <button type="submit">Cerca</button>
             {% if search_query %}
-            <a href="{{ url_for('index') }}" class="btn-secondary" style="padding: 12px 16px; border-radius: 10px; text-align: center; display: inline-block; text-decoration: none; color: white; font-weight: 600; line-height: normal;">Reset</a>
+            <a href="{{ url_for('index') }}" class="btn-secondary">Reset</a>
             {% endif %}
         </form>
     </div>
@@ -218,6 +245,9 @@
             <label>Codice QR / ID Univoco</label>
             <input type="text" name="qr_code" required placeholder="Es. PROD-001">
             
+            <label>Codice SAP</label>
+            <input type="text" name="sap" placeholder="Es. SAP-987654">
+
             <label>Nome / Descrizione Articolo</label>
             <input type="text" name="nome" required placeholder="Es. Avvitatore a batteria">
             
@@ -231,37 +261,34 @@
         </form>
     </div>
 
-    <!-- Elenco -->
+    <!-- Elenco in formato mobile card -->
     <h2>Elenco Articoli</h2>
-    <div class="table-container">
-        <table>
-            <thead>
-                <tr>
-                    <th>QR Code</th>
-                    <th>Etichetta</th>
-                    <th>Nome</th>
-                    <th>Qtà</th>
-                    <th>Posizione</th>
-                    <th>Azione</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for p in prodotti %}
-                <tr>
-                    <td><strong>{{ p.qr_code }}</strong></td>
-                    <td><img src="data:image/png;base64,{{ p.qr_img }}" alt="QR" class="qr-thumb"></td>
-                    <td>{{ p.nome }}</td>
-                    <td><span style="font-weight: 700; color: var(--primary);">{{ p.quantita }}</span></td>
-                    <td>{{ p.posizione if p.posizione else '-' }}</td>
-                    <td><a href="{{ url_for('gestisci_prodotto', qr_code=p.qr_code) }}" class="action-link">Gestisci</a></td>
-                </tr>
-                {% else %}
-                <tr>
-                    <td colspan="6" style="text-align: center; color: var(--text-muted); padding: 30px;">Nessun prodotto trovato in magazzino.</td>
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
+    <div class="items-grid">
+        {% for p in prodotti %}
+        <div class="item-card">
+            <div class="item-info">
+                <div class="item-title">{{ p.nome }}</div>
+                <div class="item-details">
+                    <span>QR: <strong class="item-badge">{{ p.qr_code }}</strong></span>
+                    {% if p.sap %}
+                    <span>SAP: <strong class="item-badge">{{ p.sap }}</strong></span>
+                    {% endif %}
+                </div>
+                <div class="item-details">
+                    <span>Pos: {{ p.posizione if p.posizione else 'N/D' }}</span>
+                    <span>Qtà: <strong class="item-qty">{{ p.quantita }} pz</strong></span>
+                </div>
+            </div>
+            <div class="item-right">
+                <img src="data:image/png;base64,{{ p.qr_img }}" alt="QR" class="qr-thumb">
+                <a href="{{ url_for('gestisci_prodotto', qr_code=p.qr_code) }}" class="action-btn">Gestisci</a>
+            </div>
+        </div>
+        {% else %}
+        <div class="card" style="text-align: center; color: var(--text-muted); padding: 24px;">
+            Nessun prodotto trovato in magazzino.
+        </div>
+        {% endfor %}
     </div>
 
     <script>
