@@ -4,10 +4,11 @@ import base64
 import qrcode
 import psycopg2
 from psycopg2.extras import RealDictCursor
-from flask import Flask, render_template, request, redirect, url_for, flash
+from flask import Flask, render_template, request, redirect, url_for, flash, session
+from werkzeug.security import generate_password_hash, check_password_hash
 
 app = Flask(__name__)
-app.secret_key = os.environ.get("SECRET_KEY", "chiave-segreta-magazzino")
+app.secret_key = os.environ.get("SECRET_KEY", "chiave-segreta-magazzino-omg")
 
 DATABASE_URL = os.environ.get("DATABASE_URL")
 
@@ -27,6 +28,15 @@ def init_db():
     if conn:
         try:
             cur = conn.cursor()
+            # Tabella Utenti
+            cur.execute("""
+                CREATE TABLE IF NOT EXISTS utenti (
+                    id SERIAL PRIMARY KEY,
+                    username VARCHAR(255) UNIQUE NOT NULL,
+                    password TEXT NOT NULL
+                );
+            """)
+            # Tabella Prodotti con colonna 'sap' e 'modificato_da' per la firma
             cur.execute("""
                 CREATE TABLE IF NOT EXISTS prodotti (
                     id SERIAL PRIMARY KEY,
@@ -34,13 +44,14 @@ def init_db():
                     nome VARCHAR(255) NOT NULL,
                     quantita INT DEFAULT 0,
                     posizione VARCHAR(255),
-                    sap VARCHAR(255)
+                    sap VARCHAR(255),
+                    modificato_da VARCHAR(255)
                 );
             """)
-            # Aggiunge la colonna sap se il database esisteva già senza di essa
-            cur.execute("""
-                ALTER TABLE prodotti ADD COLUMN IF NOT EXISTS sap VARCHAR(255);
-            """)
+            # Compatibilità per database esistenti
+            cur.execute("ALTER TABLE prodotti ADD COLUMN IF NOT EXISTS sap VARCHAR(255);")
+            cur.execute("ALTER TABLE prodotti ADD COLUMN IF NOT EXISTS modificato_da VARCHAR(255);")
+            
             conn.commit()
             cur.close()
             conn.close()
@@ -59,8 +70,81 @@ def genera_qr_base64(testo):
     img.save(buffered, format="PNG")
     return base64.b64encode(buffered.getvalue()).decode("utf-8")
 
+@app.route('/login', methods=['GET', 'POST'])
+def login():
+    if request.method == 'POST':
+        username = request.form.get('username', '').strip()
+        password = request.form.get('password', '')
+
+        if not username or not password:
+            flash("Inserisci username e password!", "error")
+            return redirect(url_for('login'))
+
+        conn = get_db_connection()
+        if not conn:
+            flash("Errore di connessione al database", "error")
+            return redirect(url_for('login'))
+        
+        try:
+            cur = conn.cursor()
+            cur.execute("SELECT * FROM utenti WHERE username = %s;", (username,))
+            utente = cur.fetchone()
+            cur.close()
+            conn.close()
+
+            if utente and check_password_hash(utente['password'], password):
+                session['user'] = utente['username']
+                flash(f"Benvenuto, {utente['username']}!", "success")
+                return redirect(url_for('index'))
+            else:
+                flash("Credenziali non valide o utente inesistente.", "error")
+        except Exception as e:
+            flash(f"Errore durante il login: {e}", "error")
+
+    return render_template("login.html")
+
+@app.route('/registra', methods=['GET', 'POST'])
+def registra():
+    if request.method == 'POST':
+        username = request.form.get('username', '').strip()
+        password = request.form.get('password', '')
+
+        if not username or not password:
+            flash("Compila tutti i campi!", "error")
+            return redirect(url_for('registra'))
+
+        hashed_password = generate_password_hash(password)
+        conn = get_db_connection()
+        if not conn:
+            flash("Errore di connessione al database", "error")
+            return redirect(url_for('registra'))
+        
+        try:
+            cur = conn.cursor()
+            cur.execute("INSERT INTO utenti (username, password) VALUES (%s, %s);", (username, hashed_password))
+            conn.commit()
+            cur.close()
+            conn.close()
+            flash("Account creato con successo! Ora puoi effettuare il login.", "success")
+            return redirect(url_for('login'))
+        except psycopg2.errors.UniqueViolation:
+            flash("Questo username è già registrato. Scegline un altro.", "error")
+        except Exception as e:
+            flash(f"Errore durante la registrazione: {e}", "error")
+
+    return render_template("registra.html")
+
+@app.route('/logout')
+def logout():
+    session.pop('user', None)
+    flash("Logout effettuato con successo.", "success")
+    return redirect(url_for('login'))
+
 @app.route('/')
 def index():
+    if 'user' not in session:
+        return redirect(url_for('login'))
+
     search_query = request.args.get('q', '').strip()
     conn = get_db_connection()
     if not conn:
@@ -69,13 +153,13 @@ def index():
         cur = conn.cursor()
         if search_query:
             cur.execute("""
-                SELECT id, qr_code, nome, quantita, posizione, sap 
+                SELECT id, qr_code, nome, quantita, posizione, sap, modificato_da 
                 FROM prodotti 
                 WHERE qr_code ILIKE %s OR nome ILIKE %s OR sap ILIKE %s
                 ORDER BY nome ASC;
             """, (f"%{search_query}%", f"%{search_query}%", f"%{search_query}%"))
         else:
-            cur.execute("SELECT id, qr_code, nome, quantita, posizione, sap FROM prodotti ORDER BY nome ASC;")
+            cur.execute("SELECT id, qr_code, nome, quantita, posizione, sap, modificato_da FROM prodotti ORDER BY nome ASC;")
         
         prodotti_db = cur.fetchall()
         cur.close()
@@ -95,13 +179,16 @@ def index():
 
 @app.route('/gestisci/<qr_code>')
 def gestisci_prodotto(qr_code):
+    if 'user' not in session:
+        return redirect(url_for('login'))
+
     conn = get_db_connection()
     if not conn:
         flash("Errore di connessione al database", "error")
         return redirect(url_for('index'))
     try:
         cur = conn.cursor()
-        cur.execute("SELECT id, qr_code, nome, quantita, posizione, sap FROM prodotti WHERE qr_code = %s;", (qr_code,))
+        cur.execute("SELECT id, qr_code, nome, quantita, posizione, sap, modificato_da FROM prodotti WHERE qr_code = %s;", (qr_code,))
         prodotto = cur.fetchone()
         cur.close()
         conn.close()
@@ -120,6 +207,9 @@ def gestisci_prodotto(qr_code):
 
 @app.route('/aggiungi', methods=['POST'])
 def aggiungi_prodotto():
+    if 'user' not in session:
+        return redirect(url_for('login'))
+
     qr_code = request.form.get('qr_code')
     nome = request.form.get('nome')
     try:
@@ -128,6 +218,7 @@ def aggiungi_prodotto():
         quantita = 0
     posizione = request.form.get('posizione', '')
     sap = request.form.get('sap', '')
+    utente_corrente = session['user']
 
     if not qr_code or not nome:
         flash("QR Code e Nome sono obbligatori!", "error")
@@ -140,25 +231,29 @@ def aggiungi_prodotto():
     try:
         cur = conn.cursor()
         cur.execute("""
-            INSERT INTO prodotti (qr_code, nome, quantita, posizione, sap)
-            VALUES (%s, %s, %s, %s, %s)
+            INSERT INTO prodotti (qr_code, nome, quantita, posizione, sap, modificato_da)
+            VALUES (%s, %s, %s, %s, %s, %s)
             ON CONFLICT (qr_code) DO UPDATE SET
                 nome = EXCLUDED.nome,
                 quantita = EXCLUDED.quantita,
                 posizione = EXCLUDED.posizione,
-                sap = EXCLUDED.sap;
-        """, (qr_code, nome, quantita, posizione, sap))
+                sap = EXCLUDED.sap,
+                modificato_da = EXCLUDED.modificato_da;
+        """, (qr_code, nome, quantita, posizione, sap, utente_corrente))
             
         conn.commit()
         cur.close()
         conn.close()
-        flash("Prodotto aggiunto o aggiornato con successo!", "success")
+        flash(f"Prodotto salvato con successo da {utente_corrente}!", "success")
     except Exception as e:
         flash(f"Errore nell'inserimento: {e}", "error")
     return redirect(url_for('index'))
 
 @app.route('/cancella/<qr_code>', methods=['POST'])
 def cancella_prodotto(qr_code):
+    if 'user' not in session:
+        return redirect(url_for('login'))
+
     conn = get_db_connection()
     if not conn:
         flash("Errore di connessione al database", "error")
@@ -176,11 +271,15 @@ def cancella_prodotto(qr_code):
 
 @app.route('/carico', methods=['POST'])
 def carico():
+    if 'user' not in session:
+        return redirect(url_for('login'))
+
     qr_code = request.form.get('qr_code')
     try:
         quantita = int(request.form.get('quantita', 1))
     except ValueError:
         quantita = 1
+    utente_corrente = session['user']
 
     if not qr_code:
         flash("QR Code non valido o mancante!", "error")
@@ -192,12 +291,12 @@ def carico():
         return redirect(url_for('index'))
     try:
         cur = conn.cursor()
-        cur.execute("UPDATE prodotti SET quantita = quantita + %s WHERE qr_code = %s;", (quantita, qr_code))
+        cur.execute("UPDATE prodotti SET quantita = quantita + %s, modificato_da = %s WHERE qr_code = %s;", (quantita, utente_corrente, qr_code))
         if cur.rowcount == 0:
             flash("Prodotto non trovato!", "error")
         else:
             conn.commit()
-            flash(f"Carico di {quantita} pz effettuato con successo!", "success")
+            flash(f"Carico di {quantita} pz effettuato da {utente_corrente}!", "success")
         cur.close()
         conn.close()
     except Exception as e:
@@ -207,11 +306,15 @@ def carico():
 
 @app.route('/scarico', methods=['POST'])
 def scarico():
+    if 'user' not in session:
+        return redirect(url_for('login'))
+
     qr_code = request.form.get('qr_code')
     try:
         quantita = int(request.form.get('quantita', 1))
     except ValueError:
         quantita = 1
+    utente_corrente = session['user']
 
     if not qr_code:
         flash("QR Code non valido o mancante!", "error")
@@ -223,12 +326,12 @@ def scarico():
         return redirect(url_for('index'))
     try:
         cur = conn.cursor()
-        cur.execute("UPDATE prodotti SET quantita = GREATEST(0, quantita - %s) WHERE qr_code = %s;", (quantita, qr_code))
+        cur.execute("UPDATE prodotti SET quantita = GREATEST(0, quantita - %s), modificato_da = %s WHERE qr_code = %s;", (quantita, utente_corrente, qr_code))
         if cur.rowcount == 0:
             flash("Prodotto non trovato!", "error")
         else:
             conn.commit()
-            flash(f"Scarico di {quantita} pz effettuato con successo!", "success")
+            flash(f"Scarico di {quantita} pz effettuato da {utente_corrente}!", "success")
         cur.close()
         conn.close()
     except Exception as e:
@@ -236,5 +339,5 @@ def scarico():
 
     return redirect(url_for('gestisci_prodotto', qr_code=qr_code))
 
-if __name__ == '_main_':
+if _name_ == '_main_':
     app.run(host='0.0.0.0', port=5000, debug=True)
