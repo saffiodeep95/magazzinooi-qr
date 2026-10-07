@@ -7,7 +7,7 @@ from psycopg2.extras import RealDictCursor
 from flask import Flask, render_template, request, redirect, url_for, flash, session
 from werkzeug.security import generate_password_hash, check_password_hash
 
-app = Flask(__name__)
+app = Flask(_name_)
 app.secret_key = os.environ.get("SECRET_KEY", "chiave-segreta-magazzino-omg")
 
 DATABASE_URL = os.environ.get("DATABASE_URL")
@@ -53,18 +53,20 @@ def init_db():
             cur.execute("ALTER TABLE prodotti ADD COLUMN IF NOT EXISTS modificato_da VARCHAR(255);")
             cur.execute("ALTER TABLE utenti ADD COLUMN IF NOT EXISTS is_admin BOOLEAN DEFAULT FALSE;")
             
-            # Crea automaticamente un account admin di default se non esiste nessuno
-            cur.execute("SELECT COUNT(*) as count FROM utenti;")
-            res = cur.fetchone()
-            if res['count'] == 0:
-                admin_pass = generate_password_hash("admin123")
-                cur.execute("INSERT INTO utenti (username, password, is_admin) VALUES (%s, %s, %s);", ("admin", admin_pass, True))
-                print("Creato account amministratore di default: username 'admin', password 'admin123'")
+            # FORZA o CREA l'account admin (Username: admin, Password: admin123)
+            admin_pass = generate_password_hash("admin123")
+            cur.execute("""
+                INSERT INTO utenti (username, password, is_admin) 
+                VALUES ('admin', %s, TRUE)
+                ON CONFLICT (username) DO UPDATE SET 
+                    password = EXCLUDED.password, 
+                    is_admin = TRUE;
+            """, (admin_pass,))
 
             conn.commit()
             cur.close()
             conn.close()
-            print("Inizializzazione database completata con successo.")
+            print("Database inizializzato e account admin sincronizzato con successo.")
         except Exception as e:
             print(f"Errore durante l'inizializzazione del database: {e}")
 
@@ -131,12 +133,7 @@ def registra():
         
         try:
             cur = conn.cursor()
-            # Se è il primo utente in assoluto, rendilo admin
-            cur.execute("SELECT COUNT(*) as count FROM utenti;")
-            count = cur.fetchone()['count']
-            is_admin = True if count == 0 else False
-
-            cur.execute("INSERT INTO utenti (username, password, is_admin) VALUES (%s, %s, %s);", (username, hashed_password, is_admin))
+            cur.execute("INSERT INTO utenti (username, password, is_admin) VALUES (%s, %s, FALSE);", (username, hashed_password))
             conn.commit()
             cur.close()
             conn.close()
@@ -213,7 +210,6 @@ def elimina_utente(user_id):
         return redirect(url_for('index'))
     try:
         cur = conn.cursor()
-        # Impedisci all'admin di eliminare se stesso per errore
         cur.execute("SELECT username FROM utenti WHERE id = %s;", (user_id,))
         u = cur.fetchone()
         if u and u['username'] == session['user']:
@@ -428,5 +424,5 @@ def scarico():
 
     return redirect(url_for('gestisci_prodotto', qr_code=qr_code))
 
-if __name__ == '_main_':
+if _name_ == '_main_':
     app.run(host='0.0.0.0', port=5000, debug=True)
