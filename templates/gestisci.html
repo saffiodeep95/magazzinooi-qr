@@ -180,6 +180,9 @@
         <p style="margin: 3px 0; color: var(--text-muted); font-size: 0.85rem;"><strong>SAP:</strong> {{ prodotto.sap }}</p>
         {% endif %}
         <p style="margin: 3px 0 8px 0; color: var(--text-muted); font-size: 0.85rem;"><strong>Posizione:</strong> {{ prodotto.posizione if prodotto.posizione else 'Non specificata' }}</p>
+        {% if prodotto.modificato_da %}
+        <p style="margin: 3px 0 8px 0; color: var(--primary); font-size: 0.85rem; font-weight: 600;">✏️ Ultima modifica di: {{ prodotto.modificato_da }}</p>
+        {% endif %}
         
         <label>Disponibilità Attuale</label>
         <div class="qty-badge">{{ prodotto.quantita }} pz</div>
