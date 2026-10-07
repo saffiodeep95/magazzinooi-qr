@@ -33,7 +33,8 @@ def init_db():
                     qr_code VARCHAR(255) UNIQUE NOT NULL,
                     nome VARCHAR(255) NOT NULL,
                     quantita INT DEFAULT 0,
-                    posizione VARCHAR(255)
+                    posizione VARCHAR(255),
+                    foto TEXT
                 );
             """)
             conn.commit()
@@ -64,13 +65,13 @@ def index():
         cur = conn.cursor()
         if search_query:
             cur.execute("""
-                SELECT id, qr_code, nome, quantita, posizione 
+                SELECT id, qr_code, nome, quantita, posizione, foto 
                 FROM prodotti 
                 WHERE qr_code ILIKE %s OR nome ILIKE %s 
                 ORDER BY nome ASC;
             """, (f"%{search_query}%", f"%{search_query}%"))
         else:
-            cur.execute("SELECT id, qr_code, nome, quantita, posizione FROM prodotti ORDER BY nome ASC;")
+            cur.execute("SELECT id, qr_code, nome, quantita, posizione, foto FROM prodotti ORDER BY nome ASC;")
         
         prodotti_db = cur.fetchall()
         cur.close()
@@ -96,7 +97,7 @@ def gestisci_prodotto(qr_code):
         return redirect(url_for('index'))
     try:
         cur = conn.cursor()
-        cur.execute("SELECT id, qr_code, nome, quantita, posizione FROM prodotti WHERE qr_code = %s;", (qr_code,))
+        cur.execute("SELECT id, qr_code, nome, quantita, posizione, foto FROM prodotti WHERE qr_code = %s;", (qr_code,))
         prodotto = cur.fetchone()
         cur.close()
         conn.close()
@@ -123,6 +124,12 @@ def aggiungi_prodotto():
         quantita = 0
     posizione = request.form.get('posizione', '')
 
+    foto_file = request.files.get('foto')
+    foto_base64 = None
+    if foto_file and foto_file.filename != '':
+        foto_bytes = foto_file.read()
+        foto_base64 = base64.b64encode(foto_bytes).decode('utf-8')
+
     if not qr_code or not nome:
         flash("QR Code e Nome sono obbligatori!", "error")
         return redirect(url_for('index'))
@@ -133,19 +140,49 @@ def aggiungi_prodotto():
         return redirect(url_for('index'))
     try:
         cur = conn.cursor()
-        cur.execute("""
-            INSERT INTO prodotti (qr_code, nome, quantita, posizione)
-            VALUES (%s, %s, %s, %s)
-            ON CONFLICT (qr_code) DO UPDATE SET
-                nome = EXCLUDED.nome,
-                posizione = EXCLUDED.posizione;
-        """, (qr_code, nome, quantita, posizione))
+        if foto_base64:
+            cur.execute("""
+                INSERT INTO prodotti (qr_code, nome, quantita, posizione, foto)
+                VALUES (%s, %s, %s, %s, %s)
+                ON CONFLICT (qr_code) DO UPDATE SET
+                    nome = EXCLUDED.nome,
+                    quantita = EXCLUDED.quantita,
+                    posizione = EXCLUDED.posizione,
+                    foto = EXCLUDED.foto;
+            """, (qr_code, nome, quantita, posizione, foto_base64))
+        else:
+            cur.execute("""
+                INSERT INTO prodotti (qr_code, nome, quantita, posizione)
+                VALUES (%s, %s, %s, %s)
+                ON CONFLICT (qr_code) DO UPDATE SET
+                    nome = EXCLUDED.nome,
+                    quantita = EXCLUDED.quantita,
+                    posizione = EXCLUDED.posizione;
+            """, (qr_code, nome, quantita, posizione))
+            
         conn.commit()
         cur.close()
         conn.close()
         flash("Prodotto aggiunto o aggiornato con successo!", "success")
     except Exception as e:
         flash(f"Errore nell'inserimento: {e}", "error")
+    return redirect(url_for('index'))
+
+@app.route('/cancella/<qr_code>', methods=['POST'])
+def cancella_prodotto(qr_code):
+    conn = get_db_connection()
+    if not conn:
+        flash("Errore di connessione al database", "error")
+        return redirect(url_for('index'))
+    try:
+        cur = conn.cursor()
+        cur.execute("DELETE FROM prodotti WHERE qr_code = %s;", (qr_code,))
+        conn.commit()
+        cur.close()
+        conn.close()
+        flash("Prodotto eliminato con successo!", "success")
+    except Exception as e:
+        flash(f"Errore durante l'eliminazione: {e}", "error")
     return redirect(url_for('index'))
 
 @app.route('/carico', methods=['POST'])
