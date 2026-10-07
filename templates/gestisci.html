@@ -4,6 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Gestione - {{ prodotto.nome }} | Magazzino OMG</title>
+    <link rel="manifest" href="{{ url_for('static', filename='manifest.json') }}">
+    <meta name="theme-color" content="#4f46e5">
     <style>
         :root {
             --primary: #4f46e5;
@@ -119,7 +121,6 @@
             margin: 4px 0 14px 0;
         }
 
-        /* Stampa etichetta pulita con QR, Nome e SAP */
         .print-label {
             display: none;
             text-align: center;
@@ -190,7 +191,6 @@
         <button onclick="window.print()" class="btn-print">🖨️ Stampa Etichetta (QR + SAP + Nome)</button>
     </div>
 
-    <!-- Etichetta nascosta per la stampa con SAP -->
     <div class="print-label">
         <h2>{{ prodotto.nome }}</h2>
         <img src="data:image/png;base64,{{ prodotto.qr_img }}" alt="QR Code">
@@ -218,7 +218,6 @@
         </form>
     </div>
 
-    <!-- Sezione Eliminazione Articolo -->
     <div class="card" style="border-color: #fecaca; background: #fff5f5;">
         <h2 style="color: var(--danger);">⚠️ Zona Pericolosa</h2>
         <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 12px;">L'eliminazione rimuoverà definitivamente l'articolo dal database.</p>
