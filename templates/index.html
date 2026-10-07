@@ -257,4 +257,19 @@
                 </tr>
                 {% else %}
                 <tr>
-                    <td colspan
+                    <td colspan="6" style="text-align: center; color: var(--text-muted); padding: 30px;">Nessun prodotto trovato in magazzino.</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <script>
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('/sw.js').catch(err => console.log('SW fallito: ', err));
+            });
+        }
+    </script>
+</body>
+</html>
