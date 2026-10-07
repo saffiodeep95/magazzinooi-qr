@@ -1,17 +1,18 @@
-[21:45, 06/10/2026] Marco Pavan: <!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="it">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Gestione Magazzino QR</title>
+    <link rel="manifest" href="{{ url_for('static', filename='manifest.json') if url_for else '/manifest.json' }}">
+    <meta name="theme-color" content="#007bff">
     <style>
         body { font-family: Arial, sans-serif; max-width: 900px; margin: 0 auto; padding: 20px; background: #f4f4f9; }
         h1, h2 { color: #333; }
         .flash { background: #d4edda; color: #155724; padding: 10px; margin-bottom: 15px; border-radius: 5px; }
-        form { background: #fff; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); margin-bottom: 20px; }
-        input, button { width: 100%; padding: 10px; margin-top: 8px; margin-bottom: 15px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; }
-        button { bac…
-[21:46, 06/10/2026] Marco Pavan: <!DOCTYPE html>
+        .card, form { background: #fff; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); margin-bottom: 20px; }
+        i…
+[07:00, 07/10/2026] Marco Pavan: <!DOCTYPE html>
 <html lang="it">
 <head>
     <meta charset="UTF-8">
@@ -21,29 +22,55 @@
         body { font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; background: #f4f4f9; }
         h1, h2 { color: #333; }
         .flash { background: #d4edda; color: #155724; padding: 10px; margin-bottom: 15px; border-radius: 5px; }
-        .card { background: #fff; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); margin-bottom: 20px; text-align: center; }
-        .card-left { text-align: left; }
+        .card, form { background: #fff; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); margin-bottom: 20px; }
         input, button { width: 100%; padding: 10px; margin-top: 8px; margin-bottom: 15px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; }
-        .btn-carico { background: #28a745; color: white; border: none; font-weight: bold; cursor: pointer; }
-        .btn-carico:hover { background: #218838; }
-        .btn-scarico { background: #dc3545; color: white; border: none; font-weight: bold; cursor: pointer; }
-        .btn-scarico:hover { background: #c82333; }
-        .btn-stampa { background: #6c757d; color: white; border: none; font-weight: bold; cursor: pointer; }
-        .btn-stampa:hover { background: #5a6268; }
-        img { width: 180px; height: 180px; margin: 10px 0; }
-        a { display: inline-block; margin-top: 15px; color: #007bff; text-decoration: none; font-weight: bold; }
+        button { background: #007bff; color: white; border: none; font-weight: bold; cursor: pointer; }
+        button:hover { background: #0056b3; }
+        .btn-green { background: #28a745; }
+        .btn-green:hover { background: #218838; }
+        .btn-red { background: #dc3545; }
+        .btn-red:hover { background: #c82333; }
+        .btn-print { background: #6c757d; }
+        .btn-print:hover { background: #5a6268; }
+        .btn-camera { background: #17a2b8; margin-top: 5px; margin-bottom: 15px; }
+        .btn-camera:hover { background: #138496; }
+        a { color: #007bff; text-decoration: none; font-weight: bold; }
         a:hover { text-decoration: underline; }
 
-        /* Stili specifici per la stampa */
+        .print-label {
+            display: none;
+            text-align: center;
+        }
+
         @media print {
-            body * { visibility: hidden; }
-            #etichetta-stampa, #etichetta-stampa * { visibility: visible; }
-            #etichetta-stampa { position: absolute; left: 0; top: 0; width: 100%; text-align: center; box-shadow: none; padding: 0; }
+            body * {
+                visibility: hidden;
+            }
+            .print-label, .print-label * {
+                visibility: visible;
+            }
+            .print-label {
+                display: flex;
+                flex-direction: column;
+                justify-content: center;
+                align-items: center;
+                position: fixed;
+                left: 0;
+                top: 0;
+                width: 100vw;
+                height: 100vh;
+            }
+            .print-label img {
+                width: 250px;
+                height: 250px;
+            }
         }
     </style>
 </head>
 <body>
-    <h1>🔍 Gestione Articolo</h1>
+    <p><a href="{{ url_for('index') }}">← Torna alla Home</a></p>
+
+    <h1>Gestione: {{ prodotto.nome }}</h1>
 
     {% with messages = get_flashed_messages() %}
       {% if messages %}
@@ -53,35 +80,70 @@
       {% endif %}
     {% endwith %}
 
-    <div class="card" id="etichetta-stampa">
-        <h2>{{ prodotto.nome }}</h2>
-        <img src="data:image/png;base64,{{ prodotto.qr_img }}" alt="QR Code">
+    <div class="card" style="text-align: center;">
+        {% if prodotto.foto %}
+            <div style="margin-bottom: 15px;">
+                <img src="data:image/jpeg;base64,{{ prodotto.foto }}" alt="Foto prodotto" style="max-width: 220px; max-height: 220px; border-radius: 8px; object-fit: cover; display: inline-block; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+            </div>
+        {% else %}
+            <p style="color: #888; font-style: italic;">Nessuna foto associata al prodotto.</p>
+        {% endif %}
+
+        <h2>Etichetta QR Code</h2>
+        <img src="data:image/png;base64,{{ prodotto.qr_img }}" alt="QR Code" style="width: 150px; height: 150px; margin: 0 auto; display: block;">
         <p><strong>Codice:</strong> {{ prodotto.qr_code }}</p>
-        <p><strong>Posizione:</strong> {{ prodotto.posizione }}</p>
-        <p><strong>Quantità Attuale:</strong> <span style="font-size: 1.2em; color: #007bff;">{{ prodotto.quantita }}</span></p>
-        <button type="button" class="btn-stampa" onclick="window.print()">🖨️ Stampa Etichetta QR</button>
+        <p><strong>Posizione:</strong> {{ prodotto.posizione if prodotto.posizione else 'Non specificata' }}</p>
+        <p><strong>Quantità Attuale:</strong> <span style="font-size: 1.5em; color: #007bff;">{{ prodotto.quantita }}</span> pz</p>
+        
+        <button onclick="window.print()" class="btn-print">🖨️ Stampa Solo QR Code</button>
     </div>
 
-    <div class="card card-left">
-        <h3>➕ Carico (Aggiungi pezzi)</h3>
+    <!-- Sezione per aggiornare la foto usando direttamente la fotocamera -->
+    <div class="card">
+        <h2>Aggiorna Foto Prodotto</h2>
+        <form action="{{ url_for('aggiungi_prodotto') }}" method="POST" enctype="multipart/form-data">
+            <!-- Campi nascosti per mantenere i dati attuali del prodotto -->
+            <input type="hidden" name="qr_code" value="{{ prodotto.qr_code }}">
+            <input type="hidden" name="nome" value="{{ prodotto.nome }}">
+            <input type="hidden" name="quantita" value="{{ prodotto.quantita }}">
+            <input type="hidden" name="posizione" value="{{ prodotto.posizione }}">
+
+            <input type="file" name="foto" id="fotoAggiorna" accept="image/*" style="display: none;" onchange="this.form.submit()">
+            
+            <button type="button" class="btn-camera" onclick="document.getElementById('fotoAggiorna').click()">📸 Scatta Nuova Foto</button>
+        </form>
+    </div>
+
+    <div class="print-label">
+        <img src="data:image/png;base64,{{ prodotto.qr_img }}" alt="QR Code">
+    </div>
+
+    <div class="card">
+        <h2>Registra Carico (Entrata merci)</h2>
         <form action="{{ url_for('carico') }}" method="POST">
             <input type="hidden" name="qr_code" value="{{ prodotto.qr_code }}">
-            <label>Quantità da caricare:</label>
+            <label>Quantità da aggiungere:</label>
             <input type="number" name="quantita" value="1" min="1" required>
-            <button type="submit" class="btn-carico">Esegui Carico</button>
+            <button type="submit" class="btn-green">Conferma Carico (+)</button>
         </form>
     </div>
 
-    <div class="card card-left">
-        <h3>➖ Scarico (Rimuovi pezzi)</h3>
+    <div class="card">
+        <h2>Registra Scarico (Uscita merci)</h2>
         <form action="{{ url_for('scarico') }}" method="POST">
             <input type="hidden" name="qr_code" value="{{ prodotto.qr_code }}">
-            <label>Quantità da scaricare:</label>
+            <label>Quantità da rimuovere:</label>
             <input type="number" name="quantita" value="1" min="1" required>
-            <button type="submit" class="btn-scarico">Esegui Scarico</button>
+            <button type="submit" class="btn-red">Conferma Scarico (-)</button>
         </form>
     </div>
 
-    <a href="{{ url_for('index') }}">⬅️ Torna alla Home / Lista Prodotti</a>
+    <div class="card" style="border: 1px solid #dc3545;">
+        <h2 style="color: #dc3545; margin-top: 0;">⚠️ Zona Pericolosa</h2>
+        <p style="font-size: 0.9em; color: #666;">Eliminando il prodotto, verranno rimossi definitivamente dal database anche il codice e la foto associata.</p>
+        <form action="{{ url_for('cancella_prodotto', qr_code=prodotto.qr_code) }}" method="POST" onsubmit="return confirm('Sei sicuro di voler eliminare definitivamente questo prodotto?');">
+            <button type="submit" class="btn-red">🗑️ Cancella Prodotto</button>
+        </form>
+    </div>
 </body>
 </html>
