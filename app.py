@@ -33,8 +33,13 @@ def init_db():
                     qr_code VARCHAR(255) UNIQUE NOT NULL,
                     nome VARCHAR(255) NOT NULL,
                     quantita INT DEFAULT 0,
-                    posizione VARCHAR(255)
+                    posizione VARCHAR(255),
+                    sap VARCHAR(255)
                 );
+            """)
+            # Aggiunge la colonna sap se il database esisteva già senza di essa
+            cur.execute("""
+                ALTER TABLE prodotti ADD COLUMN IF NOT EXISTS sap VARCHAR(255);
             """)
             conn.commit()
             cur.close()
@@ -64,13 +69,13 @@ def index():
         cur = conn.cursor()
         if search_query:
             cur.execute("""
-                SELECT id, qr_code, nome, quantita, posizione 
+                SELECT id, qr_code, nome, quantita, posizione, sap 
                 FROM prodotti 
-                WHERE qr_code ILIKE %s OR nome ILIKE %s 
+                WHERE qr_code ILIKE %s OR nome ILIKE %s OR sap ILIKE %s
                 ORDER BY nome ASC;
-            """, (f"%{search_query}%", f"%{search_query}%"))
+            """, (f"%{search_query}%", f"%{search_query}%", f"%{search_query}%"))
         else:
-            cur.execute("SELECT id, qr_code, nome, quantita, posizione FROM prodotti ORDER BY nome ASC;")
+            cur.execute("SELECT id, qr_code, nome, quantita, posizione, sap FROM prodotti ORDER BY nome ASC;")
         
         prodotti_db = cur.fetchall()
         cur.close()
@@ -96,7 +101,7 @@ def gestisci_prodotto(qr_code):
         return redirect(url_for('index'))
     try:
         cur = conn.cursor()
-        cur.execute("SELECT id, qr_code, nome, quantita, posizione FROM prodotti WHERE qr_code = %s;", (qr_code,))
+        cur.execute("SELECT id, qr_code, nome, quantita, posizione, sap FROM prodotti WHERE qr_code = %s;", (qr_code,))
         prodotto = cur.fetchone()
         cur.close()
         conn.close()
@@ -122,6 +127,7 @@ def aggiungi_prodotto():
     except ValueError:
         quantita = 0
     posizione = request.form.get('posizione', '')
+    sap = request.form.get('sap', '')
 
     if not qr_code or not nome:
         flash("QR Code e Nome sono obbligatori!", "error")
@@ -134,13 +140,14 @@ def aggiungi_prodotto():
     try:
         cur = conn.cursor()
         cur.execute("""
-            INSERT INTO prodotti (qr_code, nome, quantita, posizione)
-            VALUES (%s, %s, %s, %s)
+            INSERT INTO prodotti (qr_code, nome, quantita, posizione, sap)
+            VALUES (%s, %s, %s, %s, %s)
             ON CONFLICT (qr_code) DO UPDATE SET
                 nome = EXCLUDED.nome,
                 quantita = EXCLUDED.quantita,
-                posizione = EXCLUDED.posizione;
-        """, (qr_code, nome, quantita, posizione))
+                posizione = EXCLUDED.posizione,
+                sap = EXCLUDED.sap;
+        """, (qr_code, nome, quantita, posizione, sap))
             
         conn.commit()
         cur.close()
