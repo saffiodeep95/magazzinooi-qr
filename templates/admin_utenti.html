@@ -10,6 +10,8 @@
         :root {
             --primary: #4f46e5;
             --primary-hover: #4338ca;
+            --success: #10b981;
+            --success-hover: #059669;
             --danger: #ef4444;
             --danger-hover: #dc2626;
             --bg-color: #f8fafc;
@@ -20,7 +22,7 @@
         }
         body {
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-            max-width: 700px;
+            max-width: 750px;
             margin: 0 auto;
             padding: 16px;
             background: var(--bg-color);
@@ -47,21 +49,28 @@
             border: 1px solid var(--border-color);
             display: flex;
             flex-direction: column;
-            gap: 10px;
+            gap: 12px;
         }
         .user-row {
             display: flex;
             justify-content: space-between;
             align-items: center;
             flex-wrap: wrap;
-            gap: 10px;
+            gap: 12px;
             border-bottom: 1px solid var(--border-color);
-            padding-bottom: 12px;
-            margin-bottom: 12px;
+            padding-bottom: 14px;
+            margin-bottom: 14px;
         }
         .user-row:last-child { border-bottom: none; margin-bottom: 0; padding-bottom: 0; }
         .user-info font { font-weight: 700; font-size: 1.05rem; }
         .badge-admin { background: #e0e7ff; color: #4338ca; padding: 2px 8px; border-radius: 6px; font-size: 0.75rem; font-weight: 700; margin-left: 6px; }
+        .badge-perm { background: #dcfce7; color: #166534; padding: 2px 8px; border-radius: 6px; font-size: 0.75rem; font-weight: 700; margin-left: 6px; }
+        .actions-section {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            align-items: center;
+        }
         .actions-form {
             display: flex;
             gap: 6px;
@@ -72,7 +81,7 @@
             border: 1px solid var(--border-color);
             border-radius: 6px;
             font-size: 0.9rem;
-            width: 140px;
+            width: 130px;
         }
         button {
             padding: 8px 12px;
@@ -83,6 +92,8 @@
             font-size: 0.85rem;
             color: white;
         }
+        .btn-perm { background: var(--success); }
+        .btn-perm:hover { background: var(--success-hover); }
         .btn-reset { background: #0ea5e9; }
         .btn-reset:hover { background: #0284c7; }
         .btn-delete { background: var(--danger); }
@@ -92,8 +103,8 @@
 <body>
     <a href="{{ url_for('index') }}" class="back-link">← Torna alla Home Magazzino</a>
     
-    <h1>⚙️ Pannello Gestione Utenti</h1>
-    <p style="color: var(--text-muted); font-size: 0.9rem; margin-top: -8px; margin-bottom: 16px;">Da qui puoi resettare le password degli utenti o eliminare account.</p>
+    <h1>⚙️ Pannello Gestione Utenti e Permessi</h1>
+    <p style="color: var(--text-muted); font-size: 0.9rem; margin-top: -8px; margin-bottom: 16px;">Abilita i permessi di cancellazione, resetta le password o elimina gli account.</p>
 
     {% with messages = get_flashed_messages() %}
       {% if messages %}
@@ -111,13 +122,25 @@
                 {% if u.is_admin %}
                 <span class="badge-admin">ADMIN</span>
                 {% endif %}
+                {% if u.puoi_cancellare %}
+                <span class="badge-perm">PUÒ CANCELLARE</span>
+                {% endif %}
             </div>
-            <div style="display: flex; flex-wrap: wrap; gap: 8px;">
+            <div class="actions-section">
+                <!-- Tasto Abilita/Disabilita Permesso Cancellazione -->
+                <form action="{{ url_for('toggle_permesso', user_id=u.id) }}" method="POST">
+                    <button type="submit" class="btn-perm">
+                        {% if u.puoi_cancellare %}Revoca Cancella{% else %}Dai Cancella{% endif %}
+                    </button>
+                </form>
+
+                <!-- Form Reset Password -->
                 <form action="{{ url_for('reset_password', user_id=u.id) }}" method="POST" class="actions-form">
                     <input type="password" name="nuova_password" placeholder="Nuova password" required>
                     <button type="submit" class="btn-reset">Reset</button>
                 </form>
                 
+                <!-- Form Elimina Utente -->
                 {% if u.username != session.get('user') %}
                 <form action="{{ url_for('elimina_utente', user_id=u.id) }}" method="POST" onsubmit="return confirm('Vuoi davvero eliminare questo utente?');">
                     <button type="submit" class="btn-delete">Elimina</button>
