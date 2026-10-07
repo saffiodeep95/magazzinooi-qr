@@ -7,7 +7,7 @@ from psycopg2.extras import RealDictCursor
 from flask import Flask, render_template, request, redirect, url_for, flash, session
 from werkzeug.security import generate_password_hash, check_password_hash
 
-app = Flask(__name__)
+app = Flask(_name_)
 app.secret_key = os.environ.get("SECRET_KEY", "chiave-segreta-magazzino-omg")
 
 DATABASE_URL = os.environ.get("DATABASE_URL")
@@ -28,13 +28,14 @@ def init_db():
     if conn:
         try:
             cur = conn.cursor()
-            # Tabella Utenti con colonna is_admin
+            # Tabella Utenti con is_admin e puoi_cancellare
             cur.execute("""
                 CREATE TABLE IF NOT EXISTS utenti (
                     id SERIAL PRIMARY KEY,
                     username VARCHAR(255) UNIQUE NOT NULL,
                     password TEXT NOT NULL,
-                    is_admin BOOLEAN DEFAULT FALSE
+                    is_admin BOOLEAN DEFAULT FALSE,
+                    puoi_cancellare BOOLEAN DEFAULT FALSE
                 );
             """)
             # Tabella Prodotti
@@ -52,21 +53,23 @@ def init_db():
             cur.execute("ALTER TABLE prodotti ADD COLUMN IF NOT EXISTS sap VARCHAR(255);")
             cur.execute("ALTER TABLE prodotti ADD COLUMN IF NOT EXISTS modificato_da VARCHAR(255);")
             cur.execute("ALTER TABLE utenti ADD COLUMN IF NOT EXISTS is_admin BOOLEAN DEFAULT FALSE;")
+            cur.execute("ALTER TABLE utenti ADD COLUMN IF NOT EXISTS puoi_cancellare BOOLEAN DEFAULT FALSE;")
             
-            # Forzatura o creazione account admin di default
+            # Forzatura o creazione account admin di default con permessi completi
             admin_pass = generate_password_hash("admin123")
             cur.execute("""
-                INSERT INTO utenti (username, password, is_admin) 
-                VALUES ('admin', %s, TRUE)
+                INSERT INTO utenti (username, password, is_admin, puoi_cancellare) 
+                VALUES ('admin', %s, TRUE, TRUE)
                 ON CONFLICT (username) DO UPDATE SET 
                     password = EXCLUDED.password, 
-                    is_admin = TRUE;
+                    is_admin = TRUE,
+                    puoi_cancellare = TRUE;
             """, (admin_pass,))
 
             conn.commit()
             cur.close()
             conn.close()
-            print("Database inizializzato e account admin sincronizzato con successo.")
+            print("Database inizializzato con successo.")
         except Exception as e:
             print(f"Errore durante l'inizializzazione del database: {e}")
 
@@ -106,6 +109,7 @@ def login():
             if utente and check_password_hash(utente['password'], password):
                 session['user'] = utente['username']
                 session['is_admin'] = utente['is_admin']
+                session['puoi_cancellare'] = utente['puoi_cancellare']
                 flash(f"Benvenuto, {utente['username']}!", "success")
                 return redirect(url_for('index'))
             else:
@@ -133,7 +137,7 @@ def registra():
         
         try:
             cur = conn.cursor()
-            cur.execute("INSERT INTO utenti (username, password, is_admin) VALUES (%s, %s, FALSE);", (username, hashed_password))
+            cur.execute("INSERT INTO utenti (username, password, is_admin, puoi_cancellare) VALUES (%s, %s, FALSE, FALSE);", (username, hashed_password))
             conn.commit()
             cur.close()
             conn.close()
@@ -163,7 +167,7 @@ def gestione_utenti():
         return redirect(url_for('index'))
     try:
         cur = conn.cursor()
-        cur.execute("SELECT id, username, is_admin FROM utenti ORDER BY id ASC;")
+        cur.execute("SELECT id, username, is_admin, puoi_cancellare FROM utenti ORDER BY id ASC;")
         utenti = cur.fetchall()
         cur.close()
         conn.close()
@@ -171,6 +175,32 @@ def gestione_utenti():
     except Exception as e:
         flash(f"Errore nel recupero utenti: {e}", "error")
         return redirect(url_for('index'))
+
+@app.route('/admin/toggle_permesso/<int:user_id>', methods=['POST'])
+def toggle_permesso(user_id):
+    if 'user' not in session or not session.get('is_admin'):
+        flash("Accesso negato.", "error")
+        return redirect(url_for('index'))
+
+    conn = get_db_connection()
+    if not conn:
+        return redirect(url_for('index'))
+    try:
+        cur = conn.cursor()
+        # Inverte lo stato attuale del permesso puoi_cancellare
+        cur.execute("SELECT puoi_cancellare FROM utenti WHERE id = %s;", (user_id,))
+        res = cur.fetchone()
+        if res:
+            nuovo_stato = not res['puoi_cancellare']
+            cur.execute("UPDATE utenti SET puoi_cancellare = %s WHERE id = %s;", (nuovo_stato, user_id))
+            conn.commit()
+            flash("Permessi di cancellazione aggiornati con successo.", "success")
+        cur.close()
+        conn.close()
+    except Exception as e:
+        flash(f"Errore durante l'aggiornamento: {e}", "error")
+
+    return redirect(url_for('gestione_utenti'))
 
 @app.route('/admin/reset_password/<int:user_id>', methods=['POST'])
 def reset_password(user_id):
@@ -336,8 +366,8 @@ def aggiungi_prodotto():
 
 @app.route('/cancella/<qr_code>', methods=['POST'])
 def cancella_prodotto(qr_code):
-    if 'user' not in session or not session.get('is_admin'):
-        flash("Accesso negato. Solo gli amministratori possono eliminare gli articoli.", "error")
+    if 'user' not in session or (not session.get('is_admin') and not session.get('puoi_cancellare')):
+        flash("Accesso negato. Non hai i permessi per eliminare gli articoli.", "error")
         return redirect(url_for('gestisci_prodotto', qr_code=qr_code))
 
     conn = get_db_connection()
@@ -425,5 +455,5 @@ def scarico():
 
     return redirect(url_for('gestisci_prodotto', qr_code=qr_code))
 
-if __name__ == '_main_':
+if _name_ == '_main_':
     app.run(host='0.0.0.0', port=5000, debug=True)
