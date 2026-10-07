@@ -28,15 +28,16 @@ def init_db():
     if conn:
         try:
             cur = conn.cursor()
-            # Tabella Utenti
+            # Tabella Utenti con colonna is_admin
             cur.execute("""
                 CREATE TABLE IF NOT EXISTS utenti (
                     id SERIAL PRIMARY KEY,
                     username VARCHAR(255) UNIQUE NOT NULL,
-                    password TEXT NOT NULL
+                    password TEXT NOT NULL,
+                    is_admin BOOLEAN DEFAULT FALSE
                 );
             """)
-            # Tabella Prodotti con colonna 'sap' e 'modificato_da' per la firma
+            # Tabella Prodotti
             cur.execute("""
                 CREATE TABLE IF NOT EXISTS prodotti (
                     id SERIAL PRIMARY KEY,
@@ -48,10 +49,18 @@ def init_db():
                     modificato_da VARCHAR(255)
                 );
             """)
-            # Compatibilità per database esistenti
             cur.execute("ALTER TABLE prodotti ADD COLUMN IF NOT EXISTS sap VARCHAR(255);")
             cur.execute("ALTER TABLE prodotti ADD COLUMN IF NOT EXISTS modificato_da VARCHAR(255);")
+            cur.execute("ALTER TABLE utenti ADD COLUMN IF NOT EXISTS is_admin BOOLEAN DEFAULT FALSE;")
             
+            # Crea automaticamente un account admin di default se non esiste nessuno
+            cur.execute("SELECT COUNT(*) as count FROM utenti;")
+            res = cur.fetchone()
+            if res['count'] == 0:
+                admin_pass = generate_password_hash("admin123")
+                cur.execute("INSERT INTO utenti (username, password, is_admin) VALUES (%s, %s, %s);", ("admin", admin_pass, True))
+                print("Creato account amministratore di default: username 'admin', password 'admin123'")
+
             conn.commit()
             cur.close()
             conn.close()
@@ -94,6 +103,7 @@ def login():
 
             if utente and check_password_hash(utente['password'], password):
                 session['user'] = utente['username']
+                session['is_admin'] = utente['is_admin']
                 flash(f"Benvenuto, {utente['username']}!", "success")
                 return redirect(url_for('index'))
             else:
@@ -121,7 +131,12 @@ def registra():
         
         try:
             cur = conn.cursor()
-            cur.execute("INSERT INTO utenti (username, password) VALUES (%s, %s);", (username, hashed_password))
+            # Se è il primo utente in assoluto, rendilo admin
+            cur.execute("SELECT COUNT(*) as count FROM utenti;")
+            count = cur.fetchone()['count']
+            is_admin = True if count == 0 else False
+
+            cur.execute("INSERT INTO utenti (username, password, is_admin) VALUES (%s, %s, %s);", (username, hashed_password, is_admin))
             conn.commit()
             cur.close()
             conn.close()
@@ -136,9 +151,83 @@ def registra():
 
 @app.route('/logout')
 def logout():
-    session.pop('user', None)
+    session.clear()
     flash("Logout effettuato con successo.", "success")
     return redirect(url_for('login'))
+
+@app.route('/admin/utenti')
+def gestione_utenti():
+    if 'user' not in session or not session.get('is_admin'):
+        flash("Accesso negato. Solo gli amministratori possono gestire gli utenti.", "error")
+        return redirect(url_for('index'))
+
+    conn = get_db_connection()
+    if not conn:
+        return redirect(url_for('index'))
+    try:
+        cur = conn.cursor()
+        cur.execute("SELECT id, username, is_admin FROM utenti ORDER BY id ASC;")
+        utenti = cur.fetchall()
+        cur.close()
+        conn.close()
+        return render_template("admin_utenti.html", utenti=utenti)
+    except Exception as e:
+        flash(f"Errore nel recupero utenti: {e}", "error")
+        return redirect(url_for('index'))
+
+@app.route('/admin/reset_password/<int:user_id>', methods=['POST'])
+def reset_password(user_id):
+    if 'user' not in session or not session.get('is_admin'):
+        flash("Accesso negato.", "error")
+        return redirect(url_for('index'))
+
+    nuova_password = request.form.get('nuova_password', '').strip()
+    if not nuova_password:
+        flash("La nuova password non può essere vuota.", "error")
+        return redirect(url_for('gestione_utenti'))
+
+    hashed_pw = generate_password_hash(nuova_password)
+    conn = get_db_connection()
+    if not conn:
+        return redirect(url_for('index'))
+    try:
+        cur = conn.cursor()
+        cur.execute("UPDATE utenti SET password = %s WHERE id = %s;", (hashed_pw, user_id))
+        conn.commit()
+        cur.close()
+        conn.close()
+        flash("Password resettata con successo per l'utente.", "success")
+    except Exception as e:
+        flash(f"Errore durante il reset: {e}", "error")
+
+    return redirect(url_for('gestione_utenti'))
+
+@app.route('/admin/elimina_utente/<int:user_id>', methods=['POST'])
+def elimina_utente(user_id):
+    if 'user' not in session or not session.get('is_admin'):
+        flash("Accesso negato.", "error")
+        return redirect(url_for('index'))
+
+    conn = get_db_connection()
+    if not conn:
+        return redirect(url_for('index'))
+    try:
+        cur = conn.cursor()
+        # Impedisci all'admin di eliminare se stesso per errore
+        cur.execute("SELECT username FROM utenti WHERE id = %s;", (user_id,))
+        u = cur.fetchone()
+        if u and u['username'] == session['user']:
+            flash("Non puoi eliminare il tuo stesso account amministratore!", "error")
+        else:
+            cur.execute("DELETE FROM utenti WHERE id = %s;", (user_id,))
+            conn.commit()
+            flash("Account eliminato con successo.", "success")
+        cur.close()
+        conn.close()
+    except Exception as e:
+        flash(f"Errore durante l'eliminazione: {e}", "error")
+
+    return redirect(url_for('gestione_utenti'))
 
 @app.route('/')
 def index():
