@@ -27,24 +27,20 @@ def init_db():
     if conn:
         try:
             cur = conn.cursor()
-            # Crea la tabella se non esiste
             cur.execute("""
                 CREATE TABLE IF NOT EXISTS prodotti (
                     id SERIAL PRIMARY KEY,
                     qr_code VARCHAR(255) UNIQUE NOT NULL,
                     nome VARCHAR(255) NOT NULL,
                     quantita INT DEFAULT 0,
-                    posizione VARCHAR(255)
+                    posizione VARCHAR(255),
+                    foto TEXT
                 );
-            """)
-            # Aggiunge la colonna foto se manca nei database esistenti
-            cur.execute("""
-                ALTER TABLE prodotti ADD COLUMN IF NOT EXISTS foto TEXT;
             """)
             conn.commit()
             cur.close()
             conn.close()
-            print("Inizializzazione e aggiornamento database completati con successo.")
+            print("Inizializzazione database completata con successo.")
         except Exception as e:
             print(f"Errore durante l'inizializzazione del database: {e}")
 
@@ -119,4 +115,137 @@ def gestisci_prodotto(qr_code):
         return redirect(url_for('index'))
 
 @app.route('/aggiungi', methods=['POST'])
-def aggiungi
+def aggiungi_prodotto():
+    qr_code = request.form.get('qr_code')
+    nome = request.form.get('nome')
+    try:
+        quantita = int(request.form.get('quantita', 0))
+    except ValueError:
+        quantita = 0
+    posizione = request.form.get('posizione', '')
+
+    foto_file = request.files.get('foto')
+    foto_base64 = None
+    if foto_file and foto_file.filename != '':
+        foto_bytes = foto_file.read()
+        foto_base64 = base64.b64encode(foto_bytes).decode('utf-8')
+
+    if not qr_code or not nome:
+        flash("QR Code e Nome sono obbligatori!", "error")
+        return redirect(url_for('index'))
+
+    conn = get_db_connection()
+    if not conn:
+        flash("Errore di connessione al database", "error")
+        return redirect(url_for('index'))
+    try:
+        cur = conn.cursor()
+        if foto_base64:
+            cur.execute("""
+                INSERT INTO prodotti (qr_code, nome, quantita, posizione, foto)
+                VALUES (%s, %s, %s, %s, %s)
+                ON CONFLICT (qr_code) DO UPDATE SET
+                    nome = EXCLUDED.nome,
+                    quantita = EXCLUDED.quantita,
+                    posizione = EXCLUDED.posizione,
+                    foto = EXCLUDED.foto;
+            """, (qr_code, nome, quantita, posizione, foto_base64))
+        else:
+            cur.execute("""
+                INSERT INTO prodotti (qr_code, nome, quantita, posizione)
+                VALUES (%s, %s, %s, %s)
+                ON CONFLICT (qr_code) DO UPDATE SET
+                    nome = EXCLUDED.nome,
+                    quantita = EXCLUDED.quantita,
+                    posizione = EXCLUDED.posizione;
+            """, (qr_code, nome, quantita, posizione))
+            
+        conn.commit()
+        cur.close()
+        conn.close()
+        flash("Prodotto aggiunto o aggiornato con successo!", "success")
+    except Exception as e:
+        flash(f"Errore nell'inserimento: {e}", "error")
+    return redirect(url_for('index'))
+
+@app.route('/cancella/<qr_code>', methods=['POST'])
+def cancella_prodotto(qr_code):
+    conn = get_db_connection()
+    if not conn:
+        flash("Errore di connessione al database", "error")
+        return redirect(url_for('index'))
+    try:
+        cur = conn.cursor()
+        cur.execute("DELETE FROM prodotti WHERE qr_code = %s;", (qr_code,))
+        conn.commit()
+        cur.close()
+        conn.close()
+        flash("Prodotto eliminato con successo!", "success")
+    except Exception as e:
+        flash(f"Errore durante l'eliminazione: {e}", "error")
+    return redirect(url_for('index'))
+
+@app.route('/carico', methods=['POST'])
+def carico():
+    qr_code = request.form.get('qr_code')
+    try:
+        quantita = int(request.form.get('quantita', 1))
+    except ValueError:
+        quantita = 1
+
+    if not qr_code:
+        flash("QR Code non valido o mancante!", "error")
+        return redirect(url_for('index'))
+
+    conn = get_db_connection()
+    if not conn:
+        flash("Errore di connessione al database", "error")
+        return redirect(url_for('index'))
+    try:
+        cur = conn.cursor()
+        cur.execute("UPDATE prodotti SET quantita = quantita + %s WHERE qr_code = %s;", (quantita, qr_code))
+        if cur.rowcount == 0:
+            flash("Prodotto non trovato!", "error")
+        else:
+            conn.commit()
+            flash(f"Carico di {quantita} pz effettuato con successo!", "success")
+        cur.close()
+        conn.close()
+    except Exception as e:
+        flash(f"Errore durante il carico: {e}", "error")
+    
+    return redirect(url_for('gestisci_prodotto', qr_code=qr_code))
+
+@app.route('/scarico', methods=['POST'])
+def scarico():
+    qr_code = request.form.get('qr_code')
+    try:
+        quantita = int(request.form.get('quantita', 1))
+    except ValueError:
+        quantita = 1
+
+    if not qr_code:
+        flash("QR Code non valido o mancante!", "error")
+        return redirect(url_for('index'))
+
+    conn = get_db_connection()
+    if not conn:
+        flash("Errore di connessione al database", "error")
+        return redirect(url_for('index'))
+    try:
+        cur = conn.cursor()
+        cur.execute("UPDATE prodotti SET quantita = GREATEST(0, quantita - %s) WHERE qr_code = %s;", (quantita, qr_code))
+        if cur.rowcount == 0:
+            flash("Prodotto non trovato!", "error")
+        else:
+            conn.commit()
+            flash(f"Scarico di {quantita} pz effettuato con successo!", "success")
+        cur.close()
+        conn.close()
+    except Exception as e:
+        flash(f"Errore durante lo scarico: {e}", "error")
+
+    return redirect(url_for('gestisci_prodotto', qr_code=qr_code))
+
+if __name__ == '_main_':
+    app.run(host='0.0.0.0', port=5000, debug=True)
