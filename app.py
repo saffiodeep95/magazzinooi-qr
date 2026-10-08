@@ -24,7 +24,8 @@ def init_db():
                 username VARCHAR(255) UNIQUE NOT NULL,
                 password TEXT NOT NULL,
                 is_admin BOOLEAN DEFAULT FALSE,
-                puo_vedere_manutenzione BOOLEAN DEFAULT FALSE
+                puo_vedere_manutenzione BOOLEAN DEFAULT FALSE,
+                puo_eliminare BOOLEAN DEFAULT FALSE
             );
             CREATE TABLE IF NOT EXISTS prodotti (
                 id SERIAL PRIMARY KEY,
@@ -52,6 +53,8 @@ def init_db():
             );
         """)
         cur.execute("ALTER TABLE utenti ADD COLUMN IF NOT EXISTS puo_vedere_manutenzione BOOLEAN DEFAULT FALSE;")
+        cur.execute("ALTER TABLE utenti ADD COLUMN IF NOT EXISTS puo_eliminare BOOLEAN DEFAULT FALSE;")
+        
         cur.execute("ALTER TABLE prodotti ADD COLUMN IF NOT EXISTS in_manutenzione BOOLEAN DEFAULT FALSE;")
         cur.execute("ALTER TABLE prodotti ADD COLUMN IF NOT EXISTS cliente_manutenzione VARCHAR(255);")
         cur.execute("ALTER TABLE prodotti ADD COLUMN IF NOT EXISTS quantita_manutenzione INT DEFAULT 0;")
@@ -63,10 +66,10 @@ def init_db():
 
         admin_pass = generate_password_hash("admin123")
         cur.execute("""
-            INSERT INTO utenti (username, password, is_admin, puo_vedere_manutenzione) 
-            VALUES ('admin', %s, TRUE, TRUE)
+            INSERT INTO utenti (username, password, is_admin, puo_vedere_manutenzione, puo_eliminare) 
+            VALUES ('admin', %s, TRUE, TRUE, TRUE)
             ON CONFLICT (username) DO UPDATE 
-            SET is_admin = TRUE, puo_vedere_manutenzione = TRUE;
+            SET is_admin = TRUE, puo_vedere_manutenzione = TRUE, puo_eliminare = TRUE;
         """, (admin_pass,))
         
         conn.commit()
@@ -94,6 +97,7 @@ def login():
                 session["username"] = user["username"]
                 session["is_admin"] = bool(user.get("is_admin", False))
                 session["puo_vedere_manutenzione"] = bool(user.get("puo_vedere_manutenzione", False))
+                session["puo_eliminare"] = bool(user.get("puo_eliminare", False))
                 return redirect(url_for("index"))
             else:
                 flash("Credenziali non valide.", "error")
@@ -116,11 +120,11 @@ def registra():
                 hashed = generate_password_hash(password)
                 conn = get_db_connection()
                 cur = conn.cursor()
-                cur.execute("INSERT INTO utenti (username, password, is_admin, puo_vedere_manutenzione) VALUES (%s, %s, FALSE, FALSE);", (username, hashed))
+                cur.execute("INSERT INTO utenti (username, password, is_admin, puo_vedere_manutenzione, puo_eliminare) VALUES (%s, %s, FALSE, FALSE, FALSE);", (username, hashed))
                 conn.commit()
                 cur.close()
                 conn.close()
-                flash("Registrazione avvenuta con successo!", "success")
+                flash("Registrazione avvenuta con successo! In attesa di abilitazione dall'Admin.", "success")
                 return redirect(url_for("login"))
             except Exception as e:
                 flash(f"Errore: utente già esistente.", "error")
@@ -142,18 +146,42 @@ def admin_utenti():
         print(f"Errore utenti: {e}")
     return render_template("admin_utenti.html", utenti=utenti_list)
 
-@app.route("/admin/toggle_permesso/<int:user_id>", methods=["POST"])
-def toggle_permesso(user_id):
+@app.route("/admin/toggle_permesso/<int:user_id>/<tipo>", methods=["POST"])
+def toggle_permesso(user_id, tipo):
     if not session.get("is_admin"):
         return redirect(url_for("index"))
     try:
         conn = get_db_connection()
         cur = conn.cursor()
-        cur.execute("UPDATE utenti SET puo_vedere_manutenzione = NOT puo_vedere_manutenzione WHERE id = %s;", (user_id,))
+        if tipo == "manutenzione":
+            cur.execute("UPDATE utenti SET puo_vedere_manutenzione = NOT puo_vedere_manutenzione WHERE id = %s;", (user_id,))
+        elif tipo == "eliminazione":
+            cur.execute("UPDATE utenti SET puo_eliminare = NOT puo_eliminare WHERE id = %s;", (user_id,))
         conn.commit()
         cur.close()
         conn.close()
-        flash("Permessi aggiornati.", "success")
+        flash("Permessi aggiornati con successo.", "success")
+    except Exception as e:
+        flash(f"Errore: {e}", "error")
+    return redirect(url_for("admin_utenti"))
+
+@app.route("/admin/reset_password/<int:user_id>", methods=["POST"])
+def reset_password(user_id):
+    if not session.get("is_admin"):
+        return redirect(url_for("index"))
+    nuova_password = request.form.get("nuova_password", "").strip()
+    if not nuova_password:
+        flash("La nuova password non può essere vuota.", "error")
+        return redirect(url_for("admin_utenti"))
+    try:
+        hashed = generate_password_hash(nuova_password)
+        conn = get_db_connection()
+        cur = conn.cursor()
+        cur.execute("UPDATE utenti SET password = %s WHERE id = %s;", (hashed, user_id))
+        conn.commit()
+        cur.close()
+        conn.close()
+        flash("Password resettata con successo.", "success")
     except Exception as e:
         flash(f"Errore: {e}", "error")
     return redirect(url_for("admin_utenti"))
@@ -295,8 +323,8 @@ def scarico():
 def elimina_prodotto():
     if "username" not in session:
         return redirect(url_for("login"))
-    if not session.get("is_admin"):
-        flash("Solo l'amministratore può eliminare i prodotti.", "error")
+    if not session.get("is_admin") and not session.get("puo_eliminare"):
+        flash("Non hai i permessi per eliminare i prodotti.", "error")
         return redirect(url_for("index"))
 
     qr_code = request.form.get("qr_code")
@@ -322,7 +350,7 @@ def manda_manutenzione(qr_code):
         flash("Non hai i permessi per gestire le manutenzioni.", "error")
         return redirect(url_for("gestisci_prodotto", qr_code=qr_code))
 
-    cliente = request.form.get("cliente_manutenzione", "")
+    cliente = request.form.get("cliente_manutenzione", "").strip()
     qta_maint = int(request.form.get("quantita_manutenzione", 1) or 1)
     data_spedizione = request.form.get("data_spedizione") or None
     data_riconsegna = request.form.get("data_riconsegna") or None
@@ -333,6 +361,14 @@ def manda_manutenzione(qr_code):
     try:
         conn = get_db_connection()
         cur = conn.cursor()
+        
+        if cliente:
+            cur.execute("""
+                INSERT INTO clienti (nome_azienda)
+                VALUES (%s)
+                ON CONFLICT (nome_azienda) DO NOTHING;
+            """, (cliente,))
+
         cur.execute("SELECT quantita, in_manutenzione FROM prodotti WHERE qr_code = %s;", (qr_code,))
         prod = cur.fetchone()
         
@@ -360,7 +396,7 @@ def manda_manutenzione(qr_code):
         conn.commit()
         cur.close()
         conn.close()
-        flash("Prodotto mandato in manutenzione e pezzi scalati!", "success")
+        flash("Manutenzione salvata e cliente sincronizzato in rubrica!", "success")
     except Exception as e:
         flash(f"Errore: {e}", "error")
         
@@ -475,6 +511,22 @@ def aggiungi_cliente():
         except Exception as e:
             flash(f"Errore: {e}", "error")
 
+    return redirect(url_for("clienti"))
+
+@app.route("/elimina_cliente/<int:cliente_id>", methods=["POST"])
+def elimina_cliente(cliente_id):
+    if "username" not in session:
+        return redirect(url_for("login"))
+    try:
+        conn = get_db_connection()
+        cur = conn.cursor()
+        cur.execute("DELETE FROM clienti WHERE id = %s;", (cliente_id,))
+        conn.commit()
+        cur.close()
+        conn.close()
+        flash("Cliente eliminato dalla rubrica.", "success")
+    except Exception as e:
+        flash(f"Errore eliminazione cliente: {e}", "error")
     return redirect(url_for("clienti"))
 
 @app.route("/manutenzioni")
