@@ -33,8 +33,8 @@
         .form-group { margin-bottom: 12px; }
         label { display: block; font-size: 0.85rem; font-weight: 600; margin-bottom: 4px; color: var(--text-muted); }
         input, select, textarea { width: 100%; padding: 8px 12px; border: 1px solid var(--border-color); border-radius: 8px; font-size: 0.9rem; box-sizing: border-box; }
-        .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
-        @media(max-width: 600px) { .grid-2 { grid-template-columns: 1fr; } }
+        .grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+        @media(max-width: 768px) { .grid-3 { grid-template-columns: 1fr; } }
     </style>
 </head>
 <body>
@@ -56,26 +56,43 @@
       {% endif %}
     {% endwith %}
 
-    <!-- Sezione Operazioni / Aggiunta rapida -->
+    <!-- Sezione Inserimento / Aggiunta Prodotto -->
     <div class="card">
-        <h2>Azioni Rapide & Gestione</h2>
-        <div style="display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 15px;">
-            <a href="{{ url_for('registra') if 'registra' in url_for._globals_ else '#' }}" class="btn btn-success" style="display:none;">Nuovo Utente</a>
-        </div>
-        
-        <!-- Form rapido per aggiungere o gestire prodotti se previsto dalla tua logica -->
-        <form action="{{ url_for('index') }}" method="POST">
-            <div class="grid-2">
+        <h2>➕ Aggiungi o Aggiorna Prodotto</h2>
+        <form action="{{ url_for('aggiungi_prodotto') if 'aggiungi_prodotto' in url_for._globals_ else '#' }}" method="POST">
+            <div class="grid-3">
                 <div class="form-group">
-                    <label>Cerca / Filtra Prodotto</label>
-                    <input type="text" name="q" placeholder="Inserisci nome o QR code...">
+                    <label>QR Code / Codice</label>
+                    <input type="text" name="qr_code" required placeholder="Scansiona o inserisci QR...">
+                </div>
+                <div class="form-group">
+                    <label>Nome Prodotto</label>
+                    <input type="text" name="nome" required placeholder="Nome articolo...">
+                </div>
+                <div class="form-group">
+                    <label>Codice SAP</label>
+                    <input type="text" name="sap" placeholder="Codice SAP...">
+                </div>
+            </div>
+            <div class="grid-3" style="margin-top: 10px;">
+                <div class="form-group">
+                    <label>Quantità</label>
+                    <input type="number" name="quantita" value="1" min="0">
+                </div>
+                <div class="form-group">
+                    <label>Scaffale / Posizione</label>
+                    <input type="text" name="posizione" placeholder="Es. Scaffale A1...">
+                </div>
+                <div class="form-group" style="display: flex; align-items: flex-end;">
+                    <button type="submit" class="btn btn-success" style="width: 100%;">Salva Prodotto</button>
                 </div>
             </div>
         </form>
     </div>
 
+    <!-- Elenco Prodotti in Magazzino -->
     <div class="card">
-        <h2>Elenco Prodotti in Magazzino</h2>
+        <h2>📋 Elenco Prodotti in Magazzino</h2>
         {% if prodotti %}
         <div style="overflow-x: auto;">
             <table>
@@ -83,12 +100,11 @@
                     <tr>
                         <th>QR Code</th>
                         <th>Nome Prodotto</th>
+                        <th>Codice SAP</th>
                         <th>Quantità</th>
-                        <th>Posizione</th>
-                        <th>SAP</th>
+                        <th>Scaffale / Posizione</th>
                         <th>Stato</th>
                         <th>Cliente / Note</th>
-                        <th>Modificato da</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -96,9 +112,9 @@
                     <tr>
                         <td><code>{{ p.qr_code }}</code></td>
                         <td><strong>{{ p.nome }}</strong></td>
+                        <td>{{ p.sap if p.sap else '-' }}</td>
                         <td>{{ p.quantita }}</td>
                         <td>{{ p.posizione if p.posizione else '-' }}</td>
-                        <td>{{ p.sap if p.sap else '-' }}</td>
                         <td>
                             <span style="padding: 3px 8px; border-radius: 6px; font-size: 0.75rem; background: #e0e7ff; color: #3730a3; font-weight: 600;">
                                 {{ p.stato }}
@@ -108,7 +124,6 @@
                             {{ p.cliente_manutenzione if p.cliente_manutenzione else '-' }}
                             {% if p.note_manutenzione %}<br><small style="color: var(--text-muted);">{{ p.note_manutenzione }}</small>{% endif %}
                         </td>
-                        <td><small>{{ p.modificato_da if p.modificato_da else '-' }}</small></td>
                     </tr>
                     {% endfor %}
                 </tbody>
