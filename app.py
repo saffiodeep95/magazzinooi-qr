@@ -1,4 +1,4 @@
-[11:58, 08/10/2026] Marco Pavan: import os
+import os
 import psycopg2
 from psycopg2.extras import RealDictCursor
 from flask import Flask, render_template, request, redirect, url_for, flash, session
