@@ -24,7 +24,9 @@ def init_db():
                 nome VARCHAR(255) NOT NULL,
                 quantita INT DEFAULT 0,
                 posizione VARCHAR(255),
-                sap VARCHAR(255)
+                sap VARCHAR(255),
+                stato VARCHAR(50) DEFAULT 'Disponibile',
+                cliente_manutenzione VARCHAR(255)
             );
             CREATE TABLE IF NOT EXISTS clienti (
                 id SERIAL PRIMARY KEY,
@@ -49,7 +51,7 @@ def index():
     try:
         conn = get_db_connection()
         cur = conn.cursor()
-        cur.execute("SELECT id, qr_code, nome, quantita, posizione, sap FROM prodotti ORDER BY nome ASC;")
+        cur.execute("SELECT * FROM prodotti ORDER BY id DESC;")
         prodotti = cur.fetchall()
         cur.close()
         conn.close()
@@ -63,7 +65,7 @@ def gestisci_prodotto(qr_code):
     try:
         conn = get_db_connection()
         cur = conn.cursor()
-        cur.execute("SELECT id, qr_code, nome, quantita, posizione, sap FROM prodotti WHERE qr_code = %s;", (qr_code,))
+        cur.execute("SELECT * FROM prodotti WHERE qr_code = %s;", (qr_code,))
         prodotto = cur.fetchone()
         cur.close()
         conn.close()
@@ -90,8 +92,8 @@ def aggiungi_prodotto():
             cur = conn.cursor()
             cur.execute(
                 """
-                INSERT INTO prodotti (qr_code, nome, sap, quantita, posizione)
-                VALUES (%s, %s, %s, %s, %s)
+                INSERT INTO prodotti (qr_code, nome, sap, quantita, posizione, stato)
+                VALUES (%s, %s, %s, %s, %s, 'Disponibile')
                 ON CONFLICT (qr_code)
                 DO UPDATE SET quantita = prodotti.quantita + EXCLUDED.quantita,
                               nome = EXCLUDED.nome,
@@ -164,6 +166,26 @@ def elimina_prodotto():
 
     return redirect(url_for("index"))
 
+@app.route("/stato_manutenzione/<qr_code>", methods=["POST"])
+def stato_manutenzione(qr_code):
+    nuovo_stato = request.form.get("stato", "In Manutenzione")
+    cliente = request.form.get("cliente_manutenzione", "")
+    try:
+        conn = get_db_connection()
+        cur = conn.cursor()
+        cur.execute("""
+            UPDATE prodotti 
+            SET stato = %s, cliente_manutenzione = %s 
+            WHERE qr_code = %s;
+        """, (nuovo_stato, cliente if cliente else None, qr_code))
+        conn.commit()
+        cur.close()
+        conn.close()
+        flash(f"Stato prodotto aggiornato a: {nuovo_stato}", "success")
+    except Exception as e:
+        flash(f"Errore aggiornamento stato: {e}", "error")
+    return redirect(url_for("gestisci_prodotto", qr_code=qr_code))
+
 @app.route("/clienti")
 @app.route("/lista_clienti")
 def clienti():
@@ -215,7 +237,17 @@ def aggiungi_cliente():
 @app.route("/manutenzioni")
 @app.route("/lista_manutenzioni")
 def lista_manutenzioni():
-    return render_template("manutenzioni.html", prodotti=[])
+    prodotti_maint = []
+    try:
+        conn = get_db_connection()
+        cur = conn.cursor()
+        cur.execute("SELECT * FROM prodotti WHERE stato = 'In Manutenzione' ORDER BY id DESC;")
+        prodotti_maint = cur.fetchall()
+        cur.close()
+        conn.close()
+    except Exception as e:
+        print(f"Errore manutenzioni: {e}")
+    return render_template("manutenzioni.html", prodotti=prodotti_maint)
 
 if __name__ == "_main_":
     app.run(host="0.0.0.0", port=5000, debug=True)
