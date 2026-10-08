@@ -11,29 +11,34 @@
             --primary: #4f46e5;
             --success: #10b981;
             --danger: #ef4444;
+            --warning: #f59e0b;
+            --info: #0284c7;
             --bg-color: #f8fafc;
             --card-bg: #ffffff;
             --text-main: #1e293b;
             --text-muted: #64748b;
             --border-color: #e2e8f0;
         }
-        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; max-width: 1000px; margin: 0 auto; padding: 16px; background: var(--bg-color); color: var(--text-main); }
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; max-width: 1200px; margin: 0 auto; padding: 16px; background: var(--bg-color); color: var(--text-main); }
         .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; background: var(--card-bg); padding: 15px 20px; border-radius: 12px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); border: 1px solid var(--border-color); flex-wrap: wrap; gap: 10px; }
         .nav-links { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
         .btn { background: var(--primary); color: white; padding: 8px 14px; border-radius: 8px; text-decoration: none; font-size: 0.85rem; font-weight: 600; border: none; cursor: pointer; display: inline-block; }
         .btn:hover { opacity: 0.9; }
         .btn-danger { background: var(--danger); }
         .btn-success { background: var(--success); }
+        .btn-warning { background: var(--warning); color: #fff; }
+        .btn-info { background: var(--info); }
         .card { background: var(--card-bg); padding: 20px; border-radius: 14px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); margin-bottom: 16px; border: 1px solid var(--border-color); }
         h1, h2 { font-size: 1.2rem; color: var(--text-main); margin-top: 0; }
-        table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 0.9rem; }
-        th, td { padding: 10px; text-align: left; border-bottom: 1px solid var(--border-color); }
+        table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 0.85rem; }
+        th, td { padding: 10px; text-align: left; border-bottom: 1px solid var(--border-color); vertical-align: middle; }
         th { background: #f1f5f9; color: var(--text-muted); font-weight: 600; }
         .flash { background: #dcfce7; color: #166534; padding: 10px; border-radius: 8px; margin-bottom: 15px; font-size: 0.9rem; border: 1px solid #bbf7d0; }
         .form-group { margin-bottom: 12px; }
         label { display: block; font-size: 0.85rem; font-weight: 600; margin-bottom: 4px; color: var(--text-muted); }
         input, select, textarea { width: 100%; padding: 8px 12px; border: 1px solid var(--border-color); border-radius: 8px; font-size: 0.9rem; box-sizing: border-box; }
         .grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+        .action-btns { display: flex; gap: 5px; flex-wrap: wrap; }
         @media(max-width: 768px) { .grid-3 { grid-template-columns: 1fr; } }
     </style>
 </head>
@@ -43,7 +48,7 @@
         <h1>📦 Magazzino OMG</h1>
         <div class="nav-links">
             <a href="{{ url_for('clienti') }}" class="btn">Clienti</a>
-            <a href="{{ url_for('lista_manutenzioni') }}" class="btn" style="background: #0284c7;">Manutenzioni</a>
+            <a href="{{ url_for('lista_manutenzioni') }}" class="btn btn-info">Manutenzioni</a>
             <a href="{{ url_for('logout') }}" class="btn btn-danger">Esci</a>
         </div>
     </div>
@@ -90,7 +95,7 @@
         </form>
     </div>
 
-    <!-- Elenco Prodotti in Magazzino -->
+    <!-- Elenco Prodotti in Magazzino con tutte le informazioni -->
     <div class="card">
         <h2>📋 Elenco Prodotti in Magazzino</h2>
         {% if prodotti %}
@@ -100,11 +105,13 @@
                     <tr>
                         <th>QR Code</th>
                         <th>Nome Prodotto</th>
-                        <th>Codice SAP</th>
-                        <th>Quantità</th>
-                        <th>Scaffale / Posizione</th>
+                        <th>SAP</th>
+                        <th>Qtà</th>
+                        <th>Scaffale</th>
                         <th>Stato</th>
-                        <th>Cliente / Note</th>
+                        <th>Cliente / Note Manutenzione</th>
+                        <th>Modificato da</th>
+                        <th>Azioni & QR</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -123,6 +130,13 @@
                         <td>
                             {{ p.cliente_manutenzione if p.cliente_manutenzione else '-' }}
                             {% if p.note_manutenzione %}<br><small style="color: var(--text-muted);">{{ p.note_manutenzione }}</small>{% endif %}
+                        </td>
+                        <td><small>{{ p.modificato_da if p.modificato_da else '-' }}</small></td>
+                        <td>
+                            <div class="action-btns">
+                                <a href="{{ url_for('lista_manutenzioni') }}" class="btn btn-warning" style="padding: 4px 8px; font-size: 0.75rem;">Gestisci</a>
+                                <a href="#" class="btn" style="padding: 4px 8px; font-size: 0.75rem; background: #64748b;" onclick="window.print(); return false;">Stampa QR</a>
+                            </div>
                         </td>
                     </tr>
                     {% endfor %}
