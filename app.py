@@ -18,6 +18,8 @@ def init_db():
     try:
         conn = get_db_connection()
         cur = conn.cursor()
+        
+        # Crea le tabelle se non esistono
         cur.execute("""
             CREATE TABLE IF NOT EXISTS utenti (
                 id SERIAL PRIMARY KEY,
@@ -51,19 +53,27 @@ def init_db():
                 email VARCHAR(100)
             );
         """)
-        # Crea admin di default con permessi pieni
+        
+        # Aggiunge la colonna 'puo_vedere_manutenzione' se la tabella utenti esisteva già senza di essa
+        cur.execute("""
+            ALTER TABLE utenti ADD COLUMN IF NOT EXISTS puo_vedere_manutenzione BOOLEAN DEFAULT FALSE;
+        """)
+
+        # Crea utente admin di default con permessi pieni
         admin_pass = generate_password_hash("admin123")
         cur.execute("""
             INSERT INTO utenti (username, password, is_admin, puo_vedere_manutenzione) 
             VALUES ('admin', %s, TRUE, TRUE)
-            ON CONFLICT (username) DO NOTHING;
+            ON CONFLICT (username) DO UPDATE 
+            SET is_admin = TRUE, puo_vedere_manutenzione = TRUE;
         """, (admin_pass,))
         
         conn.commit()
         cur.close()
         conn.close()
+        print("Database inizializzato e aggiornato con successo.")
     except Exception as e:
-        print(f"Errore DB: {e}")
+        print(f"Errore DB Init: {e}")
 
 init_db()
 
@@ -83,8 +93,8 @@ def login():
             
             if user and check_password_hash(user["password"], password):
                 session["username"] = user["username"]
-                session["is_admin"] = user["is_admin"]
-                session["puo_vedere_manutenzione"] = user["puo_vedere_manutenzione"]
+                session["is_admin"] = bool(user.get("is_admin", False))
+                session["puo_vedere_manutenzione"] = bool(user.get("puo_vedere_manutenzione", False))
                 return redirect(url_for("index"))
             else:
                 flash("Credenziali non valide.", "error")
@@ -107,7 +117,6 @@ def registra():
                 hashed = generate_password_hash(password)
                 conn = get_db_connection()
                 cur = conn.cursor()
-                # I nuovi utenti partono senza permessi di manutenzione finché l'admin non li abilita
                 cur.execute("INSERT INTO utenti (username, password, is_admin, puo_vedere_manutenzione) VALUES (%s, %s, FALSE, FALSE);", (username, hashed))
                 conn.commit()
                 cur.close()
@@ -145,7 +154,6 @@ def toggle_permesso(user_id):
     try:
         conn = get_db_connection()
         cur = conn.cursor()
-        # Inverte lo stato del permesso manutenzione per quell'utente
         cur.execute("UPDATE utenti SET puo_vedere_manutenzione = NOT puo_vedere_manutenzione WHERE id = %s;", (user_id,))
         conn.commit()
         cur.close()
@@ -295,7 +303,6 @@ def elimina_prodotto():
     if "username" not in session:
         return redirect(url_for("login"))
     
-    # SOLO L'ADMIN PUÒ ELIMINARE I PRODOTTI
     if not session.get("is_admin"):
         flash("Accesso negato: solo l'amministratore può eliminare i prodotti dal magazzino.", "error")
         return redirect(url_for("index"))
@@ -320,7 +327,6 @@ def stato_manutenzione(qr_code):
     if "username" not in session:
         return redirect(url_for("login"))
     
-    # CONTROLLO PERMESSO MANUTENZIONE ASSEGNATO DALL'ADMIN
     if not session.get("is_admin") and not session.get("puo_vedere_manutenzione"):
         flash("Non hai i permessi necessari per modificare o gestire le manutenzioni.", "error")
         return redirect(url_for("gestisci_prodotto", qr_code=qr_code))
@@ -440,7 +446,6 @@ def lista_manutenzioni():
     if "username" not in session:
         return redirect(url_for("login"))
     
-    # CONTROLLO ACCESSO SEZIONE MANUTENZIONI DECISO DALL'ADMIN
     if not session.get("is_admin") and not session.get("puo_vedere_manutenzione"):
         flash("Accesso negato: l'amministratore non ti ha autorizzato a visualizzare la sezione manutenzioni.", "error")
         return redirect(url_for("index"))
