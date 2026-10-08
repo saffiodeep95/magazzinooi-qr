@@ -9,96 +9,39 @@
     <style>
         :root {
             --primary: #4f46e5;
-            --primary-hover: #4338ca;
+            --success: #10b981;
+            --danger: #ef4444;
             --bg-color: #f8fafc;
             --card-bg: #ffffff;
             --text-main: #1e293b;
             --text-muted: #64748b;
             --border-color: #e2e8f0;
         }
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-            max-width: 900px;
-            margin: 0 auto;
-            padding: 12px;
-            background: var(--bg-color);
-            color: var(--text-main);
-            -webkit-font-smoothing: antialiased;
-        }
-        .top-bar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
-        header { display: flex; align-items: center; gap: 12px; }
-        header h1 { font-size: 1.5rem; font-weight: 800; color: var(--text-main); margin: 0; }
-        .logo-badge { background: var(--primary); color: white; font-size: 1.3rem; width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; border-radius: 12px; }
-        .user-actions { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
-        .maint-nav-btn { background: #f59e0b; color: white; padding: 8px 12px; border-radius: 8px; text-decoration: none; font-size: 0.85rem; font-weight: 600; }
-        .client-nav-btn { background: #10b981; color: white; padding: 8px 12px; border-radius: 8px; text-decoration: none; font-size: 0.85rem; font-weight: 600; }
-        .admin-btn { background: #0ea5e9; color: white; padding: 8px 12px; border-radius: 8px; text-decoration: none; font-size: 0.85rem; font-weight: 600; }
-        .logout-btn { background: #ef4444; color: white; padding: 8px 12px; border-radius: 8px; text-decoration: none; font-size: 0.85rem; font-weight: 600; }
-        
-        .alert-banner {
-            background: #fef2f2; border: 1px solid #fecaca; color: #991b1b; padding: 12px 16px; border-radius: 12px; margin-bottom: 16px; font-weight: 600; font-size: 0.9rem; display: flex; align-items: center; justify-content: space-between;
-        }
-        .alert-banner.warning {
-            background: #fffbeb; border-color: #fde68a; color: #92400e;
-        }
-
-        .flash { background: #dcfce7; color: #166534; padding: 12px 16px; margin-bottom: 16px; border-radius: 10px; font-weight: 500; border: 1px solid #bbf7d0; font-size: 0.9rem; }
-        .card { background: var(--card-bg); padding: 16px; border-radius: 16px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05); margin-bottom: 16px; border: 1px solid var(--border-color); }
-        h2 { font-size: 1rem; font-weight: 600; color: var(--text-main); margin-top: 0; margin-bottom: 12px; }
-        label { display: block; font-size: 0.8rem; font-weight: 600; color: var(--text-muted); margin-bottom: 4px; }
-        input, button { width: 100%; padding: 12px; margin-bottom: 12px; border: 1px solid var(--border-color); border-radius: 10px; box-sizing: border-box; font-size: 1rem; background: #fff; }
-        button { background: var(--primary); color: white; border: none; font-weight: 600; cursor: pointer; }
-        button:hover { background: var(--primary-hover); }
-        .search-box { display: flex; gap: 8px; margin-bottom: 0; }
-        .search-box input { margin-bottom: 0; }
-        .search-box button { width: auto; padding: 0 16px; }
-        .btn-secondary { background: #64748b; color: white; padding: 12px 14px; border-radius: 10px; text-decoration: none; font-weight: 600; border: none; display: inline-block; }
-        
-        .items-grid { display: flex; flex-direction: column; gap: 12px; margin-top: 16px; }
-        .item-card { background: var(--card-bg); border: 1px solid var(--border-color); border-radius: 14px; padding: 14px; display: flex; align-items: center; justify-content: space-between; }
-        .item-info { flex-grow: 1; padding-right: 12px; }
-        .item-title { font-weight: 700; font-size: 1.05rem; color: var(--text-main); margin-bottom: 4px; }
-        .item-details { font-size: 0.85rem; color: var(--text-muted); display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 4px; }
-        .item-badge { background: #f1f5f9; padding: 2px 6px; border-radius: 4px; font-family: monospace; }
-        .item-qty { font-weight: 800; color: var(--primary); font-size: 1.1rem; }
-        .badge-maint { background: #fef3c7; color: #d97706; padding: 2px 6px; border-radius: 4px; font-weight: 700; font-size: 0.75rem; }
-        .badge-repaired { background: #dcfce7; color: #166534; padding: 2px 6px; border-radius: 4px; font-weight: 700; font-size: 0.75rem; }
-        .item-signature { font-size: 0.75rem; color: var(--primary); font-weight: 600; margin-top: 4px; }
-        .item-right { display: flex; flex-direction: column; align-items: center; gap: 8px; }
-        img.qr-thumb { width: 50px; height: 50px; border-radius: 6px; background: #fff; padding: 2px; border: 1px solid var(--border-color); display: block; }
-        a.action-btn { background: var(--primary); color: white; text-decoration: none; font-weight: 600; font-size: 0.85rem; padding: 6px 12px; border-radius: 8px; text-align: center; }
-        .footer-credit { text-align: center; margin: 30px 0 20px 0; font-size: 0.85rem; color: var(--text-muted); border-top: 1px solid var(--border-color); padding-top: 15px; }
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; max-width: 900px; margin: 0 auto; padding: 16px; background: var(--bg-color); color: var(--text-main); }
+        .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; background: var(--card-bg); padding: 15px 20px; border-radius: 12px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); border: 1px solid var(--border-color); }
+        .nav-links { display: flex; gap: 10px; align-items: center; }
+        .client-nav-btn { background: var(--primary); color: white; padding: 8px 14px; border-radius: 8px; text-decoration: none; font-size: 0.85rem; font-weight: 600; }
+        .client-nav-btn:hover { opacity: 0.9; }
+        .card { background: var(--card-bg); padding: 20px; border-radius: 14px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); margin-bottom: 16px; border: 1px solid var(--border-color); }
+        h1, h2 { font-size: 1.2rem; color: var(--text-main); margin-top: 0; }
+        table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 0.9rem; }
+        th, td { padding: 10px; text-align: left; border-bottom: 1px solid var(--border-color); }
+        th { background: #f1f5f9; color: var(--text-muted); font-weight: 600; }
+        .flash { background: #dcfce7; color: #166534; padding: 10px; border-radius: 8px; margin-bottom: 15px; font-size: 0.9rem; border: 1px solid #bbf7d0; }
+        .btn-logout { background: var(--danger); color: white; border: none; padding: 6px 12px; border-radius: 6px; cursor: pointer; font-size: 0.85rem; font-weight: 600; text-decoration: none; }
     </style>
 </head>
 <body>
-    <div class="top-bar">
-        <header>
-            <div class="logo-badge">⚡</div>
-            <h1>Magazzino OMG</h1>
-        </header>
-        <div class="user-actions">
-            <a href="{{ url_for('lista_manutenzioni') }}" class="maint-nav-btn">🔧 Manutenzioni</a>
-            <a href="{{ url_for('lista_clienti') }}" class="client-nav-btn">📇 Clienti</a>
-            {% if session.get('is_admin') %}
-            <a href="{{ url_for('gestione_utenti') }}" class="admin-btn">⚙️ Admin</a>
-            {% endif %}
-            <a href="{{ url_for('logout') }}" class="logout-btn">Esci</a>
+
+    <div class="header">
+        <h1>📦 Magazzino OMG</h1>
+        <div class="nav-links">
+            <!-- Pulsante clienti corretto che punta all'endpoint 'clienti' -->
+            <a href="{{ url_for('clienti') }}" class="client-nav-btn">Clienti</a>
+            <a href="{{ url_for('lista_manutenzioni') }}" class="client-nav-btn" style="background: #0284c7;">Manutenzioni</a>
+            <a href="{{ url_for('logout') }}" class="btn-logout">Esci</a>
         </div>
     </div>
-
-    {% if num_critici > 0 %}
-    <div class="alert-banner">
-        <span>🚨 <strong>Attenzione Critica:</strong> Ci sono <strong>{{ num_critici }} prodotti</strong> con oltre 30 giorni di ritardo sul rientro previsto!</span>
-        <a href="{{ url_for('lista_manutenzioni') }}" style="color: #991b1b; text-decoration: underline; font-weight: 700;">Controlla</a>
-    </div>
-    {% endif %}
-
-    {% if num_attenzione > 0 %}
-    <div class="alert-banner warning">
-        <span>⚠️ <strong>Avviso Ritardo:</strong> Ci sono <strong>{{ num_attenzione }} prodotti</strong> con oltre 15 giorni di ritardo sul rientro previsto.</span>
-        <a href="{{ url_for('lista_manutenzioni') }}" style="color: #92400e; text-decoration: underline; font-weight: 700;">Controlla</a>
-    </div>
-    {% endif %}
 
     {% with messages = get_flashed_messages() %}
       {% if messages %}
@@ -109,103 +52,34 @@
     {% endwith %}
 
     <div class="card">
-        <h2>🔍 Cerca Articolo</h2>
-        <form method="GET" action="{{ url_for('index') }}" class="search-box">
-            <input type="text" name="q" value="{{ search_query }}" placeholder="Cerca QR, Nome, SAP o Cliente...">
-            <button type="submit">Cerca</button>
-            {% if search_query %}
-            <a href="{{ url_for('index') }}" class="btn-secondary">Reset</a>
-            {% endif %}
-        </form>
-    </div>
-
-    <div class="card">
-        <h2>➕ Aggiungi o Aggiorna Prodotto</h2>
-        <form action="{{ url_for('aggiungi_prodotto') }}" method="POST">
-            <label>Codice QR / ID Univoco</label>
-            <input type="text" name="qr_code" required placeholder="Es. PROD-001">
-            
-            <label>Codice SAP</label>
-            <input type="text" name="sap" placeholder="Es. SAP-987654">
-
-            <label>Nome / Descrizione Articolo</label>
-            <input type="text" name="nome" required placeholder="Es. Avvitatore a batteria">
-            
-            <label>Quantità Iniziale</label>
-            <input type="number" name="quantita" value="0" min="0">
-            
-            <label>Posizione in Magazzino</label>
-            <input type="text" name="posizione" placeholder="Es. Scaffale A - Corsia 2">
-            
-            <button type="submit">Salva Articolo</button>
-        </form>
-    </div>
-
-    <h2>Elenco Articoli</h2>
-    <div class="items-grid">
-        {% for p in prodotti %}
-        <div class="item-card">
-            <div class="item-info">
-                <div class="item-title">
-                    {{ p.nome }}
-                    {% if p.stato == 'In Manutenzione' %}
-                    <span class="badge-maint">🔧 Presso Cliente</span>
-                    {% elif p.materiale_ritornato %}
-                    <span class="badge-repaired">🛠️ Riparato / Rientrato</span>
-                    {% endif %}
-                    
-                    {% if p.tot_riparazioni > 0 %}
-                    <span style="background: #e0e7ff; color: #4338ca; padding: 2px 6px; border-radius: 4px; font-size: 0.75rem; font-weight: 700; margin-left: 4px;">
-                        🔧 Riparato: {{ p.tot_riparazioni }} volte
-                    </span>
-                    {% endif %}
-                </div>
-                <div class="item-details">
-                    <span>QR: <strong class="item-badge">{{ p.qr_code }}</strong></span>
-                    {% if p.sap %}
-                    <span>SAP: <strong class="item-badge">{{ p.sap }}</strong></span>
-                    {% endif %}
-                </div>
-                <div class="item-details">
-                    <span>Pos: {{ p.posizione if p.posizione else 'N/D' }}</span>
-                    <span>Qtà: <strong class="item-qty">{{ p.quantita }} pz</strong></span>
-                </div>
-                {% if p.stato == 'In Manutenzione' %}
-                <div style="font-size: 0.8rem; color: #d97706; margin-top: 4px; font-weight: 600;">
-                    👤 Cliente: {{ p.cliente_manutenzione }} | Spedizione: {{ p.data_spedizione if p.data_spedizione else 'N/D' }} | Rientro: {{ p.data_rientro if p.data_rientro else 'N/D' }}
-                </div>
-                {% endif %}
-                {% if p.materiale_ritornato %}
-                <div style="font-size: 0.8rem; color: #166534; margin-top: 4px; font-weight: 600;">
-                    🛠️ Ultimo intervento: {{ p.materiale_ritornato }}
-                </div>
-                {% endif %}
-                {% if p.modificato_da %}
-                <div class="item-signature">✏️ Modificato da: {{ p.modificato_da }}</div>
-                {% endif %}
-            </div>
-            <div class="item-right">
-                <img src="data:image/png;base64,{{ p.qr_img }}" alt="QR" class="qr-thumb">
-                <a href="{{ url_for('gestisci_prodotto', qr_code=p.qr_code) }}" class="action-btn">Gestisci</a>
-            </div>
-        </div>
+        <h2>Elenco Prodotti in Magazzino</h2>
+        {% if prodotti %}
+        <table>
+            <thead>
+                <tr>
+                    <th>QR Code</th>
+                    <th>Nome</th>
+                    <th>Quantità</th>
+                    <th>Posizione</th>
+                    <th>Stato</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for p in prodotti %}
+                <tr>
+                    <td><code>{{ p.qr_code }}</code></td>
+                    <td><strong>{{ p.nome }}</strong></td>
+                    <td>{{ p.quantita }}</td>
+                    <td>{{ p.posizione if p.posizione else '-' }}</td>
+                    <td><span style="padding: 3px 8px; border-radius: 6px; font-size: 0.75rem; background: #e0e7ff; color: #3730a3;">{{ p.stato }}</span></td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
         {% else %}
-        <div class="card" style="text-align: center; color: var(--text-muted); padding: 24px;">
-            Nessun prodotto trovato in magazzino.
-        </div>
-        {% endfor %}
+            <p style="color: var(--text-muted); font-size: 0.9rem;">Nessun prodotto presente nel magazzino.</p>
+        {% endif %}
     </div>
 
-    <div class="footer-credit">
-        Magazzino OMG &bull; Creato da <strong>Bermuda</strong>
-    </div>
-
-    <script>
-        if ('serviceWorker' in navigator) {
-            window.addEventListener('load', () => {
-                navigator.serviceWorker.register('/static/sw.js').catch(err => console.log('SW fallito: ', err));
-            });
-        }
-    </script>
 </body>
 </html>
