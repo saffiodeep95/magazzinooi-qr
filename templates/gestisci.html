@@ -3,256 +3,41 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Gestione - {{ prodotto.nome }} | Magazzino OMG</title>
-    <link rel="manifest" href="{{ url_for('static', filename='manifest.json') }}">
-    <meta name="theme-color" content="#4f46e5">
+    <title>Gestione - {{ prodotto.nome }}</title>
     <style>
-        :root {
-            --primary: #4f46e5;
-            --primary-hover: #4338ca;
-            --success: #10b981;
-            --success-hover: #059669;
-            --warning: #f59e0b;
-            --warning-hover: #d97706;
-            --danger: #ef4444;
-            --danger-hover: #dc2626;
-            --bg-color: #f8fafc;
-            --card-bg: #ffffff;
-            --text-main: #1e293b;
-            --text-muted: #64748b;
-            --border-color: #e2e8f0;
-        }
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-            max-width: 650px;
-            margin: 0 auto;
-            padding: 12px;
-            background: var(--bg-color);
-            color: var(--text-main);
-            -webkit-font-smoothing: antialiased;
-        }
-        .back-link { display: inline-block; color: var(--primary); text-decoration: none; font-weight: 600; margin-bottom: 16px; font-size: 0.9rem; }
-        .back-link:hover { text-decoration: underline; }
-        h1 { font-size: 1.35rem; font-weight: 800; margin-top: 0; margin-bottom: 16px; letter-spacing: -0.5px; }
-        .flash { background: #dcfce7; color: #166534; padding: 12px 16px; margin-bottom: 16px; border-radius: 10px; font-weight: 500; border: 1px solid #bbf7d0; font-size: 0.9rem; }
-        .card { background: var(--card-bg); padding: 20px; border-radius: 16px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05); margin-bottom: 16px; border: 1px solid var(--border-color); text-align: center; }
-        .card form { text-align: left; }
-        h2 { font-size: 1rem; font-weight: 600; margin-top: 0; margin-bottom: 12px; color: var(--text-main); }
-        label { display: block; font-size: 0.8rem; font-weight: 600; color: var(--text-muted); margin-bottom: 4px; }
-        input, textarea, select, button { width: 100%; padding: 12px; margin-top: 4px; margin-bottom: 12px; border: 1px solid var(--border-color); border-radius: 10px; box-sizing: border-box; font-size: 1rem; font-family: inherit; background: #fff; }
-        textarea { resize: vertical; height: 80px; }
-        button { border: none; font-weight: 600; cursor: pointer; color: white; transition: background 0.2s; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); }
-        .btn-green { background: var(--success); }
-        .btn-green:hover { background: var(--success-hover); }
-        .btn-warning { background: var(--warning); color: #fff; }
-        .btn-warning:hover { background: var(--warning-hover); }
-        .btn-red { background: var(--danger); }
-        .btn-red:hover { background: var(--danger-hover); }
-        .btn-print { background: #64748b; }
-        .btn-print:hover { background: #475569; }
-
-        .qr-display { width: 150px; height: 150px; margin: 10px auto; display: block; border-radius: 8px; padding: 4px; background: #fff; border: 1px solid var(--border-color); }
-        .qty-badge { font-size: 1.6rem; font-weight: 800; color: var(--primary); margin: 4px 0 14px 0; }
-        .status-badge { display: inline-block; padding: 4px 10px; border-radius: 8px; font-weight: 700; font-size: 0.85rem; margin-bottom: 10px; }
-        .status-ok { background: #dcfce7; color: #166534; }
-        .status-maint { background: #fef3c7; color: #d97706; }
-        
-        .order-status-box { background: #f8fafc; border: 1px solid var(--border-color); padding: 12px; border-radius: 10px; margin-bottom: 12px; }
-        .checkbox-container { display: flex; align-items: center; gap: 10px; cursor: pointer; font-weight: 600; font-size: 0.9rem; color: var(--text-main); }
-        .checkbox-container input { width: 20px; height: 20px; margin: 0; cursor: pointer; }
-
-        .storico-box { text-align: left; background: #f8fafc; border: 1px solid var(--border-color); border-radius: 10px; padding: 12px; margin-top: 10px; font-size: 0.85rem; }
-        .storico-item { border-bottom: 1px solid var(--border-color); padding-bottom: 10px; margin-bottom: 10px; position: relative; padding-right: 70px; }
-        .storico-item:last-child { border-bottom: none; margin-bottom: 0; padding-bottom: 0; }
-
-        .print-label { display: none; text-align: center; background: #fff; padding: 10px; }
-
-        @media print {
-            body * { visibility: hidden; }
-            .print-label, .print-label * { visibility: visible; }
-            .print-label { display: flex; flex-direction: column; justify-content: center; align-items: center; position: fixed; left: 0; top: 0; width: 100vw; height: 100vh; }
-            .print-label img { width: 190px; height: 190px; margin: 8px 0; }
-            .print-label h2 { font-size: 22px; margin: 0 0 4px 0; color: #000; }
-            .print-label p { font-size: 13px; margin: 2px 0; color: #333; }
-        }
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; max-width: 800px; margin: 0 auto; padding: 16px; background: #f8fafc; color: #1e293b; }
+        .card { background: #ffffff; padding: 25px; border-radius: 14px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); margin-bottom: 16px; border: 1px solid #e2e8f0; text-align: center; }
+        .btn { background: #4f46e5; color: white; padding: 10px 18px; border-radius: 8px; text-decoration: none; font-size: 0.9rem; font-weight: 600; border: none; cursor: pointer; display: inline-block; margin: 5px; }
+        .btn-danger { background: #ef4444; }
+        .btn-success { background: #10b981; }
+        .btn:hover { opacity: 0.9; }
     </style>
 </head>
 <body>
-    <a href="{{ url_for('index') }}" class="back-link">← Torna alla Home</a>
-
-    <h1>Gestione: {{ prodotto.nome }}</h1>
-
-    {% with messages = get_flashed_messages() %}
-      {% if messages %}
-        {% for message in messages %}
-          <div class="flash">{{ message }}</div>
-        {% endfor %}
-      {% endif %}
-    {% endwith %}
 
     <div class="card">
-        <h2>Stato & Etichetta</h2>
-        
-        {% if prodotto.stato == 'In Manutenzione' %}
-            <span class="status-badge status-maint">🔧 In Manutenzione presso Cliente</span>
-            <p style="margin: 4px 0; font-size: 0.9rem;"><strong>👤 Cliente:</strong> {{ prodotto.cliente_manutenzione }}</p>
-            <p style="margin: 4px 0; font-size: 0.85rem; color: var(--text-muted);"><strong>📅 Spedizione:</strong> {{ prodotto.data_spedizione if prodotto.data_spedizione else 'N/D' }}</p>
-            <p style="margin: 4px 0; font-size: 0.85rem; color: var(--text-muted);"><strong>⏳ Rientro Previsto:</strong> {{ prodotto.data_rientro if prodotto.data_rientro else 'N/D' }}</p>
-            
-            {% if prodotto.ordine_arrivato %}
-                <p style="margin: 6px 0; font-size: 0.85rem; background: #dcfce7; padding: 6px; border-radius: 6px; color: #166534; font-weight: 700;">🛠️ Stato: Ordine ricambi arrivato (Pronto per la riparazione)</p>
-            {% else %}
-                <p style="margin: 6px 0; font-size: 0.85rem; background: #fee2e2; padding: 6px; border-radius: 6px; color: #991b1b; font-weight: 700;">⏳ Stato: In attesa ordine amministrazione</p>
-            {% endif %}
-
-            {% if prodotto.note_manutenzione %}
-            <p style="margin: 8px 0; font-size: 0.85rem; background: #fffbeb; padding: 8px; border-radius: 6px; text-align: left; color: #b45309;"><strong>📝 Note invio:</strong> {{ prodotto.note_manutenzione }}</p>
-            {% endif %}
-
-            <div style="margin-top: 14px;">
-                <a href="{{ url_for('promemoria_spedizione', qr_code=prodotto.qr_code) }}" target="_blank" class="btn-secondary" style="display: block; text-align: center; text-decoration: none; background: #0ea5e9; color: white; padding: 10px; border-radius: 8px; font-weight: 600;">📄 Stampa Promemoria Spedizione</a>
-            </div>
-        {% else %}
-            <span class="status-badge status-ok">✅ Disponibile in Magazzino</span>
-            {% if prodotto.materiale_ritornato %}
-            <div style="background: #f0fdf4; border: 1px solid #bbf7d0; padding: 10px; border-radius: 8px; text-align: left; margin-bottom: 10px;">
-                <strong style="color: #166534; font-size: 0.9rem;">🛠️ Ultima riparazione effettuata:</strong>
-                <p style="margin: 4px 0 0 0; font-size: 0.85rem; color: #166534;">{{ prodotto.materiale_ritornato }}</p>
-            </div>
-            {% endif %}
-        {% endif %}
-
-        <img src="data:image/png;base64,{{ prodotto.qr_img }}" alt="QR Code" class="qr-display">
-        <p style="margin: 3px 0; color: var(--text-muted); font-size: 0.85rem;"><strong>Codice QR:</strong> {{ prodotto.qr_code }}</p>
-        {% if prodotto.sap %}
-        <p style="margin: 3px 0; color: var(--text-muted); font-size: 0.85rem;"><strong>SAP:</strong> {{ prodotto.sap }}</p>
-        {% endif %}
-        <p style="margin: 3px 0 8px 0; color: var(--text-muted); font-size: 0.85rem;"><strong>Posizione:</strong> {{ prodotto.posizione if prodotto.posizione else 'Non specificata' }}</p>
-        
-        <label style="margin-top: 10px;">Disponibilità Attuale</label>
-        <div class="qty-badge">{{ prodotto.quantita }} pz</div>
-        
-        <button onclick="window.print()" class="btn-print">🖨️ Stampa Etichetta QR</button>
-    </div>
-
-    <!-- Sezione Manutenzione / Assistenza -->
-    <div class="card" style="border-color: #fde68a; background: #fffbeb;">
-        <h2 style="color: #d97706;">🔧 Gestione Servizio Assistenza</h2>
-        
-        {% if session.get('is_admin') or session.get('puoi_assistenza') %}
-            {% if prodotto.stato == 'In Manutenzione' %}
-                <div class="order-status-box">
-                    <form action="{{ url_for('aggiorna_ordine') }}" method="POST">
-                        <input type="hidden" name="qr_code" value="{{ prodotto.qr_code }}">
-                        <label class="checkbox-container">
-                            <input type="checkbox" name="ordine_arrivato" {% if prodotto.ordine_arrivato %}checked{% endif %} onchange="this.form.submit()">
-                            📦 Ordine ricambi arrivato in amministrazione (Pronto per la riparazione)
-                        </label>
-                    </form>
-                </div>
-
-                <form action="{{ url_for('rientro') }}" method="POST">
-                    <input type="hidden" name="qr_code" value="{{ prodotto.qr_code }}">
-                    <label>Intervento di Riparazione Eseguito / Note di Chiusura</label>
-                    <textarea name="materiale_ritornato" required placeholder="Es. Sostituita scheda madre e testato con successo..."></textarea>
-                    
-                    <button type="submit" class="btn-green" style="margin-top: 8px;">📥 Registra Rientro Fisico e Chiudi Assistenza</button>
-                </form>
-            {% else %}
-            <form action="{{ url_for('manutenzione') }}" method="POST">
-                <input type="hidden" name="qr_code" value="{{ prodotto.qr_code }}">
-                
-                <label>Cliente / Azienda (<a href="{{ url_for('lista_clienti') }}" target="_blank" style="color: var(--primary);">Gestisci anagrafica clienti</a>)</label>
-                <select name="cliente_manutenzione" required>
-                    <option value="" disabled selected>-- Seleziona un cliente --</option>
-                    {% for c in clienti %}
-                    <option value="{{ c.nome_azienda }}">{{ c.nome_azienda }}</option>
-                    {% endfor %}
-                </select>
-
-                <label>Quantità da Inviare in Manutenzione</label>
-                <input type="number" name="quantita_inviata" value="1" min="1" max="{{ prodotto.quantita }}" required>
-
-                <label>Data Spedizione</label>
-                <input type="date" name="data_spedizione">
-
-                <label>Data Prevista Rientro</label>
-                <input type="date" name="data_rientro">
-
-                <label>Note di Assistenza / Guasto riscontrato</label>
-                <textarea name="note_manutenzione" placeholder="Es. Anomalia sul display, necessita controllo tecnico..."></textarea>
-
-                <button type="submit" class="btn-warning">📤 Invia in Assistenza</button>
-            </form>
-            {% endif %}
-        {% else %}
-            <p style="font-size: 0.85rem; color: #b45309; margin: 0;">Non hai i permessi per utilizzare il servizio assistenza.</p>
-        {% endif %}
-    </div>
-
-    <!-- Storico Interventi -->
-    <div class="card">
-        <h2>📜 Storico Interventi (Riparato: <strong>{{ storico|length }} volte</strong>)</h2>
-        {% if storico %}
-        <div class="storico-box">
-            {% for s in storico %}
-            <div class="storico-item">
-                <p style="margin: 0 0 4px 0; font-weight: 700; color: var(--primary);">Intervento #{{ loop.revindex }}</p>
-                <p style="margin: 0 0 4px 0;"><strong>👤 Cliente:</strong> {{ s.cliente }}</p>
-                <p style="margin: 0 0 4px 0; color: var(--text-muted);"><strong>📅 Date:</strong> Spedito il {{ s.data_spedizione if s.data_spedizione else 'N/D' }} &rarr; Rientrato il {{ s.data_rientro if s.data_rientro else 'N/D' }}</p>
-                {% if s.note_manutenzione %}
-                <p style="margin: 0 0 4px 0; color: var(--text-muted);"><strong>📝 Guasto segnalato:</strong> {{ s.note_manutenzione }}</p>
-                {% endif %}
-                <p style="margin: 0 0 4px 0; color: #166534;"><strong>🛠️ Riparazione eseguita:</strong> {{ s.materiale_ritornato if s.materiale_ritornato else 'N/D' }}</p>
-                <p style="margin: 0; font-size: 0.75rem; color: var(--text-muted);">Chiuso da: {{ s.chiuso_da }}</p>
-
-                {% if session.get('is_admin') or session.get('puoi_assistenza') %}
-                <form action="{{ url_for('elimina_storico', storico_id=s.id) }}" method="POST" onsubmit="return confirm('Vuoi davvero cancellare questo record dallo storico?');" style="position: absolute; top: 0; right: 0; margin: 0;">
-                    <button type="submit" style="background: var(--danger); color: white; border: none; padding: 4px 8px; border-radius: 6px; font-size: 0.75rem; font-weight: 600; cursor: pointer; width: auto; margin: 0;">🗑️ Cancella</button>
-                </form>
-                {% endif %}
-            </div>
-            {% endfor %}
-        </div>
-        {% else %}
-        <p style="font-size: 0.85rem; color: var(--text-muted); margin: 0;">Nessun intervento precedente registrato.</p>
-        {% endif %}
-    </div>
-
-    <div class="print-label">
+        <h1>Gestione Articolo</h1>
         <h2>{{ prodotto.nome }}</h2>
-        <img src="data:image/png;base64,{{ prodotto.qr_img }}" alt="QR Code">
-        <p><strong>QR:</strong> {{ prodotto.qr_code }} {% if prodotto.sap %}| <strong>SAP:</strong> {{ prodotto.sap }}{% endif %}</p>
-        <p><strong>Pos:</strong> {{ prodotto.posizione if prodotto.posizione else '-' }}</p>
+        <p><strong>Codice QR:</strong> <code>{{ prodotto.qr_code }}</code></p>
+        <p><strong>Codice SAP:</strong> {{ prodotto.sap if prodotto.sap else '-' }}</p>
+        <p><strong>Quantità Attuale:</strong> {{ prodotto.quantita }}</p>
+        <p><strong>Posizione:</strong> {{ prodotto.posizione if prodotto.posizione else '-' }}</p>
+
+        <!-- QR Code grande per visualizzazione e stampa -->
+        <div style="margin: 20px 0;">
+            <img src="https://api.qrserver.com/v1/create-qr-code/?size=180x180&data={{ prodotto.qr_code }}" alt="QR Code" style="border: 1px solid #e2e8f0; padding: 10px; background: white; border-radius: 8px;">
+        </div>
+
+        <div>
+            <button onclick="window.print();" class="btn">🖨️ Stampa QR Code</button>
+            <a href="{{ url_for('carico', qr_code=prodotto.qr_code) }}" class="btn btn-success">➕ Carico Rapido</a>
+            <a href="{{ url_for('scarico', qr_code=prodotto.qr_code) }}" class="btn btn-danger">➖ Scarico Rapido</a>
+        </div>
+        
+        <div style="margin-top: 20px;">
+            <a href="{{ url_for('index') }}" class="btn" style="background: #64748b;">← Torna alla Home</a>
+        </div>
     </div>
 
-    <div class="card">
-        <h2>📈 Registra Carico (Entrata)</h2>
-        <form action="{{ url_for('carico') }}" method="POST">
-            <input type="hidden" name="qr_code" value="{{ prodotto.qr_code }}">
-            <label>Quantità da aggiungere</label>
-            <input type="number" name="quantita" value="1" min="1" required>
-            <button type="submit" class="btn-green">Conferma Carico (+)</button>
-        </form>
-    </div>
-
-    <div class="card">
-        <h2>📉 Registra Scarico (Uscita)</h2>
-        <form action="{{ url_for('scarico') }}" method="POST">
-            <input type="hidden" name="qr_code" value="{{ prodotto.qr_code }}">
-            <label>Quantità da rimuovere</label>
-            <input type="number" name="quantita" value="1" min="1" required>
-            <button type="submit" class="btn-red">Conferma Scarico (-)</button>
-        </form>
-    </div>
-
-    {% if session.get('is_admin') or session.get('puoi_cancellare') %}
-    <div class="card" style="border-color: #fecaca; background: #fff5f5;">
-        <h2 style="color: var(--danger);">⚠️ Zona Pericolosa</h2>
-        <form action="{{ url_for('cancella_prodotto', qr_code=prodotto.qr_code) }}" method="POST" onsubmit="return confirm('Eliminare definitivamente questo prodotto?');">
-            <button type="submit" class="btn-red">🗑️ Cancella Prodotto</button>
-        </form>
-    </div>
-    {% endif %}
 </body>
 </html>
