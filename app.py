@@ -153,6 +153,32 @@ def login():
                 
     return render_template('login.html')
 
+# --- ROTTA REGISTRAZIONE NUOVO UTENTE ---
+@app.route('/registra', methods=['GET', 'POST'])
+def registra():
+    if request.method == 'POST':
+        username = request.form.get('username')
+        password = request.form.get('password')
+        
+        conn = get_db_connection()
+        if conn:
+            try:
+                cur = conn.cursor()
+                cur.execute("""
+                    INSERT INTO utenti (username, password, is_admin, puoi_cancellare, puoi_assistenza)
+                    VALUES (%s, %s, FALSE, FALSE, FALSE);
+                """, (username, password))
+                conn.commit()
+                cur.close()
+                conn.close()
+                flash("Registrazione avvenuta con successo! Ora puoi effettuare il login.")
+                return redirect(url_for('login'))
+            except Exception as e:
+                print(f"Errore durante la registrazione: {e}")
+                flash("Errore: username già esistente o non valido.")
+                
+    return render_template('registra.html')
+
 # --- ROTTA LOGOUT ---
 @app.route('/logout')
 def logout():
