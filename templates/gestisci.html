@@ -39,7 +39,7 @@
         .card form { text-align: left; }
         h2 { font-size: 1rem; font-weight: 600; margin-top: 0; margin-bottom: 12px; color: var(--text-main); }
         label { display: block; font-size: 0.8rem; font-weight: 600; color: var(--text-muted); margin-bottom: 4px; }
-        input, textarea, button { width: 100%; padding: 12px; margin-top: 4px; margin-bottom: 12px; border: 1px solid var(--border-color); border-radius: 10px; box-sizing: border-box; font-size: 1rem; font-family: inherit; }
+        input, textarea, select, button { width: 100%; padding: 12px; margin-top: 4px; margin-bottom: 12px; border: 1px solid var(--border-color); border-radius: 10px; box-sizing: border-box; font-size: 1rem; font-family: inherit; background: #fff; }
         textarea { resize: vertical; height: 80px; }
         button { border: none; font-weight: 600; cursor: pointer; color: white; transition: background 0.2s; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); }
         .btn-green { background: var(--success); }
@@ -108,6 +108,10 @@
             {% if prodotto.note_manutenzione %}
             <p style="margin: 8px 0; font-size: 0.85rem; background: #fffbeb; padding: 8px; border-radius: 6px; text-align: left; color: #b45309;"><strong>📝 Note invio:</strong> {{ prodotto.note_manutenzione }}</p>
             {% endif %}
+
+            <div style="margin-top: 14px;">
+                <a href="{{ url_for('promemoria_spedizione', qr_code=prodotto.qr_code) }}" target="_blank" class="btn-secondary" style="display: block; text-align: center; text-decoration: none; background: #0ea5e9; color: white; padding: 10px; border-radius: 8px; font-weight: 600;">📄 Stampa Promemoria Spedizione</a>
+            </div>
         {% else %}
             <span class="status-badge status-ok">✅ Disponibile in Magazzino</span>
             {% if prodotto.materiale_ritornato %}
@@ -128,7 +132,7 @@
         <label style="margin-top: 10px;">Disponibilità Attuale</label>
         <div class="qty-badge">{{ prodotto.quantita }} pz</div>
         
-        <button onclick="window.print()" class="btn-print">🖨️ Stampa Etichetta</button>
+        <button onclick="window.print()" class="btn-print">🖨️ Stampa Etichetta QR</button>
     </div>
 
     <!-- Sezione Manutenzione / Assistenza -->
@@ -152,14 +156,22 @@
                     <label>Intervento di Riparazione Eseguito / Note di Chiusura</label>
                     <textarea name="materiale_ritornato" required placeholder="Es. Sostituita scheda madre e testato con successo..."></textarea>
                     
-                    <button type="submit" class="btn-green" style="margin-top: 8px;">📥 Registra Rientro Fisico in Magazzino e Chiudi Assistenza</button>
+                    <button type="submit" class="btn-green" style="margin-top: 8px;">📥 Registra Rientro Fisico e Chiudi Assistenza</button>
                 </form>
             {% else %}
             <form action="{{ url_for('manutenzione') }}" method="POST">
                 <input type="hidden" name="qr_code" value="{{ prodotto.qr_code }}">
                 
-                <label>Nome del Cliente</label>
-                <input type="text" name="cliente_manutenzione" required placeholder="Es. Rossi S.r.l.">
+                <label>Cliente / Azienda (<a href="{{ url_for('lista_clienti') }}" target="_blank" style="color: var(--primary);">Gestisci anagrafica clienti</a>)</label>
+                <select name="cliente_manutenzione" required>
+                    <option value="" disabled selected>-- Seleziona un cliente --</option>
+                    {% for c in clienti %}
+                    <option value="{{ c.nome_azienda }}">{{ c.nome_azienda }}</option>
+                    {% endfor %}
+                </select>
+
+                <label>Quantità da Inviare in Manutenzione</label>
+                <input type="number" name="quantita_inviata" value="1" min="1" max="{{ prodotto.quantita }}" required>
 
                 <label>Data Spedizione</label>
                 <input type="date" name="data_spedizione">
@@ -174,11 +186,11 @@
             </form>
             {% endif %}
         {% else %}
-            <p style="font-size: 0.85rem; color: #b45309; margin: 0;">Non hai i permessi per utilizzare il servizio assistenza. Rivolgiti a un amministratore.</p>
+            <p style="font-size: 0.85rem; color: #b45309; margin: 0;">Non hai i permessi per utilizzare il servizio assistenza.</p>
         {% endif %}
     </div>
 
-    <!-- Storico Interventi e Date con Tasto Cancella -->
+    <!-- Storico Interventi -->
     <div class="card">
         <h2>📜 Storico Interventi (Riparato: <strong>{{ storico|length }} volte</strong>)</h2>
         {% if storico %}
@@ -203,7 +215,7 @@
             {% endfor %}
         </div>
         {% else %}
-        <p style="font-size: 0.85rem; color: var(--text-muted); margin: 0;">Nessun intervento di manutenzione precedente registrato per questo articolo.</p>
+        <p style="font-size: 0.85rem; color: var(--text-muted); margin: 0;">Nessun intervento precedente registrato.</p>
         {% endif %}
     </div>
 
@@ -237,7 +249,7 @@
     {% if session.get('is_admin') or session.get('puoi_cancellare') %}
     <div class="card" style="border-color: #fecaca; background: #fff5f5;">
         <h2 style="color: var(--danger);">⚠️ Zona Pericolosa</h2>
-        <form action="{{ url_for('cancella_prodotto', qr_code=prodotto.qr_code) }}" method="POST" onsubmit="return confirm('Sei sicuro di voler eliminare definitivamente questo prodotto?');">
+        <form action="{{ url_for('cancella_prodotto', qr_code=prodotto.qr_code) }}" method="POST" onsubmit="return confirm('Eliminare definitivamente questo prodotto?');">
             <button type="submit" class="btn-red">🗑️ Cancella Prodotto</button>
         </form>
     </div>
