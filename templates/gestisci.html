@@ -24,7 +24,7 @@
         }
         body {
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-            max-width: 600px;
+            max-width: 650px;
             margin: 0 auto;
             padding: 12px;
             background: var(--bg-color);
@@ -136,6 +136,23 @@
         }
         .status-ok { background: #dcfce7; color: #166534; }
         .status-maint { background: #fef3c7; color: #d97706; }
+        .status-repaired { background: #dcfce7; color: #166534; border: 1px solid #bbf7d0; }
+
+        .storico-box {
+            text-align: left;
+            background: #f8fafc;
+            border: 1px solid var(--border-color);
+            border-radius: 10px;
+            padding: 12px;
+            margin-top: 10px;
+            font-size: 0.85rem;
+        }
+        .storico-item {
+            border-bottom: 1px solid var(--border-color);
+            padding-bottom: 8px;
+            margin-bottom: 8px;
+        }
+        .storico-item:last-child { border-bottom: none; margin-bottom: 0; padding-bottom: 0; }
 
         .print-label {
             display: none;
@@ -198,12 +215,15 @@
             <p style="margin: 4px 0; font-size: 0.85rem; color: var(--text-muted);"><strong>Spedizione:</strong> {{ prodotto.data_spedizione if prodotto.data_spedizione else 'N/D' }}</p>
             <p style="margin: 4px 0; font-size: 0.85rem; color: var(--text-muted);"><strong>Rientro Previsto:</strong> {{ prodotto.data_rientro if prodotto.data_rientro else 'N/D' }}</p>
             {% if prodotto.note_manutenzione %}
-            <p style="margin: 8px 0; font-size: 0.85rem; background: #fffbeb; padding: 8px; border-radius: 6px; text-align: left; color: #b45309;"><strong>Note:</strong> {{ prodotto.note_manutenzione }}</p>
+            <p style="margin: 8px 0; font-size: 0.85rem; background: #fffbeb; padding: 8px; border-radius: 6px; text-align: left; color: #b45309;"><strong>Note invio:</strong> {{ prodotto.note_manutenzione }}</p>
             {% endif %}
         {% else %}
             <span class="status-badge status-ok">✅ Disponibile in Magazzino</span>
             {% if prodotto.materiale_ritornato %}
-            <p style="margin: 8px 0; font-size: 0.85rem; background: #f0fdf4; padding: 8px; border-radius: 6px; text-align: left; color: #166534;"><strong>Ultimo materiale ritornato:</strong> {{ prodotto.materiale_ritornato }}</p>
+            <div style="background: #f0fdf4; border: 1px solid #bbf7d0; padding: 10px; border-radius: 8px; text-align: left; margin-bottom: 10px;">
+                <strong style="color: #166534; font-size: 0.9rem;">🛠️ AVVISO: Prodotto già riparato!</strong>
+                <p style="margin: 4px 0 0 0; font-size: 0.85rem; color: #166534;">Ultimo intervento registrato: {{ prodotto.materiale_ritornato }}</p>
+            </div>
             {% endif %}
         {% endif %}
 
@@ -222,34 +242,59 @@
 
     <!-- Sezione Manutenzione / Cliente -->
     <div class="card" style="border-color: #fde68a; background: #fffbeb;">
-        <h2 style="color: #d97706;">🔧 Gestione Manutenzione Cliente</h2>
+        <h2 style="color: #d97706;">🔧 Gestione Servizio Assistenza</h2>
         
-        {% if prodotto.stato == 'In Manutenzione' %}
-        <form action="{{ url_for('rientro') }}" method="POST">
-            <input type="hidden" name="qr_code" value="{{ prodotto.qr_code }}">
-            <label>Materiale Ritornato in Sede / Note di Chiusura</label>
-            <textarea name="materiale_ritornato" placeholder="Es. Sostituita scheda madre e testato con successo..."></textarea>
-            
-            <button type="submit" class="btn-green" style="margin-top: 8px;">📥 Registra Rientro in Magazzino</button>
-        </form>
+        {% if session.get('is_admin') or session.get('puoi_assistenza') %}
+            {% if prodotto.stato == 'In Manutenzione' %}
+            <form action="{{ url_for('rientro') }}" method="POST">
+                <input type="hidden" name="qr_code" value="{{ prodotto.qr_code }}">
+                <label>Materiale Ritornato / Intervento di Riparazione Eseguito</label>
+                <textarea name="materiale_ritornato" required placeholder="Es. Sostituita scheda madre e testato con successo..."></textarea>
+                
+                <button type="submit" class="btn-green" style="margin-top: 8px;">📥 Registra Rientro in Magazzino e Chiudi Assistenza</button>
+            </form>
+            {% else %}
+            <form action="{{ url_for('manutenzione') }}" method="POST">
+                <input type="hidden" name="qr_code" value="{{ prodotto.qr_code }}">
+                
+                <label>Nome del Cliente</label>
+                <input type="text" name="cliente_manutenzione" required placeholder="Es. Rossi S.r.l.">
+
+                <label>Data Spedizione</label>
+                <input type="date" name="data_spedizione">
+
+                <label>Data Prevista Rientro</label>
+                <input type="date" name="data_rientro">
+
+                <label>Note di Assistenza / Guasto riscontrato</label>
+                <textarea name="note_manutenzione" placeholder="Es. Anomalia sul display, necessita controllo tecnico..."></textarea>
+
+                <button type="submit" class="btn-warning">📤 Invia in Assistenza</button>
+            </form>
+            {% endif %}
         {% else %}
-        <form action="{{ url_for('manutenzione') }}" method="POST">
-            <input type="hidden" name="qr_code" value="{{ prodotto.qr_code }}">
-            
-            <label>Nome del Cliente</label>
-            <input type="text" name="cliente_manutenzione" required placeholder="Es. Rossi S.r.l.">
+            <p style="font-size: 0.85rem; color: #b45309; margin: 0;">Non hai i permessi per utilizzare il servizio assistenza. Rivolgiti a un amministratore.</p>
+        {% endif %}
+    </div>
 
-            <label>Data Spedizione</label>
-            <input type="date" name="data_spedizione">
-
-            <label>Data Prevista Rientro</label>
-            <input type="date" name="data_rientro">
-
-            <label>Note di Manutenzione / Problema riscontrato</label>
-            <textarea name="note_manutenzione" placeholder="Es. Guasto al motore, necessita revisione cuscinetti..."></textarea>
-
-            <button type="submit" class="btn-warning">📤 Invia in Manutenzione</button>
-        </form>
+    <!-- Storico Manutenzioni del Prodotto -->
+    <div class="card">
+        <h2>📜 Storico Interventi e Manutenzioni</h2>
+        {% if storico %}
+        <div class="storico-box">
+            {% for s in storico %}
+            <div class="storico-item">
+                <p style="margin: 0 0 4px 0;"><strong>Cliente:</strong> {{ s.cliente }} | <strong>Spedito:</strong> {{ s.data_spedizione if s.data_spedizione else 'N/D' }}</p>
+                {% if s.note_manutenzione %}
+                <p style="margin: 0 0 4px 0; color: var(--text-muted);"><strong>Guasto:</strong> {{ s.note_manutenzione }}</p>
+                {% endif %}
+                <p style="margin: 0 0 4px 0; color: #166534;"><strong>Riparazione / Rientro:</strong> {{ s.materiale_ritornato if s.materiale_ritornato else 'N/D' }}</p>
+                <p style="margin: 0; font-size: 0.75rem; color: var(--text-muted);">Chiuso da: {{ s.chiuso_da }}</p>
+            </div>
+            {% endfor %}
+        </div>
+        {% else %}
+        <p style="font-size: 0.85rem; color: var(--text-muted); margin: 0;">Nessun intervento precedente registrato per questo articolo.</p>
         {% endif %}
     </div>
 
