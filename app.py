@@ -40,6 +40,17 @@ def init_db():
                 );
             """)
             cur.execute("""
+                CREATE TABLE IF NOT EXISTS clienti (
+                    id SERIAL PRIMARY KEY,
+                    nome_azienda VARCHAR(255) UNIQUE NOT NULL,
+                    indirizzo TEXT,
+                    p_iva VARCHAR(50),
+                    codice_fiscale VARCHAR(50),
+                    telefono VARCHAR(50),
+                    email VARCHAR(100)
+                );
+            """)
+            cur.execute("""
                 CREATE TABLE IF NOT EXISTS prodotti (
                     id SERIAL PRIMARY KEY,
                     qr_code VARCHAR(255) UNIQUE NOT NULL,
@@ -175,20 +186,21 @@ def index():
         cur.execute("SELECT * FROM prodotti ORDER BY nome ASC;")
     prodotti_db = cur.fetchall()
     
-    cur.execute("SELECT data_spedizione FROM prodotti WHERE stato = 'In Manutenzione' AND data_spedizione IS NOT NULL;")
+    # Notifiche basate sui giorni di ritardo oltre la data prevista di rientro
+    cur.execute("SELECT data_rientro FROM prodotti WHERE stato = 'In Manutenzione' AND data_rientro IS NOT NULL;")
     maint_attive = cur.fetchall()
     
     oggi = date.today()
     num_critici = 0
     num_attenzione = 0
     for m in maint_attive:
-        d_sped = m['data_spedizione']
-        if isinstance(d_sped, str):
-            d_sped = datetime.strptime(d_sped, '%Y-%m-%d').date()
-        giorni = (oggi - d_sped).days
-        if giorni >= 30:
+        d_rientro = m['data_rientro']
+        if isinstance(d_rientro, str):
+            d_rientro = datetime.strptime(d_rientro, '%Y-%m-%d').date()
+        giorni_ritardo = (oggi - d_rientro).days
+        if giorni_ritardo >= 30:
             num_critici += 1
-        elif giorni >= 15:
+        elif giorni_ritardo >= 15:
             num_attenzione += 1
 
     prodotti = []
@@ -223,20 +235,20 @@ def lista_manutenzioni():
     for p in prodotti_db:
         p_dict = dict(p)
         p_dict['qr_img'] = genera_qr_base64(url_for('gestisci_prodotto', qr_code=p['qr_code'], _external=True))
-        if p['data_spedizione']:
-            d_sped = p['data_spedizione']
-            if isinstance(d_sped, str):
-                d_sped = datetime.strptime(d_sped, '%Y-%m-%d').date()
-            giorni_trascorsi = (oggi - d_sped).days
-            p_dict['giorni_trascorsi'] = giorni_trascorsi
-            if giorni_trascorsi >= 30:
+        if p['data_rientro']:
+            d_rientro = p['data_rientro']
+            if isinstance(d_rientro, str):
+                d_rientro = datetime.strptime(d_rientro, '%Y-%m-%d').date()
+            giorni_ritardo = (oggi - d_rientro).days
+            p_dict['giorni_ritardo'] = giorni_ritardo
+            if giorni_ritardo >= 30:
                 p_dict['livello_avviso'] = 'critico'
-            elif giorni_trascorsi >= 15:
+            elif giorni_ritardo >= 15:
                 p_dict['livello_avviso'] = 'attenzione'
             else:
                 p_dict['livello_avviso'] = 'normale'
         else:
-            p_dict['giorni_trascorsi'] = 0
+            p_dict['giorni_ritardo'] = 0
             p_dict['livello_avviso'] = 'normale'
         prodotti.append(p_dict)
 
@@ -253,6 +265,9 @@ def gestisci_prodotto(qr_code):
     cur.execute("SELECT * FROM storico_manutenzioni WHERE qr_code = %s ORDER BY id DESC;", (qr_code,))
     storico_prodotto = cur.fetchall()
     
+    cur.execute("SELECT * FROM clienti ORDER BY nome_azienda ASC;")
+    clienti = cur.fetchall()
+    
     cur.close()
     conn.close()
     if not prodotto:
@@ -261,7 +276,7 @@ def gestisci_prodotto(qr_code):
     
     prodotto_dict = dict(prodotto)
     prodotto_dict['qr_img'] = genera_qr_base64(url_for('gestisci_prodotto', qr_code=qr_code, _external=True))
-    return render_template("gestisci.html", prodotto=prodotto_dict, storico=storico_prodotto)
+    return render_template("gestisci.html", prodotto=prodotto_dict, storico=storico_prodotto, clienti=clienti)
 
 @app.route('/aggiungi', methods=['POST'])
 def aggiungi_prodotto():
@@ -294,18 +309,43 @@ def manutenzione():
     data_spedizione = request.form.get('data_spedizione') or None
     data_rientro = request.form.get('data_rientro') or None
     note = request.form.get('note_manutenzione', '').strip()
+    quantita_inviata = int(request.form.get('quantita_inviata', 1) or 1)
     
     conn = get_db_connection()
     cur = conn.cursor()
+    cur.execute("SELECT quantita FROM prodotti WHERE qr_code = %s;", (qr_code,))
+    prod = cur.fetchone()
+    
+    if not prod:
+        cur.close()
+        conn.close()
+        flash("Prodotto non trovato.", "error")
+        return redirect(url_for('index'))
+        
+    if quantita_inviata > prod['quantita']:
+        flash(f"Errore: Non puoi spedire {quantita_inviata} pezzi. Disponibilità attuale in magazzino: {prod['quantita']} pz.", "error")
+        cur.close()
+        conn.close()
+        return redirect(url_for('gestisci_prodotto', qr_code=qr_code))
+
+    nuova_quantita = prod['quantita'] - quantita_inviata
+    
     cur.execute("""
         UPDATE prodotti 
-        SET stato = 'In Manutenzione', cliente_manutenzione = %s, data_spedizione = %s, data_rientro = %s, note_manutenzione = %s, ordine_arrivato = FALSE, modificato_da = %s 
+        SET stato = 'In Manutenzione', 
+            quantita = %s,
+            cliente_manutenzione = %s, 
+            data_spedizione = %s, 
+            data_rientro = %s, 
+            note_manutenzione = %s, 
+            ordine_arrivato = FALSE, 
+            modificato_da = %s 
         WHERE qr_code = %s;
-    """, (cliente, data_spedizione, data_rientro, note, session['user'], qr_code))
+    """, (nuova_quantita, cliente, data_spedizione, data_rientro, note, session['user'], qr_code))
     conn.commit()
     cur.close()
     conn.close()
-    flash("Pezzo inviato in manutenzione.", "success")
+    flash(f"Inviati {quantita_inviata} pz in manutenzione.", "success")
     return redirect(url_for('gestisci_prodotto', qr_code=qr_code))
 
 @app.route('/aggiorna_ordine', methods=['POST'])
@@ -368,7 +408,7 @@ def elimina_storico(storico_id):
     if storico_id:
         cur.execute("DELETE FROM storico_manutenzioni WHERE id = %s;", (storico_id,))
         conn.commit()
-        flash("Intervento rimosso dallo storico con successo.", "success")
+        flash("Intervento rimosso dallo storico.", "success")
     
     cur.close()
     conn.close()
@@ -376,6 +416,77 @@ def elimina_storico(storico_id):
     if qr_code:
         return redirect(url_for('gestisci_prodotto', qr_code=qr_code))
     return redirect(url_for('index'))
+
+@app.route('/clienti')
+def lista_clienti():
+    if 'user' not in session: return redirect(url_for('login'))
+    conn = get_db_connection()
+    cur = conn.cursor()
+    cur.execute("SELECT * FROM clienti ORDER BY nome_azienda ASC;")
+    clienti = cur.fetchall()
+    cur.close()
+    conn.close()
+    return render_template("clienti.html", clienti=clienti)
+
+@app.route('/clienti/aggiungi', methods=['POST'])
+def aggiungi_cliente():
+    if 'user' not in session: return redirect(url_for('login'))
+    nome = request.form.get('nome_azienda', '').strip()
+    indirizzo = request.form.get('indirizzo', '').strip()
+    p_iva = request.form.get('p_iva', '').strip()
+    cf = request.form.get('codice_fiscale', '').strip()
+    tel = request.form.get('telefono', '').strip()
+    email = request.form.get('email', '').strip()
+    
+    if nome:
+        conn = get_db_connection()
+        cur = conn.cursor()
+        cur.execute("""
+            INSERT INTO clienti (nome_azienda, indirizzo, p_iva, codice_fiscale, telefono, email)
+            VALUES (%s, %s, %s, %s, %s, %s)
+            ON CONFLICT (nome_azienda) DO UPDATE SET
+                indirizzo = EXCLUDED.indirizzo, p_iva = EXCLUDED.p_iva, 
+                codice_fiscale = EXCLUDED.codice_fiscale, telefono = EXCLUDED.telefono, email = EXCLUDED.email;
+        """, (nome, indirizzo, p_iva, cf, tel, email))
+        conn.commit()
+        cur.close()
+        conn.close()
+        flash("Cliente salvato con successo.", "success")
+    return redirect(url_for('lista_clienti'))
+
+@app.route('/clienti/elimina/<int:cliente_id>', methods=['POST'])
+def elimina_cliente(cliente_id):
+    if 'user' not in session or not session.get('is_admin'): return redirect(url_for('index'))
+    conn = get_db_connection()
+    cur = conn.cursor()
+    cur.execute("DELETE FROM clienti WHERE id = %s;", (cliente_id,))
+    conn.commit()
+    cur.close()
+    conn.close()
+    flash("Cliente eliminato.", "success")
+    return redirect(url_for('lista_clienti'))
+
+@app.route('/promemoria_spedizione/<qr_code>')
+def promemoria_spedizione(qr_code):
+    if 'user' not in session: return redirect(url_for('login'))
+    conn = get_db_connection()
+    cur = conn.cursor()
+    cur.execute("SELECT * FROM prodotti WHERE qr_code = %s;", (qr_code,))
+    prodotto = cur.fetchone()
+    
+    cliente_info = None
+    if prodotto and prodotto['cliente_manutenzione']:
+        cur.execute("SELECT * FROM clienti WHERE nome_azienda ILIKE %s;", (prodotto['cliente_manutenzione'],))
+        cliente_info = cur.fetchone()
+        
+    cur.close()
+    conn.close()
+    
+    if not prodotto:
+        flash("Prodotto non trovato.", "error")
+        return redirect(url_for('index'))
+        
+    return render_template("promemoria_spedizione.html", prodotto=prodotto, cliente=cliente_info)
 
 @app.route('/cancella/<qr_code>', methods=['POST'])
 def cancella_prodotto(qr_code):
