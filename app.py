@@ -1,7 +1,8 @@
 import os
 import psycopg2
 from psycopg2.extras import RealDictCursor
-from flask import Flask, render_template, request, redirect, url_for, flash
+from flask import Flask, render_template, request, redirect, url_for, flash, session
+from werkzeug.security import generate_password_hash, check_password_hash
 
 app = Flask(__name__)
 app.secret_key = os.environ.get("SECRET_KEY", "chiave-segreta-magazzino")
@@ -18,6 +19,13 @@ def init_db():
         conn = get_db_connection()
         cur = conn.cursor()
         cur.execute("""
+            CREATE TABLE IF NOT EXISTS utenti (
+                id SERIAL PRIMARY KEY,
+                username VARCHAR(255) UNIQUE NOT NULL,
+                password TEXT NOT NULL,
+                is_admin BOOLEAN DEFAULT FALSE,
+                puo_vedere_manutenzione BOOLEAN DEFAULT FALSE
+            );
             CREATE TABLE IF NOT EXISTS prodotti (
                 id SERIAL PRIMARY KEY,
                 qr_code VARCHAR(255) UNIQUE NOT NULL,
@@ -43,6 +51,14 @@ def init_db():
                 email VARCHAR(100)
             );
         """)
+        # Crea admin di default con permessi pieni
+        admin_pass = generate_password_hash("admin123")
+        cur.execute("""
+            INSERT INTO utenti (username, password, is_admin, puo_vedere_manutenzione) 
+            VALUES ('admin', %s, TRUE, TRUE)
+            ON CONFLICT (username) DO NOTHING;
+        """, (admin_pass,))
+        
         conn.commit()
         cur.close()
         conn.close()
@@ -51,8 +67,116 @@ def init_db():
 
 init_db()
 
+# --- AUTENTICAZIONE ---
+@app.route("/login", methods=["GET", "POST"])
+def login():
+    if request.method == "POST":
+        username = request.form.get("username", "").strip()
+        password = request.form.get("password", "")
+        try:
+            conn = get_db_connection()
+            cur = conn.cursor()
+            cur.execute("SELECT * FROM utenti WHERE username = %s;", (username,))
+            user = cur.fetchone()
+            cur.close()
+            conn.close()
+            
+            if user and check_password_hash(user["password"], password):
+                session["username"] = user["username"]
+                session["is_admin"] = user["is_admin"]
+                session["puo_vedere_manutenzione"] = user["puo_vedere_manutenzione"]
+                return redirect(url_for("index"))
+            else:
+                flash("Credenziali non valide.", "error")
+        except Exception as e:
+            flash(f"Errore durante il login: {e}", "error")
+    return render_template("login.html")
+
+@app.route("/logout")
+def logout():
+    session.clear()
+    return redirect(url_for("login"))
+
+@app.route("/registra", methods=["GET", "POST"])
+def registra():
+    if request.method == "POST":
+        username = request.form.get("username", "").strip()
+        password = request.form.get("password", "")
+        if username and password:
+            try:
+                hashed = generate_password_hash(password)
+                conn = get_db_connection()
+                cur = conn.cursor()
+                # I nuovi utenti partono senza permessi di manutenzione finché l'admin non li abilita
+                cur.execute("INSERT INTO utenti (username, password, is_admin, puo_vedere_manutenzione) VALUES (%s, %s, FALSE, FALSE);", (username, hashed))
+                conn.commit()
+                cur.close()
+                conn.close()
+                flash("Registrazione avvenuta con successo! In attesa di abilitazione dall'Admin.", "success")
+                return redirect(url_for("login"))
+            except Exception as e:
+                flash(f"Errore: utente già esistente.", "error")
+    return render_template("registra.html")
+
+# --- PANNELLO ADMIN UTENTI E PERMESSI ---
+@app.route("/admin/utenti")
+def admin_utenti():
+    if not session.get("is_admin"):
+        flash("Accesso negato: area riservata agli amministratori.", "error")
+        return redirect(url_for("index"))
+    
+    utenti_list = []
+    try:
+        conn = get_db_connection()
+        cur = conn.cursor()
+        cur.execute("SELECT * FROM utenti ORDER BY id ASC;")
+        utenti_list = cur.fetchall()
+        cur.close()
+        conn.close()
+    except Exception as e:
+        print(f"Errore utenti: {e}")
+    return render_template("admin_utenti.html", utenti=utenti_list)
+
+@app.route("/admin/toggle_permesso/<int:user_id>", methods=["POST"])
+def toggle_permesso(user_id):
+    if not session.get("is_admin"):
+        flash("Accesso negato.", "error")
+        return redirect(url_for("index"))
+    try:
+        conn = get_db_connection()
+        cur = conn.cursor()
+        # Inverte lo stato del permesso manutenzione per quell'utente
+        cur.execute("UPDATE utenti SET puo_vedere_manutenzione = NOT puo_vedere_manutenzione WHERE id = %s;", (user_id,))
+        conn.commit()
+        cur.close()
+        conn.close()
+        flash("Permessi utente aggiornati con successo.", "success")
+    except Exception as e:
+        flash(f"Errore aggiornamento permessi: {e}", "error")
+    return redirect(url_for("admin_utenti"))
+
+@app.route("/admin/elimina_utente/<int:user_id>", methods=["POST"])
+def elimina_utente(user_id):
+    if not session.get("is_admin"):
+        flash("Accesso negato.", "error")
+        return redirect(url_for("index"))
+    try:
+        conn = get_db_connection()
+        cur = conn.cursor()
+        cur.execute("DELETE FROM utenti WHERE id = %s;", (user_id,))
+        conn.commit()
+        cur.close()
+        conn.close()
+        flash("Utente eliminato con successo.", "success")
+    except Exception as e:
+        flash(f"Errore eliminazione utente: {e}", "error")
+    return redirect(url_for("admin_utenti"))
+
+# --- MAGAZZINO ---
 @app.route("/")
 def index():
+    if "username" not in session:
+        return redirect(url_for("login"))
     prodotti = []
     try:
         conn = get_db_connection()
@@ -67,6 +191,8 @@ def index():
 
 @app.route("/gestisci/<qr_code>")
 def gestisci_prodotto(qr_code):
+    if "username" not in session:
+        return redirect(url_for("login"))
     prodotto = None
     clienti_list = []
     try:
@@ -89,6 +215,8 @@ def gestisci_prodotto(qr_code):
 
 @app.route("/aggiungi", methods=["POST"])
 def aggiungi_prodotto():
+    if "username" not in session:
+        return redirect(url_for("login"))
     qr_code = request.form.get("qr_code")
     nome = request.form.get("nome")
     sap = request.form.get("sap", "")
@@ -122,6 +250,8 @@ def aggiungi_prodotto():
 
 @app.route("/carico", methods=["GET", "POST"])
 def carico():
+    if "username" not in session:
+        return redirect(url_for("login"))
     if request.method == "POST":
         qr_code = request.form.get("qr_code")
         quantita = int(request.form.get("quantita", 1) or 1)
@@ -141,6 +271,8 @@ def carico():
 
 @app.route("/scarico", methods=["GET", "POST"])
 def scarico():
+    if "username" not in session:
+        return redirect(url_for("login"))
     if request.method == "POST":
         qr_code = request.form.get("qr_code")
         quantita = int(request.form.get("quantita", 1) or 1)
@@ -160,6 +292,14 @@ def scarico():
 
 @app.route("/elimina", methods=["POST"])
 def elimina_prodotto():
+    if "username" not in session:
+        return redirect(url_for("login"))
+    
+    # SOLO L'ADMIN PUÒ ELIMINARE I PRODOTTI
+    if not session.get("is_admin"):
+        flash("Accesso negato: solo l'amministratore può eliminare i prodotti dal magazzino.", "error")
+        return redirect(url_for("index"))
+
     qr_code = request.form.get("qr_code")
     if qr_code:
         try:
@@ -177,6 +317,14 @@ def elimina_prodotto():
 
 @app.route("/stato_manutenzione/<qr_code>", methods=["POST"])
 def stato_manutenzione(qr_code):
+    if "username" not in session:
+        return redirect(url_for("login"))
+    
+    # CONTROLLO PERMESSO MANUTENZIONE ASSEGNATO DALL'ADMIN
+    if not session.get("is_admin") and not session.get("puo_vedere_manutenzione"):
+        flash("Non hai i permessi necessari per modificare o gestire le manutenzioni.", "error")
+        return redirect(url_for("gestisci_prodotto", qr_code=qr_code))
+
     nuovo_stato = request.form.get("stato", "In Manutenzione")
     cliente = request.form.get("cliente_manutenzione", "")
     qta_maint = int(request.form.get("quantita_manutenzione", 1) or 1)
@@ -211,6 +359,8 @@ def stato_manutenzione(qr_code):
 
 @app.route("/bolla/<qr_code>")
 def stampa_bolla(qr_code):
+    if "username" not in session:
+        return redirect(url_for("login"))
     prodotto = None
     cliente_info = None
     try:
@@ -235,6 +385,8 @@ def stampa_bolla(qr_code):
 @app.route("/clienti")
 @app.route("/lista_clienti")
 def clienti():
+    if "username" not in session:
+        return redirect(url_for("login"))
     clienti_list = []
     try:
         conn = get_db_connection()
@@ -249,6 +401,8 @@ def clienti():
 
 @app.route("/aggiungi_cliente", methods=["POST"])
 def aggiungi_cliente():
+    if "username" not in session:
+        return redirect(url_for("login"))
     nome_azienda = request.form.get("nome_azienda", "").strip()
     indirizzo = request.form.get("indirizzo", "")
     p_iva = request.form.get("p_iva", "")
@@ -283,6 +437,14 @@ def aggiungi_cliente():
 @app.route("/manutenzioni")
 @app.route("/lista_manutenzioni")
 def lista_manutenzioni():
+    if "username" not in session:
+        return redirect(url_for("login"))
+    
+    # CONTROLLO ACCESSO SEZIONE MANUTENZIONI DECISO DALL'ADMIN
+    if not session.get("is_admin") and not session.get("puo_vedere_manutenzione"):
+        flash("Accesso negato: l'amministratore non ti ha autorizzato a visualizzare la sezione manutenzioni.", "error")
+        return redirect(url_for("index"))
+
     prodotti_maint = []
     try:
         conn = get_db_connection()
