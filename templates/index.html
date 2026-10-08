@@ -41,9 +41,15 @@
         <h1>📦 Magazzino OMG</h1>
         <div class="nav-links">
             <a href="{{ url_for('clienti') }}" class="btn">Clienti</a>
-            <a href="{{ url_for('lista_manutenzioni') }}" class="btn" style="background: #0284c7;">Manutenzioni</a>
+            {% if session.get('is_admin') or session.get('puo_vedere_manutenzione') %}
+                <a href="{{ url_for('lista_manutenzioni') }}" class="btn" style="background: #0284c7;">Manutenzioni</a>
+            {% endif %}
             <a href="{{ url_for('carico') }}" class="btn btn-success">Carico</a>
             <a href="{{ url_for('scarico') }}" class="btn btn-danger">Scarico</a>
+            {% if session.get('is_admin') %}
+                <a href="{{ url_for('admin_utenti') }}" class="btn" style="background: #eab308; color: #000;">👑 Admin</a>
+            {% endif %}
+            <a href="{{ url_for('logout') }}" class="btn" style="background: #64748b;">Esci</a>
         </div>
     </div>
 
@@ -119,7 +125,15 @@
                             </span>
                         </td>
                         <td>
-                            <a href="{{ url_for('gestisci_prodotto', qr_code=p.qr_code) }}" class="btn" style="padding: 4px 8px; font-size: 0.75rem;">Gestisci</a>
+                            <div style="display: flex; gap: 5px; align-items: center;">
+                                <a href="{{ url_for('gestisci_prodotto', qr_code=p.qr_code) }}" class="btn" style="padding: 4px 8px; font-size: 0.75rem;">Gestisci</a>
+                                {% if session.get('is_admin') %}
+                                <form action="{{ url_for('elimina_prodotto') }}" method="POST" onsubmit="return confirm('Eliminare {{ p.nome }}?');" style="margin: 0;">
+                                    <input type="hidden" name="qr_code" value="{{ p.qr_code }}">
+                                    <button type="submit" class="btn btn-danger" style="padding: 4px 8px; font-size: 0.75rem;">🗑️</button>
+                                </form>
+                                {% endif %}
+                            </div>
                         </td>
                     </tr>
                     {% endfor %}
