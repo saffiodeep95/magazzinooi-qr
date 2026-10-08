@@ -9,6 +9,7 @@
             --primary: #4f46e5;
             --success: #10b981;
             --danger: #ef4444;
+            --warning: #f59e0b;
             --bg-color: #f8fafc;
             --card-bg: #ffffff;
             --text-main: #1e293b;
@@ -22,6 +23,7 @@
         .btn:hover { opacity: 0.9; }
         .btn-danger { background: var(--danger); }
         .btn-success { background: var(--success); }
+        .btn-warning { background: var(--warning); color: #fff; }
         .card { background: var(--card-bg); padding: 20px; border-radius: 14px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); margin-bottom: 16px; border: 1px solid var(--border-color); }
         h1, h2 { font-size: 1.2rem; color: var(--text-main); margin-top: 0; }
         table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 0.9rem; }
@@ -55,7 +57,6 @@
       {% endif %}
     {% endwith %}
 
-    <!-- Form Aggiunta Prodotto -->
     <div class="card">
         <h2>➕ Aggiungi o Aggiorna Prodotto</h2>
         <form action="{{ url_for('aggiungi_prodotto') }}" method="POST">
@@ -89,7 +90,6 @@
         </form>
     </div>
 
-    <!-- Tabella Prodotti con QR Code -->
     <div class="card">
         <h2>📋 Elenco Prodotti in Magazzino</h2>
         {% if prodotti %}
@@ -99,9 +99,9 @@
                     <tr>
                         <th>QR Code</th>
                         <th>Nome Prodotto</th>
-                        <th>Codice SAP</th>
-                        <th>Quantità</th>
-                        <th>Scaffale</th>
+                        <th>SAP</th>
+                        <th>Qtà</th>
+                        <th>Stato</th>
                         <th>Azioni</th>
                     </tr>
                 </thead>
@@ -109,15 +109,19 @@
                     {% for p in prodotti %}
                     <tr>
                         <td>
-                            <img src="https://api.qrserver.com/v1/create-qr-code/?size=60x60&data={{ p.qr_code }}" alt="QR" style="vertical-align: middle; border-radius: 4px; border: 1px solid #e2e8f0; margin-right: 8px;">
+                            <img src="https://api.qrserver.com/v1/create-qr-code/?size=50x50&data={{ p.qr_code }}" alt="QR" style="vertical-align: middle; border-radius: 4px; border: 1px solid #e2e8f0; margin-right: 6px;">
                             <code>{{ p.qr_code }}</code>
                         </td>
                         <td><strong>{{ p.nome }}</strong></td>
                         <td>{{ p.sap if p.sap else '-' }}</td>
                         <td>{{ p.quantita }}</td>
-                        <td>{{ p.posizione if p.posizione else '-' }}</td>
                         <td>
-                            <a href="{{ url_for('gestisci_prodotto', qr_code=p.qr_code) }}" class="btn" style="padding: 4px 10px; font-size: 0.75rem;">Gestisci</a>
+                            <span style="padding: 3px 8px; border-radius: 6px; font-size: 0.75rem; background: #e0e7ff; color: #3730a3; font-weight: 600;">
+                                {{ p.stato if p.stato else 'Disponibile' }}
+                            </span>
+                        </td>
+                        <td>
+                            <a href="{{ url_for('gestisci_prodotto', qr_code=p.qr_code) }}" class="btn" style="padding: 4px 8px; font-size: 0.75rem;">Gestisci</a>
                         </td>
                     </tr>
                     {% endfor %}
