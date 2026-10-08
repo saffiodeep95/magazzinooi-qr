@@ -143,7 +143,32 @@ def index():
         
     return render_template('index.html', prodotti=prodotti)
 
-# --- ROTTA LOGIN (A prova di errore) ---
+# --- ROTTA LISTA MANUTENZIONI E STORICO ---
+@app.route('/manutenzioni')
+def lista_manutenzioni():
+    if 'username' not in session:
+        return redirect(url_for('login'))
+        
+    conn = get_db_connection()
+    prodotti_maint = []
+    storico_list = []
+    if conn:
+        try:
+            cur = conn.cursor()
+            cur.execute("SELECT * FROM prodotti WHERE stato = 'In Manutenzione' ORDER BY id DESC;")
+            prodotti_maint = cur.fetchall()
+            
+            cur.execute("SELECT * FROM storico_manutenzioni ORDER BY id DESC;")
+            storico_list = cur.fetchall()
+            
+            cur.close()
+            conn.close()
+        except Exception as e:
+            print(f"Errore caricamento manutenzioni: {e}")
+            
+    return render_template('manutenzioni.html', prodotti=prodotti_maint, storico=storico_list)
+
+# --- ROTTA LOGIN ---
 @app.route('/login', methods=['GET', 'POST'])
 def login():
     if request.method == 'POST':
@@ -162,7 +187,6 @@ def login():
                 if user:
                     pwd_db = user[2]
                     is_valid = False
-                    # Gestione sicura per evitare crash se la password nel DB ha formati misti
                     try:
                         if pwd_db and (pwd_db.startswith('pbkdf2:') or pwd_db.startswith('scrypt:') or pwd_db.startswith('$')):
                             is_valid = check_password_hash(pwd_db, password)
