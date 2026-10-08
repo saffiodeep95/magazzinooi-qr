@@ -9,7 +9,6 @@
             --primary: #4f46e5;
             --success: #10b981;
             --danger: #ef4444;
-            --warning: #f59e0b;
             --bg-color: #f8fafc;
             --card-bg: #ffffff;
             --text-main: #1e293b;
@@ -23,7 +22,6 @@
         .btn:hover { opacity: 0.9; }
         .btn-danger { background: var(--danger); }
         .btn-success { background: var(--success); }
-        .btn-warning { background: var(--warning); color: #fff; }
         .card { background: var(--card-bg); padding: 20px; border-radius: 14px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); margin-bottom: 16px; border: 1px solid var(--border-color); }
         h1, h2 { font-size: 1.2rem; color: var(--text-main); margin-top: 0; }
         table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 0.9rem; }
@@ -116,7 +114,7 @@
                         <td>{{ p.sap if p.sap else '-' }}</td>
                         <td>{{ p.quantita }}</td>
                         <td>
-                            <span style="padding: 3px 8px; border-radius: 6px; font-size: 0.75rem; background: #e0e7ff; color: #3730a3; font-weight: 600;">
+                            <span style="padding: 3px 8px; border-radius: 6px; font-size: 0.75rem; background: {% if p.stato == 'In Manutenzione' %}#fef3c7; color: #92400e;{% else %}#e0e7ff; color: #3730a3;{% endif %} font-weight: 600;">
                                 {{ p.stato if p.stato else 'Disponibile' }}
                             </span>
                         </td>
