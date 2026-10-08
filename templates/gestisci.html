@@ -17,6 +17,7 @@
         label { font-size: 0.85rem; font-weight: 600; color: #64748b; display: block; margin-top: 8px; }
         .checkbox-group { display: flex; align-items: center; gap: 10px; margin: 12px 0; }
         .checkbox-group input { width: 20px; height: 20px; margin: 0; }
+        .client-info-box { background: #f1f5f9; padding: 12px; border-radius: 8px; margin-bottom: 12px; font-size: 0.85rem; color: #334155; border: 1px solid #cbd5e1; }
     </style>
 </head>
 <body>
@@ -47,7 +48,7 @@
             <a href="{{ url_for('scarico', qr_code=prodotto.qr_code) }}" class="btn btn-danger" style="background: #ea580c;">➖ Scarico</a>
         </div>
 
-        {% if session.get('is_admin') %}
+        {% if session.get('is_admin') or session.get('puo_eliminare') %}
         <div style="margin-top: 25px; border-top: 1px solid #e2e8f0; padding-top: 15px;">
             <form action="{{ url_for('elimina_prodotto') }}" method="POST" onsubmit="return confirm('Sei sicuro di voler eliminare definitivamente questo articolo?');">
                 <input type="hidden" name="qr_code" value="{{ prodotto.qr_code }}">
@@ -57,14 +58,14 @@
         {% endif %}
     </div>
 
-    <!-- Modulo Gestione Manutenzione -->
+    <!-- Modulo Gestione Manutenzione con Autocompilazione Rubrica -->
     <div class="card">
-        <h3>🔧 Gestione Manutenzione e Pezzi</h3>
+        <h3>🔧 Gestione Manutenzione e Rubrica</h3>
         {% if session.get('is_admin') or session.get('puo_vedere_manutenzione') %}
             
             {% if prodotto.in_manutenzione %}
                 <div style="background: #fef3c7; border: 1px solid #f59e0b; padding: 15px; border-radius: 8px; margin-bottom: 15px; text-align: center;">
-                    <p style="margin: 0 0 10px 0; color: #92400e; font-weight: bold;">Questo articolo ha attualmente {{ prodotto.quantita_manutenzione }} pezzi in manutenzione per il cliente: {{ prodotto.cliente_manutenzione }}</p>
+                    <p style="margin: 0 0 10px 0; color: #92400e; font-weight: bold;">Articolo in manutenzione per: {{ prodotto.cliente_manutenzione }} ({{ prodotto.quantita_manutenzione }} pz)</p>
                     <form action="{{ url_for('ripristina_magazzino', qr_code=prodotto.qr_code) }}" method="POST">
                         <button type="submit" class="btn btn-success" style="width: 100%;">🔄 Ripristina in Magazzino (Riconsegna Pezzi)</button>
                     </form>
@@ -73,13 +74,28 @@
 
             <form action="{{ url_for('manda_manutenzione', qr_code=prodotto.qr_code) }}" method="POST">
                 <div>
-                    <label>Cliente / Azienda</label>
-                    <select name="cliente_manutenzione">
-                        <option value="">-- Seleziona Cliente --</option>
+                    <label>Seleziona Cliente da Rubrica</label>
+                    <select name="cliente_manutenzione" id="select_cliente" onchange="aggiornaDatiCliente()">
+                        <option value="">-- Seleziona Azienda Cliente --</option>
                         {% for c in clienti %}
-                        <option value="{{ c.nome_azienda }}" {% if prodotto.cliente_manutenzione == c.nome_azienda %}selected{% endif %}>{{ c.nome_azienda }}</option>
+                        <option value="{{ c.nome_azienda }}" 
+                                data-indirizzo="{{ c.indirizzo or '' }}" 
+                                data-piva="{{ c.p_iva or '' }}" 
+                                data-telefono="{{ c.telefono or '' }}" 
+                                data-email="{{ c.email or '' }}"
+                                {% if prodotto.cliente_manutenzione == c.nome_azienda %}selected{% endif %}>
+                            {{ c.nome_azienda }}
+                        </option>
                         {% endfor %}
                     </select>
+                </div>
+
+                <!-- Box informativo che si autocompila pescando dalla rubrica -->
+                <div id="box_info_cliente" class="client-info-box" style="display: none;">
+                    <strong>Dati Cliente in Rubrica:</strong><br>
+                    📍 Indirizzo: <span id="info_indirizzo">-</span><br>
+                    📄 P.IVA: <span id="info_piva">-</span><br>
+                    📞 Telefono: <span id="info_telefono">-</span>
                 </div>
 
                 <div>
@@ -117,7 +133,7 @@
             </form>
         {% else %}
             <p style="color: #991b1b; background: #fee2e2; padding: 12px; border-radius: 8px; font-size: 0.9rem; text-align: center;">
-                <strong>Accesso Limitato:</strong> Non disponi dei permessi necessari per gestire le manutenzioni.
+                <strong>Accesso Limitato:</strong> Non disponi dei permessi per gestire le manutenzioni.
             </p>
         {% endif %}
     </div>
@@ -126,5 +142,26 @@
         <a href="{{ url_for('index') }}" class="btn" style="background: #64748b;">← Torna alla Home</a>
     </div>
 
+    <script>
+        function aggiornaDatiCliente() {
+            const select = document.getElementById('select_cliente');
+            const selectedOption = select.options[select.selectedIndex];
+            const box = document.getElementById('box_info_cliente');
+
+            if (select.value) {
+                document.getElementById('info_indirizzo').textContent = selectedOption.getAttribute('data-indirizzo') || '-';
+                document.getElementById('info_piva').textContent = selectedOption.getAttribute('data-piva') || '-';
+                document.getElementById('info_telefono').textContent = selectedOption.getAttribute('data-telefono') || '-';
+                box.style.display = 'block';
+            } else {
+                box.style.display = 'none';
+            }
+        }
+
+        // Esegue all'avvio se c'è già un cliente selezionato
+        window.onload = function() {
+            aggiornaDatiCliente();
+        };
+    </script>
 </body>
 </html>
