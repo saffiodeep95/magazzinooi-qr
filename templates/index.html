@@ -29,8 +29,9 @@
         header { display: flex; align-items: center; gap: 12px; }
         header h1 { font-size: 1.5rem; font-weight: 800; color: var(--text-main); margin: 0; }
         .logo-badge { background: var(--primary); color: white; font-size: 1.3rem; width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; border-radius: 12px; }
-        .user-actions { display: flex; gap: 8px; align-items: center; }
+        .user-actions { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
         .maint-nav-btn { background: #f59e0b; color: white; padding: 8px 12px; border-radius: 8px; text-decoration: none; font-size: 0.85rem; font-weight: 600; }
+        .client-nav-btn { background: #10b981; color: white; padding: 8px 12px; border-radius: 8px; text-decoration: none; font-size: 0.85rem; font-weight: 600; }
         .admin-btn { background: #0ea5e9; color: white; padding: 8px 12px; border-radius: 8px; text-decoration: none; font-size: 0.85rem; font-weight: 600; }
         .logout-btn { background: #ef4444; color: white; padding: 8px 12px; border-radius: 8px; text-decoration: none; font-size: 0.85rem; font-weight: 600; }
         
@@ -77,6 +78,7 @@
         </header>
         <div class="user-actions">
             <a href="{{ url_for('lista_manutenzioni') }}" class="maint-nav-btn">🔧 Manutenzioni</a>
+            <a href="{{ url_for('lista_clienti') }}" class="client-nav-btn">📇 Clienti</a>
             {% if session.get('is_admin') %}
             <a href="{{ url_for('gestione_utenti') }}" class="admin-btn">⚙️ Admin</a>
             {% endif %}
@@ -86,14 +88,14 @@
 
     {% if num_critici > 0 %}
     <div class="alert-banner">
-        <span>🚨 <strong>Attenzione Critica:</strong> Ci sono <strong>{{ num_critici }} prodotti</strong> in riparazione da oltre 30 giorni non rientrati!</span>
+        <span>🚨 <strong>Attenzione Critica:</strong> Ci sono <strong>{{ num_critici }} prodotti</strong> con oltre 30 giorni di ritardo sul rientro previsto!</span>
         <a href="{{ url_for('lista_manutenzioni') }}" style="color: #991b1b; text-decoration: underline; font-weight: 700;">Controlla</a>
     </div>
     {% endif %}
 
     {% if num_attenzione > 0 %}
     <div class="alert-banner warning">
-        <span>⚠️ <strong>Avviso Manutenzione:</strong> Ci sono <strong>{{ num_attenzione }} prodotti</strong> in riparazione da oltre 15 giorni.</span>
+        <span>⚠️ <strong>Avviso Ritardo:</strong> Ci sono <strong>{{ num_attenzione }} prodotti</strong> con oltre 15 giorni di ritardo sul rientro previsto.</span>
         <a href="{{ url_for('lista_manutenzioni') }}" style="color: #92400e; text-decoration: underline; font-weight: 700;">Controlla</a>
     </div>
     {% endif %}
@@ -195,7 +197,7 @@
     </div>
 
     <div class="footer-credit">
-        Magazzino OMG &bull; Creato da <strong>Marco Pavan</strong>
+        Magazzino OMG &bull; Creato da <strong>Bermuda</strong>
     </div>
 
     <script>
