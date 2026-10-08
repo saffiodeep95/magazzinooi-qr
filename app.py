@@ -1,34 +1,9 @@
 import os
 import psycopg2
 from psycopg2.extras import RealDictCursor
-from flask import Flask, render_template, request, redirect, url_for, flash, session
-from werkzeug.security import generate_password_hash, check_password_hash
-
-app = Flask(__name__)
-app.secret_key = os.environ.get("SECRET_KEY", "chiave-segreta-magazzino")
-
-DATABASE_URL = os.environ.get("DATABASE_URL")
-
-def get_db_connection():
-    return psycopg2.connect(DATABASE_URL, cursor_factory=RealDictCursor)
-
-def init_db():
-    if not DATABASE_URL:
-        return
-    try:
-        conn = get_db_connection()
-        cur = conn.cursor()
-        cur.execute("""
-            CREATE TABLE IF NOT EXISTS utenti (
-                id SERIAL PRIMARY KEY,
-                username VARCHAR(255) UNIQUE NOT NULL,
-     …
-[12:08, 08/10/2026] Marco Pavan: import os
-import psycopg2
-from psycopg2.extras import RealDictCursor
 from flask import Flask, render_template, request, redirect, url_for, flash
 
-app = Flask(_name_)
+app = Flask(__name__)
 app.secret_key = os.environ.get("SECRET_KEY", "chiave-segreta-magazzino")
 
 DATABASE_URL = os.environ.get("DATABASE_URL")
@@ -216,12 +191,18 @@ def aggiungi_cliente():
         try:
             conn = get_db_connection()
             cur = conn.cursor()
-            cur.execute("""
+            cur.execute(
+                """
                 INSERT INTO clienti (nome_azienda, indirizzo, p_iva, telefono, email)
                 VALUES (%s, %s, %s, %s, %s)
                 ON CONFLICT (nome_azienda) DO UPDATE 
-                SET indirizzo = EXCLUDED.indirizzo, p_iva = EXCLUDED.p_iva, telefono = EXCLUDED.telefono, email = EXCLUDED.email;
-            """, (nome_azienda, indirizzo, p_iva, telefono, email))
+                SET indirizzo = EXCLUDED.indirizzo, 
+                    p_iva = EXCLUDED.p_iva, 
+                    telefono = EXCLUDED.telefono, 
+                    email = EXCLUDED.email;
+                """,
+                (nome_azienda, indirizzo, p_iva, telefono, email)
+            )
             conn.commit()
             cur.close()
             conn.close()
