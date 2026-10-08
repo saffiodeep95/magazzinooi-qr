@@ -116,7 +116,7 @@ def index():
     if conn:
         try:
             cur = conn.cursor()
-            cur.execute("SELECT * FROM prodotti ORDER BY id DESC;")
+            cur.execute("SELECT id, qr_code, nome, quantita, posizione, sap, modificato_da, stato, cliente_manutenzione, data_spedizione, data_rientro, note_manutenzione, materiale_ritornato, ordine_arrivato FROM prodotti ORDER BY id DESC;")
             rows = cur.fetchall()
             for r in rows:
                 prodotti.append({
@@ -138,7 +138,7 @@ def index():
             cur.close()
             conn.close()
         except Exception as e:
-            print(f"Errore caricamento prodotti: {e}")
+            print(f"Errore caricamento prodotti in index: {e}")
         
     return render_template('index.html', prodotti=prodotti)
 
@@ -244,7 +244,7 @@ def logout():
     session.clear()
     return redirect(url_for('login'))
 
-# --- GESTIONE ANAGRAFICA CLIENTI (Supporta sia /clienti che /lista_clienti) ---
+# --- GESTIONE ANAGRAFICA CLIENTI ---
 @app.route('/clienti')
 @app.route('/lista_clienti')
 def clienti():
@@ -401,4 +401,4 @@ def aggiorna_manutenzione(id):
     return redirect(url_for('index'))
 
 if __name__ == '_main_':
-    app.run(host='0.0.0.0', port=5000, debug=True)
+    app.run(host='0.0.0.0', port5000, debug=True)
