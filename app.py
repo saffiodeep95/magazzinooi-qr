@@ -4,6 +4,7 @@ import io
 import base64
 from datetime import datetime
 from flask import Flask, render_template, request, redirect, url_for, session, flash, send_file
+from werkzeug.security import generate_password_hash, check_password_hash
 import psycopg2
 from urllib.parse import urlparse
 
@@ -25,7 +26,7 @@ def get_db_connection():
         return conn
     return None
 
-# --- INIZIALIZZAZIONE DEL DATABASE ---
+# --- INIZIALIZZAZIONE DEL DATABASE E RIPRISTINO ADMIN ---
 def init_db():
     conn = get_db_connection()
     if conn:
@@ -83,10 +84,23 @@ def init_db():
                     chiuso_da VARCHAR(255)
                 );
             """)
+
+            # Forziamo l'inserimento o l'aggiornamento dell'utente admin predefinito
+            admin_pass = generate_password_hash("admin123")
+            cur.execute("""
+                INSERT INTO utenti (username, password, is_admin, puoi_cancellare, puoi_assistenza) 
+                VALUES ('admin', %s, TRUE, TRUE, TRUE)
+                ON CONFLICT (username) DO UPDATE SET 
+                    password = EXCLUDED.password, 
+                    is_admin = TRUE,
+                    puoi_cancellare = TRUE,
+                    puoi_assistenza = TRUE;
+            """, (admin_pass,))
+
             conn.commit()
             cur.close()
             conn.close()
-            print("Database inizializzato con successo.")
+            print("Database inizializzato e utente admin ripristinato con successo.")
         except Exception as e:
             print(f"Errore inizializzazione DB: {e}")
 
@@ -127,7 +141,7 @@ def index():
         
     return render_template('index.html', prodotti=prodotti)
 
-# --- ROTTA LOGIN ---
+# --- ROTTA LOGIN SICURA ---
 @app.route('/login', methods=['GET', 'POST'])
 def login():
     if request.method == 'POST':
@@ -137,19 +151,27 @@ def login():
         conn = get_db_connection()
         if conn:
             cur = conn.cursor()
-            cur.execute("SELECT * FROM utenti WHERE username = %s AND password = %s;", (username, password))
+            cur.execute("SELECT * FROM utenti WHERE username = %s;", (username,))
             user = cur.fetchone()
             cur.close()
             conn.close()
             
             if user:
-                session['username'] = user[1]
-                session['is_admin'] = user[3]
-                session['puoi_cancellare'] = user[4]
-                session['puoi_assistenza'] = user[5]
-                return redirect(url_for('index'))
-            else:
-                flash("Credenziali non valide.")
+                pwd_db = user[2]
+                is_valid = False
+                if pwd_db.startswith('pbkdf2:') or pwd_db.startswith('scrypt:'):
+                    is_valid = check_password_hash(pwd_db, password)
+                else:
+                    is_valid = (pwd_db == password)
+                
+                if is_valid:
+                    session['username'] = user[1]
+                    session['is_admin'] = user[3]
+                    session['puoi_cancellare'] = user[4]
+                    session['puoi_assistenza'] = user[5]
+                    return redirect(url_for('index'))
+                    
+            flash("Credenziali non valide.")
                 
     return render_template('login.html')
 
@@ -160,6 +182,11 @@ def registra():
         username = request.form.get('username')
         password = request.form.get('password')
         
+        if not username or not password:
+            flash("Compila tutti i campi.")
+            return redirect(url_for('registra'))
+
+        hashed_password = generate_password_hash(password)
         conn = get_db_connection()
         if conn:
             try:
@@ -167,7 +194,7 @@ def registra():
                 cur.execute("""
                     INSERT INTO utenti (username, password, is_admin, puoi_cancellare, puoi_assistenza)
                     VALUES (%s, %s, FALSE, FALSE, FALSE);
-                """, (username, password))
+                """, (username, hashed_password))
                 conn.commit()
                 cur.close()
                 conn.close()
