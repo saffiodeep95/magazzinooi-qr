@@ -62,7 +62,7 @@
         .checkbox-container input { width: 20px; height: 20px; margin: 0; cursor: pointer; }
 
         .storico-box { text-align: left; background: #f8fafc; border: 1px solid var(--border-color); border-radius: 10px; padding: 12px; margin-top: 10px; font-size: 0.85rem; }
-        .storico-item { border-bottom: 1px solid var(--border-color); padding-bottom: 10px; margin-bottom: 10px; }
+        .storico-item { border-bottom: 1px solid var(--border-color); padding-bottom: 10px; margin-bottom: 10px; position: relative; padding-right: 70px; }
         .storico-item:last-child { border-bottom: none; margin-bottom: 0; padding-bottom: 0; }
 
         .print-label { display: none; text-align: center; background: #fff; padding: 10px; }
@@ -137,7 +137,6 @@
         
         {% if session.get('is_admin') or session.get('puoi_assistenza') %}
             {% if prodotto.stato == 'In Manutenzione' %}
-                <!-- Checkbox Ordine Amministrazione Arrivato -->
                 <div class="order-status-box">
                     <form action="{{ url_for('aggiorna_ordine') }}" method="POST">
                         <input type="hidden" name="qr_code" value="{{ prodotto.qr_code }}">
@@ -148,7 +147,6 @@
                     </form>
                 </div>
 
-                <!-- Form per Registrare il Rientro Fisico in Magazzino -->
                 <form action="{{ url_for('rientro') }}" method="POST">
                     <input type="hidden" name="qr_code" value="{{ prodotto.qr_code }}">
                     <label>Intervento di Riparazione Eseguito / Note di Chiusura</label>
@@ -157,7 +155,6 @@
                     <button type="submit" class="btn-green" style="margin-top: 8px;">📥 Registra Rientro Fisico in Magazzino e Chiudi Assistenza</button>
                 </form>
             {% else %}
-            <!-- Form per Inviare in Manutenzione -->
             <form action="{{ url_for('manutenzione') }}" method="POST">
                 <input type="hidden" name="qr_code" value="{{ prodotto.qr_code }}">
                 
@@ -181,7 +178,7 @@
         {% endif %}
     </div>
 
-    <!-- Storico Completo di Tutte le Manutenzioni Passate -->
+    <!-- Storico Interventi e Date con Tasto Cancella -->
     <div class="card">
         <h2>📜 Storico Interventi (Riparato: <strong>{{ storico|length }} volte</strong>)</h2>
         {% if storico %}
@@ -196,6 +193,12 @@
                 {% endif %}
                 <p style="margin: 0 0 4px 0; color: #166534;"><strong>🛠️ Riparazione eseguita:</strong> {{ s.materiale_ritornato if s.materiale_ritornato else 'N/D' }}</p>
                 <p style="margin: 0; font-size: 0.75rem; color: var(--text-muted);">Chiuso da: {{ s.chiuso_da }}</p>
+
+                {% if session.get('is_admin') or session.get('puoi_assistenza') %}
+                <form action="{{ url_for('elimina_storico', storico_id=s.id) }}" method="POST" onsubmit="return confirm('Vuoi davvero cancellare questo record dallo storico?');" style="position: absolute; top: 0; right: 0; margin: 0;">
+                    <button type="submit" style="background: var(--danger); color: white; border: none; padding: 4px 8px; border-radius: 6px; font-size: 0.75rem; font-weight: 600; cursor: pointer; width: auto; margin: 0;">🗑️ Cancella</button>
+                </form>
+                {% endif %}
             </div>
             {% endfor %}
         </div>
@@ -204,7 +207,6 @@
         {% endif %}
     </div>
 
-    <!-- Etichetta nascosta per la stampa -->
     <div class="print-label">
         <h2>{{ prodotto.nome }}</h2>
         <img src="data:image/png;base64,{{ prodotto.qr_img }}" alt="QR Code">
