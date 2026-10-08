@@ -59,7 +59,7 @@
     <!-- Sezione Inserimento / Aggiunta Prodotto -->
     <div class="card">
         <h2>➕ Aggiungi o Aggiorna Prodotto</h2>
-        <form action="{{ url_for('aggiungi_prodotto') if 'aggiungi_prodotto' in url_for._globals_ else '#' }}" method="POST">
+        <form action="{{ url_for('aggiungi_prodotto') }}" method="POST">
             <div class="grid-3">
                 <div class="form-group">
                     <label>QR Code / Codice</label>
