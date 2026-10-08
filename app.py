@@ -1,4 +1,4 @@
-[10:39, 08/10/2026] Marco Pavan: import os
+import os
 import qrcode
 import io
 import base64
