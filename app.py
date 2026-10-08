@@ -51,7 +51,6 @@ def init_db():
                 email VARCHAR(100)
             );
         """)
-        # Aggiunge colonne se mancano su tabelle esistenti
         cur.execute("ALTER TABLE utenti ADD COLUMN IF NOT EXISTS puo_vedere_manutenzione BOOLEAN DEFAULT FALSE;")
         cur.execute("ALTER TABLE prodotti ADD COLUMN IF NOT EXISTS in_manutenzione BOOLEAN DEFAULT FALSE;")
         cur.execute("ALTER TABLE prodotti ADD COLUMN IF NOT EXISTS cliente_manutenzione VARCHAR(255);")
@@ -62,7 +61,6 @@ def init_db():
         cur.execute("ALTER TABLE prodotti ADD COLUMN IF NOT EXISTS vettore VARCHAR(255);")
         cur.execute("ALTER TABLE prodotti ADD COLUMN IF NOT EXISTS note_manutenzione TEXT;")
 
-        # Crea admin di default
         admin_pass = generate_password_hash("admin123")
         cur.execute("""
             INSERT INTO utenti (username, password, is_admin, puo_vedere_manutenzione) 
@@ -79,7 +77,6 @@ def init_db():
 
 init_db()
 
-# --- AUTENTICAZIONE ---
 @app.route("/login", methods=["GET", "POST"])
 def login():
     if request.method == "POST":
@@ -123,19 +120,16 @@ def registra():
                 conn.commit()
                 cur.close()
                 conn.close()
-                flash("Registrazione avvenuta con successo! In attesa di abilitazione dall'Admin.", "success")
+                flash("Registrazione avvenuta con successo!", "success")
                 return redirect(url_for("login"))
             except Exception as e:
                 flash(f"Errore: utente già esistente.", "error")
     return render_template("registra.html")
 
-# --- ADMIN UTENTI ---
 @app.route("/admin/utenti")
 def admin_utenti():
     if not session.get("is_admin"):
-        flash("Accesso negato.", "error")
         return redirect(url_for("index"))
-    
     utenti_list = []
     try:
         conn = get_db_connection()
@@ -180,7 +174,6 @@ def elimina_utente(user_id):
         flash(f"Errore: {e}", "error")
     return redirect(url_for("admin_utenti"))
 
-# --- MAGAZZINO ---
 @app.route("/")
 def index():
     if "username" not in session:
@@ -302,9 +295,8 @@ def scarico():
 def elimina_prodotto():
     if "username" not in session:
         return redirect(url_for("login"))
-    
     if not session.get("is_admin"):
-        flash("Solo l'amministratore può eliminare i prodotti dal magazzino.", "error")
+        flash("Solo l'amministratore può eliminare i prodotti.", "error")
         return redirect(url_for("index"))
 
     qr_code = request.form.get("qr_code")
@@ -316,18 +308,16 @@ def elimina_prodotto():
             conn.commit()
             cur.close()
             conn.close()
-            flash("Articolo eliminato dal magazzino.", "success")
+            flash("Articolo eliminato.", "success")
         except Exception as e:
             flash(f"Errore: {e}", "error")
 
     return redirect(url_for("index"))
 
-# --- GESTIONE MANUTENZIONE (MANDA E SCALA PEZZI) ---
 @app.route("/manda_manutenzione/<qr_code>", methods=["POST"])
 def manda_manutenzione(qr_code):
     if "username" not in session:
         return redirect(url_for("login"))
-    
     if not session.get("is_admin") and not session.get("puo_vedere_manutenzione"):
         flash("Non hai i permessi per gestire le manutenzioni.", "error")
         return redirect(url_for("gestisci_prodotto", qr_code=qr_code))
@@ -343,8 +333,6 @@ def manda_manutenzione(qr_code):
     try:
         conn = get_db_connection()
         cur = conn.cursor()
-        
-        # Prende i pezzi attuali in magazzino
         cur.execute("SELECT quantita, in_manutenzione FROM prodotti WHERE qr_code = %s;", (qr_code,))
         prod = cur.fetchone()
         
@@ -353,90 +341,64 @@ def manda_manutenzione(qr_code):
             gia_in_maint = prod["in_manutenzione"]
             
             if not gia_in_maint:
-                # Se non era in manutenzione, scaliamo i pezzi dal magazzino
                 nuova_qta = max(0, qta_magazzino - qta_maint)
                 cur.execute("""
                     UPDATE prodotti 
-                    SET quantita = %s,
-                        in_manutenzione = TRUE, 
-                        cliente_manutenzione = %s, 
-                        quantita_manutenzione = %s,
-                        data_spedizione = %s, 
-                        data_riconsegna = %s, 
-                        ordine_amministrativo = %s,
-                        vettore = %s,
-                        note_manutenzione = %s
+                    SET quantita = %s, in_manutenzione = TRUE, cliente_manutenzione = %s, 
+                        quantita_manutenzione = %s, data_spedizione = %s, data_riconsegna = %s, 
+                        ordine_amministrativo = %s, vettore = %s, note_manutenzione = %s
                     WHERE qr_code = %s;
                 """, (nuova_qta, cliente if cliente else None, qta_maint, data_spedizione, data_riconsegna, ordine_amministrativo, vettore if vettore else None, note, qr_code))
             else:
-                # Se era già in manutenzione, aggiorna solo i dati senza riscalare il magazzino da capo
                 cur.execute("""
                     UPDATE prodotti 
-                    SET cliente_manutenzione = %s, 
-                        quantita_manutenzione = %s,
-                        data_spedizione = %s, 
-                        data_riconsegna = %s, 
-                        ordine_amministrativo = %s,
-                        vettore = %s,
-                        note_manutenzione = %s
+                    SET cliente_manutenzione = %s, quantita_manutenzione = %s, data_spedizione = %s, 
+                        data_riconsegna = %s, ordine_amministrativo = %s, vettore = %s, note_manutenzione = %s
                     WHERE qr_code = %s;
                 """, (cliente if cliente else None, qta_maint, data_spedizione, data_riconsegna, ordine_amministrativo, vettore if vettore else None, note, qr_code))
 
         conn.commit()
         cur.close()
         conn.close()
-        flash("Prodotto mandato in manutenzione e pezzi scalati dal magazzino!", "success")
+        flash("Prodotto mandato in manutenzione e pezzi scalati!", "success")
     except Exception as e:
         flash(f"Errore: {e}", "error")
         
     return redirect(url_for("gestisci_prodotto", qr_code=qr_code))
 
-# --- RIPRISTINA DA MANUTENZIONE (RIMETTE I PEZZI IN MAGAZZINO) ---
 @app.route("/ripristina_magazzino/<qr_code>", methods=["POST"])
 def ripristina_magazzino(qr_code):
     if "username" not in session:
         return redirect(url_for("login"))
-    
     if not session.get("is_admin") and not session.get("puo_vedere_manutenzione"):
-        flash("Non hai i permessi per ripristinare il prodotto.", "error")
+        flash("Non hai i permessi.", "error")
         return redirect(url_for("gestisci_prodotto", qr_code=qr_code))
 
     try:
         conn = get_db_connection()
         cur = conn.cursor()
-        
-        # Recupera quanti pezzi erano in manutenzione
         cur.execute("SELECT quantita, quantita_manutenzione, in_manutenzione FROM prodotti WHERE qr_code = %s;", (qr_code,))
         prod = cur.fetchone()
         
         if prod and prod["in_manutenzione"]:
             qta_magazzino = prod["quantita"]
             qta_maint = prod["quantita_manutenzione"] or 0
-            
-            # Ritorna i pezzi nel magazzino
             nuova_qta = qta_magazzino + qta_maint
             
             cur.execute("""
                 UPDATE prodotti 
-                SET quantita = %s,
-                    in_manutenzione = FALSE,
-                    cliente_manutenzione = NULL,
-                    quantita_manutenzione = 0,
-                    data_spedizione = NULL,
-                    data_riconsegna = NULL,
-                    ordine_amministrativo = FALSE,
-                    vettore = NULL,
-                    note_manutenzione = NULL
+                SET quantita = %s, in_manutenzione = FALSE, cliente_manutenzione = NULL,
+                    quantita_manutenzione = 0, data_spedizione = NULL, data_riconsegna = NULL,
+                    ordine_amministrativo = FALSE, vettore = NULL, note_manutenzione = NULL
                 WHERE qr_code = %s;
             """, (nuova_qta, qr_code))
-            
             conn.commit()
-            flash("Prodotto ripristinato in magazzino e pezzi ricaricati con successo!", "success")
+            flash("Prodotto ripristinato in magazzino e pezzi ricaricati!", "success")
         
         cur.close()
         conn.close()
     except Exception as e:
-        flash(f"Errore durante il ripristino: {e}", "error")
+        flash(f"Errore: {e}", "error")
 
     return redirect(url_for("gestisci_prodotto", qr_code=qr_code))
 
@@ -501,10 +463,8 @@ def aggiungi_cliente():
                 INSERT INTO clienti (nome_azienda, indirizzo, p_iva, telefono, email)
                 VALUES (%s, %s, %s, %s, %s)
                 ON CONFLICT (nome_azienda) DO UPDATE 
-                SET indirizzo = EXCLUDED.indirizzo, 
-                    p_iva = EXCLUDED.p_iva, 
-                    telefono = EXCLUDED.telefono, 
-                    email = EXCLUDED.email;
+                SET indirizzo = EXCLUDED.indirizzo, p_iva = EXCLUDED.p_iva, 
+                    telefono = EXCLUDED.telefono, email = EXCLUDED.email;
                 """,
                 (nome_azienda, indirizzo, p_iva, telefono, email)
             )
@@ -522,9 +482,8 @@ def aggiungi_cliente():
 def lista_manutenzioni():
     if "username" not in session:
         return redirect(url_for("login"))
-    
     if not session.get("is_admin") and not session.get("puo_vedere_manutenzione"):
-        flash("Accesso negato alla sezione manutenzioni.", "error")
+        flash("Accesso negato.", "error")
         return redirect(url_for("index"))
 
     prodotti_maint = []
