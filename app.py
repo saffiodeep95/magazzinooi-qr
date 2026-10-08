@@ -8,7 +8,7 @@ from werkzeug.security import generate_password_hash, check_password_hash
 import psycopg2
 from urllib.parse import urlparse
 
-app = Flask(__name__)
+app = Flask(_name_)
 app.secret_key = os.environ.get('SECRET_KEY', 'chiave_segreta_default')
 
 # --- CONFIGURAZIONE DATABASE POSTGRESQL (RENDER) ---
@@ -85,7 +85,7 @@ def init_db():
                 );
             """)
 
-            # Forziamo l'inserimento o l'aggiornamento dell'utente admin predefinito
+            # Forziamo l'aggiornamento dell'admin con password cifrata
             admin_pass = generate_password_hash("admin123")
             cur.execute("""
                 INSERT INTO utenti (username, password, is_admin, puoi_cancellare, puoi_assistenza) 
@@ -100,11 +100,10 @@ def init_db():
             conn.commit()
             cur.close()
             conn.close()
-            print("Database inizializzato e utente admin ripristinato con successo.")
+            print("Database inizializzato con successo.")
         except Exception as e:
             print(f"Errore inizializzazione DB: {e}")
 
-# Esegue l'inizializzazione all'avvio
 init_db()
 
 # --- ROTTA PRINCIPALE (HOME) ---
@@ -116,61 +115,71 @@ def index():
     conn = get_db_connection()
     prodotti = []
     if conn:
-        cur = conn.cursor()
-        cur.execute("SELECT * FROM prodotti ORDER BY id DESC;")
-        rows = cur.fetchall()
-        for r in rows:
-            prodotti.append({
-                'id': r[0],
-                'qr_code': r[1],
-                'nome': r[2],
-                'quantita': r[3],
-                'posizione': r[4],
-                'sap': r[5],
-                'modificato_da': r[6],
-                'stato': r[7],
-                'cliente_manutenzione': r[8],
-                'data_spedizione': r[9],
-                'data_rientro': r[10],
-                'note_manutenzione': r[11],
-                'materiale_ritornato': r[12],
-                'ordine_arrivato': r[13]
-            })
-        cur.close()
-        conn.close()
+        try:
+            cur = conn.cursor()
+            cur.execute("SELECT * FROM prodotti ORDER BY id DESC;")
+            rows = cur.fetchall()
+            for r in rows:
+                prodotti.append({
+                    'id': r[0],
+                    'qr_code': r[1],
+                    'nome': r[2],
+                    'quantita': r[3],
+                    'posizione': r[4],
+                    'sap': r[5],
+                    'modificato_da': r[6],
+                    'stato': r[7],
+                    'cliente_manutenzione': r[8],
+                    'data_spedizione': r[9],
+                    'data_rientro': r[10],
+                    'note_manutenzione': r[11],
+                    'materiale_ritornato': r[12],
+                    'ordine_arrivato': r[13]
+                })
+            cur.close()
+            conn.close()
+        except Exception as e:
+            print(f"Errore caricamento prodotti: {e}")
         
     return render_template('index.html', prodotti=prodotti)
 
-# --- ROTTA LOGIN SICURA ---
+# --- ROTTA LOGIN (A prova di errore) ---
 @app.route('/login', methods=['GET', 'POST'])
 def login():
     if request.method == 'POST':
-        username = request.form.get('username')
-        password = request.form.get('password')
+        username = request.form.get('username', '').strip()
+        password = request.form.get('password', '')
         
         conn = get_db_connection()
         if conn:
-            cur = conn.cursor()
-            cur.execute("SELECT * FROM utenti WHERE username = %s;", (username,))
-            user = cur.fetchone()
-            cur.close()
-            conn.close()
-            
-            if user:
-                pwd_db = user[2]
-                is_valid = False
-                if pwd_db.startswith('pbkdf2:') or pwd_db.startswith('scrypt:'):
-                    is_valid = check_password_hash(pwd_db, password)
-                else:
-                    is_valid = (pwd_db == password)
+            try:
+                cur = conn.cursor()
+                cur.execute("SELECT * FROM utenti WHERE username = %s;", (username,))
+                user = cur.fetchone()
+                cur.close()
+                conn.close()
                 
-                if is_valid:
-                    session['username'] = user[1]
-                    session['is_admin'] = user[3]
-                    session['puoi_cancellare'] = user[4]
-                    session['puoi_assistenza'] = user[5]
-                    return redirect(url_for('index'))
+                if user:
+                    pwd_db = user[2]
+                    is_valid = False
+                    # Gestione sicura per evitare crash se la password nel DB ha formati misti
+                    try:
+                        if pwd_db and (pwd_db.startswith('pbkdf2:') or pwd_db.startswith('scrypt:') or pwd_db.startswith('$')):
+                            is_valid = check_password_hash(pwd_db, password)
+                        else:
+                            is_valid = (pwd_db == password)
+                    except Exception:
+                        is_valid = (pwd_db == password)
                     
+                    if is_valid:
+                        session['username'] = user[1]
+                        session['is_admin'] = user[3]
+                        session['puoi_cancellare'] = user[4]
+                        session['puoi_assistenza'] = user[5]
+                        return redirect(url_for('index'))
+            except Exception as e:
+                print(f"Errore durante il login: {e}")
+                
             flash("Credenziali non valide.")
                 
     return render_template('login.html')
@@ -179,8 +188,8 @@ def login():
 @app.route('/registra', methods=['GET', 'POST'])
 def registra():
     if request.method == 'POST':
-        username = request.form.get('username')
-        password = request.form.get('password')
+        username = request.form.get('username', '').strip()
+        password = request.form.get('password', '')
         
         if not username or not password:
             flash("Compila tutti i campi.")
@@ -221,29 +230,32 @@ def clienti():
     conn = get_db_connection()
     clienti_list = []
     if conn:
-        cur = conn.cursor()
-        cur.execute("SELECT * FROM clienti ORDER BY nome_azienda ASC;")
-        clienti_raw = cur.fetchall()
-        
-        for c in clienti_raw:
-            cliente_id, nome_azienda, indirizzo, p_iva, cf, tel, email = c
+        try:
+            cur = conn.cursor()
+            cur.execute("SELECT * FROM clienti ORDER BY nome_azienda ASC;")
+            clienti_raw = cur.fetchall()
             
-            cur.execute("SELECT COUNT(*) FROM prodotti WHERE cliente_manutenzione = %s;", (nome_azienda,))
-            count_prodotti = cur.fetchone()[0]
-            
-            clienti_list.append({
-                'id': cliente_id,
-                'nome_azienda': nome_azienda,
-                'indirizzo': indirizzo,
-                'p_iva': p_iva,
-                'codice_fiscale': cf,
-                'telefono': tel,
-                'email': email,
-                'num_prodotti': count_prodotti
-            })
-            
-        cur.close()
-        conn.close()
+            for c in clienti_raw:
+                cliente_id, nome_azienda, indirizzo, p_iva, cf, tel, email = c
+                
+                cur.execute("SELECT COUNT(*) FROM prodotti WHERE cliente_manutenzione = %s;", (nome_azienda,))
+                count_prodotti = cur.fetchone()[0]
+                
+                clienti_list.append({
+                    'id': cliente_id,
+                    'nome_azienda': nome_azienda,
+                    'indirizzo': indirizzo,
+                    'p_iva': p_iva,
+                    'codice_fiscale': cf,
+                    'telefono': tel,
+                    'email': email,
+                    'num_prodotti': count_prodotti
+                })
+                
+            cur.close()
+            conn.close()
+        except Exception as e:
+            print(f"Errore caricamento clienti: {e}")
         
     return render_template('clienti.html', clienti=clienti_list)
 
@@ -252,12 +264,12 @@ def aggiungi_cliente():
     if 'username' not in session:
         return redirect(url_for('login'))
         
-    nome_azienda = request.form.get('nome_azienda').strip()
-    indirizzo = request.form.get('indirizzo')
-    p_iva = request.form.get('p_iva')
-    codice_fiscale = request.form.get('codice_fiscale')
-    telefono = request.form.get('telefono')
-    email = request.form.get('email')
+    nome_azienda = request.form.get('nome_azienda', '').strip()
+    indirizzo = request.form.get('indirizzo', '')
+    p_iva = request.form.get('p_iva', '')
+    codice_fiscale = request.form.get('codice_fiscale', '')
+    telefono = request.form.get('telefono', '')
+    email = request.form.get('email', '')
     
     if nome_azienda:
         conn = get_db_connection()
@@ -291,12 +303,15 @@ def elimina_cliente(cliente_id):
         
     conn = get_db_connection()
     if conn:
-        cur = conn.cursor()
-        cur.execute("DELETE FROM clienti WHERE id = %s;", (cliente_id,))
-        conn.commit()
-        cur.close()
-        conn.close()
-        flash("Cliente eliminato dal database.")
+        try:
+            cur = conn.cursor()
+            cur.execute("DELETE FROM clienti WHERE id = %s;", (cliente_id,))
+            conn.commit()
+            cur.close()
+            conn.close()
+            flash("Cliente eliminato dal database.")
+        except Exception as e:
+            print(f"Errore eliminazione cliente: {e}")
         
     return redirect(url_for('clienti'))
 
@@ -306,11 +321,11 @@ def aggiorna_manutenzione(id):
     if 'username' not in session:
         return redirect(url_for('login'))
         
-    cliente = request.form.get('cliente_manutenzione').strip() if request.form.get('cliente_manutenzione') else ""
-    stato = request.form.get('stato')
-    note = request.form.get('note_manutenzione')
-    data_spedizione = request.form.get('data_spedizione')
-    data_rientro = request.form.get('data_rientro')
+    cliente = request.form.get('cliente_manutenzione', '').strip()
+    stato = request.form.get('stato', '')
+    note = request.form.get('note_manutenzione', '')
+    data_spedizione = request.form.get('data_spedizione') or None
+    data_rientro = request.form.get('data_rientro') or None
     
     conn = get_db_connection()
     if conn:
@@ -338,8 +353,7 @@ def aggiorna_manutenzione(id):
                         data_spedizione = %s, data_rientro = %s, modificato_da = %s
                     WHERE id = %s;
                 """, (cliente if cliente else None, stato, note, 
-                      data_spedizione if data_spedizione else None, 
-                      data_rientro if data_rientro else None, 
+                      data_spedizione, data_rientro, 
                       session['username'], id))
                 
                 # Registra nello storico se in manutenzione o spedito
@@ -349,8 +363,7 @@ def aggiorna_manutenzione(id):
                         (qr_code, nome_prodotto, cliente, data_spedizione, data_rientro, note_manutenzione, chiuso_da)
                         VALUES (%s, %s, %s, %s, %s, %s, %s);
                     """, (qr_code, nome_prodotto, cliente if cliente else None, 
-                          data_spedizione if data_spedizione else None, 
-                          data_rientro if data_rientro else None, 
+                          data_spedizione, data_rientro, 
                           note, session['username']))
                     
             conn.commit()
@@ -363,5 +376,5 @@ def aggiorna_manutenzione(id):
             
     return redirect(url_for('index'))
 
-if __name__ == '_main_':
+if _name_ == '_main_':
     app.run(host='0.0.0.0', port=5000, debug=True)
