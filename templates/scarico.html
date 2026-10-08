@@ -3,62 +3,52 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Scarico Merce (-1)</title>
+    <title>Scarico Merce</title>
+    <!-- Libreria per la scansione QR con la fotocamera -->
+    <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
     <style>
-        body { font-family: Arial, sans-serif; text-align: center; margin-top: 30px; background-color: #eef2f5; }
-        .box { background: white; display: inline-block; padding: 30px; border-radius: 10px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); max-width: 90%; width: 400px; }
-        input[type="text"] { width: 90%; padding: 15px; font-size: 18px; border: 2px solid #dc3545; border-radius: 5px; text-align: center; margin-top: 15px; }
-        .log { margin-top: 25px; padding: 15px; border-radius: 5px; font-size: 16px; font-weight: bold; }
-        .success { background-color: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
-        .error { background-color: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }
-        .btn-back { display: inline-block; margin-bottom: 20px; color: #555; text-decoration: none; font-weight: bold; }
+        body { font-family: sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; background: #f8fafc; color: #1e293b; }
+        .card { background: white; padding: 25px; border-radius: 12px; border: 1px solid #e2e8f0; box-shadow: 0 2px 4px rgba(0,0,0,0.05); margin-bottom: 20px; }
+        .btn { background: #ef4444; color: white; padding: 10px 16px; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; width: 100%; font-size: 1rem; }
+        .btn:hover { opacity: 0.9; }
+        input { width: 100%; padding: 10px; margin: 8px 0 16px 0; border: 1px solid #cbd5e1; border-radius: 8px; box-sizing: border-box; font-size: 1rem; }
+        label { font-size: 0.9rem; font-weight: bold; color: #64748b; }
+        #reader { width: 100%; border-radius: 8px; overflow-hidden: hidden; margin-bottom: 15px; }
     </style>
 </head>
 <body>
 
-    <div class="box">
-        <a href="/" class="btn-back">← Torna alle Giacenze</a>
-        <h2 style="color: #dc3545;">- Scarico Merce</h2>
-        <p>Inquadra il QR Code con la pistola per scaricare (-1):</p>
+    <div class="card">
+        <h2>➖ Scarico Rapido Merce</h2>
         
-        <form id="scanForm">
-            <input type="text" id="qrInput" placeholder="Spara sul QR code..." autofocus autocomplete="off">
-        </form>
+        <!-- Area per la fotocamera dello smartphone -->
+        <div id="reader"></div>
 
-        <div id="statusLog" class="log" style="display: none;"></div>
+        <form action="{{ url_for('scarico') }}" method="POST">
+            <label>QR Code Scansionato o Inserito</label>
+            <input type="text" id="qr_code" name="qr_code" required placeholder="Inquadra il QR con la fotocamera...">
+            
+            <label>Quantità da scaricare</label>
+            <input type="number" name="quantita" value="1" min="1" required>
+
+            <button type="submit" class="btn">Conferma Scarico</button>
+        </form>
+    </div>
+
+    <div style="text-align: center;">
+        <a href="{{ url_for('index') }}" style="text-decoration: none; color: #64748b; font-weight: bold;">← Torna alla Home</a>
     </div>
 
     <script>
-        const qrInput = document.getElementById('qrInput');
-        const statusLog = document.getElementById('statusLog');
-        const scanForm = document.getElementById('scanForm');
+        function onScanSuccess(decodedText, decodedResult) {
+            // Inserisce automaticamente il testo del QR code nel campo di input
+            document.getElementById('qr_code').value = decodedText;
+            console.log(Codice scansionato: ${decodedText});
+        }
 
-        document.addEventListener('click', () => qrInput.focus());
-
-        scanForm.addEventListener('submit', function(e) {
-            e.preventDefault();
-            const code = qrInput.value.trim();
-            if (!code) return;
-
-            fetch('/api/scarica', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ qr_code: code })
-            })
-            .then(res => res.json())
-            .then(data => {
-                statusLog.style.display = 'block';
-                if (data.success) {
-                    statusLog.className = 'log success';
-                    statusLog.innerText = data.message;
-                } else {
-                    statusLog.className = 'log error';
-                    statusLog.innerText = data.message;
-                }
-                qrInput.value = '';
-                qrInput.focus();
-            });
-        });
+        let html5QrcodeScanner = new Html5QrcodeScanner(
+            "reader", { fps: 10, qrbox: { width: 250, height: 250 } }, false);
+        html5QrcodeScanner.render(onScanSuccess);
     </script>
 </body>
 </html>
