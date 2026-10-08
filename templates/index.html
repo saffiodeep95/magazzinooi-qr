@@ -60,6 +60,16 @@
             gap: 8px;
             align-items: center;
         }
+        .maint-nav-btn {
+            background: #f59e0b;
+            color: white;
+            padding: 8px 12px;
+            border-radius: 8px;
+            text-decoration: none;
+            font-size: 0.85rem;
+            font-weight: 600;
+        }
+        .maint-nav-btn:hover { background: #d97706; }
         .admin-btn {
             background: #0ea5e9;
             color: white;
@@ -173,11 +183,20 @@
         .item-details { font-size: 0.85rem; color: var(--text-muted); display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 4px; }
         .item-badge { background: #f1f5f9; padding: 2px 6px; border-radius: 4px; font-family: monospace; }
         .item-qty { font-weight: 800; color: var(--primary); font-size: 1.1rem; }
+        .badge-maint { background: #fef3c7; color: #d97706; padding: 2px 6px; border-radius: 4px; font-weight: 700; font-size: 0.75rem; }
         .item-signature { font-size: 0.75rem; color: var(--primary); font-weight: 600; margin-top: 4px; }
         .item-right { display: flex; flex-direction: column; align-items: center; gap: 8px; }
         img.qr-thumb { width: 50px; height: 50px; border-radius: 6px; background: #fff; padding: 2px; border: 1px solid var(--border-color); display: block; }
         a.action-btn { background: var(--primary); color: white; text-decoration: none; font-weight: 600; font-size: 0.85rem; padding: 6px 12px; border-radius: 8px; text-align: center; }
         a.action-btn:hover { background: var(--primary-hover); }
+        .footer-credit {
+            text-align: center;
+            margin: 30px 0 20px 0;
+            font-size: 0.85rem;
+            color: var(--text-muted);
+            border-top: 1px solid var(--border-color);
+            padding-top: 15px;
+        }
     </style>
 </head>
 <body>
@@ -187,6 +206,7 @@
             <h1>Magazzino OMG</h1>
         </header>
         <div class="user-actions">
+            <a href="{{ url_for('lista_manutenzioni') }}" class="maint-nav-btn">🔧 Manutenzioni</a>
             {% if session.get('is_admin') %}
             <a href="{{ url_for('gestione_utenti') }}" class="admin-btn">⚙️ Admin</a>
             {% endif %}
@@ -205,7 +225,7 @@
     <div class="card">
         <h2>🔍 Cerca Articolo</h2>
         <form method="GET" action="{{ url_for('index') }}" class="search-box">
-            <input type="text" name="q" value="{{ search_query }}" placeholder="Cerca QR, Nome o SAP...">
+            <input type="text" name="q" value="{{ search_query }}" placeholder="Cerca QR, Nome, SAP o Cliente...">
             <button type="submit">Cerca</button>
             {% if search_query %}
             <a href="{{ url_for('index') }}" class="btn-secondary">Reset</a>
@@ -240,7 +260,12 @@
         {% for p in prodotti %}
         <div class="item-card">
             <div class="item-info">
-                <div class="item-title">{{ p.nome }}</div>
+                <div class="item-title">
+                    {{ p.nome }}
+                    {% if p.stato == 'In Manutenzione' %}
+                    <span class="badge-maint">🔧 Presso Cliente</span>
+                    {% endif %}
+                </div>
                 <div class="item-details">
                     <span>QR: <strong class="item-badge">{{ p.qr_code }}</strong></span>
                     {% if p.sap %}
@@ -251,6 +276,19 @@
                     <span>Pos: {{ p.posizione if p.posizione else 'N/D' }}</span>
                     <span>Qtà: <strong class="item-qty">{{ p.quantita }} pz</strong></span>
                 </div>
+                {% if p.stato == 'In Manutenzione' %}
+                <div style="font-size: 0.8rem; color: #d97706; margin-top: 4px; font-weight: 600;">
+                    👤 Cliente: {{ p.cliente_manutenzione }} | Spedizione: {{ p.data_spedizione if p.data_spedizione else 'N/D' }} | Rientro: {{ p.data_rientro if p.data_rientro else 'N/D' }}
+                    {% if p.note_manutenzione %}
+                    <br>📝 Note: {{ p.note_manutenzione }}
+                    {% endif %}
+                </div>
+                {% endif %}
+                {% if p.materiale_ritornato %}
+                <div style="font-size: 0.8rem; color: #166534; margin-top: 4px; font-weight: 600;">
+                    📦 Ultimo materiale rientrato: {{ p.materiale_ritornato }}
+                </div>
+                {% endif %}
                 {% if p.modificato_da %}
                 <div class="item-signature">✏️ Modificato da: {{ p.modificato_da }}</div>
                 {% endif %}
@@ -265,6 +303,10 @@
             Nessun prodotto trovato in magazzino.
         </div>
         {% endfor %}
+    </div>
+
+    <div class="footer-credit">
+        Magazzino OMG &bull; Creato da <strong>Marco Pavan</strong>
     </div>
 
     <script>
