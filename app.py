@@ -85,7 +85,6 @@ def init_db():
                 );
             """)
 
-            # Forziamo l'aggiornamento dell'admin con password cifrata
             admin_pass = generate_password_hash("admin123")
             cur.execute("""
                 INSERT INTO utenti (username, password, is_admin, puoi_cancellare, puoi_assistenza) 
@@ -245,8 +244,9 @@ def logout():
     session.clear()
     return redirect(url_for('login'))
 
-# --- GESTIONE ANAGRAFICA CLIENTI ---
+# --- GESTIONE ANAGRAFICA CLIENTI (Supporta sia /clienti che /lista_clienti) ---
 @app.route('/clienti')
+@app.route('/lista_clienti')
 def clienti():
     if 'username' not in session:
         return redirect(url_for('login'))
