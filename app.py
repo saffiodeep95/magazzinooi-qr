@@ -244,10 +244,8 @@ def logout():
     session.clear()
     return redirect(url_for('login'))
 
-# --- GESTIONE ANAGRAFICA CLIENTI ---
-@app.route('/clienti')
-@app.route('/lista_clienti')
-def clienti():
+# --- GESTIONE ANAGRAFICA CLIENTI (Con supporto universale a /clienti e /lista_clienti) ---
+def _gestisci_clienti():
     if 'username' not in session:
         return redirect(url_for('login'))
         
@@ -282,6 +280,14 @@ def clienti():
             print(f"Errore caricamento clienti: {e}")
         
     return render_template('clienti.html', clienti=clienti_list)
+
+@app.route('/clienti')
+def clienti():
+    return _gestisci_clienti()
+
+@app.route('/lista_clienti')
+def lista_clienti():
+    return _gestisci_clienti()
 
 @app.route('/aggiungi_cliente', methods=['POST'])
 def aggiungi_cliente():
