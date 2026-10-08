@@ -184,6 +184,7 @@
         .item-badge { background: #f1f5f9; padding: 2px 6px; border-radius: 4px; font-family: monospace; }
         .item-qty { font-weight: 800; color: var(--primary); font-size: 1.1rem; }
         .badge-maint { background: #fef3c7; color: #d97706; padding: 2px 6px; border-radius: 4px; font-weight: 700; font-size: 0.75rem; }
+        .badge-repaired { background: #dcfce7; color: #166534; padding: 2px 6px; border-radius: 4px; font-weight: 700; font-size: 0.75rem; }
         .item-signature { font-size: 0.75rem; color: var(--primary); font-weight: 600; margin-top: 4px; }
         .item-right { display: flex; flex-direction: column; align-items: center; gap: 8px; }
         img.qr-thumb { width: 50px; height: 50px; border-radius: 6px; background: #fff; padding: 2px; border: 1px solid var(--border-color); display: block; }
@@ -264,6 +265,8 @@
                     {{ p.nome }}
                     {% if p.stato == 'In Manutenzione' %}
                     <span class="badge-maint">🔧 Presso Cliente</span>
+                    {% elif p.materiale_ritornato %}
+                    <span class="badge-repaired">🛠️ Riparato / Rientrato</span>
                     {% endif %}
                 </div>
                 <div class="item-details">
@@ -286,7 +289,7 @@
                 {% endif %}
                 {% if p.materiale_ritornato %}
                 <div style="font-size: 0.8rem; color: #166534; margin-top: 4px; font-weight: 600;">
-                    📦 Ultimo materiale rientrato: {{ p.materiale_ritornato }}
+                    🛠️ Ultimo intervento effettuato: {{ p.materiale_ritornato }}
                 </div>
                 {% endif %}
                 {% if p.modificato_da %}
