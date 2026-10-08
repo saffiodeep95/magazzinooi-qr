@@ -8,7 +8,7 @@ from werkzeug.security import generate_password_hash, check_password_hash
 import psycopg2
 from urllib.parse import urlparse
 
-app = Flask(_name_)
+app = Flask(__name__)
 app.secret_key = os.environ.get('SECRET_KEY', 'chiave_segreta_default')
 
 # --- CONFIGURAZIONE DATABASE POSTGRESQL (RENDER) ---
@@ -376,5 +376,5 @@ def aggiorna_manutenzione(id):
             
     return redirect(url_for('index'))
 
-if _name_ == '_main_':
+if __name__ == '_main_':
     app.run(host='0.0.0.0', port=5000, debug=True)
