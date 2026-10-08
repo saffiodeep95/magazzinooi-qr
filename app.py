@@ -142,6 +142,49 @@ def index():
         
     return render_template('index.html', prodotti=prodotti)
 
+# --- AGGIUNTA O AGGIORNAMENTO PRODOTTO ---
+@app.route('/aggiungi_prodotto', methods=['POST'])
+def aggiungi_prodotto():
+    if 'username' not in session:
+        return redirect(url_for('login'))
+        
+    qr_code = request.form.get('qr_code', '').strip()
+    nome = request.form.get('nome', '').strip()
+    sap = request.form.get('sap', '').strip()
+    quantita = request.form.get('quantita', 1)
+    posizione = request.form.get('posizione', '').strip()
+    
+    try:
+        quantita = int(quantita)
+    except ValueError:
+        quantita = 1
+        
+    if qr_code and nome:
+        conn = get_db_connection()
+        if conn:
+            try:
+                cur = conn.cursor()
+                cur.execute("""
+                    INSERT INTO prodotti (qr_code, nome, sap, quantita, posizione, modificato_da, stato)
+                    VALUES (%s, %s, %s, %s, %s, %s, 'Disponibile')
+                    ON CONFLICT (qr_code) DO UPDATE 
+                    SET nome = EXCLUDED.nome, 
+                        sap = EXCLUDED.sap, 
+                        quantita = EXCLUDED.quantita, 
+                        posizione = EXCLUDED.posizione, 
+                        modificato_da = EXCLUDED.modificato_da;
+                """, (qr_code, nome, sap if sap else None, quantita, posizione if posizione else None, session['username']))
+                
+                conn.commit()
+                cur.close()
+                conn.close()
+                flash("Prodotto salvato con successo nel magazzino!")
+            except Exception as e:
+                print(f"Errore salvataggio prodotto: {e}")
+                flash("Errore durante il salvataggio del prodotto.")
+                
+    return redirect(url_for('index'))
+
 # --- ROTTA LISTA MANUTENZIONI E STORICO ---
 @app.route('/manutenzioni')
 def lista_manutenzioni():
@@ -244,7 +287,7 @@ def logout():
     session.clear()
     return redirect(url_for('login'))
 
-# --- GESTIONE ANAGRAFICA CLIENTI (Con supporto universale a /clienti e /lista_clienti) ---
+# --- GESTIONE ANAGRAFICA CLIENTI (Supporta sia clienti che lista_clienti) ---
 def _gestisci_clienti():
     if 'username' not in session:
         return redirect(url_for('login'))
@@ -344,63 +387,6 @@ def elimina_cliente(cliente_id):
             print(f"Errore eliminazione cliente: {e}")
         
     return redirect(url_for('clienti'))
-
-# --- AGGIORNAMENTO MANUTENZIONE (Con salvataggio automatico cliente) ---
-@app.route('/aggiorna_manutenzione/<int:id>', methods=['POST'])
-def aggiorna_manutenzione(id):
-    if 'username' not in session:
-        return redirect(url_for('login'))
-        
-    cliente = request.form.get('cliente_manutenzione', '').strip()
-    stato = request.form.get('stato', '')
-    note = request.form.get('note_manutenzione', '')
-    data_spedizione = request.form.get('data_spedizione') or None
-    data_rientro = request.form.get('data_rientro') or None
-    
-    conn = get_db_connection()
-    if conn:
-        try:
-            cur = conn.cursor()
-            
-            if cliente:
-                cur.execute("SELECT id FROM clienti WHERE LOWER(nome_azienda) = LOWER(%s);", (cliente,))
-                esistente = cur.fetchone()
-                if not esistente:
-                    cur.execute("INSERT INTO clienti (nome_azienda) VALUES (%s);", (cliente,))
-            
-            cur.execute("SELECT qr_code, nome FROM prodotti WHERE id = %s;", (id,))
-            prod = cur.fetchone()
-            
-            if prod:
-                qr_code, nome_prodotto = prod[0], prod[1]
-                
-                cur.execute("""
-                    UPDATE prodotti 
-                    SET cliente_manutenzione = %s, stato = %s, note_manutenzione = %s, 
-                        data_spedizione = %s, data_rientro = %s, modificato_da = %s
-                    WHERE id = %s;
-                """, (cliente if cliente else None, stato, note, 
-                      data_spedizione, data_rientro, 
-                      session['username'], id))
-                
-                if stato in ['In Manutenzione', 'Spedito']:
-                    cur.execute("""
-                        INSERT INTO storico_manutenzioni 
-                        (qr_code, nome_prodotto, cliente, data_spedizione, data_rientro, note_manutenzione, chiuso_da)
-                        VALUES (%s, %s, %s, %s, %s, %s, %s);
-                    """, (qr_code, nome_prodotto, cliente if cliente else None, 
-                          data_spedizione, data_rientro, 
-                          note, session['username']))
-                    
-            conn.commit()
-            cur.close()
-            conn.close()
-            flash("Manutenzione salvata e cliente registrato con successo!")
-        except Exception as e:
-            print(f"Errore aggiornamento manutenzione: {e}")
-            flash("Errore durante il salvataggio.")
-            
-    return redirect(url_for('index'))
 
 if __name__ == '_main_':
     app.run(host='0.0.0.0', port=5000, debug=True)
