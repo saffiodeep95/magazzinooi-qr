@@ -36,15 +36,25 @@
 
         <div>
             <button onclick="window.print();" class="btn">🖨️ Stampa QR</button>
-            <a href="{{ url_for('stampa_bolla', qr_code=prodotto.qr_code) }}" class="btn btn-info" target="_blank">📄 Stampa Bolla Manutenzione</a>
+            <a href="{{ url_for('stampa_bolla', qr_code=prodotto.qr_code) }}" class="btn btn-info" target="_blank">📄 Stampa Bolla</a>
             <a href="{{ url_for('carico', qr_code=prodotto.qr_code) }}" class="btn btn-success">➕ Carico</a>
-            <a href="{{ url_for('scarico', qr_code=prodotto.qr_code) }}" class="btn btn-danger">➖ Scarico</a>
+            <a href="{{ url_for('scarico', qr_code=prodotto.qr_code) }}" class="btn btn-danger" style="background: #ea580c;">➖ Scarico</a>
         </div>
+
+        {% if session.get('is_admin') %}
+        <div style="margin-top: 25px; border-top: 1px solid #e2e8f0; padding-top: 15px;">
+            <form action="{{ url_for('elimina_prodotto') }}" method="POST" onsubmit="return confirm('Sei sicuro di voler eliminare definitivamente questo articolo dal magazzino?');">
+                <input type="hidden" name="qr_code" value="{{ prodotto.qr_code }}">
+                <button type="submit" class="btn btn-danger">🗑️ Elimina Prodotto dal Magazzino (Admin)</button>
+            </form>
+        </div>
+        {% endif %}
     </div>
 
     <!-- Modulo Gestione Manutenzione & Spedizione -->
     <div class="card">
         <h3>🔧 Gestione Manutenzione, Pezzi e Vettore</h3>
+        {% if session.get('is_admin') or session.get('puo_vedere_manutenzione') %}
         <form action="{{ url_for('stato_manutenzione', qr_code=prodotto.qr_code) }}" method="POST">
             <div>
                 <label>Imposta Stato</label>
@@ -98,6 +108,11 @@
 
             <button type="submit" class="btn btn-warning" style="width: 100%; margin-top: 10px;">Salva Dati Manutenzione</button>
         </form>
+        {% else %}
+            <p style="color: #991b1b; background: #fee2e2; padding: 12px; border-radius: 8px; font-size: 0.9rem; text-align: center;">
+                <strong>Accesso Limitato:</strong> Non disponi dei permessi necessari per modificare i dati di manutenzione di questo articolo. Contatta l'amministratore per richiedere l'abilitazione.
+            </p>
+        {% endif %}
     </div>
 
     <div style="text-align: center; margin-bottom: 20px;">
