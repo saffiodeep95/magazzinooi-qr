@@ -116,24 +116,24 @@ def index():
     if conn:
         try:
             cur = conn.cursor()
-            cur.execute("SELECT id, qr_code, nome, quantita, posizione, sap, modificato_da, stato, cliente_manutenzione, data_spedizione, data_rientro, note_manutenzione, materiale_ritornato, ordine_arrivato FROM prodotti ORDER BY id DESC;")
+            cur.execute("SELECT * FROM prodotti ORDER BY id DESC;")
             rows = cur.fetchall()
             for r in rows:
                 prodotti.append({
                     'id': r[0],
                     'qr_code': r[1],
                     'nome': r[2],
-                    'quantita': r[3],
-                    'posizione': r[4],
-                    'sap': r[5],
-                    'modificato_da': r[6],
-                    'stato': r[7],
-                    'cliente_manutenzione': r[8],
-                    'data_spedizione': r[9],
-                    'data_rientro': r[10],
-                    'note_manutenzione': r[11],
-                    'materiale_ritornato': r[12],
-                    'ordine_arrivato': r[13]
+                    'quantita': r[3] if len(r) > 3 else 0,
+                    'posizione': r[4] if len(r) > 4 else '',
+                    'sap': r[5] if len(r) > 5 else '',
+                    'modificato_da': r[6] if len(r) > 6 else '',
+                    'stato': r[7] if len(r) > 7 else 'Disponibile',
+                    'cliente_manutenzione': r[8] if len(r) > 8 else '',
+                    'data_spedizione': r[9] if len(r) > 9 else None,
+                    'data_rientro': r[10] if len(r) > 10 else None,
+                    'note_manutenzione': r[11] if len(r) > 11 else '',
+                    'materiale_ritornato': r[12] if len(r) > 12 else '',
+                    'ordine_arrivato': r[13] if len(r) > 13 else False
                 })
             cur.close()
             conn.close()
@@ -356,21 +356,18 @@ def aggiorna_manutenzione(id):
         try:
             cur = conn.cursor()
             
-            # Registrazione automatica del cliente se inserito e non presente nel DB
             if cliente:
                 cur.execute("SELECT id FROM clienti WHERE LOWER(nome_azienda) = LOWER(%s);", (cliente,))
                 esistente = cur.fetchone()
                 if not esistente:
                     cur.execute("INSERT INTO clienti (nome_azienda) VALUES (%s);", (cliente,))
             
-            # Recupera dati attuali del prodotto
             cur.execute("SELECT qr_code, nome FROM prodotti WHERE id = %s;", (id,))
             prod = cur.fetchone()
             
             if prod:
                 qr_code, nome_prodotto = prod[0], prod[1]
                 
-                # Aggiorna il prodotto nel magazzino
                 cur.execute("""
                     UPDATE prodotti 
                     SET cliente_manutenzione = %s, stato = %s, note_manutenzione = %s, 
@@ -380,7 +377,6 @@ def aggiorna_manutenzione(id):
                       data_spedizione, data_rientro, 
                       session['username'], id))
                 
-                # Registra nello storico se in manutenzione o spedito
                 if stato in ['In Manutenzione', 'Spedito']:
                     cur.execute("""
                         INSERT INTO storico_manutenzioni 
