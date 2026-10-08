@@ -4,43 +4,35 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Magazzino OMG</title>
-    <link rel="manifest" href="{{ url_for('static', filename='manifest.json') }}">
-    <meta name="theme-color" content="#4f46e5">
     <style>
         :root {
             --primary: #4f46e5;
             --success: #10b981;
             --danger: #ef4444;
-            --warning: #f59e0b;
-            --info: #0284c7;
             --bg-color: #f8fafc;
             --card-bg: #ffffff;
             --text-main: #1e293b;
             --text-muted: #64748b;
             --border-color: #e2e8f0;
         }
-        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; max-width: 1200px; margin: 0 auto; padding: 16px; background: var(--bg-color); color: var(--text-main); }
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; max-width: 1000px; margin: 0 auto; padding: 16px; background: var(--bg-color); color: var(--text-main); }
         .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; background: var(--card-bg); padding: 15px 20px; border-radius: 12px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); border: 1px solid var(--border-color); flex-wrap: wrap; gap: 10px; }
         .nav-links { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
         .btn { background: var(--primary); color: white; padding: 8px 14px; border-radius: 8px; text-decoration: none; font-size: 0.85rem; font-weight: 600; border: none; cursor: pointer; display: inline-block; }
         .btn:hover { opacity: 0.9; }
         .btn-danger { background: var(--danger); }
         .btn-success { background: var(--success); }
-        .btn-warning { background: var(--warning); color: #fff; }
-        .btn-info { background: var(--info); }
         .card { background: var(--card-bg); padding: 20px; border-radius: 14px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); margin-bottom: 16px; border: 1px solid var(--border-color); }
         h1, h2 { font-size: 1.2rem; color: var(--text-main); margin-top: 0; }
-        table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 0.85rem; }
-        th, td { padding: 10px; text-align: left; border-bottom: 1px solid var(--border-color); vertical-align: middle; }
+        table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 0.9rem; }
+        th, td { padding: 10px; text-align: left; border-bottom: 1px solid var(--border-color); }
         th { background: #f1f5f9; color: var(--text-muted); font-weight: 600; }
         .flash { background: #dcfce7; color: #166534; padding: 10px; border-radius: 8px; margin-bottom: 15px; font-size: 0.9rem; border: 1px solid #bbf7d0; }
         .form-group { margin-bottom: 12px; }
         label { display: block; font-size: 0.85rem; font-weight: 600; margin-bottom: 4px; color: var(--text-muted); }
-        input, select, textarea { width: 100%; padding: 8px 12px; border: 1px solid var(--border-color); border-radius: 8px; font-size: 0.9rem; box-sizing: border-box; }
+        input, select { width: 100%; padding: 8px 12px; border: 1px solid var(--border-color); border-radius: 8px; font-size: 0.9rem; box-sizing: border-box; }
         .grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
-        .grid-2 { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; }
-        .action-btns { display: flex; gap: 5px; flex-wrap: wrap; }
-        @media(max-width: 768px) { .grid-3, .grid-2 { grid-template-columns: 1fr; } }
+        @media(max-width: 768px) { .grid-3 { grid-template-columns: 1fr; } }
     </style>
 </head>
 <body>
@@ -49,8 +41,9 @@
         <h1>📦 Magazzino OMG</h1>
         <div class="nav-links">
             <a href="{{ url_for('clienti') }}" class="btn">Clienti</a>
-            <a href="{{ url_for('lista_manutenzioni') }}" class="btn btn-info">Manutenzioni</a>
-            <a href="{{ url_for('logout') }}" class="btn btn-danger">Esci</a>
+            <a href="{{ url_for('lista_manutenzioni') }}" class="btn" style="background: #0284c7;">Manutenzioni</a>
+            <a href="{{ url_for('carico') }}" class="btn btn-success">Carico</a>
+            <a href="{{ url_for('scarico') }}" class="btn btn-danger">Scarico</a>
         </div>
     </div>
 
@@ -62,14 +55,14 @@
       {% endif %}
     {% endwith %}
 
-    <!-- Sezione Inserimento / Aggiunta Prodotto -->
+    <!-- Form Aggiunta Prodotto -->
     <div class="card">
         <h2>➕ Aggiungi o Aggiorna Prodotto</h2>
         <form action="{{ url_for('aggiungi_prodotto') }}" method="POST">
             <div class="grid-3">
                 <div class="form-group">
                     <label>QR Code / Codice</label>
-                    <input type="text" name="qr_code" required placeholder="Scansiona o inserisci QR...">
+                    <input type="text" name="qr_code" required placeholder="Inserisci QR...">
                 </div>
                 <div class="form-group">
                     <label>Nome Prodotto</label>
@@ -96,77 +89,32 @@
         </form>
     </div>
 
-    <!-- Elenco Prodotti in Magazzino con Gestione Manutenzione per ciascun elemento -->
+    <!-- Tabella Prodotti -->
     <div class="card">
-        <h2>📋 Elenco Prodotti & Gestione Manutenzioni</h2>
+        <h2>📋 Elenco Prodotti in Magazzino</h2>
         {% if prodotti %}
         <div style="overflow-x: auto;">
             <table>
                 <thead>
                     <tr>
                         <th>QR Code</th>
-                        <th>Nome / SAP</th>
-                        <th>Qtà / Pos</th>
-                        <th>Stato Attuale</th>
-                        <th>Gestione Manutenzione & Spedizione</th>
+                        <th>Nome Prodotto</th>
+                        <th>Codice SAP</th>
+                        <th>Quantità</th>
+                        <th>Scaffale</th>
+                        <th>Azioni</th>
                     </tr>
                 </thead>
                 <tbody>
                     {% for p in prodotti %}
                     <tr>
                         <td><code>{{ p.qr_code }}</code></td>
+                        <td><strong>{{ p.nome }}</strong></td>
+                        <td>{{ p.sap if p.sap else '-' }}</td>
+                        <td>{{ p.quantita }}</td>
+                        <td>{{ p.posizione if p.posizione else '-' }}</td>
                         <td>
-                            <strong>{{ p.nome }}</strong>
-                            {% if p.sap %}<br><small style="color: var(--text-muted);">SAP: {{ p.sap }}</small>{% endif %}
-                        </td>
-                        <td>
-                            Qtà: {{ p.quantita }}<br>
-                            <small style="color: var(--text-muted);">Pos: {{ p.posizione if p.posizione else '-' }}</small>
-                        </td>
-                        <td>
-                            <span style="padding: 3px 8px; border-radius: 6px; font-size: 0.75rem; background: #e0e7ff; color: #3730a3; font-weight: 600;">
-                                {{ p.stato }}
-                            </span>
-                            {% if p.cliente_manutenzione %}
-                                <br><small>Cliente: <strong>{{ p.cliente_manutenzione }}</strong></small>
-                            {% endif %}
-                        </td>
-                        <td>
-                            <!-- Modulo rapido integrato per aggiornare la manutenzione del singolo prodotto -->
-                            <form action="{{ url_for('aggiorna_manutenzione', id=p.id) }}" method="POST" style="background: #f8fafc; padding: 10px; border-radius: 8px; border: 1px solid var(--border-color);">
-                                <div class="grid-2" style="margin-bottom: 8px;">
-                                    <div>
-                                        <label style="font-size: 0.75rem;">Cliente</label>
-                                        <input type="text" name="cliente_manutenzione" value="{{ p.cliente_manutenzione if p.cliente_manutenzione else '' }}" placeholder="Nome cliente..." style="padding: 4px 8px; font-size: 0.8rem;">
-                                    </div>
-                                    <div>
-                                        <label style="font-size: 0.75rem;">Stato</label>
-                                        <select name="stato" style="padding: 4px 8px; font-size: 0.8rem;">
-                                            <option value="Disponibile" {% if p.stato == 'Disponibile' %}selected{% endif %}>Disponibile</option>
-                                            <option value="In Manutenzione" {% if p.stato == 'In Manutenzione' %}selected{% endif %}>In Manutenzione</option>
-                                            <option value="Spedito" {% if p.stato == 'Spedito' %}selected{% endif %}>Spedito</option>
-                                        </select>
-                                    </div>
-                                </div>
-                                <div class="grid-2" style="margin-bottom: 8px;">
-                                    <div>
-                                        <label style="font-size: 0.75rem;">Data Spedizione</label>
-                                        <input type="date" name="data_spedizione" value="{{ p.data_spedizione if p.data_spedizione else '' }}" style="padding: 4px 8px; font-size: 0.8rem;">
-                                    </div>
-                                    <div>
-                                        <label style="font-size: 0.75rem;">Data Rientro Prevista</label>
-                                        <input type="date" name="data_rientro" value="{{ p.data_rientro if p.data_rientro else '' }}" style="padding: 4px 8px; font-size: 0.8rem;">
-                                    </div>
-                                </div>
-                                <div style="margin-bottom: 8px;">
-                                    <label style="font-size: 0.75rem;">Note Manutenzione / Materiale</label>
-                                    <input type="text" name="note_manutenzione" value="{{ p.note_manutenzione if p.note_manutenzione else '' }}" placeholder="Inserisci note o dettagli..." style="padding: 4px 8px; font-size: 0.8rem;">
-                                </div>
-                                <div style="display: flex; justify-content: space-between; align-items: center;">
-                                    <button type="submit" class="btn btn-warning" style="padding: 4px 10px; font-size: 0.75rem;">Salva Manutenzione</button>
-                                    <small style="color: var(--text-muted); font-size: 0.7rem;">Modificato da: {{ p.modificato_da if p.modificato_da else '-' }}</small>
-                                </div>
-                            </form>
+                            <a href="{{ url_for('gestisci_prodotto', qr_code=p.qr_code) }}" class="btn" style="padding: 4px 10px; font-size: 0.75rem;">Gestisci</a>
                         </td>
                     </tr>
                     {% endfor %}
