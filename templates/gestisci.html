@@ -11,9 +11,12 @@
         .btn-danger { background: #ef4444; }
         .btn-success { background: #10b981; }
         .btn-warning { background: #f59e0b; color: white; }
+        .btn-info { background: #0284c7; color: white; }
         .btn:hover { opacity: 0.9; }
-        input, select { width: 100%; padding: 8px 12px; border: 1px solid #e2e8f0; border-radius: 8px; font-size: 0.9rem; box-sizing: border-box; margin-top: 5px; margin-bottom: 12px; }
-        label { font-size: 0.85rem; font-weight: 600; color: #64748b; }
+        input, select, textarea { width: 100%; padding: 8px 12px; border: 1px solid #e2e8f0; border-radius: 8px; font-size: 0.9rem; box-sizing: border-box; margin-top: 5px; margin-bottom: 12px; }
+        label { font-size: 0.85rem; font-weight: 600; color: #64748b; display: block; margin-top: 8px; }
+        .checkbox-group { display: flex; align-items: center; gap: 10px; margin: 12px 0; }
+        .checkbox-group input { width: 20px; height: 20px; margin: 0; }
     </style>
 </head>
 <body>
@@ -23,25 +26,25 @@
         <h2>{{ prodotto.nome }}</h2>
         <p><strong>Codice QR:</strong> <code>{{ prodotto.qr_code }}</code></p>
         <p><strong>Codice SAP:</strong> {{ prodotto.sap if prodotto.sap else '-' }}</p>
-        <p><strong>Quantità Attuale:</strong> {{ prodotto.quantita }}</p>
+        <p><strong>Quantità Magazzino:</strong> {{ prodotto.quantita }}</p>
         <p><strong>Posizione:</strong> {{ prodotto.posizione if prodotto.posizione else '-' }}</p>
         <p><strong>Stato Attuale:</strong> <span style="color: #4f46e5; font-weight: bold;">{{ prodotto.stato if prodotto.stato else 'Disponibile' }}</span></p>
 
-        <!-- QR Code grande con anteprima e stampa -->
         <div style="margin: 20px 0;">
             <img src="https://api.qrserver.com/v1/create-qr-code/?size=160x160&data={{ prodotto.qr_code }}" alt="QR Code" style="border: 1px solid #e2e8f0; padding: 10px; background: white; border-radius: 8px;">
         </div>
 
         <div>
-            <button onclick="window.print();" class="btn">🖨️ Stampa QR Code</button>
+            <button onclick="window.print();" class="btn">🖨️ Stampa QR</button>
+            <a href="{{ url_for('stampa_bolla', qr_code=prodotto.qr_code) }}" class="btn btn-info" target="_blank">📄 Stampa Bolla Manutenzione</a>
             <a href="{{ url_for('carico', qr_code=prodotto.qr_code) }}" class="btn btn-success">➕ Carico</a>
             <a href="{{ url_for('scarico', qr_code=prodotto.qr_code) }}" class="btn btn-danger">➖ Scarico</a>
         </div>
     </div>
 
-    <!-- Modulo Gestione Manutenzione & Stato -->
+    <!-- Modulo Gestione Manutenzione & Spedizione -->
     <div class="card">
-        <h3>🔧 Gestione Manutenzione & Stato</h3>
+        <h3>🔧 Gestione Manutenzione, Pezzi e Vettore</h3>
         <form action="{{ url_for('stato_manutenzione', qr_code=prodotto.qr_code) }}" method="POST">
             <div>
                 <label>Imposta Stato</label>
@@ -51,11 +54,49 @@
                     <option value="Spedito" {% if prodotto.stato == 'Spedito' %}selected{% endif %}>Spedito</option>
                 </select>
             </div>
+
             <div>
-                <label>Cliente / Note Manutenzione</label>
-                <input type="text" name="cliente_manutenzione" value="{{ prodotto.cliente_manutenzione if prodotto.cliente_manutenzione else '' }}" placeholder="Nome cliente o dettagli...">
+                <label>Cliente / Azienda</label>
+                <select name="cliente_manutenzione">
+                    <option value="">-- Seleziona Cliente --</option>
+                    {% for c in clienti %}
+                    <option value="{{ c.nome_azienda }}" {% if prodotto.cliente_manutenzione == c.nome_azienda %}selected{% endif %}>{{ c.nome_azienda }}</option>
+                    {% endfor %}
+                </select>
             </div>
-            <button type="submit" class="btn btn-warning" style="width: 100%;">Aggiorna Stato e Manutenzione</button>
+
+            <div>
+                <label>Numero Pezzi in Manutenzione</label>
+                <input type="number" name="quantita_manutenzione" value="{{ prodotto.quantita_manutenzione if prodotto.quantita_manutenzione else 1 }}" min="1">
+            </div>
+
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+                <div>
+                    <label>Data Spedizione</label>
+                    <input type="date" name="data_spedizione" value="{{ prodotto.data_spedizione if prodotto.data_spedizione else '' }}">
+                </div>
+                <div>
+                    <label>Data Riconsegna Prevista</label>
+                    <input type="date" name="data_riconsegna" value="{{ prodotto.data_riconsegna if prodotto.data_riconsegna else '' }}">
+                </div>
+            </div>
+
+            <div>
+                <label>Vettore (es. Bartolini, DHL, Corriere Interno)</label>
+                <input type="text" name="vettore" value="{{ prodotto.vettore if prodotto.vettore else '' }}" placeholder="Nome corriere o vettore...">
+            </div>
+
+            <div class="checkbox-group">
+                <input type="checkbox" id="ordine_amministrativo" name="ordine_amministrativo" {% if prodotto.ordine_amministrativo %}checked{% endif %}>
+                <label for="ordine_amministrativo" style="margin: 0; cursor: pointer; color: #1e293b; font-weight: bold;">Ordine Amministrativo / Autorizzato</label>
+            </div>
+
+            <div>
+                <label>Note di Manutenzione / Lavorazioni</label>
+                <textarea name="note_manutenzione" rows="3" placeholder="Inserisci note o dettagli tecnici...">{{ prodotto.note_manutenzione if prodotto.note_manutenzione else '' }}</textarea>
+            </div>
+
+            <button type="submit" class="btn btn-warning" style="width: 100%; margin-top: 10px;">Salva Dati Manutenzione</button>
         </form>
     </div>
 
