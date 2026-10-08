@@ -26,7 +26,13 @@ def init_db():
                 posizione VARCHAR(255),
                 sap VARCHAR(255),
                 stato VARCHAR(50) DEFAULT 'Disponibile',
-                cliente_manutenzione VARCHAR(255)
+                cliente_manutenzione VARCHAR(255),
+                quantita_manutenzione INT DEFAULT 1,
+                data_spedizione DATE,
+                data_riconsegna DATE,
+                ordine_amministrativo BOOLEAN DEFAULT FALSE,
+                vettore VARCHAR(255),
+                note_manutenzione TEXT
             );
             CREATE TABLE IF NOT EXISTS clienti (
                 id SERIAL PRIMARY KEY,
@@ -62,11 +68,14 @@ def index():
 @app.route("/gestisci/<qr_code>")
 def gestisci_prodotto(qr_code):
     prodotto = None
+    clienti_list = []
     try:
         conn = get_db_connection()
         cur = conn.cursor()
         cur.execute("SELECT * FROM prodotti WHERE qr_code = %s;", (qr_code,))
         prodotto = cur.fetchone()
+        cur.execute("SELECT * FROM clienti ORDER BY nome_azienda ASC;")
+        clienti_list = cur.fetchall()
         cur.close()
         conn.close()
     except Exception as e:
@@ -76,7 +85,7 @@ def gestisci_prodotto(qr_code):
         flash("Prodotto non trovato nel sistema!", "error")
         return redirect(url_for("index"))
 
-    return render_template("gestisci.html", prodotto=prodotto)
+    return render_template("gestisci.html", prodotto=prodotto, clienti=clienti_list)
 
 @app.route("/aggiungi", methods=["POST"])
 def aggiungi_prodotto():
@@ -170,21 +179,58 @@ def elimina_prodotto():
 def stato_manutenzione(qr_code):
     nuovo_stato = request.form.get("stato", "In Manutenzione")
     cliente = request.form.get("cliente_manutenzione", "")
+    qta_maint = int(request.form.get("quantita_manutenzione", 1) or 1)
+    data_spedizione = request.form.get("data_spedizione") or None
+    data_riconsegna = request.form.get("data_riconsegna") or None
+    ordine_amministrativo = True if request.form.get("ordine_amministrativo") == "on" else False
+    vettore = request.form.get("vettore", "")
+    note = request.form.get("note_manutenzione", "")
+
     try:
         conn = get_db_connection()
         cur = conn.cursor()
         cur.execute("""
             UPDATE prodotti 
-            SET stato = %s, cliente_manutenzione = %s 
+            SET stato = %s, 
+                cliente_manutenzione = %s, 
+                quantita_manutenzione = %s,
+                data_spedizione = %s, 
+                data_riconsegna = %s, 
+                ordine_amministrativo = %s,
+                vettore = %s,
+                note_manutenzione = %s
             WHERE qr_code = %s;
-        """, (nuovo_stato, cliente if cliente else None, qr_code))
+        """, (nuovo_stato, cliente if cliente else None, qta_maint, data_spedizione, data_riconsegna, ordine_amministrativo, vettore if vettore else None, note, qr_code))
         conn.commit()
         cur.close()
         conn.close()
-        flash(f"Stato prodotto aggiornato a: {nuovo_stato}", "success")
+        flash("Dati manutenzione aggiornati con successo!", "success")
     except Exception as e:
-        flash(f"Errore aggiornamento stato: {e}", "error")
+        flash(f"Errore aggiornamento manutenzione: {e}", "error")
     return redirect(url_for("gestisci_prodotto", qr_code=qr_code))
+
+@app.route("/bolla/<qr_code>")
+def stampa_bolla(qr_code):
+    prodotto = None
+    cliente_info = None
+    try:
+        conn = get_db_connection()
+        cur = conn.cursor()
+        cur.execute("SELECT * FROM prodotti WHERE qr_code = %s;", (qr_code,))
+        prodotto = cur.fetchone()
+        if prodotto and prodotto["cliente_manutenzione"]:
+            cur.execute("SELECT * FROM clienti WHERE nome_azienda = %s;", (prodotto["cliente_manutenzione"],))
+            cliente_info = cur.fetchone()
+        cur.close()
+        conn.close()
+    except Exception as e:
+        print(f"Errore bolla: {e}")
+
+    if not prodotto:
+        flash("Prodotto non trovato per la stampa della bolla.", "error")
+        return redirect(url_for("index"))
+
+    return render_template("bolla.html", prodotto=prodotto, cliente=cliente_info)
 
 @app.route("/clienti")
 @app.route("/lista_clienti")
@@ -241,7 +287,7 @@ def lista_manutenzioni():
     try:
         conn = get_db_connection()
         cur = conn.cursor()
-        cur.execute("SELECT * FROM prodotti WHERE stato = 'In Manutenzione' ORDER BY id DESC;")
+        cur.execute("SELECT * FROM prodotti WHERE stato = 'In Manutenzione' ORDER BY data_riconsegna ASC NULLS LAST;")
         prodotti_maint = cur.fetchall()
         cur.close()
         conn.close()
