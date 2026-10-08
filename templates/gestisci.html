@@ -12,6 +12,8 @@
             --primary-hover: #4338ca;
             --success: #10b981;
             --success-hover: #059669;
+            --warning: #f59e0b;
+            --warning-hover: #d97706;
             --danger: #ef4444;
             --danger-hover: #dc2626;
             --bg-color: #f8fafc;
@@ -79,7 +81,7 @@
             color: var(--text-muted);
             margin-bottom: 4px;
         }
-        input, button {
+        input, textarea, button {
             width: 100%;
             padding: 12px;
             margin-top: 4px;
@@ -88,7 +90,9 @@
             border-radius: 10px;
             box-sizing: border-box;
             font-size: 1rem;
+            font-family: inherit;
         }
+        textarea { resize: vertical; height: 80px; }
         button {
             border: none;
             font-weight: 600;
@@ -99,6 +103,8 @@
         }
         .btn-green { background: var(--success); }
         .btn-green:hover { background: var(--success-hover); }
+        .btn-warning { background: var(--warning); color: #fff; }
+        .btn-warning:hover { background: var(--warning-hover); }
         .btn-red { background: var(--danger); }
         .btn-red:hover { background: var(--danger-hover); }
         .btn-print { background: #64748b; }
@@ -120,6 +126,16 @@
             color: var(--primary);
             margin: 4px 0 14px 0;
         }
+        .status-badge {
+            display: inline-block;
+            padding: 4px 10px;
+            border-radius: 8px;
+            font-weight: 700;
+            font-size: 0.85rem;
+            margin-bottom: 10px;
+        }
+        .status-ok { background: #dcfce7; color: #166534; }
+        .status-maint { background: #fef3c7; color: #d97706; }
 
         .print-label {
             display: none;
@@ -174,21 +190,67 @@
     {% endwith %}
 
     <div class="card">
-        <h2>Etichetta & Quantità</h2>
+        <h2>Stato & Etichetta</h2>
+        
+        {% if prodotto.stato == 'In Manutenzione' %}
+            <span class="status-badge status-maint">🔧 In Manutenzione presso Cliente</span>
+            <p style="margin: 4px 0; font-size: 0.9rem;"><strong>Cliente:</strong> {{ prodotto.cliente_manutenzione }}</p>
+            <p style="margin: 4px 0; font-size: 0.85rem; color: var(--text-muted);"><strong>Spedizione:</strong> {{ prodotto.data_spedizione if prodotto.data_spedizione else 'N/D' }}</p>
+            <p style="margin: 4px 0; font-size: 0.85rem; color: var(--text-muted);"><strong>Rientro Previsto:</strong> {{ prodotto.data_rientro if prodotto.data_rientro else 'N/D' }}</p>
+            {% if prodotto.note_manutenzione %}
+            <p style="margin: 8px 0; font-size: 0.85rem; background: #fffbeb; padding: 8px; border-radius: 6px; text-align: left; color: #b45309;"><strong>Note:</strong> {{ prodotto.note_manutenzione }}</p>
+            {% endif %}
+        {% else %}
+            <span class="status-badge status-ok">✅ Disponibile in Magazzino</span>
+            {% if prodotto.materiale_ritornato %}
+            <p style="margin: 8px 0; font-size: 0.85rem; background: #f0fdf4; padding: 8px; border-radius: 6px; text-align: left; color: #166534;"><strong>Ultimo materiale ritornato:</strong> {{ prodotto.materiale_ritornato }}</p>
+            {% endif %}
+        {% endif %}
+
         <img src="data:image/png;base64,{{ prodotto.qr_img }}" alt="QR Code" class="qr-display">
         <p style="margin: 3px 0; color: var(--text-muted); font-size: 0.85rem;"><strong>Codice QR:</strong> {{ prodotto.qr_code }}</p>
         {% if prodotto.sap %}
         <p style="margin: 3px 0; color: var(--text-muted); font-size: 0.85rem;"><strong>SAP:</strong> {{ prodotto.sap }}</p>
         {% endif %}
         <p style="margin: 3px 0 8px 0; color: var(--text-muted); font-size: 0.85rem;"><strong>Posizione:</strong> {{ prodotto.posizione if prodotto.posizione else 'Non specificata' }}</p>
-        {% if prodotto.modificato_da %}
-        <p style="margin: 3px 0 8px 0; color: var(--primary); font-size: 0.85rem; font-weight: 600;">✏️ Ultima modifica di: {{ prodotto.modificato_da }}</p>
-        {% endif %}
         
-        <label>Disponibilità Attuale</label>
+        <label style="margin-top: 10px;">Disponibilità Attuale</label>
         <div class="qty-badge">{{ prodotto.quantita }} pz</div>
         
-        <button onclick="window.print()" class="btn-print">🖨️ Stampa Etichetta (QR + SAP + Nome)</button>
+        <button onclick="window.print()" class="btn-print">🖨️ Stampa Etichetta</button>
+    </div>
+
+    <!-- Sezione Manutenzione / Cliente -->
+    <div class="card" style="border-color: #fde68a; background: #fffbeb;">
+        <h2 style="color: #d97706;">🔧 Gestione Manutenzione Cliente</h2>
+        
+        {% if prodotto.stato == 'In Manutenzione' %}
+        <form action="{{ url_for('rientro') }}" method="POST">
+            <input type="hidden" name="qr_code" value="{{ prodotto.qr_code }}">
+            <label>Materiale Ritornato in Sede / Note di Chiusura</label>
+            <textarea name="materiale_ritornato" placeholder="Es. Sostituita scheda madre e testato con successo..."></textarea>
+            
+            <button type="submit" class="btn-green" style="margin-top: 8px;">📥 Registra Rientro in Magazzino</button>
+        </form>
+        {% else %}
+        <form action="{{ url_for('manutenzione') }}" method="POST">
+            <input type="hidden" name="qr_code" value="{{ prodotto.qr_code }}">
+            
+            <label>Nome del Cliente</label>
+            <input type="text" name="cliente_manutenzione" required placeholder="Es. Rossi S.r.l.">
+
+            <label>Data Spedizione</label>
+            <input type="date" name="data_spedizione">
+
+            <label>Data Prevista Rientro</label>
+            <input type="date" name="data_rientro">
+
+            <label>Note di Manutenzione / Problema riscontrato</label>
+            <textarea name="note_manutenzione" placeholder="Es. Guasto al motore, necessita revisione cuscinetti..."></textarea>
+
+            <button type="submit" class="btn-warning">📤 Invia in Manutenzione</button>
+        </form>
+        {% endif %}
     </div>
 
     <div class="print-label">
@@ -218,7 +280,7 @@
         </form>
     </div>
 
-    <!-- Zona Pericolosa: visibile se Admin o se l'utente ha il permesso specifico -->
+    <!-- Zona Pericolosa: visibile se Admin o con permesso -->
     {% if session.get('is_admin') or session.get('puoi_cancellare') %}
     <div class="card" style="border-color: #fecaca; background: #fff5f5;">
         <h2 style="color: var(--danger);">⚠️ Zona Pericolosa</h2>
