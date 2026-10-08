@@ -25,34 +25,6 @@ def get_db_connection():
         return conn
     return None
 
-# --- INIZIALIZZAZIONE DE…
-[10:39, 08/10/2026] Marco Pavan: import os
-import qrcode
-import io
-import base64
-from datetime import datetime
-from flask import Flask, render_template, request, redirect, url_for, session, flash, send_file
-import psycopg2
-from urllib.parse import urlparse
-
-app = Flask(_name_)
-app.secret_key = os.environ.get('SECRET_KEY', 'chiave_segreta_default')
-
-# --- CONFIGURAZIONE DATABASE POSTGRESQL (RENDER) ---
-def get_db_connection():
-    database_url = os.environ.get('DATABASE_URL')
-    if database_url:
-        url = urlparse(database_url)
-        conn = psycopg2.connect(
-            database=url.path[1:],
-            user=url.username,
-            password=url.password,
-            host=url.hostname,
-            port=url.port
-        )
-        return conn
-    return None
-
 # --- INIZIALIZZAZIONE DEL DATABASE ---
 def init_db():
     conn = get_db_connection()
@@ -203,7 +175,6 @@ def clienti():
         for c in clienti_raw:
             cliente_id, nome_azienda, indirizzo, p_iva, cf, tel, email = c
             
-            # Conta quanti prodotti attivi o in manutenzione ha questo cliente
             cur.execute("SELECT COUNT(*) FROM prodotti WHERE cliente_manutenzione = %s;", (nome_azienda,))
             count_prodotti = cur.fetchone()[0]
             
