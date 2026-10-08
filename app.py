@@ -7,7 +7,7 @@ from psycopg2.extras import RealDictCursor
 from flask import Flask, render_template, request, redirect, url_for, flash, session
 from werkzeug.security import generate_password_hash, check_password_hash
 
-app = Flask(__name__)
+app = Flask(_name_)
 app.secret_key = os.environ.get("SECRET_KEY", "chiave-segreta-magazzino-omg")
 
 DATABASE_URL = os.environ.get("DATABASE_URL")
@@ -132,6 +132,37 @@ def login():
                 return redirect(url_for('index'))
             flash("Credenziali non valide.", "error")
     return render_template("login.html")
+
+@app.route('/registra', methods=['GET', 'POST'])
+def registra():
+    if request.method == 'POST':
+        username = request.form.get('username', '').strip()
+        password = request.form.get('password', '')
+
+        if not username or not password:
+            flash("Compila tutti i campi!", "error")
+            return redirect(url_for('registra'))
+
+        hashed_password = generate_password_hash(password)
+        conn = get_db_connection()
+        if not conn:
+            flash("Errore di connessione al database", "error")
+            return redirect(url_for('registra'))
+        
+        try:
+            cur = conn.cursor()
+            cur.execute("INSERT INTO utenti (username, password, is_admin, puoi_cancellare, puoi_assistenza) VALUES (%s, %s, FALSE, FALSE, FALSE);", (username, hashed_password))
+            conn.commit()
+            cur.close()
+            conn.close()
+            flash("Account creato con successo! Ora puoi effettuare il login.", "success")
+            return redirect(url_for('login'))
+        except psycopg2.errors.UniqueViolation:
+            flash("Questo username è già registrato. Scegline un altro.", "error")
+        except Exception as e:
+            flash(f"Errore durante la registrazione: {e}", "error")
+
+    return render_template("registra.html")
 
 @app.route('/logout')
 def logout():
@@ -383,5 +414,5 @@ def elimina_utente(user_id):
     conn.close()
     return redirect(url_for('gestione_utenti'))
 
-if __name__ == '_main_':
+if _name_ == '_main_':
     app.run(host='0.0.0.0', port=5000, debug=True)
