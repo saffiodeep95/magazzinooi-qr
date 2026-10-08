@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Anagrafica Clienti - Magazzino OMG</title>
+    <link rel="manifest" href="{{ url_for('static', filename='manifest.json') }}">
+    <meta name="theme-color" content="#4f46e5">
+    <style>
+        :root {
+            --primary: #4f46e5;
+            --primary-hover: #4338ca;
+            --success: #10b981;
+            --danger: #ef4444;
+            --bg-color: #f8fafc;
+            --card-bg: #ffffff;
+            --text-main: #1e293b;
+            --text-muted: #64748b;
+            --border-color: #e2e8f0;
+        }
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; max-width: 800px; margin: 0 auto; padding: 16px; background: var(--bg-color); color: var(--text-main); }
+        .back-link { display: inline-block; color: var(--primary); text-decoration: none; font-weight: 600; margin-bottom: 16px; }
+        .back-link:hover { text-decoration: underline; }
+        .card { background: var(--card-bg); padding: 20px; border-radius: 14px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); margin-bottom: 16px; border: 1px solid var(--border-color); }
+        h1, h2 { font-size: 1.2rem; color: var(--text-main); margin-top: 0; }
+        label { display: block; font-size: 0.8rem; font-weight: 600; color: var(--text-muted); margin-bottom: 4px; margin-top: 10px; }
+        input, button { width: 100%; padding: 10px; border: 1px solid var(--border-color); border-radius: 8px; box-sizing: border-box; font-size: 0.95rem; }
+        button { background: var(--success); color: white; border: none; font-weight: 600; cursor: pointer; margin-top: 14px; }
+        .client-row { border-bottom: 1px solid var(--border-color); padding: 12px 0; display: flex; justify-content: space-between; align-items: center; }
+        .client-row:last-child { border-bottom: none; }
+        .flash { background: #dcfce7; color: #166534; padding: 10px; border-radius: 8px; margin-bottom: 15px; font-size: 0.9rem; border: 1px solid #bbf7d0; }
+    </style>
+</head>
+<body>
+    <a href="{{ url_for('index') }}" class="back-link">← Torna alla Home Magazzino</a>
+    
+    <h1>📇 Gestione Anagrafica Clienti</h1>
+
+    {% with messages = get_flashed_messages() %}
+      {% if messages %}
+        {% for message in messages %}
+          <div class="flash">{{ message }}</div>
+        {% endfor %}
+      {% endif %}
+    {% endwith %}
+
+    <div class="card">
+        <h2>Aggiungi / Aggiorna Cliente</h2>
+        <form action="{{ url_for('aggiungi_cliente') }}" method="POST">
+            <label>Nome Azienda / Cliente *</label>
+            <input type="text" name="nome_azienda" required placeholder="Es. Rossi S.r.l.">
+
+            <label>Indirizzo Completo</label>
+            <input type="text" name="indirizzo" placeholder="Via Roma 10, Quarto d'Altino (VE)">
+
+            <label>Partita IVA</label>
+            <input type="text" name="p_iva" placeholder="IT12345678901">
+
+            <label>Codice Fiscale</label>
+            <input type="text" name="codice_fiscale" placeholder="RSSMRA80A01L736X">
+
+            <label>Telefono</label>
+            <input type="text" name="telefono" placeholder="+39 041 123456">
+
+            <label>Email</label>
+            <input type="email" name="email" placeholder="info@rossisrl.it">
+
+            <button type="submit">Salva Cliente nel Database</button>
+        </form>
+    </div>
+
+    <div class="card">
+        <h2>Elenco Clienti Salvati ({{ clienti|length }})</h2>
+        {% if clienti %}
+            {% for c in clienti %}
+            <div class="client-row">
+                <div>
+                    <strong>{{ c.nome_azienda }}</strong><br>
+                    <span style="font-size: 0.85rem; color: var(--text-muted);">
+                        Indirizzo: {{ c.indirizzo if c.indirizzo else 'N/D' }} | P.IVA: {{ c.p_iva if c.p_iva else 'N/D' }} | Tel: {{ c.telefono if c.telefono else 'N/D' }}
+                    </span>
+                </div>
+                {% if session.get('is_admin') %}
+                <form action="{{ url_for('elimina_cliente', cliente_id=c.id) }}" method="POST" onsubmit="return confirm('Eliminare questo cliente?');" style="margin: 0;">
+                    <button type="submit" style="background: var(--danger); padding: 6px 10px; margin: 0; font-size: 0.8rem;">Elimina</button>
+                </form>
+                {% endif %}
+            </div>
+            {% endfor %}
+        {% else %}
+            <p style="color: var(--text-muted); font-size: 0.9rem;">Nessun cliente registrato nel database.</p>
+        {% endif %}
+    </div>
+</body>
+</html>
