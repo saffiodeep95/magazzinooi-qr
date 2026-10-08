@@ -6,7 +6,7 @@ import psycopg2
 from psycopg2.extras import RealDictCursor
 from flask import Flask, render_template, request, redirect, url_for, flash, session
 from werkzeug.security import generate_password_hash, check_password_hash
-from datetime import datetime
+from datetime import datetime, date
 
 app = Flask(__name__)
 app.secret_key = os.environ.get("SECRET_KEY", "chiave-segreta-magazzino-omg")
@@ -29,7 +29,6 @@ def init_db():
     if conn:
         try:
             cur = conn.cursor()
-            # Tabella Utenti
             cur.execute("""
                 CREATE TABLE IF NOT EXISTS utenti (
                     id SERIAL PRIMARY KEY,
@@ -40,7 +39,6 @@ def init_db():
                     puoi_assistenza BOOLEAN DEFAULT FALSE
                 );
             """)
-            # Tabella Prodotti
             cur.execute("""
                 CREATE TABLE IF NOT EXISTS prodotti (
                     id SERIAL PRIMARY KEY,
@@ -59,7 +57,6 @@ def init_db():
                     ordine_arrivato BOOLEAN DEFAULT FALSE
                 );
             """)
-            # Tabella Storico Manutenzioni (Registra ogni singola riparazione passata)
             cur.execute("""
                 CREATE TABLE IF NOT EXISTS storico_manutenzioni (
                     id SERIAL PRIMARY KEY,
@@ -74,7 +71,6 @@ def init_db():
                 );
             """)
 
-            # Compatibilità colonne esistenti
             cur.execute("ALTER TABLE prodotti ADD COLUMN IF NOT EXISTS sap VARCHAR(255);")
             cur.execute("ALTER TABLE prodotti ADD COLUMN IF NOT EXISTS modificato_da VARCHAR(255);")
             cur.execute("ALTER TABLE prodotti ADD COLUMN IF NOT EXISTS stato VARCHAR(50) DEFAULT 'Disponibile';")
@@ -89,7 +85,6 @@ def init_db():
             cur.execute("ALTER TABLE utenti ADD COLUMN IF NOT EXISTS puoi_cancellare BOOLEAN DEFAULT FALSE;")
             cur.execute("ALTER TABLE utenti ADD COLUMN IF NOT EXISTS puoi_assistenza BOOLEAN DEFAULT FALSE;")
             
-            # Account admin di default
             admin_pass = generate_password_hash("admin123")
             cur.execute("""
                 INSERT INTO utenti (username, password, is_admin, puoi_cancellare, puoi_assistenza) 
@@ -104,7 +99,6 @@ def init_db():
             conn.commit()
             cur.close()
             conn.close()
-            print("Database inizializzato con successo.")
         except Exception as e:
             print(f"Errore inizializzazione DB: {e}")
 
@@ -173,18 +167,35 @@ def index():
     if 'user' not in session: return redirect(url_for('login'))
     search_query = request.args.get('q', '').strip()
     conn = get_db_connection()
-    if not conn: return render_template("index.html", prodotti=[], search_query=search_query)
+    if not conn: return render_template("index.html", prodotti=[], search_query=search_query, num_critici=0, num_attenzione=0)
     cur = conn.cursor()
     if search_query:
         cur.execute("SELECT * FROM prodotti WHERE qr_code ILIKE %s OR nome ILIKE %s OR sap ILIKE %s OR cliente_manutenzione ILIKE %s ORDER BY nome ASC;", (f"%{search_query}%", f"%{search_query}%", f"%{search_query}%", f"%{search_query}%"))
     else:
         cur.execute("SELECT * FROM prodotti ORDER BY nome ASC;")
     prodotti_db = cur.fetchall()
+    
+    cur.execute("SELECT data_spedizione FROM prodotti WHERE stato = 'In Manutenzione' AND data_spedizione IS NOT NULL;")
+    maint_attive = cur.fetchall()
+    
     cur.close()
     conn.close()
     
+    oggi = date.today()
+    num_critici = 0
+    num_attenzione = 0
+    for m in maint_attive:
+        d_sped = m['data_spedizione']
+        if isinstance(d_sped, str):
+            d_sped = datetime.strptime(d_sped, '%Y-%m-%d').date()
+        giorni = (oggi - d_sped).days
+        if giorni >= 30:
+            num_critici += 1
+        elif giorni >= 15:
+            num_attenzione += 1
+
     prodotti = [{**dict(p), 'qr_img': genera_qr_base64(url_for('gestisci_prodotto', qr_code=p['qr_code'], _external=True))} for p in prodotti_db]
-    return render_template("index.html", prodotti=prodotti, search_query=search_query)
+    return render_template("index.html", prodotti=prodotti, search_query=search_query, num_critici=num_critici, num_attenzione=num_attenzione)
 
 @app.route('/manutenzioni')
 def lista_manutenzioni():
@@ -198,7 +209,28 @@ def lista_manutenzioni():
     cur.close()
     conn.close()
     
-    prodotti = [{**dict(p), 'qr_img': genera_qr_base64(url_for('gestisci_prodotto', qr_code=p['qr_code'], _external=True))} for p in prodotti_db]
+    oggi = date.today()
+    prodotti = []
+    for p in prodotti_db:
+        p_dict = dict(p)
+        p_dict['qr_img'] = genera_qr_base64(url_for('gestisci_prodotto', qr_code=p['qr_code'], _external=True))
+        if p['data_spedizione']:
+            d_sped = p['data_spedizione']
+            if isinstance(d_sped, str):
+                d_sped = datetime.strptime(d_sped, '%Y-%m-%d').date()
+            giorni_trascorsi = (oggi - d_sped).days
+            p_dict['giorni_trascorsi'] = giorni_trascorsi
+            if giorni_trascorsi >= 30:
+                p_dict['livello_avviso'] = 'critico'
+            elif giorni_trascorsi >= 15:
+                p_dict['livello_avviso'] = 'attenzione'
+            else:
+                p_dict['livello_avviso'] = 'normale'
+        else:
+            p_dict['giorni_trascorsi'] = 0
+            p_dict['livello_avviso'] = 'normale'
+        prodotti.append(p_dict)
+
     return render_template("manutenzioni.html", prodotti=prodotti, storico=storico_db)
 
 @app.route('/gestisci/<qr_code>')
@@ -209,7 +241,6 @@ def gestisci_prodotto(qr_code):
     cur.execute("SELECT * FROM prodotti WHERE qr_code = %s;", (qr_code,))
     prodotto = cur.fetchone()
     
-    # Recupera TUTTO lo storico delle manutenzioni passate per questo specifico prodotto
     cur.execute("SELECT * FROM storico_manutenzioni WHERE qr_code = %s ORDER BY id DESC;", (qr_code,))
     storico_prodotto = cur.fetchall()
     
@@ -297,7 +328,6 @@ def rientro():
     prod = cur.fetchone()
     
     if prod:
-        # Salva permanentemente nello storico ogni singola riparazione con tutte le date
         cur.execute("""
             INSERT INTO storico_manutenzioni (qr_code, nome_prodotto, cliente, data_spedizione, data_rientro, note_manutenzione, materiale_ritornato, chiuso_da)
             VALUES (%s, %s, %s, %s, %s, %s, %s, %s);
