@@ -4,7 +4,7 @@ from psycopg2.extras import RealDictCursor
 from flask import Flask, render_template, request, redirect, url_for, flash, session
 from werkzeug.security import generate_password_hash, check_password_hash
 
-app = Flask(__name__)
+app = Flask(_name_)
 app.secret_key = os.environ.get("SECRET_KEY", "chiave-segreta-magazzino")
 
 DATABASE_URL = os.environ.get("DATABASE_URL")
@@ -130,9 +130,11 @@ def registra():
                 flash(f"Errore: utente già esistente.", "error")
     return render_template("registra.html")
 
+# --- PANNELLO ADMIN UTENTI ---
 @app.route("/admin/utenti")
 def admin_utenti():
     if not session.get("is_admin"):
+        flash("Accesso negato.", "error")
         return redirect(url_for("index"))
     utenti_list = []
     try:
@@ -143,7 +145,7 @@ def admin_utenti():
         cur.close()
         conn.close()
     except Exception as e:
-        print(f"Errore utenti: {e}")
+        print(f"Errore caricamento utenti admin: {e}")
     return render_template("admin_utenti.html", utenti=utenti_list)
 
 @app.route("/admin/toggle_permesso/<int:user_id>/<tipo>", methods=["POST"])
@@ -550,5 +552,5 @@ def lista_manutenzioni():
         print(f"Errore manutenzioni: {e}")
     return render_template("manutenzioni.html", prodotti=prodotti_maint)
 
-if __name__ == "_main_":
+if _name_ == "_main_":
     app.run(host="0.0.0.0", port=5000, debug=True)
