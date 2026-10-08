@@ -6,6 +6,7 @@ import psycopg2
 from psycopg2.extras import RealDictCursor
 from flask import Flask, render_template, request, redirect, url_for, flash, session
 from werkzeug.security import generate_password_hash, check_password_hash
+from datetime import datetime
 
 app = Flask(__name__)
 app.secret_key = os.environ.get("SECRET_KEY", "chiave-segreta-magazzino-omg")
@@ -28,6 +29,7 @@ def init_db():
     if conn:
         try:
             cur = conn.cursor()
+            # Tabella Utenti
             cur.execute("""
                 CREATE TABLE IF NOT EXISTS utenti (
                     id SERIAL PRIMARY KEY,
@@ -38,6 +40,7 @@ def init_db():
                     puoi_assistenza BOOLEAN DEFAULT FALSE
                 );
             """)
+            # Tabella Prodotti
             cur.execute("""
                 CREATE TABLE IF NOT EXISTS prodotti (
                     id SERIAL PRIMARY KEY,
@@ -56,6 +59,7 @@ def init_db():
                     ordine_arrivato BOOLEAN DEFAULT FALSE
                 );
             """)
+            # Tabella Storico Manutenzioni (Registra ogni singola riparazione passata)
             cur.execute("""
                 CREATE TABLE IF NOT EXISTS storico_manutenzioni (
                     id SERIAL PRIMARY KEY,
@@ -70,6 +74,7 @@ def init_db():
                 );
             """)
 
+            # Compatibilità colonne esistenti
             cur.execute("ALTER TABLE prodotti ADD COLUMN IF NOT EXISTS sap VARCHAR(255);")
             cur.execute("ALTER TABLE prodotti ADD COLUMN IF NOT EXISTS modificato_da VARCHAR(255);")
             cur.execute("ALTER TABLE prodotti ADD COLUMN IF NOT EXISTS stato VARCHAR(50) DEFAULT 'Disponibile';")
@@ -84,6 +89,7 @@ def init_db():
             cur.execute("ALTER TABLE utenti ADD COLUMN IF NOT EXISTS puoi_cancellare BOOLEAN DEFAULT FALSE;")
             cur.execute("ALTER TABLE utenti ADD COLUMN IF NOT EXISTS puoi_assistenza BOOLEAN DEFAULT FALSE;")
             
+            # Account admin di default
             admin_pass = generate_password_hash("admin123")
             cur.execute("""
                 INSERT INTO utenti (username, password, is_admin, puoi_cancellare, puoi_assistenza) 
@@ -98,6 +104,7 @@ def init_db():
             conn.commit()
             cur.close()
             conn.close()
+            print("Database inizializzato con successo.")
         except Exception as e:
             print(f"Errore inizializzazione DB: {e}")
 
@@ -138,30 +145,22 @@ def registra():
     if request.method == 'POST':
         username = request.form.get('username', '').strip()
         password = request.form.get('password', '')
-
         if not username or not password:
             flash("Compila tutti i campi!", "error")
             return redirect(url_for('registra'))
-
-        hashed_password = generate_password_hash(password)
-        conn = get_db_connection()
-        if not conn:
-            flash("Errore di connessione al database", "error")
-            return redirect(url_for('registra'))
         
-        try:
-            cur = conn.cursor()
-            cur.execute("INSERT INTO utenti (username, password, is_admin, puoi_cancellare, puoi_assistenza) VALUES (%s, %s, FALSE, FALSE, FALSE);", (username, hashed_password))
-            conn.commit()
-            cur.close()
-            conn.close()
-            flash("Account creato con successo! Ora puoi effettuare il login.", "success")
-            return redirect(url_for('login'))
-        except psycopg2.errors.UniqueViolation:
-            flash("Questo username è già registrato. Scegline un altro.", "error")
-        except Exception as e:
-            flash(f"Errore durante la registrazione: {e}", "error")
-
+        conn = get_db_connection()
+        if conn:
+            try:
+                cur = conn.cursor()
+                cur.execute("INSERT INTO utenti (username, password, is_admin, puoi_cancellare, puoi_assistenza) VALUES (%s, %s, FALSE, FALSE, FALSE);", (username, generate_password_hash(password)))
+                conn.commit()
+                cur.close()
+                conn.close()
+                flash("Account creato con successo! Ora puoi effettuare il login.", "success")
+                return redirect(url_for('login'))
+            except psycopg2.errors.UniqueViolation:
+                flash("Questo username è già registrato.", "error")
     return render_template("registra.html")
 
 @app.route('/logout')
@@ -171,37 +170,25 @@ def logout():
 
 @app.route('/')
 def index():
-    if 'user' not in session:
-        return redirect(url_for('login'))
+    if 'user' not in session: return redirect(url_for('login'))
     search_query = request.args.get('q', '').strip()
     conn = get_db_connection()
-    if not conn:
-        return render_template("index.html", prodotti=[], search_query=search_query)
+    if not conn: return render_template("index.html", prodotti=[], search_query=search_query)
     cur = conn.cursor()
     if search_query:
-        cur.execute("""
-            SELECT * FROM prodotti 
-            WHERE qr_code ILIKE %s OR nome ILIKE %s OR sap ILIKE %s OR cliente_manutenzione ILIKE %s
-            ORDER BY nome ASC;
-        """, (f"%{search_query}%", f"%{search_query}%", f"%{search_query}%", f"%{search_query}%"))
+        cur.execute("SELECT * FROM prodotti WHERE qr_code ILIKE %s OR nome ILIKE %s OR sap ILIKE %s OR cliente_manutenzione ILIKE %s ORDER BY nome ASC;", (f"%{search_query}%", f"%{search_query}%", f"%{search_query}%", f"%{search_query}%"))
     else:
         cur.execute("SELECT * FROM prodotti ORDER BY nome ASC;")
     prodotti_db = cur.fetchall()
     cur.close()
     conn.close()
     
-    prodotti = []
-    for p in prodotti_db:
-        p_dict = dict(p)
-        url_azione = url_for('gestisci_prodotto', qr_code=p['qr_code'], _external=True)
-        p_dict['qr_img'] = genera_qr_base64(url_azione)
-        prodotti.append(p_dict)
+    prodotti = [{**dict(p), 'qr_img': genera_qr_base64(url_for('gestisci_prodotto', qr_code=p['qr_code'], _external=True))} for p in prodotti_db]
     return render_template("index.html", prodotti=prodotti, search_query=search_query)
 
 @app.route('/manutenzioni')
 def lista_manutenzioni():
-    if 'user' not in session:
-        return redirect(url_for('login'))
+    if 'user' not in session: return redirect(url_for('login'))
     conn = get_db_connection()
     cur = conn.cursor()
     cur.execute("SELECT * FROM prodotti WHERE stato = 'In Manutenzione' ORDER BY data_rientro ASC NULLS LAST;")
@@ -211,19 +198,21 @@ def lista_manutenzioni():
     cur.close()
     conn.close()
     
-    prodotti = [ {**dict(p), 'qr_img': genera_qr_base64(url_for('gestisci_prodotto', qr_code=p['qr_code'], _external=True))} for p in prodotti_db ]
+    prodotti = [{**dict(p), 'qr_img': genera_qr_base64(url_for('gestisci_prodotto', qr_code=p['qr_code'], _external=True))} for p in prodotti_db]
     return render_template("manutenzioni.html", prodotti=prodotti, storico=storico_db)
 
 @app.route('/gestisci/<qr_code>')
 def gestisci_prodotto(qr_code):
-    if 'user' not in session:
-        return redirect(url_for('login'))
+    if 'user' not in session: return redirect(url_for('login'))
     conn = get_db_connection()
     cur = conn.cursor()
     cur.execute("SELECT * FROM prodotti WHERE qr_code = %s;", (qr_code,))
     prodotto = cur.fetchone()
+    
+    # Recupera TUTTO lo storico delle manutenzioni passate per questo specifico prodotto
     cur.execute("SELECT * FROM storico_manutenzioni WHERE qr_code = %s ORDER BY id DESC;", (qr_code,))
     storico_prodotto = cur.fetchall()
+    
     cur.close()
     conn.close()
     if not prodotto:
@@ -236,8 +225,7 @@ def gestisci_prodotto(qr_code):
 
 @app.route('/aggiungi', methods=['POST'])
 def aggiungi_prodotto():
-    if 'user' not in session:
-        return redirect(url_for('login'))
+    if 'user' not in session: return redirect(url_for('login'))
     qr_code = request.form.get('qr_code')
     nome = request.form.get('nome')
     quantita = int(request.form.get('quantita', 0) or 0)
@@ -260,7 +248,6 @@ def aggiungi_prodotto():
 @app.route('/manutenzione', methods=['POST'])
 def manutenzione():
     if 'user' not in session or (not session.get('is_admin') and not session.get('puoi_assistenza')):
-        flash("Accesso negato.", "error")
         return redirect(url_for('index'))
     qr_code = request.form.get('qr_code')
     cliente = request.form.get('cliente_manutenzione', '').strip()
@@ -278,7 +265,7 @@ def manutenzione():
     conn.commit()
     cur.close()
     conn.close()
-    flash("Pezzo inviato in manutenzione: in attesa di ordine amministrazione.", "success")
+    flash("Pezzo inviato in manutenzione.", "success")
     return redirect(url_for('gestisci_prodotto', qr_code=qr_code))
 
 @app.route('/aggiorna_ordine', methods=['POST'])
@@ -294,7 +281,6 @@ def aggiorna_ordine():
     conn.commit()
     cur.close()
     conn.close()
-    flash("Stato ordine amministrazione aggiornato: pronto per la riparazione.", "success")
     return redirect(url_for('gestisci_prodotto', qr_code=qr_code))
 
 @app.route('/rientro', methods=['POST'])
@@ -303,16 +289,19 @@ def rientro():
         return redirect(url_for('index'))
     qr_code = request.form.get('qr_code')
     materiale_ritornato = request.form.get('materiale_ritornato', '').strip()
+    data_rientro_effettiva = datetime.now().strftime('%Y-%m-%d')
     
     conn = get_db_connection()
     cur = conn.cursor()
-    cur.execute("SELECT nome, cliente_manutenzione, data_spedizione, data_rientro, note_manutenzione FROM prodotti WHERE qr_code = %s;", (qr_code,))
+    cur.execute("SELECT nome, cliente_manutenzione, data_spedizione, note_manutenzione FROM prodotti WHERE qr_code = %s;", (qr_code,))
     prod = cur.fetchone()
+    
     if prod:
+        # Salva permanentemente nello storico ogni singola riparazione con tutte le date
         cur.execute("""
             INSERT INTO storico_manutenzioni (qr_code, nome_prodotto, cliente, data_spedizione, data_rientro, note_manutenzione, materiale_ritornato, chiuso_da)
             VALUES (%s, %s, %s, %s, %s, %s, %s, %s);
-        """, (qr_code, prod['nome'], prod['cliente_manutenzione'], prod['data_spedizione'], prod['data_rientro'], prod['note_manutenzione'], materiale_ritornato, session['user']))
+        """, (qr_code, prod['nome'], prod['cliente_manutenzione'], prod['data_spedizione'], data_rientro_effettiva, prod['note_manutenzione'], materiale_ritornato, session['user']))
 
     cur.execute("""
         UPDATE prodotti 
@@ -322,7 +311,7 @@ def rientro():
     conn.commit()
     cur.close()
     conn.close()
-    flash("Pezzo rientrato fisicamente in magazzino e riparazione archiviata!", "success")
+    flash("Rientro registrato e salvato nello storico!", "success")
     return redirect(url_for('gestisci_prodotto', qr_code=qr_code))
 
 @app.route('/cancella/<qr_code>', methods=['POST'])
@@ -336,7 +325,6 @@ def cancella_prodotto(qr_code):
     conn.commit()
     cur.close()
     conn.close()
-    flash("Prodotto eliminato.", "success")
     return redirect(url_for('index'))
 
 @app.route('/carico', methods=['POST'])
@@ -400,7 +388,6 @@ def reset_password(user_id):
         conn.commit()
         cur.close()
         conn.close()
-        flash("Password resettata.", "success")
     return redirect(url_for('gestione_utenti'))
 
 @app.route('/admin/elimina_utente/<int:user_id>', methods=['POST'])
