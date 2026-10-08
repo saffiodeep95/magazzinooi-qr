@@ -25,179 +25,41 @@
             color: var(--text-main);
             -webkit-font-smoothing: antialiased;
         }
-        .top-bar {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 20px;
-        }
-        header {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-        }
-        header h1 {
-            font-size: 1.5rem;
-            font-weight: 800;
-            color: var(--text-main);
-            margin: 0;
-            letter-spacing: -0.5px;
-        }
-        .logo-badge {
-            background: var(--primary);
-            color: white;
-            font-size: 1.3rem;
-            width: 40px;
-            height: 40px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            border-radius: 12px;
-            box-shadow: 0 4px 6px -1px rgba(79, 70, 229, 0.2);
-        }
-        .user-actions {
-            display: flex;
-            gap: 8px;
-            align-items: center;
-        }
-        .maint-nav-btn {
-            background: #f59e0b;
-            color: white;
-            padding: 8px 12px;
-            border-radius: 8px;
-            text-decoration: none;
-            font-size: 0.85rem;
-            font-weight: 600;
-        }
-        .maint-nav-btn:hover { background: #d97706; }
-        .admin-btn {
-            background: #0ea5e9;
-            color: white;
-            padding: 8px 12px;
-            border-radius: 8px;
-            text-decoration: none;
-            font-size: 0.85rem;
-            font-weight: 600;
-        }
-        .admin-btn:hover { background: #0284c7; }
-        .logout-btn {
-            background: #ef4444;
-            color: white;
-            padding: 8px 12px;
-            border-radius: 8px;
-            text-decoration: none;
-            font-size: 0.85rem;
-            font-weight: 600;
-        }
-        .logout-btn:hover { background: #dc2626; }
-        .flash {
-            background: #dcfce7;
-            color: #166534;
-            padding: 12px 16px;
-            margin-bottom: 16px;
-            border-radius: 10px;
-            font-weight: 500;
-            border: 1px solid #bbf7d0;
-            font-size: 0.9rem;
-        }
-        .card {
-            background: var(--card-bg);
-            padding: 16px;
-            border-radius: 16px;
-            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
-            margin-bottom: 16px;
-            border: 1px solid var(--border-color);
-        }
-        h2 {
-            font-size: 1rem;
-            font-weight: 600;
-            color: var(--text-main);
-            margin-top: 0;
-            margin-bottom: 12px;
-        }
-        label {
-            display: block;
-            font-size: 0.8rem;
-            font-weight: 600;
-            color: var(--text-muted);
-            margin-bottom: 4px;
-        }
-        input, button {
-            width: 100%;
-            padding: 12px;
-            margin-bottom: 12px;
-            border: 1px solid var(--border-color);
-            border-radius: 10px;
-            box-sizing: border-box;
-            font-size: 1rem;
-            background: #fff;
-        }
-        button {
-            background: var(--primary);
-            color: white;
-            border: none;
-            font-weight: 600;
-            cursor: pointer;
-            box-shadow: 0 4px 6px -1px rgba(79, 70, 229, 0.2);
-        }
+        .top-bar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+        header { display: flex; align-items: center; gap: 12px; }
+        header h1 { font-size: 1.5rem; font-weight: 800; color: var(--text-main); margin: 0; }
+        .logo-badge { background: var(--primary); color: white; font-size: 1.3rem; width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; border-radius: 12px; }
+        .user-actions { display: flex; gap: 8px; align-items: center; }
+        .maint-nav-btn { background: #f59e0b; color: white; padding: 8px 12px; border-radius: 8px; text-decoration: none; font-size: 0.85rem; font-weight: 600; }
+        .admin-btn { background: #0ea5e9; color: white; padding: 8px 12px; border-radius: 8px; text-decoration: none; font-size: 0.85rem; font-weight: 600; }
+        .logout-btn { background: #ef4444; color: white; padding: 8px 12px; border-radius: 8px; text-decoration: none; font-size: 0.85rem; font-weight: 600; }
+        .flash { background: #dcfce7; color: #166534; padding: 12px 16px; margin-bottom: 16px; border-radius: 10px; font-weight: 500; border: 1px solid #bbf7d0; font-size: 0.9rem; }
+        .card { background: var(--card-bg); padding: 16px; border-radius: 16px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05); margin-bottom: 16px; border: 1px solid var(--border-color); }
+        h2 { font-size: 1rem; font-weight: 600; color: var(--text-main); margin-top: 0; margin-bottom: 12px; }
+        label { display: block; font-size: 0.8rem; font-weight: 600; color: var(--text-muted); margin-bottom: 4px; }
+        input, button { width: 100%; padding: 12px; margin-bottom: 12px; border: 1px solid var(--border-color); border-radius: 10px; box-sizing: border-box; font-size: 1rem; background: #fff; }
+        button { background: var(--primary); color: white; border: none; font-weight: 600; cursor: pointer; }
         button:hover { background: var(--primary-hover); }
-        .search-box {
-            display: flex;
-            gap: 8px;
-            margin-bottom: 0;
-        }
+        .search-box { display: flex; gap: 8px; margin-bottom: 0; }
         .search-box input { margin-bottom: 0; }
         .search-box button { width: auto; padding: 0 16px; }
-        .btn-secondary {
-            background: #64748b;
-            color: white;
-            padding: 12px 14px;
-            border-radius: 10px;
-            text-align: center;
-            display: inline-block;
-            text-decoration: none;
-            font-weight: 600;
-            line-height: normal;
-            border: none;
-        }
-        .btn-secondary:hover { background: #475569; }
-
-        .items-grid {
-            display: flex;
-            flex-direction: column;
-            gap: 12px;
-            margin-top: 16px;
-        }
-        .item-card {
-            background: var(--card-bg);
-            border: 1px solid var(--border-color);
-            border-radius: 14px;
-            padding: 14px;
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.02);
-        }
+        .btn-secondary { background: #64748b; color: white; padding: 12px 14px; border-radius: 10px; text-decoration: none; font-weight: 600; border: none; display: inline-block; }
+        .items-grid { display: flex; flex-direction: column; gap: 12px; margin-top: 16px; }
+        .item-card { background: var(--card-bg); border: 1px solid var(--border-color); border-radius: 14px; padding: 14px; display: flex; align-items: center; justify-content: space-between; }
         .item-info { flex-grow: 1; padding-right: 12px; }
         .item-title { font-weight: 700; font-size: 1.05rem; color: var(--text-main); margin-bottom: 4px; }
         .item-details { font-size: 0.85rem; color: var(--text-muted); display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 4px; }
         .item-badge { background: #f1f5f9; padding: 2px 6px; border-radius: 4px; font-family: monospace; }
         .item-qty { font-weight: 800; color: var(--primary); font-size: 1.1rem; }
         .badge-maint { background: #fef3c7; color: #d97706; padding: 2px 6px; border-radius: 4px; font-weight: 700; font-size: 0.75rem; }
+        .badge-order-wait { background: #fee2e2; color: #991b1b; padding: 2px 6px; border-radius: 4px; font-weight: 700; font-size: 0.75rem; }
+        .badge-order-ready { background: #dcfce7; color: #166534; padding: 2px 6px; border-radius: 4px; font-weight: 700; font-size: 0.75rem; }
         .badge-repaired { background: #dcfce7; color: #166534; padding: 2px 6px; border-radius: 4px; font-weight: 700; font-size: 0.75rem; }
         .item-signature { font-size: 0.75rem; color: var(--primary); font-weight: 600; margin-top: 4px; }
         .item-right { display: flex; flex-direction: column; align-items: center; gap: 8px; }
         img.qr-thumb { width: 50px; height: 50px; border-radius: 6px; background: #fff; padding: 2px; border: 1px solid var(--border-color); display: block; }
         a.action-btn { background: var(--primary); color: white; text-decoration: none; font-weight: 600; font-size: 0.85rem; padding: 6px 12px; border-radius: 8px; text-align: center; }
-        a.action-btn:hover { background: var(--primary-hover); }
-        .footer-credit {
-            text-align: center;
-            margin: 30px 0 20px 0;
-            font-size: 0.85rem;
-            color: var(--text-muted);
-            border-top: 1px solid var(--border-color);
-            padding-top: 15px;
-        }
+        .footer-credit { text-align: center; margin: 30px 0 20px 0; font-size: 0.85rem; color: var(--text-muted); border-top: 1px solid var(--border-color); padding-top: 15px; }
     </style>
 </head>
 <body>
@@ -264,9 +126,14 @@
                 <div class="item-title">
                     {{ p.nome }}
                     {% if p.stato == 'In Manutenzione' %}
-                    <span class="badge-maint">🔧 Presso Cliente</span>
+                        <span class="badge-maint">🔧 Presso Cliente</span>
+                        {% if p.ordine_arrivato %}
+                            <span class="badge-order-ready">🛠️ Ordine arrivato - Pronto per riparazione</span>
+                        {% else %}
+                            <span class="badge-order-wait">⏳ In attesa ordine amministrazione</span>
+                        {% endif %}
                     {% elif p.materiale_ritornato %}
-                    <span class="badge-repaired">🛠️ Riparato / Rientrato</span>
+                        <span class="badge-repaired">🛠️ Riparato / Rientrato</span>
                     {% endif %}
                 </div>
                 <div class="item-details">
@@ -281,7 +148,7 @@
                 </div>
                 {% if p.stato == 'In Manutenzione' %}
                 <div style="font-size: 0.8rem; color: #d97706; margin-top: 4px; font-weight: 600;">
-                    👤 Cliente: {{ p.cliente_manutenzione }} | Spedizione: {{ p.data_spedizione if p.data_spedizione else 'N/D' }} | Rientro: {{ p.data_rientro if p.data_rientro else 'N/D' }}
+                    👤 Cliente: {{ p.cliente_manutenzione }} | Spedizione: {{ p.data_spedizione if p.data_spedizione else 'N/D' }} | Rientro Previsto: {{ p.data_rientro if p.data_rientro else 'N/D' }}
                     {% if p.note_manutenzione %}
                     <br>📝 Note: {{ p.note_manutenzione }}
                     {% endif %}
