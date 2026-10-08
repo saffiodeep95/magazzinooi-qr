@@ -178,9 +178,6 @@ def index():
     cur.execute("SELECT data_spedizione FROM prodotti WHERE stato = 'In Manutenzione' AND data_spedizione IS NOT NULL;")
     maint_attive = cur.fetchall()
     
-    cur.close()
-    conn.close()
-    
     oggi = date.today()
     num_critici = 0
     num_attenzione = 0
@@ -194,7 +191,19 @@ def index():
         elif giorni >= 15:
             num_attenzione += 1
 
-    prodotti = [{**dict(p), 'qr_img': genera_qr_base64(url_for('gestisci_prodotto', qr_code=p['qr_code'], _external=True))} for p in prodotti_db]
+    prodotti = []
+    for p in prodotti_db:
+        p_dict = dict(p)
+        p_dict['qr_img'] = genera_qr_base64(url_for('gestisci_prodotto', qr_code=p['qr_code'], _external=True))
+        
+        cur.execute("SELECT COUNT(*) as tot FROM storico_manutenzioni WHERE qr_code = %s;", (p['qr_code'],))
+        res_count = cur.fetchone()
+        p_dict['tot_riparazioni'] = res_count['tot'] if res_count else 0
+        
+        prodotti.append(p_dict)
+
+    cur.close()
+    conn.close()
     return render_template("index.html", prodotti=prodotti, search_query=search_query, num_critici=num_critici, num_attenzione=num_attenzione)
 
 @app.route('/manutenzioni')
@@ -343,6 +352,30 @@ def rientro():
     conn.close()
     flash("Rientro registrato e salvato nello storico!", "success")
     return redirect(url_for('gestisci_prodotto', qr_code=qr_code))
+
+@app.route('/admin/elimina_storico/<int:storico_id>', methods=['POST'])
+def elimina_storico(storico_id):
+    if 'user' not in session or (not session.get('is_admin') and not session.get('puoi_assistenza')):
+        flash("Accesso negato.", "error")
+        return redirect(url_for('index'))
+    
+    conn = get_db_connection()
+    cur = conn.cursor()
+    cur.execute("SELECT qr_code FROM storico_manutenzioni WHERE id = %s;", (storico_id,))
+    row = cur.fetchone()
+    qr_code = row['qr_code'] if row else None
+
+    if storico_id:
+        cur.execute("DELETE FROM storico_manutenzioni WHERE id = %s;", (storico_id,))
+        conn.commit()
+        flash("Intervento rimosso dallo storico con successo.", "success")
+    
+    cur.close()
+    conn.close()
+    
+    if qr_code:
+        return redirect(url_for('gestisci_prodotto', qr_code=qr_code))
+    return redirect(url_for('index'))
 
 @app.route('/cancella/<qr_code>', methods=['POST'])
 def cancella_prodotto(qr_code):
