@@ -26,9 +26,15 @@
         <h2>{{ prodotto.nome }}</h2>
         <p><strong>Codice QR:</strong> <code>{{ prodotto.qr_code }}</code></p>
         <p><strong>Codice SAP:</strong> {{ prodotto.sap if prodotto.sap else '-' }}</p>
-        <p><strong>Quantità Magazzino:</strong> {{ prodotto.quantita }}</p>
+        <p><strong>Quantità in Magazzino:</strong> {{ prodotto.quantita }}</p>
         <p><strong>Posizione:</strong> {{ prodotto.posizione if prodotto.posizione else '-' }}</p>
-        <p><strong>Stato Attuale:</strong> <span style="color: #4f46e5; font-weight: bold;">{{ prodotto.stato if prodotto.stato else 'Disponibile' }}</span></p>
+        <p><strong>Stato:</strong> 
+            {% if prodotto.in_manutenzione %}
+                <span style="color: #d97706; font-weight: bold;">In Manutenzione ({{ prodotto.quantita_manutenzione }} pz bloccati)</span>
+            {% else %}
+                <span style="color: #10b981; font-weight: bold;">Disponibile</span>
+            {% endif %}
+        </p>
 
         <div style="margin: 20px 0;">
             <img src="https://api.qrserver.com/v1/create-qr-code/?size=160x160&data={{ prodotto.qr_code }}" alt="QR Code" style="border: 1px solid #e2e8f0; padding: 10px; background: white; border-radius: 8px;">
@@ -43,74 +49,75 @@
 
         {% if session.get('is_admin') %}
         <div style="margin-top: 25px; border-top: 1px solid #e2e8f0; padding-top: 15px;">
-            <form action="{{ url_for('elimina_prodotto') }}" method="POST" onsubmit="return confirm('Sei sicuro di voler eliminare definitivamente questo articolo dal magazzino?');">
+            <form action="{{ url_for('elimina_prodotto') }}" method="POST" onsubmit="return confirm('Sei sicuro di voler eliminare definitivamente questo articolo?');">
                 <input type="hidden" name="qr_code" value="{{ prodotto.qr_code }}">
-                <button type="submit" class="btn btn-danger">🗑️ Elimina Prodotto dal Magazzino (Admin)</button>
+                <button type="submit" class="btn btn-danger">🗑️ Elimina Prodotto dal Magazzino</button>
             </form>
         </div>
         {% endif %}
     </div>
 
-    <!-- Modulo Gestione Manutenzione & Spedizione -->
+    <!-- Modulo Gestione Manutenzione -->
     <div class="card">
-        <h3>🔧 Gestione Manutenzione, Pezzi e Vettore</h3>
+        <h3>🔧 Gestione Manutenzione e Pezzi</h3>
         {% if session.get('is_admin') or session.get('puo_vedere_manutenzione') %}
-        <form action="{{ url_for('stato_manutenzione', qr_code=prodotto.qr_code) }}" method="POST">
-            <div>
-                <label>Imposta Stato</label>
-                <select name="stato">
-                    <option value="Disponibile" {% if prodotto.stato == 'Disponibile' %}selected{% endif %}>Disponibile</option>
-                    <option value="In Manutenzione" {% if prodotto.stato == 'In Manutenzione' %}selected{% endif %}>In Manutenzione</option>
-                    <option value="Spedito" {% if prodotto.stato == 'Spedito' %}selected{% endif %}>Spedito</option>
-                </select>
-            </div>
-
-            <div>
-                <label>Cliente / Azienda</label>
-                <select name="cliente_manutenzione">
-                    <option value="">-- Seleziona Cliente --</option>
-                    {% for c in clienti %}
-                    <option value="{{ c.nome_azienda }}" {% if prodotto.cliente_manutenzione == c.nome_azienda %}selected{% endif %}>{{ c.nome_azienda }}</option>
-                    {% endfor %}
-                </select>
-            </div>
-
-            <div>
-                <label>Numero Pezzi in Manutenzione</label>
-                <input type="number" name="quantita_manutenzione" value="{{ prodotto.quantita_manutenzione if prodotto.quantita_manutenzione else 1 }}" min="1">
-            </div>
-
-            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
-                <div>
-                    <label>Data Spedizione</label>
-                    <input type="date" name="data_spedizione" value="{{ prodotto.data_spedizione if prodotto.data_spedizione else '' }}">
+            
+            {% if prodotto.in_manutenzione %}
+                <div style="background: #fef3c7; border: 1px solid #f59e0b; padding: 15px; border-radius: 8px; margin-bottom: 15px; text-align: center;">
+                    <p style="margin: 0 0 10px 0; color: #92400e; font-weight: bold;">Questo articolo ha attualmente {{ prodotto.quantita_manutenzione }} pezzi in manutenzione per il cliente: {{ prodotto.cliente_manutenzione }}</p>
+                    <form action="{{ url_for('ripristina_magazzino', qr_code=prodotto.qr_code) }}" method="POST">
+                        <button type="submit" class="btn btn-success" style="width: 100%;">🔄 Ripristina in Magazzino (Riconsegna Pezzi)</button>
+                    </form>
                 </div>
+            {% endif %}
+
+            <form action="{{ url_for('manda_manutenzione', qr_code=prodotto.qr_code) }}" method="POST">
                 <div>
-                    <label>Data Riconsegna Prevista</label>
-                    <input type="date" name="data_riconsegna" value="{{ prodotto.data_riconsegna if prodotto.data_riconsegna else '' }}">
+                    <label>Cliente / Azienda</label>
+                    <select name="cliente_manutenzione">
+                        <option value="">-- Seleziona Cliente --</option>
+                        {% for c in clienti %}
+                        <option value="{{ c.nome_azienda }}" {% if prodotto.cliente_manutenzione == c.nome_azienda %}selected{% endif %}>{{ c.nome_azienda }}</option>
+                        {% endfor %}
+                    </select>
                 </div>
-            </div>
 
-            <div>
-                <label>Vettore (es. Bartolini, DHL, Corriere Interno)</label>
-                <input type="text" name="vettore" value="{{ prodotto.vettore if prodotto.vettore else '' }}" placeholder="Nome corriere o vettore...">
-            </div>
+                <div>
+                    <label>Numero Pezzi da Mandare in Manutenzione</label>
+                    <input type="number" name="quantita_manutenzione" value="{{ prodotto.quantita_manutenzione if prodotto.quantita_manutenzione else 1 }}" min="1">
+                </div>
 
-            <div class="checkbox-group">
-                <input type="checkbox" id="ordine_amministrativo" name="ordine_amministrativo" {% if prodotto.ordine_amministrativo %}checked{% endif %}>
-                <label for="ordine_amministrativo" style="margin: 0; cursor: pointer; color: #1e293b; font-weight: bold;">Ordine Amministrativo / Autorizzato</label>
-            </div>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+                    <div>
+                        <label>Data Spedizione</label>
+                        <input type="date" name="data_spedizione" value="{{ prodotto.data_spedizione if prodotto.data_spedizione else '' }}">
+                    </div>
+                    <div>
+                        <label>Data Riconsegna Prevista</label>
+                        <input type="date" name="data_riconsegna" value="{{ prodotto.data_riconsegna if prodotto.data_riconsegna else '' }}">
+                    </div>
+                </div>
 
-            <div>
-                <label>Note di Manutenzione / Lavorazioni</label>
-                <textarea name="note_manutenzione" rows="3" placeholder="Inserisci note o dettagli tecnici...">{{ prodotto.note_manutenzione if prodotto.note_manutenzione else '' }}</textarea>
-            </div>
+                <div>
+                    <label>Vettore (es. Bartolini, DHL, Corriere)</label>
+                    <input type="text" name="vettore" value="{{ prodotto.vettore if prodotto.vettore else '' }}" placeholder="Nome corriere o vettore...">
+                </div>
 
-            <button type="submit" class="btn btn-warning" style="width: 100%; margin-top: 10px;">Salva Dati Manutenzione</button>
-        </form>
+                <div class="checkbox-group">
+                    <input type="checkbox" id="ordine_amministrativo" name="ordine_amministrativo" {% if prodotto.ordine_amministrativo %}checked{% endif %}>
+                    <label for="ordine_amministrativo" style="margin: 0; cursor: pointer; color: #1e293b; font-weight: bold;">Ordine Amministrativo / Autorizzato</label>
+                </div>
+
+                <div>
+                    <label>Note di Manutenzione</label>
+                    <textarea name="note_manutenzione" rows="3" placeholder="Inserisci note o dettagli tecnici...">{{ prodotto.note_manutenzione if prodotto.note_manutenzione else '' }}</textarea>
+                </div>
+
+                <button type="submit" class="btn btn-warning" style="width: 100%; margin-top: 10px;">Manda in Manutenzione (Scala Pezzi)</button>
+            </form>
         {% else %}
             <p style="color: #991b1b; background: #fee2e2; padding: 12px; border-radius: 8px; font-size: 0.9rem; text-align: center;">
-                <strong>Accesso Limitato:</strong> Non disponi dei permessi necessari per modificare i dati di manutenzione di questo articolo. Contatta l'amministratore per richiedere l'abilitazione.
+                <strong>Accesso Limitato:</strong> Non disponi dei permessi necessari per gestire le manutenzioni.
             </p>
         {% endif %}
     </div>
