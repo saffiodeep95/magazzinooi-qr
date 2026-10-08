@@ -28,17 +28,18 @@ def init_db():
     if conn:
         try:
             cur = conn.cursor()
-            # Tabella Utenti con is_admin e puoi_cancellare
+            # Tabella Utenti con is_admin, puoi_cancellare e puoi_assistenza
             cur.execute("""
                 CREATE TABLE IF NOT EXISTS utenti (
                     id SERIAL PRIMARY KEY,
                     username VARCHAR(255) UNIQUE NOT NULL,
                     password TEXT NOT NULL,
                     is_admin BOOLEAN DEFAULT FALSE,
-                    puoi_cancellare BOOLEAN DEFAULT FALSE
+                    puoi_cancellare BOOLEAN DEFAULT FALSE,
+                    puoi_assistenza BOOLEAN DEFAULT FALSE
                 );
             """)
-            # Tabella Prodotti con campi manutenzione, note e materiale ritornato
+            # Tabella Prodotti
             cur.execute("""
                 CREATE TABLE IF NOT EXISTS prodotti (
                     id SERIAL PRIMARY KEY,
@@ -56,6 +57,21 @@ def init_db():
                     materiale_ritornato TEXT
                 );
             """)
+            # Tabella Storico Manutenzioni
+            cur.execute("""
+                CREATE TABLE IF NOT EXISTS storico_manutenzioni (
+                    id SERIAL PRIMARY KEY,
+                    qr_code VARCHAR(255) NOT NULL,
+                    nome_prodotto VARCHAR(255),
+                    cliente VARCHAR(255),
+                    data_spedizione DATE,
+                    data_rientro DATE,
+                    note_manutenzione TEXT,
+                    materiale_ritornato TEXT,
+                    chiuso_da VARCHAR(255)
+                );
+            """)
+
             # Compatibilità colonne esistenti
             cur.execute("ALTER TABLE prodotti ADD COLUMN IF NOT EXISTS sap VARCHAR(255);")
             cur.execute("ALTER TABLE prodotti ADD COLUMN IF NOT EXISTS modificato_da VARCHAR(255);")
@@ -68,16 +84,18 @@ def init_db():
             
             cur.execute("ALTER TABLE utenti ADD COLUMN IF NOT EXISTS is_admin BOOLEAN DEFAULT FALSE;")
             cur.execute("ALTER TABLE utenti ADD COLUMN IF NOT EXISTS puoi_cancellare BOOLEAN DEFAULT FALSE;")
+            cur.execute("ALTER TABLE utenti ADD COLUMN IF NOT EXISTS puoi_assistenza BOOLEAN DEFAULT FALSE;")
             
-            # Account admin di default
+            # Account admin di default con tutti i permessi
             admin_pass = generate_password_hash("admin123")
             cur.execute("""
-                INSERT INTO utenti (username, password, is_admin, puoi_cancellare) 
-                VALUES ('admin', %s, TRUE, TRUE)
+                INSERT INTO utenti (username, password, is_admin, puoi_cancellare, puoi_assistenza) 
+                VALUES ('admin', %s, TRUE, TRUE, TRUE)
                 ON CONFLICT (username) DO UPDATE SET 
                     password = EXCLUDED.password, 
                     is_admin = TRUE,
-                    puoi_cancellare = TRUE;
+                    puoi_cancellare = TRUE,
+                    puoi_assistenza = TRUE;
             """, (admin_pass,))
 
             conn.commit()
@@ -124,6 +142,7 @@ def login():
                 session['user'] = utente['username']
                 session['is_admin'] = utente['is_admin']
                 session['puoi_cancellare'] = utente['puoi_cancellare']
+                session['puoi_assistenza'] = utente['puoi_assistenza']
                 flash(f"Benvenuto, {utente['username']}!", "success")
                 return redirect(url_for('index'))
             else:
@@ -151,7 +170,7 @@ def registra():
         
         try:
             cur = conn.cursor()
-            cur.execute("INSERT INTO utenti (username, password, is_admin, puoi_cancellare) VALUES (%s, %s, FALSE, FALSE);", (username, hashed_password))
+            cur.execute("INSERT INTO utenti (username, password, is_admin, puoi_cancellare, puoi_assistenza) VALUES (%s, %s, FALSE, FALSE, FALSE);", (username, hashed_password))
             conn.commit()
             cur.close()
             conn.close()
@@ -181,7 +200,7 @@ def gestione_utenti():
         return redirect(url_for('index'))
     try:
         cur = conn.cursor()
-        cur.execute("SELECT id, username, is_admin, puoi_cancellare FROM utenti ORDER BY id ASC;")
+        cur.execute("SELECT id, username, is_admin, puoi_cancellare, puoi_assistenza FROM utenti ORDER BY id ASC;")
         utenti = cur.fetchall()
         cur.close()
         conn.close()
@@ -190,8 +209,8 @@ def gestione_utenti():
         flash(f"Errore nel recupero utenti: {e}", "error")
         return redirect(url_for('index'))
 
-@app.route('/admin/toggle_permesso/<int:user_id>', methods=['POST'])
-def toggle_permesso(user_id):
+@app.route('/admin/toggle_permesso/<int:user_id>/<tipo>', methods=['POST'])
+def toggle_permesso(user_id, tipo):
     if 'user' not in session or not session.get('is_admin'):
         flash("Accesso negato.", "error")
         return redirect(url_for('index'))
@@ -201,15 +220,23 @@ def toggle_permesso(user_id):
         return redirect(url_for('index'))
     try:
         cur = conn.cursor()
-        cur.execute("SELECT puoi_cancellare FROM utenti WHERE id = %s;", (user_id,))
-        res = cur.fetchone()
-        if res:
-            nuovo_stato = not res['puoi_cancellare']
-            cur.execute("UPDATE utenti SET puoi_cancellare = %s WHERE id = %s;", (nuovo_stato, user_id))
-            conn.commit()
-            flash("Permessi di cancellazione aggiornati con successo.", "success")
+        if tipo == 'cancellare':
+            cur.execute("SELECT puoi_cancellare FROM utenti WHERE id = %s;", (user_id,))
+            res = cur.fetchone()
+            if res:
+                nuovo_stato = not res['puoi_cancellare']
+                cur.execute("UPDATE utenti SET puoi_cancellare = %s WHERE id = %s;", (nuovo_stato, user_id))
+        elif tipo == 'assistenza':
+            cur.execute("SELECT puoi_assistenza FROM utenti WHERE id = %s;", (user_id,))
+            res = cur.fetchone()
+            if res:
+                nuovo_stato = not res['puoi_assistenza']
+                cur.execute("UPDATE utenti SET puoi_assistenza = %s WHERE id = %s;", (nuovo_stato, user_id))
+        
+        conn.commit()
         cur.close()
         conn.close()
+        flash("Permessi utente aggiornati con successo.", "success")
     except Exception as e:
         flash(f"Errore durante l'aggiornamento: {e}", "error")
 
@@ -312,9 +339,10 @@ def lista_manutenzioni():
 
     conn = get_db_connection()
     if not conn:
-        return render_template("manutenzioni.html", prodotti=[])
+        return render_template("manutenzioni.html", prodotti=[], storico=[])
     try:
         cur = conn.cursor()
+        # Pezzi attualmente in manutenzione
         cur.execute("""
             SELECT id, qr_code, nome, quantita, posizione, sap, modificato_da, stato, cliente_manutenzione, data_spedizione, data_rientro, note_manutenzione, materiale_ritornato 
             FROM prodotti 
@@ -322,6 +350,15 @@ def lista_manutenzioni():
             ORDER BY data_rientro ASC NULLS LAST;
         """)
         prodotti_db = cur.fetchall()
+
+        # Storico completo manutenzioni passate
+        cur.execute("""
+            SELECT id, qr_code, nome_prodotto, cliente, data_spedizione, data_rientro, note_manutenzione, materiale_ritornato, chiuso_da
+            FROM storico_manutenzioni
+            ORDER BY id DESC;
+        """)
+        storico_db = cur.fetchall()
+
         cur.close()
         conn.close()
         
@@ -332,10 +369,10 @@ def lista_manutenzioni():
             p_dict['qr_img'] = genera_qr_base64(url_azione)
             prodotti.append(p_dict)
 
-        return render_template("manutenzioni.html", prodotti=prodotti)
+        return render_template("manutenzioni.html", prodotti=prodotti, storico=storico_db)
     except Exception as e:
         print(f"Errore nella rotta manutenzioni: {e}")
-        return render_template("manutenzioni.html", prodotti=[])
+        return render_template("manutenzioni.html", prodotti=[], storico=[])
 
 @app.route('/gestisci/<qr_code>')
 def gestisci_prodotto(qr_code):
@@ -350,6 +387,16 @@ def gestisci_prodotto(qr_code):
         cur = conn.cursor()
         cur.execute("SELECT id, qr_code, nome, quantita, posizione, sap, modificato_da, stato, cliente_manutenzione, data_spedizione, data_rientro, note_manutenzione, materiale_ritornato FROM prodotti WHERE qr_code = %s;", (qr_code,))
         prodotto = cur.fetchone()
+        
+        # Recupera anche lo storico specifico per questo QR code
+        cur.execute("""
+            SELECT cliente, data_spedizione, data_rientro, note_manutenzione, materiale_ritornato, chiuso_da
+            FROM storico_manutenzioni
+            WHERE qr_code = %s
+            ORDER BY id DESC;
+        """, (qr_code,))
+        storico_prodotto = cur.fetchall()
+
         cur.close()
         conn.close()
         if not prodotto:
@@ -360,7 +407,7 @@ def gestisci_prodotto(qr_code):
         url_azione = url_for('gestisci_prodotto', qr_code=qr_code, _external=True)
         prodotto_dict['qr_img'] = genera_qr_base64(url_azione)
 
-        return render_template("gestisci.html", prodotto=prodotto_dict)
+        return render_template("gestisci.html", prodotto=prodotto_dict, storico=storico_prodotto)
     except Exception as e:
         flash(f"Errore: {e}", "error")
         return redirect(url_for('index'))
@@ -414,6 +461,11 @@ def manutenzione():
     if 'user' not in session:
         return redirect(url_for('login'))
 
+    # Controllo permesso assistenza
+    if not session.get('is_admin') and not session.get('puoi_assistenza'):
+        flash("Accesso negato. Non hai i permessi per gestire il servizio assistenza.", "error")
+        return redirect(url_for('index'))
+
     qr_code = request.form.get('qr_code')
     cliente = request.form.get('cliente_manutenzione', '').strip()
     data_spedizione = request.form.get('data_spedizione') or None
@@ -455,6 +507,11 @@ def rientro():
     if 'user' not in session:
         return redirect(url_for('login'))
 
+    # Controllo permesso assistenza
+    if not session.get('is_admin') and not session.get('puoi_assistenza'):
+        flash("Accesso negato. Non hai i permessi per gestire il servizio assistenza.", "error")
+        return redirect(url_for('index'))
+
     qr_code = request.form.get('qr_code')
     materiale_ritornato = request.form.get('materiale_ritornato', '').strip()
     utente_corrente = session['user']
@@ -465,6 +522,27 @@ def rientro():
         return redirect(url_for('index'))
     try:
         cur = conn.cursor()
+        # 1. Recupera i dati attuali del prodotto prima di azzerarli, per salvarli nello storico
+        cur.execute("SELECT nome, cliente_manutenzione, data_spedizione, data_rientro, note_manutenzione FROM prodotti WHERE qr_code = %s;", (qr_code,))
+        prod = cur.fetchone()
+
+        if prod:
+            # 2. Inserisci nello storico manutenzioni
+            cur.execute("""
+                INSERT INTO storico_manutenzioni (qr_code, nome_prodotto, cliente, data_spedizione, data_rientro, note_manutenzione, materiale_ritornato, chiuso_da)
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s);
+            """, (
+                qr_code, 
+                prod['nome'], 
+                prod['cliente_manutenzione'], 
+                prod['data_spedizione'], 
+                prod['data_rientro'], 
+                prod['note_manutenzione'], 
+                materiale_ritornato, 
+                utente_corrente
+            ))
+
+        # 3. Aggiorna lo stato del prodotto in magazzino (torna disponibile)
         cur.execute("""
             UPDATE prodotti 
             SET stato = 'Disponibile', 
@@ -476,10 +554,11 @@ def rientro():
                 modificato_da = %s 
             WHERE qr_code = %s;
         """, (materiale_ritornato, utente_corrente, qr_code))
+
         conn.commit()
         cur.close()
         conn.close()
-        flash("Pezzo rientrato in magazzino con successo!", "success")
+        flash("Pezzo rientrato in magazzino e salvato nello storico!", "success")
     except Exception as e:
         flash(f"Errore durante il rientro: {e}", "error")
 
@@ -498,10 +577,11 @@ def cancella_prodotto(qr_code):
     try:
         cur = conn.cursor()
         cur.execute("DELETE FROM prodotti WHERE qr_code = %s;", (qr_code,))
+        cur.execute("DELETE FROM storico_manutenzioni WHERE qr_code = %s;", (qr_code,))
         conn.commit()
         cur.close()
         conn.close()
-        flash("Prodotto eliminato con successo!", "success")
+        flash("Prodotto e relativo storico eliminati con successo!", "success")
     except Exception as e:
         flash(f"Errore durante l'eliminazione: {e}", "error")
     return redirect(url_for('index'))
