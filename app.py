@@ -4,7 +4,7 @@ import sqlite3
 import os
 
 app = Flask(__name__)
-app.secret_key = 'chiave_segreta_magazzino_sicura'
+app.secret_key = 'chiave_segreta_magazzino'
 
 login_manager = LoginManager()
 login_manager.init_app(app)
@@ -18,6 +18,13 @@ def get_db_connection():
     return conn
 
 def init_db():
+    # Rimuove il DB vecchio ad ogni avvio per azzerare qualsiasi conflitto o colonna mancante
+    if os.path.exists(DATABASE):
+        try:
+            os.remove(DATABASE)
+        except:
+            pass
+            
     conn = get_db_connection()
     
     # Tabella Utenti
@@ -27,11 +34,11 @@ def init_db():
             username TEXT UNIQUE NOT NULL,
             password TEXT NOT NULL,
             role TEXT NOT NULL DEFAULT 'user',
-            puo_vedere_pesanti INTEGER NOT NULL DEFAULT 0
+            puo_vedere_pesanti INTEGER NOT NULL DEFAULT 1
         )
     ''')
     
-    # Tabella Magazzino (Standard e Sezione Pesante: Rulli, Riduttori, Motori con peso)
+    # Tabella Magazzino (Standard e Sezione Pesante con peso in kg)
     conn.execute('''
         CREATE TABLE IF NOT EXISTS rulli (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -59,25 +66,10 @@ def init_db():
         )
     ''')
     
-    # Migrazione automatica delle colonne se il DB esisteva già
-    cursor = conn.cursor()
-    cursor.execute("PRAGMA table_info(users)")
-    user_columns = [col['name'] for col in cursor.fetchall()]
-    if 'puo_vedere_pesanti' not in user_columns:
-        conn.execute('ALTER TABLE users ADD COLUMN puo_vedere_pesanti INTEGER NOT NULL DEFAULT 0')
-
-    cursor.execute("PRAGMA table_info(rulli)")
-    rulli_columns = [col['name'] for col in cursor.fetchall()]
-    if 'is_pesante' not in rulli_columns:
-        conn.execute('ALTER TABLE rulli ADD COLUMN is_pesante INTEGER NOT NULL DEFAULT 0')
-    if 'peso' not in rulli_columns:
-        conn.execute('ALTER TABLE rulli ADD COLUMN peso REAL DEFAULT 0.0')
-
-    # Admin di default
+    # Inserimento utente admin predefinito
     conn.execute('''
         INSERT INTO users (id, username, password, role, puo_vedere_pesanti) 
         VALUES (1, 'admin', 'admin123', 'admin', 1)
-        ON CONFLICT(id) DO UPDATE SET username='admin', password='admin123', role='admin', puo_vedere_pesanti=1
     ''')
     
     conn.commit()
@@ -96,8 +88,7 @@ def load_user(user_id):
     user = conn.execute('SELECT * FROM users WHERE id = ?', (user_id,)).fetchone()
     conn.close()
     if user:
-        pesanti_val = user['puo_vedere_pesanti'] if 'puo_vedere_pesanti' in user.keys() else 1
-        return User(user['id'], user['username'], user['role'], pesanti_val)
+        return User(user['id'], user['username'], user['role'], user['puo_vedere_pesanti'])
     return None
 
 @app.route('/')
@@ -109,7 +100,7 @@ def index():
 @login_required
 def manage_users():
     if current_user.role != 'admin':
-        flash("Accesso negato: sezione riservata agli amministratori.", "danger")
+        flash("Accesso negato.", "danger")
         return redirect(url_for('index'))
     
     conn = get_db_connection()
@@ -119,14 +110,12 @@ def manage_users():
         role = request.form['role']
         puo_vedere_pesanti = 1 if 'puo_vedere_pesanti' in request.form else 0
         try:
-            conn.execute('''
-                INSERT INTO users (username, password, role, puo_vedere_pesanti) 
-                VALUES (?, ?, ?, ?)
-            ''', (username, password, role, puo_vedere_pesanti))
+            conn.execute('INSERT INTO users (username, password, role, puo_vedere_pesanti) VALUES (?, ?, ?, ?)', 
+                         (username, password, role, puo_vedere_pesanti))
             conn.commit()
-            flash("Utente e permessi aggiornati con successo!", "success")
+            flash("Utente aggiunto!", "success")
         except sqlite3.IntegrityError:
-            flash("Nome utente già esistente.", "danger")
+            flash("Username già esistente.", "danger")
         return redirect(url_for('manage_users'))
         
     users = conn.execute('SELECT * FROM users').fetchall()
@@ -137,14 +126,11 @@ def manage_users():
 @login_required
 def delete_user(id):
     if current_user.role != 'admin':
-        flash("Accesso negato.", "danger")
         return redirect(url_for('index'))
-    
     conn = get_db_connection()
     conn.execute('DELETE FROM users WHERE id = ?', (id,))
     conn.commit()
     conn.close()
-    flash("Utente eliminato.", "success")
     return redirect(url_for('manage_users'))
 
 @app.route('/rulli', methods=['GET', 'POST'])
@@ -157,11 +143,6 @@ def gestione_rulli():
         giacenza = int(request.form['giacenza'])
         soglia_minima = int(request.form['soglia_minima'])
         is_pesante = 1 if 'is_pesante' in request.form else 0
-        
-        if is_pesante == 1 and current_user.role != 'admin' and current_user.puo_vedere_pesanti == 0:
-            flash("Non hai i permessi per aggiungere componenti nella sezione pesante.", "danger")
-            return redirect(url_for('gestione_rulli'))
-
         peso = float(request.form.get('peso', 0.0)) if is_pesante == 1 else 0.0
         
         try:
@@ -170,17 +151,13 @@ def gestione_rulli():
                 VALUES (?, ?, ?, ?, ?, ?)
             ''', (codice_articolo, descrizione, giacenza, soglia_minima, is_pesante, peso))
             conn.commit()
-            flash("Articolo inserito correttamente.", "success")
+            flash("Articolo aggiunto!", "success")
         except sqlite3.IntegrityError:
             flash("Codice articolo già esistente.", "danger")
         return redirect(url_for('gestione_rulli'))
         
     rulli = conn.execute('SELECT * FROM rulli WHERE is_pesante = 0').fetchall()
-    
-    pesanti = []
-    if current_user.role == 'admin' or current_user.puo_vedere_pesanti == 1:
-        pesanti = conn.execute('SELECT * FROM rulli WHERE is_pesante = 1').fetchall()
-        
+    pesanti = conn.execute('SELECT * FROM rulli WHERE is_pesante = 1').fetchall() if (current_user.role == 'admin' or current_user.puo_vedere_pesanti == 1) else []
     conn.close()
     return render_template('rulli.html', rulli=rulli, pesanti=pesanti, puo_vedere_pesanti=(current_user.role == 'admin' or current_user.puo_vedere_pesanti == 1))
 
@@ -200,15 +177,11 @@ def manutenzioni():
         ''', (macchinario, descrizione, articolo_id if articolo_id else None, quantita if articolo_id else 0, current_user.id))
         
         if articolo_id and quantita > 0:
-            conn.execute('''
-                UPDATE rulli 
-                SET giacenza = giacenza - ? 
-                WHERE id = ?
-            ''', (quantita, articolo_id))
+            conn.execute('UPDATE rulli SET giacenza = giacenza - ? WHERE id = ?', (quantita, articolo_id))
             
         conn.commit()
         conn.close()
-        flash("Intervento di manutenzione registrato.", "success")
+        flash("Manutenzione registrata.", "success")
         return redirect(url_for('manutenzioni'))
         
     storico = conn.execute('''
@@ -219,11 +192,7 @@ def manutenzioni():
         ORDER BY m.data DESC
     ''').fetchall()
     
-    if current_user.role == 'admin' or current_user.puo_vedere_pesanti == 1:
-        rulli_totali = conn.execute('SELECT * FROM rulli').fetchall()
-    else:
-        rulli_totali = conn.execute('SELECT * FROM rulli WHERE is_pesante = 0').fetchall()
-        
+    rulli_totali = conn.execute('SELECT * FROM rulli').fetchall()
     conn.close()
     return render_template('manutenzioni.html', storico=storico, rulli=rulli_totali)
 
@@ -238,11 +207,9 @@ def login():
         conn.close()
         
         if user_data:
-            pesanti_val = user_data['puo_vedere_pesanti'] if 'puo_vedere_pesanti' in user_data.keys() else 1
-            user = User(user_data['id'], user_data['username'], user_data['role'], pesanti_val)
+            user = User(user_data['id'], user_data['username'], user_data['role'], user_data['puo_vedere_pesanti'])
             login_user(user)
             return redirect(url_for('index'))
-            
         flash("Credenziali non valide.", "danger")
     return render_template('login.html')
 
