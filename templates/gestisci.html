@@ -46,7 +46,6 @@
         <div style="text-align: left; margin-top: 15px;">
             <p><strong>Codice SAP:</strong> {{ prodotto.sap if prodotto.sap else '-' }}</p>
             <p><strong>Posizione:</strong> {{ prodotto.posizione if prodotto.posizione else '-' }}</p>
-            <p><strong>Quantità in Magazzino:</strong> <span style="font-size: 1.2rem; color: #10b981; font-weight: bold;">{{ prodotto.quantita }} pz</span></p>
         </div>
         
         {% set totale_reale = prodotto.quantita + (prodotto.quantita_manutenzione if prodotto.in_manutenzione else 0) %}
