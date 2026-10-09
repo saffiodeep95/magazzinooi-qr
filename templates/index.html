@@ -3,83 +3,62 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Magazzino OMG</title>
+    <title>Magazzino - Home</title>
     <style>
-        body { font-family: sans-serif; max-width: 1000px; margin: 0 auto; padding: 20px; background: #f8fafc; color: #1e293b; }
+        body { font-family: sans-serif; max-width: 1200px; margin: 0 auto; padding: 20px; background: #f8fafc; color: #1e293b; }
         .card { background: white; padding: 20px; border-radius: 12px; border: 1px solid #e2e8f0; margin-bottom: 20px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
-        .btn { background: #4f46e5; color: white; padding: 8px 14px; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; text-decoration: none; display: inline-block; margin: 3px; }
+        .btn { background: #4f46e5; color: white; padding: 10px 16px; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; text-decoration: none; display: inline-block; margin: 4px; }
         .btn:hover { opacity: 0.9; }
         table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 0.9rem; }
-        th, td { padding: 10px; border-bottom: 1px solid #e2e8f0; text-align: left; }
+        th, td { padding: 12px; border-bottom: 1px solid #e2e8f0; text-align: left; }
         th { background: #f1f5f9; }
-        input, select { width: 100%; padding: 8px; margin: 6px 0 12px 0; border: 1px solid #cbd5e1; border-radius: 6px; box-sizing: border-box; }
-        .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
-        .menu-bar { display: flex; flex-wrap: wrap; gap: 5px; align-items: center; margin-bottom: 20px; background: white; padding: 12px; border-radius: 12px; border: 1px solid #e2e8f0; }
+        .menu-grid { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 20px; }
     </style>
 </head>
 <body>
 
-    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
-        <h1>📦 Magazzino OMG</h1>
-        <a href="{{ url_for('logout') }}" class="btn" style="background: #ef4444;">Esci</a>
-    </div>
-
-    <!-- Barra di navigazione comandi -->
-    <div class="menu-bar">
-        <a href="{{ url_for('carico') }}" class="btn" style="background: #10b981;">➕ Carico</a>
-        <a href="{{ url_for('scarico') }}" class="btn" style="background: #ea580c;">➖ Scarico</a>
-        <a href="{{ url_for('clienti') }}" class="btn" style="background: #0284c7;">📇 Rubrica</a>
-        <a href="{{ url_for('pagina_upload') }}" class="btn" style="background: #0284c7;">📁 Upload CSV</a>
-        <a href="{{ url_for('stampa_tutti_qr') }}" class="btn" style="background: #8b5cf6;">🖨️ Stampa Tutti i QR</a>
-        {% if session.get('is_admin') or session.get('puo_vedere_manutenzione') %}
-        <a href="{{ url_for('lista_manutenzioni') }}" class="btn" style="background: #d97706;">🔧 Manutenzioni</a>
-        {% endif %}
-        {% if session.get('is_admin') %}
-        <a href="{{ url_for('admin_utenti') }}" class="btn" style="background: #7c3aed;">👑 Utenti</a>
-        {% endif %}
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; flex-wrap: wrap; gap: 10px;">
+        <h1>📦 Gestione Magazzino OMG</h1>
+        <div style="display: flex; align-items: center; gap: 15px;">
+            <span>Utente: <strong>{{ session.username }}</strong></span>
+            <a href="{{ url_for('logout') }}" class="btn" style="background: #ef4444; padding: 6px 12px;">Esci</a>
+        </div>
     </div>
 
     {% with messages = get_flashed_messages() %}
       {% if messages %}
         {% for message in messages %}
-          <div style="background: #dcfce7; color: #166534; padding: 10px; border-radius: 8px; margin-bottom: 15px; border: 1px solid #bbf7d0;">{{ message }}</div>
+          <div style="background: #dcfce7; color: #166534; padding: 12px; border-radius: 8px; margin-bottom: 15px; border: 1px solid #bbf7d0;">{{ message }}</div>
         {% endfor %}
       {% endif %}
     {% endwith %}
 
+    <div class="menu-grid">
+        <a href="{{ url_for('carico') }}" class="btn" style="background: #10b981;">➕ Carico</a>
+        <a href="{{ url_for('scarico') }}" class="btn" style="background: #f97316;">➖ Scarico</a>
+        <a href="{{ url_for('clienti') }}" class="btn" style="background: #0284c7;">📖 Rubrica Clienti</a>
+        <a href="{{ url_for('pagina_upload') }}" class="btn" style="background: #0ea5e9;">📁 Upload CSV</a>
+        <a href="{{ url_for('stampa_tutti_qr') }}" class="btn" style="background: #8b5cf6;">🖨️ Stampa Tutti i QR</a>
+        <a href="{{ url_for('lista_manutenzioni') }}" class="btn" style="background: #d97706;">🔧 Manutenzioni</a>
+        {% if session.get('is_admin') %}
+        <a href="{{ url_for('admin_utenti') }}" class="btn" style="background: #7c3aed;">👑 Utenti</a>
+        {% endif %}
+    </div>
+
     <div class="card">
         <h3>➕ Aggiungi Nuovo Articolo in Magazzino</h3>
-        <form action="{{ url_for('aggiungi_prodotto') }}" method="POST">
-            <div class="grid-2">
-                <div>
-                    <label>Codice QR *</label>
-                    <input type="text" name="qr_code" required placeholder="Codice univoco QR...">
-                </div>
-                <div>
-                    <label>Nome Articolo *</label>
-                    <input type="text" name="nome" required placeholder="Nome prodotto...">
-                </div>
-            </div>
-            <div class="grid-2">
-                <div>
-                    <label>Codice SAP</label>
-                    <input type="text" name="sap" placeholder="Codice SAP...">
-                </div>
-                <div>
-                    <label>Quantità Iniziale</label>
-                    <input type="number" name="quantita" value="0" min="0">
-                </div>
-            </div>
-            <div>
-                <label>Posizione in Magazzino</label>
-                <input type="text" name="posizione" placeholder="Es. Scaffale A, Corsia 2...">
-            </div>
-            <button type="submit" class="btn" style="width: 100%; margin-top: 5px; background: #4f46e5;">Salva Articolo</button>
+        <form action="{{ url_for('aggiungi_prodotto') }}" method="POST" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 10px; margin-top: 15px;">
+            <input type="text" name="qr_code" placeholder="Codice univoco QR..." required style="padding: 10px; border: 1px solid #cbd5e1; border-radius: 6px;">
+            <input type="text" name="nome" placeholder="Nome articolo..." required style="padding: 10px; border: 1px solid #cbd5e1; border-radius: 6px;">
+            <input type="text" name="sap" placeholder="Codice SAP..." style="padding: 10px; border: 1px solid #cbd5e1; border-radius: 6px;">
+            <input type="number" name="quantita" placeholder="Quantità iniziale..." value="0" min="0" style="padding: 10px; border: 1px solid #cbd5e1; border-radius: 6px;">
+            <input type="text" name="posizione" placeholder="Posizione (es. Scaffale A)..." style="padding: 10px; border: 1px solid #cbd5e1; border-radius: 6px;">
+            <button type="submit" class="btn" style="background: #4f46e5; grid-column: 1 / -1;">Salva Articolo</button>
         </form>
     </div>
 
     <div class="card">
-        <h3>📋 Stato Magazzino Prodotti</h3>
+        <h3>📋 Elenco Articoli in Magazzino</h3>
         {% if prodotti %}
         <div style="overflow-x: auto;">
             <table>
@@ -88,7 +67,7 @@
                         <th>Nome Articolo</th>
                         <th>QR Code</th>
                         <th>SAP</th>
-                        <th>Disp. Magazzino</th>
+                        <th>Quantità Disp.</th>
                         <th>In Manutenzione</th>
                         <th>Posizione</th>
                         <th>Azione</th>
@@ -96,11 +75,17 @@
                 </thead>
                 <tbody>
                     {% for p in prodotti %}
-                    <tr>
-                        <td><strong>{{ p.nome }}</strong></td>
+                    {% set totale_reale = p.quantita + (p.quantita_manutenzione if p.in_manutenzione else 0) %}
+                    <tr style="{% if totale_reale < 2 and totale_reale > 0 %}background: #fef2f2;{% endif %}">
+                        <td>
+                            <strong>{{ p.nome }}</strong>
+                            {% if totale_reale < 2 and totale_reale > 0 %}
+                                <br><span style="color: #dc2626; font-size: 0.75rem; font-weight: bold;">⚠️ Sotto soglia (Da Riordinare)</span>
+                            {% endif %}
+                        </td>
                         <td><code>{{ p.qr_code }}</code></td>
                         <td>{{ p.sap if p.sap else '-' }}</td>
-                        <td><span style="color: #10b981; font-weight: bold; font-size: 1.1rem;">{{ p.quantita }}</span> pz</td>
+                        <td><span style="color: {% if p.quantita < 2 %}#dc2626{% else %}#10b981{% endif %}; font-weight: bold; font-size: 1.1rem;">{{ p.quantita }}</span> pz</td>
                         <td>
                             {% if p.in_manutenzione %}
                                 <span style="color: #d97706; font-weight: bold;">{{ p.quantita_manutenzione }} pz</span><br>
@@ -111,7 +96,7 @@
                         </td>
                         <td>{{ p.posizione if p.posizione else '-' }}</td>
                         <td>
-                            <a href="{{ url_for('gestisci_prodotto', qr_code=p.qr_code) }}" class="btn" style="padding: 5px 10px; font-size: 0.8rem; background: #4f46e5;">Gestisci</a>
+                            <a href="{{ url_for('gestisci_prodotto', qr_code=p.qr_code) }}" class="btn" style="padding: 6px 12px; font-size: 0.85rem; background: #4f46e5;">Gestisci</a>
                         </td>
                     </tr>
                     {% endfor %}
@@ -119,7 +104,7 @@
             </table>
         </div>
         {% else %}
-            <p style="color: #64748b;">Nessun prodotto presente in magazzino.</p>
+            <p style="color: #64748b;">Nessun articolo presente in magazzino.</p>
         {% endif %}
     </div>
 
