@@ -3,78 +3,47 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Carico Merce</title>
-    <!-- Libreria per la scansione QR con la fotocamera -->
-    <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
+    <title>Carico Magazzino</title>
     <style>
         body { font-family: sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; background: #f8fafc; color: #1e293b; }
-        .card { background: white; padding: 25px; border-radius: 12px; border: 1px solid #e2e8f0; box-shadow: 0 2px 4px rgba(0,0,0,0.05); margin-bottom: 20px; }
-        .btn { background: #10b981; color: white; padding: 12px 16px; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; width: 100%; font-size: 1rem; margin-top: 10px; }
-        .btn-cam { background: #0284c7; margin-bottom: 15px; }
+        .card { background: white; padding: 25px; border-radius: 12px; border: 1px solid #e2e8f0; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
+        .btn { background: #10b981; color: white; padding: 10px 16px; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; text-decoration: none; display: inline-block; width: 100%; text-align: center; box-sizing: border-box; }
         .btn:hover { opacity: 0.9; }
-        input { width: 100%; padding: 10px; margin: 8px 0 16px 0; border: 1px solid #cbd5e1; border-radius: 8px; box-sizing: border-box; font-size: 1rem; }
-        label { font-size: 0.9rem; font-weight: bold; color: #64748b; }
-        #reader { width: 100%; border-radius: 8px; overflow: hidden; margin-bottom: 15px; display: none; }
+        .form-group { margin-bottom: 15px; }
+        label { display: block; margin-bottom: 5px; font-weight: bold; font-size: 0.9rem; }
+        input { width: 100%; padding: 10px; border: 1px solid #cbd5e1; border-radius: 6px; box-sizing: border-box; }
     </style>
 </head>
 <body>
 
+    <div style="margin-bottom: 20px;">
+        <a href="{{ url_for('index') }}" style="color: #4f46e5; text-decoration: none; font-weight: bold;">← Torna alla Home</a>
+    </div>
+
     <div class="card">
-        <h2>➕ Carico Rapido Merce</h2>
-        
-        <!-- Pulsante per attivare la fotocamera a comando -->
-        <button type="button" class="btn btn-cam" onclick="avviaFotocamera()">📷 Apri Fotocamera per Scansionare</button>
-        
-        <!-- Area video della fotocamera -->
-        <div id="reader"></div>
+        <h2>➕ Carico Rapido Articolo</h2>
+        <p style="color: #64748b; font-size: 0.9rem; margin-bottom: 20px;">Scansiona o inserisci il codice QR dell'articolo da ricaricare.</p>
+
+        {% with messages = get_flashed_messages() %}
+          {% if messages %}
+            {% for message in messages %}
+              <div style="background: #dcfce7; color: #166534; padding: 10px; border-radius: 8px; margin-bottom: 15px; border: 1px solid #bbf7d0;">{{ message }}</div>
+            {% endfor %}
+          {% endif %}
+        {% endwith %}
 
         <form action="{{ url_for('carico') }}" method="POST">
-            <label>QR Code Scansionato o Inserito</label>
-            <input type="text" id="qr_code" name="qr_code" required placeholder="Inquadra il QR o scrivi il codice...">
-            
-            <label>Quantità da caricare</label>
-            <input type="number" name="quantita" value="1" min="1" required>
-
+            <div class="form-group">
+                <label>Codice QR o ID Articolo *</label>
+                <input type="text" name="qr_code" placeholder="Puntare qui il lettore o scrivere il QR..." required autofocus>
+            </div>
+            <div class="form-group">
+                <label>Quantità da Aggiungere *</label>
+                <input type="number" name="quantita" value="1" min="1" required>
+            </div>
             <button type="submit" class="btn">Conferma Carico</button>
         </form>
     </div>
 
-    <div style="text-align: center;">
-        <a href="{{ url_for('index') }}" style="text-decoration: none; color: #64748b; font-weight: bold;">← Torna alla Home</a>
-    </div>
-
-    <script>
-        let html5QrCode = null;
-
-        function avviaFotocamera() {
-            const readerDiv = document.getElementById('reader');
-            readerDiv.style.display = "block";
-            
-            if (!html5QrCode) {
-                html5QrCode = new Html5Qrcode("reader");
-            }
-
-            html5QrCode.start(
-                { facingMode: "environment" }, // Usa la fotocamera posteriore del telefono
-                {
-                    fps: 10,
-                    qrbox: { width: 250, height: 250 }
-                },
-                (decodedText, decodedResult) => {
-                    // Quando legge il QR code
-                    document.getElementById('qr_code').value = decodedText;
-                    // Ferma la fotocamera dopo la scansione riuscita
-                    html5QrCode.stop().then(() => {
-                        readerDiv.style.display = "none";
-                    }).catch(err => console.log(err));
-                },
-                (errorMessage) => {
-                    // Errori di scansione in corso (ignorabili perché cerca continuamente)
-                }
-            ).catch((err) => {
-                alert("Errore di accesso alla fotocamera: assicurati di aver concesso i permessi al browser.");
-            });
-        }
-    </script>
 </body>
 </html>
