@@ -59,7 +59,7 @@
                         <td>
                             {% if not u.is_admin %}
                             <form action="{{ url_for('toggle_permesso', user_id=u.id, tipo='manutenzione') }}" method="POST" style="display:inline;">
-                                <button type="submit" class="btn" style="background: {% if u.puo_vedere_manutenzione %}#10b981{% else %}#cbd5e1{% color %};">
+                                <button type="submit" class="btn" style="background: {{ '#10b981' if u.puo_vedere_manutenzione else '#cbd5e1' }};">
                                     {{ 'Abilitato' if u.puo_vedere_manutenzione else 'Disabilitato' }}
                                 </button>
                             </form>
@@ -70,7 +70,7 @@
                         <td>
                             {% if not u.is_admin %}
                             <form action="{{ url_for('toggle_permesso', user_id=u.id, tipo='eliminazione') }}" method="POST" style="display:inline;">
-                                <button type="submit" class="btn" style="background: {% if u.puo_eliminare %}#10b981{% else %}#cbd5e1{% endif %};">
+                                <button type="submit" class="btn" style="background: {{ '#10b981' if u.puo_eliminare else '#cbd5e1' }};">
                                     {{ 'Abilitato' if u.puo_eliminare else 'Disabilitato' }}
                                 </button>
                             </form>
@@ -81,7 +81,7 @@
                         <td>
                             {% if not u.is_admin %}
                             <form action="{{ url_for('toggle_permesso', user_id=u.id, tipo='eliminazione_storico') }}" method="POST" style="display:inline;">
-                                <button type="submit" class="btn" style="background: {% if u.puo_eliminare_storico %}#10b981{% else %}#cbd5e1{% endif %};">
+                                <button type="submit" class="btn" style="background: {{ '#10b981' if u.puo_eliminare_storico else '#cbd5e1' }};">
                                     {{ 'Abilitato' if u.puo_eliminare_storico else 'Disabilitato' }}
                                 </button>
                             </form>
