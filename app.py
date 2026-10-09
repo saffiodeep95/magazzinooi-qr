@@ -91,6 +91,7 @@ def index():
 def logout():
     return redirect(url_for("index"))
 
+# Rotta collegata a clienti.html
 @app.route("/clienti", methods=["GET", "POST"])
 def clienti():
     conn = get_db_connection()
@@ -117,6 +118,7 @@ def clienti():
     conn.close()
     return render_template("clienti.html", clienti=lista_clienti)
 
+# Rotta collegata a upload.html (visto nella tua lista)
 @app.route("/pagina_upload", methods=["GET", "POST"])
 def pagina_upload():
     if request.method == "POST":
@@ -124,8 +126,9 @@ def pagina_upload():
         if file:
             flash("File caricato ed elaborato con successo!", "success")
         return redirect(url_for("index"))
-    return render_template("pagina_upload.html")
+    return render_template("upload.html")
 
+# Rotta collegata a stampa_tutti_qr.html
 @app.route("/stampa_tutti_qr")
 def stampa_tutti_qr():
     conn = get_db_connection()
@@ -136,6 +139,7 @@ def stampa_tutti_qr():
     conn.close()
     return render_template("stampa_tutti_qr.html", prodotti=prodotti)
 
+# Rotta collegata al nuovo file magazzino_composizione.html (o magazzino_composizione_motori.html a seconda di come l'hai salvato)
 @app.route("/magazzino_composizione_motori")
 def magazzino_composizione_motori_view():
     conn = get_db_connection()
@@ -144,7 +148,8 @@ def magazzino_composizione_motori_view():
     prodotti = cur.fetchall()
     cur.close()
     conn.close()
-    return render_template("magazzino_composizione_motori.html", prodotti=prodotti)
+    # Usa il nome esatto del file presente nella tua schermata di GitHub
+    return render_template("magazzino_composizione.html", prodotti=prodotti)
 
 @app.route("/gestisci/<qr_code>")
 def gestisci_prodotto(qr_code):
@@ -314,7 +319,7 @@ def manutenzione(qr_code):
                     UPDATE prodotti SET 
                         quantita = quantita + %s,
                         in_manutenzione = 0,
-                        cliente_manutenzione = NULL,
+                C        cliente_manutenzione = NULL,
                         quantita_manutenzione = 0,
                         data_spedizione = NULL,
                         data_riconsegna = NULL,
