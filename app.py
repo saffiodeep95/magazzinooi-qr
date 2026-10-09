@@ -13,7 +13,7 @@ def init_db():
     conn = get_db_connection()
     cursor = conn.cursor()
     
-    # Tabella prodotti (con peso e is_pesante per i motori/riduttori/nastri)
+    # Tabella prodotti unificata
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS prodotti (
             qr_code TEXT PRIMARY KEY,
@@ -34,7 +34,7 @@ def init_db():
         )
     ''')
     
-    # Tabella utenti (con permessi granulari)
+    # Tabella utenti con permessi
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS utenti (
             username TEXT PRIMARY KEY,
@@ -57,20 +57,27 @@ def init_db():
         )
     ''')
     
-    # Aggiornamenti sicuri delle colonne se il DB esiste già
+    # Controllo e aggiunta automatica colonne mancanti in utenti
     cursor.execute("PRAGMA table_info(utenti)")
-    colonne_utenti = [col[1] for col in cursor.fetchall()]
+    colonne_utenti = [col['name'] for col in cursor.fetchall()]
     if 'puo_vedere_pesanti' not in colonne_utenti:
         cursor.execute('ALTER TABLE utenti ADD COLUMN puo_vedere_pesanti INTEGER DEFAULT 0')
+    if 'puo_vedere_manutenzione' not in colonne_utenti:
+        cursor.execute('ALTER TABLE utenti ADD COLUMN puo_vedere_manutenzione INTEGER DEFAULT 0')
+    if 'puo_eliminare' not in colonne_utenti:
+        cursor.execute('ALTER TABLE utenti ADD COLUMN puo_eliminare INTEGER DEFAULT 0')
 
+    # Controllo e aggiunta automatica colonne mancanti in prodotti
     cursor.execute("PRAGMA table_info(prodotti)")
-    colonne_prodotti = [col[1] for col in cursor.fetchall()]
+    colonne_prodotti = [col['name'] for col in cursor.fetchall()]
     if 'is_pesante' not in colonne_prodotti:
         cursor.execute('ALTER TABLE prodotti ADD COLUMN is_pesante INTEGER DEFAULT 0')
     if 'peso' not in colonne_prodotti:
         cursor.execute('ALTER TABLE prodotti ADD COLUMN peso TEXT')
+    if 'in_manutenzione' not in colonne_prodotti:
+        cursor.execute('ALTER TABLE prodotti ADD COLUMN in_manutenzione INTEGER DEFAULT 0')
 
-    # Admin di default
+    # Crea admin di default se non esiste
     cursor.execute('SELECT * FROM utenti WHERE username = "admin"')
     if not cursor.fetchone():
         cursor.execute('''
@@ -83,7 +90,7 @@ def init_db():
 
 init_db()
 
-# --- AUTENTICAZIONE & REGISTRAZIONE ---
+# --- AUTENTICAZIONE ---
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():
@@ -134,7 +141,7 @@ def logout():
     session.clear()
     return redirect(url_for('login'))
 
-# --- HOME E SEZIONE MOTORI/RIDUTTORI ---
+# --- HOME STANDARD ---
 
 @app.route('/')
 def index():
@@ -144,6 +151,8 @@ def index():
     prodotti = conn.execute('SELECT * FROM prodotti WHERE is_pesante = 0 OR is_pesante IS NULL').fetchall()
     conn.close()
     return render_template('index.html', prodotti=prodotti)
+
+# --- SEZIONE MOTORI, RIDUTTORI E NASTRI (PROTETTA) ---
 
 @app.route('/motori_riduttori')
 def sezione_pesanti():
@@ -157,9 +166,9 @@ def sezione_pesanti():
     conn = get_db_connection()
     prodotti = conn.execute('SELECT * FROM prodotti WHERE is_pesante = 1').fetchall()
     conn.close()
-    return render_template('sezione_pesanti.html', prodotti=prodotti)
+    return render_template('sezioni_pesanti.html', prodotti=prodotti)
 
-# --- GESTIONE PRODOTTI ---
+# --- GESTIONE ARTICOLI ---
 
 @app.route('/aggiungi', methods=['POST'])
 def aggiungi_prodotto():
@@ -274,7 +283,7 @@ def pagina_upload():
         return redirect(url_for('index'))
     return render_template('upload.html')
 
-# --- MANUTENZIONE, STORICO E BOLLA ---
+# --- MANUTENZIONI E STORICO ---
 
 @app.route('/manda_manutenzione/<qr_code>', methods=['POST'])
 def manda_manutenzione(qr_code):
@@ -396,7 +405,7 @@ def bolla(qr_code):
         return redirect(url_for('index'))
     return render_template('bolla.html', prodotto=prodotto)
 
-# --- RUBRICA CLIENTI E ADMIN UTENTI ---
+# --- RUBRICA CLIENTI E UTENTI ADMIN ---
 
 @app.route('/clienti', methods=['GET', 'POST'])
 def clienti():
