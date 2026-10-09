@@ -6,7 +6,7 @@ from psycopg2.extras import RealDictCursor
 from flask import Flask, render_template, request, redirect, url_for, flash, session
 from werkzeug.security import generate_password_hash, check_password_hash
 
-app = Flask(__name__)
+app = Flask(_name_)
 app.secret_key = os.environ.get("SECRET_KEY", "chiave-segreta-magazzino")
 
 DATABASE_URL = os.environ.get("DATABASE_URL")
@@ -29,7 +29,8 @@ def init_db():
                 password TEXT NOT NULL,
                 is_admin BOOLEAN DEFAULT FALSE,
                 puo_vedere_manutenzione BOOLEAN DEFAULT FALSE,
-                puo_eliminare BOOLEAN DEFAULT FALSE
+                puo_eliminare BOOLEAN DEFAULT FALSE,
+                puo_eliminare_storico BOOLEAN DEFAULT FALSE
             );
             CREATE TABLE IF NOT EXISTS prodotti (
                 id SERIAL PRIMARY KEY,
@@ -55,12 +56,7 @@ def init_db():
                 telefono VARCHAR(50),
                 email VARCHAR(100)
             );
-        """)
-        
-        # Ricostruzione pulita della tabella storico per evitare errori di colonne mancanti
-        cur.execute("DROP TABLE IF EXISTS storico_manutenzioni;")
-        cur.execute("""
-            CREATE TABLE storico_manutenzioni (
+            CREATE TABLE IF NOT EXISTS storico_manutenzioni (
                 id SERIAL PRIMARY KEY,
                 qr_code VARCHAR(255) NOT NULL,
                 nome_prodotto VARCHAR(255) NOT NULL,
@@ -76,9 +72,10 @@ def init_db():
             );
         """)
 
-        # Aggiornamenti sicuri per eventuali colonne prodotti/utenti mancanti
+        # Aggiornamenti sicuri per colonne mancanti
         cur.execute("ALTER TABLE utenti ADD COLUMN IF NOT EXISTS puo_vedere_manutenzione BOOLEAN DEFAULT FALSE;")
         cur.execute("ALTER TABLE utenti ADD COLUMN IF NOT EXISTS puo_eliminare BOOLEAN DEFAULT FALSE;")
+        cur.execute("ALTER TABLE utenti ADD COLUMN IF NOT EXISTS puo_eliminare_storico BOOLEAN DEFAULT FALSE;")
         
         cur.execute("ALTER TABLE prodotti ADD COLUMN IF NOT EXISTS in_manutenzione BOOLEAN DEFAULT FALSE;")
         cur.execute("ALTER TABLE prodotti ADD COLUMN IF NOT EXISTS cliente_manutenzione VARCHAR(255);")
@@ -91,10 +88,10 @@ def init_db():
 
         admin_pass = generate_password_hash("admin123")
         cur.execute("""
-            INSERT INTO utenti (username, password, is_admin, puo_vedere_manutenzione, puo_eliminare) 
-            VALUES ('admin', %s, TRUE, TRUE, TRUE)
+            INSERT INTO utenti (username, password, is_admin, puo_vedere_manutenzione, puo_eliminare, puo_eliminare_storico) 
+            VALUES ('admin', %s, TRUE, TRUE, TRUE, TRUE)
             ON CONFLICT (username) DO UPDATE 
-            SET is_admin = TRUE, puo_vedere_manutenzione = TRUE, puo_eliminare = TRUE;
+            SET is_admin = TRUE, puo_vedere_manutenzione = TRUE, puo_eliminare = TRUE, puo_eliminare_storico = TRUE;
         """, (admin_pass,))
         
         conn.commit()
@@ -123,6 +120,7 @@ def login():
                 session["is_admin"] = bool(user.get("is_admin", False))
                 session["puo_vedere_manutenzione"] = bool(user.get("puo_vedere_manutenzione", False))
                 session["puo_eliminare"] = bool(user.get("puo_eliminare", False))
+                session["puo_eliminare_storico"] = bool(user.get("puo_eliminare_storico", False))
                 return redirect(url_for("index"))
             else:
                 flash("Credenziali non valide.", "error")
@@ -145,7 +143,7 @@ def registra():
                 hashed = generate_password_hash(password)
                 conn = get_db_connection()
                 cur = conn.cursor()
-                cur.execute("INSERT INTO utenti (username, password, is_admin, puo_vedere_manutenzione, puo_eliminare) VALUES (%s, %s, FALSE, FALSE, FALSE);", (username, hashed))
+                cur.execute("INSERT INTO utenti (username, password, is_admin, puo_vedere_manutenzione, puo_eliminare, puo_eliminare_storico) VALUES (%s, %s, FALSE, FALSE, FALSE, FALSE);", (username, hashed))
                 conn.commit()
                 cur.close()
                 conn.close()
@@ -183,6 +181,8 @@ def toggle_permesso(user_id, tipo):
             cur.execute("UPDATE utenti SET puo_vedere_manutenzione = NOT puo_vedere_manutenzione WHERE id = %s;", (user_id,))
         elif tipo == "eliminazione":
             cur.execute("UPDATE utenti SET puo_eliminare = NOT puo_eliminare WHERE id = %s;", (user_id,))
+        elif tipo == "eliminazione_storico":
+            cur.execute("UPDATE utenti SET puo_eliminare_storico = NOT puo_eliminare_storico WHERE id = %s;", (user_id,))
         conn.commit()
         cur.close()
         conn.close()
@@ -499,7 +499,6 @@ def manda_manutenzione(qr_code):
                     WHERE qr_code = %s;
                 """, (cliente if cliente else None, qta_maint, data_spedizione, data_riconsegna, ordine_amministrativo, vettore if vettore else None, note, qr_code))
 
-            # Registrazione sicura nell'archivio storico
             cur.execute("""
                 INSERT INTO storico_manutenzioni (qr_code, nome_prodotto, sap, cliente, quantita, data_spedizione, data_riconsegna, vettore, ordine_amministrativo, note)
                 VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s);
@@ -569,6 +568,27 @@ def storico_manutenzioni():
     except Exception as e:
         print(f"Errore storico: {e}")
     return render_template("storico_manutenzioni.html", storico=storico)
+
+@app.route("/elimina_storico_manutenzione/<int:storico_id>", methods=["POST"])
+def elimina_storico_manutenzione(storico_id):
+    if "username" not in session:
+        return redirect(url_for("login"))
+    if not session.get("is_admin") and not session.get("puo_eliminare_storico"):
+        flash("Non hai i permessi per eliminare i record dallo storico.", "error")
+        return redirect(url_for("storico_manutenzioni"))
+    
+    try:
+        conn = get_db_connection()
+        cur = conn.cursor()
+        cur.execute("DELETE FROM storico_manutenzioni WHERE id = %s;", (storico_id,))
+        conn.commit()
+        cur.close()
+        conn.close()
+        flash("Record dello storico eliminato con successo.", "success")
+    except Exception as e:
+        flash(f"Errore durante l'eliminazione: {e}", "error")
+        
+    return redirect(url_for("storico_manutenzioni"))
 
 @app.route("/bolla/<qr_code>")
 def stampa_bolla(qr_code):
@@ -682,5 +702,5 @@ def lista_manutenzioni():
         print(f"Errore manutenzioni: {e}")
     return render_template("manutenzioni.html", prodotti=prodotti_maint)
 
-if __name__ == "_main_":
+if _name_ == "_main_":
     app.run(host="0.0.0.0", port=5000, debug=True)
