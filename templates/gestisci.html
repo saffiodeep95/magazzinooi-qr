@@ -4,6 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Gestione Articolo - {{ prodotto.nome }}</title>
+    <!-- Libreria per generare l'immagine del QR Code -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     <style>
         body { font-family: sans-serif; max-width: 900px; margin: 0 auto; padding: 20px; background: #f8fafc; color: #1e293b; }
         .card { background: white; padding: 25px; border-radius: 12px; border: 1px solid #e2e8f0; margin-bottom: 20px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
@@ -13,6 +15,7 @@
         @media(max-width: 768px) { .grid-2 { grid-template-columns: 1fr; } }
         input, select, textarea { width: 100%; padding: 10px; border: 1px solid #cbd5e1; border-radius: 6px; box-sizing: border-box; margin-top: 5px; margin-bottom: 15px; }
         label { font-weight: bold; font-size: 0.9rem; color: #475569; }
+        #qrcode img { margin: 0 auto; border-radius: 6px; }
     </style>
 </head>
 <body>
@@ -31,26 +34,42 @@
       {% endif %}
     {% endwith %}
 
-    <div class="card">
+    <div class="card" style="text-align: center;">
         <h2>📦 Dettagli Articolo: {{ prodotto.nome }}</h2>
         
-        <!-- Campo QR Code visibile e modificabile -->
-        <div style="background: #f1f5f9; padding: 15px; border-radius: 8px; margin: 15px 0;">
-            <label>QR Code Articolo:</label>
-            <input type="text" value="{{ prodotto.qr_code }}" readonly style="background: #e2e8f0; font-weight: bold; color: #4f46e5; font-size: 1.1rem; margin-bottom: 0;">
+        <!-- Box Generazione Immagine QR Code -->
+        <div style="background: #f1f5f9; padding: 20px; border-radius: 12px; display: inline-block; margin: 15px 0; border: 1px solid #cbd5e1;">
+            <div id="qrcode" style="margin-bottom: 10px;"></div>
+            <code style="font-size: 1.1rem; font-weight: bold; color: #4f46e5;">{{ prodotto.qr_code }}</code>
         </div>
 
-        <p><strong>Codice SAP:</strong> {{ prodotto.sap if prodotto.sap else '-' }}</p>
-        <p><strong>Posizione:</strong> {{ prodotto.posizione if prodotto.posizione else '-' }}</p>
-        <p><strong>Quantità in Magazzino:</strong> <span style="font-size: 1.2rem; color: #10b981; font-weight: bold;">{{ prodotto.quantita }} pz</span></p>
+        <div style="text-align: left; margin-top: 15px;">
+            <p><strong>Codice SAP:</strong> {{ prodotto.sap if prodotto.sap else '-' }}</p>
+            <p><strong>Posizione:</strong> {{ prodotto.posizione if prodotto.posizione else '-' }}</p>
+            <p><strong>Quantità in Magazzino:</strong> <span style="font-size: 1.2rem; color: #10b981; font-weight: bold;">{{ prodotto.quantita }} pz</span></p>
+        </div>
         
         {% set totale_reale = prodotto.quantita + (prodotto.quantita_manutenzione if prodotto.in_manutenzione else 0) %}
         {% if totale_reale < 2 %}
-            <div style="background: #fef2f2; color: #dc2626; padding: 10px; border-radius: 6px; margin-top: 10px; font-weight: bold;">
-                ⚠️ Attenzione: il totale complessivo (magazzino + manutenzione) è sotto soglia ({% if totale_reale < 0%}0{% else %}{{ totale_reale }}{% endif %} pz). Da riordinare!
+            <div style="background: #fef2f2; color: #dc2626; padding: 10px; border-radius: 6px; margin-top: 10px; font-weight: bold; text-align: left;">
+                ⚠️ Attenzione: il totale complessivo (magazzino + manutenzione) è sotto soglia ({% if totale_reale < 0 %}0{% else %}{{ totale_reale }}{% endif %} pz). Da riordinare!
             </div>
         {% endif %}
     </div>
+
+    <script>
+        // Genera automaticamente l'immagine del QR Code al caricamento della pagina
+        document.addEventListener("DOMContentLoaded", function() {
+            new QRCode(document.getElementById("qrcode"), {
+                text: "{{ prodotto.qr_code }}",
+                width: 140,
+                height: 140,
+                colorDark: "#000000",
+                colorLight: "#ffffff",
+                correctLevel: QRCode.CorrectLevel.H
+            });
+        });
+    </script>
 
     <div class="grid-2">
         <!-- SEZIONE CARICO RAPIDO -->
