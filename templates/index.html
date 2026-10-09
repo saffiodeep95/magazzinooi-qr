@@ -34,8 +34,8 @@
     {% endwith %}
 
     <div class="menu-grid">
-        <a href="{{ url_for('carico') }}" class="btn" style="background: #10b981;">➕ Carico (Scanner QR)</a>
-        <a href="{{ url_for('scarico') }}" class="btn" style="background: #f97316;">➖ Scarico (Scanner QR)</a>
+        <a href="{{ url_for('carico') }}" class="btn" style="background: #10b981;">➕ Carico (Fotocamera)</a>
+        <a href="{{ url_for('scarico') }}" class="btn" style="background: #f97316;">➖ Scarico (Fotocamera)</a>
         <a href="{{ url_for('clienti') }}" class="btn" style="background: #0284c7;">📖 Rubrica Clienti</a>
         <a href="{{ url_for('pagina_upload') }}" class="btn" style="background: #0ea5e9;">📁 Upload CSV</a>
         <a href="{{ url_for('stampa_tutti_qr') }}" class="btn" style="background: #8b5cf6;">🖨️ Stampa Tutti i QR</a>
@@ -83,7 +83,7 @@
                                 <br><span style="color: #dc2626; font-size: 0.75rem; font-weight: bold;">⚠️ Sotto soglia (Da Riordinare)</span>
                             {% endif %}
                         </td>
-                        <td><code>{{ p.qr_code }}</code></td>
+                        <td><code style="background: #f1f5f9; padding: 4px 8px; border-radius: 4px; font-weight: bold; color: #4f46e5;">{{ p.qr_code }}</code></td>
                         <td>{{ p.sap if p.sap else '-' }}</td>
                         <td><span style="color: {% if p.quantita < 2 %}#dc2626{% else %}#10b981{% endif %}; font-weight: bold; font-size: 1.1rem;">{{ p.quantita }}</span> pz</td>
                         <td>
