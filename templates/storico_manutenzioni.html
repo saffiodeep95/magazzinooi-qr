@@ -47,7 +47,7 @@
                         <th>Vettore</th>
                         <th>Ordine Amm.</th>
                         <th>Note</th>
-                        {% if session.get('is_admin') %}
+                        {% if session.get('is_admin') or session.get('puo_eliminare_storico') %}
                         <th>Azione</th>
                         {% endif %}
                     </tr>
@@ -72,7 +72,7 @@
                             {% endif %}
                         </td>
                         <td>{{ s.note if s.note else '-' }}</td>
-                        {% if session.get('is_admin') %}
+                        {% if session.get('is_admin') or session.get('puo_eliminare_storico') %}
                         <td>
                             <form action="{{ url_for('elimina_storico_manutenzione', storico_id=s.id) }}" method="POST" onsubmit="return confirm('Sei sicuro di voler eliminare questo record dallo storico?');">
                                 <button type="submit" class="btn" style="background: #ef4444; padding: 5px 10px; font-size: 0.75rem;">🗑️ Elimina</button>
