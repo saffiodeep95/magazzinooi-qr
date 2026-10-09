@@ -6,7 +6,7 @@ from psycopg2.extras import RealDictCursor
 from flask import Flask, render_template, request, redirect, url_for, flash, session
 from werkzeug.security import generate_password_hash, check_password_hash
 
-app = Flask(__name__)
+app = Flask(_name_)
 app.secret_key = os.environ.get("SECRET_KEY", "chiave-segreta-magazzino")
 
 DATABASE_URL = os.environ.get("DATABASE_URL")
@@ -21,7 +21,6 @@ def init_db():
         conn = get_db_connection()
         cur = conn.cursor()
         
-        # Creazione tabelle principali
         cur.execute("""
             CREATE TABLE IF NOT EXISTS utenti (
                 id SERIAL PRIMARY KEY,
@@ -72,7 +71,6 @@ def init_db():
             );
         """)
 
-        # Aggiornamenti sicuri per colonne mancanti
         cur.execute("ALTER TABLE utenti ADD COLUMN IF NOT EXISTS puo_vedere_manutenzione BOOLEAN DEFAULT FALSE;")
         cur.execute("ALTER TABLE utenti ADD COLUMN IF NOT EXISTS puo_eliminare BOOLEAN DEFAULT FALSE;")
         cur.execute("ALTER TABLE utenti ADD COLUMN IF NOT EXISTS puo_eliminare_storico BOOLEAN DEFAULT FALSE;")
@@ -415,11 +413,28 @@ def scarico():
             try:
                 conn = get_db_connection()
                 cur = conn.cursor()
-                cur.execute("UPDATE prodotti SET quantita = GREATEST(0, quantita - %s) WHERE qr_code = %s;", (quantita, qr_code))
-                conn.commit()
+                
+                cur.execute("SELECT quantita, quantita_manutenzione, nome FROM prodotti WHERE qr_code = %s;", (qr_code,))
+                prod = cur.fetchone()
+                
+                if prod:
+                    vecchia_qta_magazzino = prod["quantita"]
+                    qta_maint = prod["quantita_manutenzione"] or 0
+                    
+                    vecchio_totale = vecchia_qta_magazzino + qta_maint
+                    nuova_qta_magazzino = max(0, vecchia_qta_magazzino - quantita)
+                    nuovo_totale = nuova_qta_magazzino + qta_maint
+                    
+                    cur.execute("UPDATE prodotti SET quantita = %s WHERE qr_code = %s;", (nuova_qta_magazzino, qr_code))
+                    conn.commit()
+                    
+                    if vecchio_totale >= 2 and nuovo_totale < 2:
+                        flash(f"⚠️ ATTENZIONE: Il totale complessivo del prodotto '{prod['nome']}' (tra magazzino e manutenzione) è sceso a {nuovo_totale} pz! È necessario riordinarlo.", "error")
+                    else:
+                        flash(f"Scarico di {quantita} pz effettuato!", "success")
+                
                 cur.close()
                 conn.close()
-                flash(f"Scarico di {quantita} pz effettuato!", "success")
                 return redirect(url_for("gestisci_prodotto", qr_code=qr_code))
             except Exception as e:
                 flash(f"Errore: {e}", "error")
@@ -480,18 +495,24 @@ def manda_manutenzione(qr_code):
         
         if prod:
             qta_magazzino = prod["quantita"]
+            vecchia_qta_maint = prod["quantita_manutenzione"] or 0
             gia_in_maint = prod["in_manutenzione"]
             
+            vecchio_totale = qta_magazzino + vecchia_qta_maint
+            
             if not gia_in_maint:
-                nuova_qta = max(0, qta_magazzino - qta_maint)
+                nuova_qta_magazzino = max(0, qta_magazzino - qta_maint)
+                nuovo_totale = nuova_qta_magazzino + qta_maint
+                
                 cur.execute("""
                     UPDATE prodotti 
                     SET quantita = %s, in_manutenzione = TRUE, cliente_manutenzione = %s, 
                         quantita_manutenzione = %s, data_spedizione = %s, data_riconsegna = %s, 
                         ordine_amministrativo = %s, vettore = %s, note_manutenzione = %s
                     WHERE qr_code = %s;
-                """, (nuova_qta, cliente if cliente else None, qta_maint, data_spedizione, data_riconsegna, ordine_amministrativo, vettore if vettore else None, note, qr_code))
+                """, (nuova_qta_magazzino, cliente if cliente else None, qta_maint, data_spedizione, data_riconsegna, ordine_amministrativo, vettore if vettore else None, note, qr_code))
             else:
+                nuovo_totale = qta_magazzino + qta_maint
                 cur.execute("""
                     UPDATE prodotti 
                     SET cliente_manutenzione = %s, quantita_manutenzione = %s, data_spedizione = %s, 
@@ -504,10 +525,14 @@ def manda_manutenzione(qr_code):
                 VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s);
             """, (qr_code, prod["nome"], prod["sap"], cliente, qta_maint, data_spedizione, data_riconsegna, vettore, ordine_amministrativo, note))
 
+            if vecchio_totale >= 2 and nuovo_totale < 2:
+                flash(f"⚠️ ATTENZIONE: Il totale complessivo del prodotto '{prod['nome']}' (tra magazzino e manutenzione) è sceso a {nuovo_totale} pz! Da riordinare.", "error")
+            else:
+                flash("Manutenzione salvata e registrata nello storico!", "success")
+
         conn.commit()
         cur.close()
         conn.close()
-        flash("Manutenzione salvata e registrata nello storico!", "success")
     except Exception as e:
         flash(f"Errore: {e}", "error")
         
@@ -702,5 +727,5 @@ def lista_manutenzioni():
         print(f"Errore manutenzioni: {e}")
     return render_template("manutenzioni.html", prodotti=prodotti_maint)
 
-if __name__ == "_main_":
+if _name_ == "_main_":
     app.run(host="0.0.0.0", port=5000, debug=True)
