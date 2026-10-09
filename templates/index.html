@@ -2,113 +2,26 @@
 <html lang="it">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Magazzino - Home</title>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
-    <style>
-        body { font-family: sans-serif; max-width: 1200px; margin: 0 auto; padding: 20px; background: #f8fafc; color: #1e293b; }
-        .card { background: white; padding: 20px; border-radius: 12px; border: 1px solid #e2e8f0; margin-bottom: 20px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
-        .btn { background: #4f46e5; color: white; padding: 10px 16px; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; text-decoration: none; display: inline-block; margin: 4px; }
-        .btn:hover { opacity: 0.9; }
-        table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 0.9rem; }
-        th, td { padding: 12px; border-bottom: 1px solid #e2e8f0; text-align: left; vertical-align: middle; }
-        th { background: #f1f5f9; }
-        .menu-grid { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 20px; }
-        input { width: 100%; padding: 10px; border: 1px solid #cbd5e1; border-radius: 6px; box-sizing: border-box; }
-        .qrcode-container img { display: block; border-radius: 4px; }
-    </style>
+    <title>Home - Gestione Magazzino</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
 </head>
-<body>
-
-    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; flex-wrap: wrap; gap: 10px;">
-        <h1>📦 Gestione Magazzino OMG</h1>
-        <div style="display: flex; align-items: center; gap: 15px;">
-            <span>Utente: <strong>{{ session.username }}</strong></span>
-            <a href="{{ url_for('logout') }}" class="btn" style="background: #ef4444; padding: 6px 12px;">Esci</a>
+<body class="container mt-5">
+    <div class="p-5 mb-4 bg-light rounded-3 shadow-sm">
+        <div class="container-fluid py-3">
+            <h1 class="display-5 fw-bold">Sistema Gestione Manutenzioni & Magazzino</h1>
+            <p class="col-md-8 fs-4 text-muted">Benvenuto, <strong>{{ current_user.username }}</strong> (Ruolo: <em>{{ current_user.role }}</em>)</p>
+            <hr class="my-4">
+            <div class="d-flex gap-3 flex-wrap">
+                <a class="btn btn-primary btn-lg" href="{{ url_for('gestione_rulli') }}" role="button">Magazzino & Sezione Pesanti</a>
+                <a class="btn btn-secondary btn-lg" href="{{ url_for('manutenzioni') }}" role="button">Registro Manutenzioni</a>
+                {% if current_user.role == 'admin' %}
+                <a class="btn btn-dark btn-lg" href="{{ url_for('manage_users') }}" role="button">Gestione Utenti & Permessi</a>
+                {% endif %}
+            </div>
+            <div class="mt-4">
+                <a href="{{ url_for('logout') }}" class="btn btn-outline-danger">Disconnetti (Logout)</a>
+            </div>
         </div>
     </div>
-
-    <div class="menu-grid">
-        <a href="{{ url_for('carico') }}" class="btn" style="background: #10b981;">➕ Carico (Fotocamera)</a>
-        <a href="{{ url_for('scarico') }}" class="btn" style="background: #f97316;">➖ Scarico (Fotocamera)</a>
-        
-        <!-- LINK VISIBILE SOLO SE ABILITATO DALL'ADMIN -->
-        {% if session.get('is_admin') or session.get('puo_vedere_pesanti') %}
-        <a href="{{ url_for('sezione_pesanti') }}" class="btn" style="background: #d97706;">⚙️ Motori, Riduttori e Nastri</a>
-        {% endif %}
-
-        <a href="{{ url_for('clienti') }}" class="btn" style="background: #0284c7;">📖 Rubrica Clienti</a>
-        <a href="{{ url_for('pagina_upload') }}" class="btn" style="background: #0ea5e9;">📁 Upload CSV</a>
-        <a href="{{ url_for('stampa_tutti_qr') }}" class="btn" style="background: #8b5cf6;">🖨️ Stampa Tutti i QR</a>
-        <a href="{{ url_for('lista_manutenzioni') }}" class="btn" style="background: #b45309;">🔧 Manutenzioni</a>
-        {% if session.get('is_admin') %}
-        <a href="{{ url_for('admin_utenti') }}" class="btn" style="background: #7c3aed;">👑 Utenti</a>
-        {% endif %}
-    </div>
-
-    <!-- MODULO AGGIUNGI ARTICOLO NORMALE -->
-    <div class="card">
-        <h3>➕ Aggiungi Nuovo Articolo Standard</h3>
-        <form action="{{ url_for('aggiungi_prodotto') }}" method="POST" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 10px; margin-top: 15px;">
-            <input type="text" name="qr_code" placeholder="Codice QR univoco..." required>
-            <input type="text" name="nome" placeholder="Nome articolo..." required>
-            <input type="text" name="sap" placeholder="Codice SAP...">
-            <input type="number" name="quantita" placeholder="Quantità..." value="0" min="0">
-            <input type="text" name="posizione" placeholder="Posizione...">
-            <input type="hidden" name="is_pesante" value="0">
-            <button type="submit" class="btn" style="background: #4f46e5; grid-column: 1 / -1;">Salva Articolo Standard</button>
-        </form>
-    </div>
-
-    <!-- TABELLA ARTICOLI STANDARD -->
-    <div class="card">
-        <h3>📋 Elenco Articoli Standard</h3>
-        {% if prodotti %}
-        <div style="overflow-x: auto;">
-            <table>
-                <thead>
-                    <tr>
-                        <th>Nome Articolo</th>
-                        <th>QR Code</th>
-                        <th>SAP</th>
-                        <th>Quantità Disp.</th>
-                        <th>Posizione</th>
-                        <th>Azione</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for p in prodotti %}
-                    <tr>
-                        <td><strong>{{ p.nome }}</strong></td>
-                        <td>
-                            <div class="qrcode-container" id="qr-{{ loop.index }}" data-code="{{ p.qr_code }}"></div>
-                            <small style="color: #64748b; font-family: monospace;">{{ p.qr_code }}</small>
-                        </td>
-                        <td>{{ p.sap if p.sap else '-' }}</td>
-                        <td><span style="color: #10b981; font-weight: bold;">{{ p.quantita }}</span> pz</td>
-                        <td>{{ p.posizione if p.posizione else '-' }}</td>
-                        <td>
-                            <a href="{{ url_for('gestisci_prodotto', qr_code=p.qr_code) }}" class="btn" style="padding: 6px 12px; font-size: 0.85rem; background: #4f46e5;">Gestisci</a>
-                        </td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
-        </div>
-        {% else %}
-            <p style="color: #64748b;">Nessun articolo standard presente.</p>
-        {% endif %}
-    </div>
-
-    <script>
-        document.addEventListener("DOMContentLoaded", function() {
-            document.querySelectorAll(".qrcode-container").forEach(function(el) {
-                let code = el.getAttribute("data-code");
-                if(code) {
-                    new QRCode(el, { text: code, width: 75, height: 75, colorDark: "#000000", colorLight: "#ffffff", correctLevel: QRCode.CorrectLevel.H });
-                }
-            });
-        });
-    </script>
 </body>
 </html>
