@@ -6,7 +6,7 @@ from psycopg2.extras import RealDictCursor
 from flask import Flask, render_template, request, redirect, url_for, flash, session
 from werkzeug.security import generate_password_hash, check_password_hash
 
-app = Flask(__name__)
+app = Flask(_name_)
 app.secret_key = os.environ.get("SECRET_KEY", "chiave-segreta-magazzino")
 
 DATABASE_URL = os.environ.get("DATABASE_URL")
@@ -20,6 +20,8 @@ def init_db():
     try:
         conn = get_db_connection()
         cur = conn.cursor()
+        
+        # Creazione tabelle principali
         cur.execute("""
             CREATE TABLE IF NOT EXISTS utenti (
                 id SERIAL PRIMARY KEY,
@@ -53,7 +55,12 @@ def init_db():
                 telefono VARCHAR(50),
                 email VARCHAR(100)
             );
-            CREATE TABLE IF NOT EXISTS storico_manutenzioni (
+        """)
+        
+        # Ricostruzione pulita della tabella storico per evitare errori di colonne mancanti
+        cur.execute("DROP TABLE IF EXISTS storico_manutenzioni;")
+        cur.execute("""
+            CREATE TABLE storico_manutenzioni (
                 id SERIAL PRIMARY KEY,
                 qr_code VARCHAR(255) NOT NULL,
                 nome_prodotto VARCHAR(255) NOT NULL,
@@ -68,6 +75,8 @@ def init_db():
                 registrato_il TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             );
         """)
+
+        # Aggiornamenti sicuri per eventuali colonne prodotti/utenti mancanti
         cur.execute("ALTER TABLE utenti ADD COLUMN IF NOT EXISTS puo_vedere_manutenzione BOOLEAN DEFAULT FALSE;")
         cur.execute("ALTER TABLE utenti ADD COLUMN IF NOT EXISTS puo_eliminare BOOLEAN DEFAULT FALSE;")
         
@@ -143,7 +152,7 @@ def registra():
                 flash("Registrazione avvenuta con successo! In attesa di abilitazione dall'Admin.", "success")
                 return redirect(url_for("login"))
             except Exception as e:
-                flash(f"Errore: utente già esistente.", "error")
+                flash("Errore: utente già esistente.", "error")
     return render_template("registra.html")
 
 @app.route("/admin/utenti")
@@ -490,7 +499,7 @@ def manda_manutenzione(qr_code):
                     WHERE qr_code = %s;
                 """, (cliente if cliente else None, qta_maint, data_spedizione, data_riconsegna, ordine_amministrativo, vettore if vettore else None, note, qr_code))
 
-            # Salva nello storico manutenzioni
+            # Registrazione sicura nell'archivio storico
             cur.execute("""
                 INSERT INTO storico_manutenzioni (qr_code, nome_prodotto, sap, cliente, quantita, data_spedizione, data_riconsegna, vettore, ordine_amministrativo, note)
                 VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s);
@@ -673,5 +682,5 @@ def lista_manutenzioni():
         print(f"Errore manutenzioni: {e}")
     return render_template("manutenzioni.html", prodotti=prodotti_maint)
 
-if __name__ == "_main_":
+if _name_ == "_main_":
     app.run(host="0.0.0.0", port=5000, debug=True)
