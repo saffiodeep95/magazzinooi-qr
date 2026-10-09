@@ -77,9 +77,13 @@ def index():
     conn.close()
     return render_template("index.html", prodotti=prodotti)
 
-# Rotta di sicurezza per evitare qualsiasi errore BuildError sul logout
+# Rotte di sicurezza per evitare qualsiasi errore BuildError nei template
 @app.route("/logout")
 def logout():
+    return redirect(url_for("index"))
+
+@app.route("/clienti")
+def clienti():
     return redirect(url_for("index"))
 
 @app.route("/magazzino_composizione_motori")
@@ -99,10 +103,10 @@ def gestisci_prodotto(qr_code):
     cur.execute("SELECT * FROM prodotti WHERE qr_code = %s;", (qr_code,))
     prodotto = cur.fetchone()
     
-    clienti = []
+    lista_clienti = []
     try:
         cur.execute("SELECT * FROM clienti ORDER BY nome_azienda ASC;")
-        clienti = cur.fetchall()
+        lista_clienti = cur.fetchall()
     except Exception:
         pass
 
@@ -113,7 +117,7 @@ def gestisci_prodotto(qr_code):
         flash("Prodotto non trovato nel sistema!", "error")
         return redirect(url_for("index"))
 
-    return render_template("gestisci.html", prodotto=prodotto, clienti=clienti)
+    return render_template("gestisci.html", prodotto=prodotto, clienti=lista_clienti)
 
 @app.route("/aggiungi", methods=["POST"])
 def aggiungi_prodotto():
@@ -257,7 +261,7 @@ def manutenzione(qr_code):
             if prod:
                 q_rientro = prod["quantita_manutenzione"] or 0
                 cur.execute("""
-                    UPDATE prodotti SET 
+                    UPDATE prodotti SET 0,
                         quantita = quantita + %s,
                         in_manutenzione = 0,
                         cliente_manutenzione = NULL,
