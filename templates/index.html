@@ -4,16 +4,19 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Magazzino - Home</title>
+    <!-- Libreria per generare l'immagine del QR Code -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     <style>
         body { font-family: sans-serif; max-width: 1200px; margin: 0 auto; padding: 20px; background: #f8fafc; color: #1e293b; }
         .card { background: white; padding: 20px; border-radius: 12px; border: 1px solid #e2e8f0; margin-bottom: 20px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
         .btn { background: #4f46e5; color: white; padding: 10px 16px; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; text-decoration: none; display: inline-block; margin: 4px; }
         .btn:hover { opacity: 0.9; }
         table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 0.9rem; }
-        th, td { padding: 12px; border-bottom: 1px solid #e2e8f0; text-align: left; }
+        th, td { padding: 12px; border-bottom: 1px solid #e2e8f0; text-align: left; vertical-align: middle; }
         th { background: #f1f5f9; }
         .menu-grid { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 20px; }
         input { width: 100%; padding: 10px; border: 1px solid #cbd5e1; border-radius: 6px; box-sizing: border-box; }
+        .qrcode-container canvas, .qrcode-container img { display: block; border-radius: 4px; }
     </style>
 </head>
 <body>
@@ -46,7 +49,7 @@
         {% endif %}
     </div>
 
-    <!-- MODULO AGGIUNGI ARTICOLO (RIPRISTINATO) -->
+    <!-- MODULO AGGIUNGI ARTICOLO -->
     <div class="card">
         <h3>➕ Aggiungi Nuovo Articolo in Magazzino</h3>
         <form action="{{ url_for('aggiungi_prodotto') }}" method="POST" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 10px; margin-top: 15px;">
@@ -59,7 +62,7 @@
         </form>
     </div>
 
-    <!-- TABELLA ARTICOLI CON QR CODE VISIBILE -->
+    <!-- TABELLA ARTICOLI CON IMMAGINE QR CODE -->
     <div class="card">
         <h3>📋 Elenco Articoli in Magazzino</h3>
         {% if prodotti %}
@@ -68,7 +71,7 @@
                 <thead>
                     <tr>
                         <th>Nome Articolo</th>
-                        <th>QR Code</th>
+                        <th>QR Code (Immagine)</th>
                         <th>SAP</th>
                         <th>Quantità Disp.</th>
                         <th>In Manutenzione</th>
@@ -86,7 +89,10 @@
                                 <br><span style="color: #dc2626; font-size: 0.75rem; font-weight: bold;">⚠️ Sotto soglia (Da Riordinare)</span>
                             {% endif %}
                         </td>
-                        <td><code style="background: #f1f5f9; padding: 4px 8px; border-radius: 4px; font-weight: bold; color: #4f46e5;">{{ p.qr_code }}</code></td>
+                        <td>
+                            <div class="qrcode-container" id="qr-{{ loop.index }}" data-code="{{ p.qr_code }}"></div>
+                            <small style="color: #64748b; font-family: monospace;">{{ p.qr_code }}</small>
+                        </td>
                         <td>{{ p.sap if p.sap else '-' }}</td>
                         <td><span style="color: {% if p.quantita < 2 %}#dc2626{% else %}#10b981{% endif %}; font-weight: bold; font-size: 1.1rem;">{{ p.quantita }}</span> pz</td>
                         <td>
@@ -110,6 +116,25 @@
             <p style="color: #64748b;">Nessun articolo presente in magazzino.</p>
         {% endif %}
     </div>
+
+    <script>
+        // Genera automaticamente un'immagine QR per ogni riga della tabella in home
+        document.addEventListener("DOMContentLoaded", function() {
+            document.querySelectorAll(".qrcode-container").forEach(function(el) {
+                let code = el.getAttribute("data-code");
+                if(code) {
+                    new QRCode(el, {
+                        text: code,
+                        width: 80,
+                        height: 80,
+                        colorDark: "#000000",
+                        colorLight: "#ffffff",
+                        correctLevel: QRCode.CorrectLevel.H
+                    });
+                }
+            });
+        });
+    </script>
 
 </body>
 </html>
