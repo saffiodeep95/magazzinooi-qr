@@ -19,7 +19,6 @@ def init_db():
         conn = get_db_connection()
         cur = conn.cursor()
         
-        # Tabella prodotti principale con supporto per la nuova sezione e manutenzione
         cur.execute("""
             CREATE TABLE IF NOT EXISTS prodotti (
                 id SERIAL PRIMARY KEY,
@@ -41,7 +40,6 @@ def init_db():
             );
         """)
         
-        # Controllo e aggiunta automatica delle colonne se la tabella esisteva già
         colonne_da_aggiungere = [
             ("peso", "VARCHAR(255)"),
             ("magazzino_composizione_motori", "INT DEFAULT 0"),
@@ -73,14 +71,17 @@ init_db()
 def index():
     conn = get_db_connection()
     cur = conn.cursor()
-    # Mostra i prodotti del magazzino standard (esclusi quelli della nuova sezione)
     cur.execute("SELECT * FROM prodotti WHERE magazzino_composizione_motori = 0 OR magazzino_composizione_motori IS NULL ORDER BY nome ASC;")
     prodotti = cur.fetchall()
     cur.close()
     conn.close()
     return render_template("index.html", prodotti=prodotti)
 
-# Sezione dedicata Magazzino Composizione e Motori
+# Rotta di sicurezza per evitare qualsiasi errore BuildError sul logout
+@app.route("/logout")
+def logout():
+    return redirect(url_for("index"))
+
 @app.route("/magazzino_composizione_motori")
 def magazzino_composizione_motori_view():
     conn = get_db_connection()
@@ -122,7 +123,6 @@ def aggiungi_prodotto():
     peso = request.form.get("peso", "")
     quantita = int(request.form.get("quantita", 0))
     posizione = request.form.get("posizione", "")
-    # Legge il flag specifico per questa sezione
     flag_sezione = 1 if request.form.get("magazzino_composizione_motori") else 0
 
     if not qr_code or not nome:
