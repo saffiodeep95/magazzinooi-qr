@@ -1,10 +1,12 @@
 import os
+import csv
+import io
 import psycopg2
 from psycopg2.extras import RealDictCursor
 from flask import Flask, render_template, request, redirect, url_for, flash, session
 from werkzeug.security import generate_password_hash, check_password_hash
 
-app = Flask(__name__)
+app = Flask(_name_)
 app.secret_key = os.environ.get("SECRET_KEY", "chiave-segreta-magazzino")
 
 DATABASE_URL = os.environ.get("DATABASE_URL")
@@ -130,7 +132,6 @@ def registra():
                 flash(f"Errore: utente già esistente.", "error")
     return render_template("registra.html")
 
-# --- PANNELLO ADMIN UTENTI ---
 @app.route("/admin/utenti")
 def admin_utenti():
     if not session.get("is_admin"):
@@ -145,7 +146,7 @@ def admin_utenti():
         cur.close()
         conn.close()
     except Exception as e:
-        print(f"Errore caricamento utenti admin: {e}")
+        print(f"Errore utenti: {e}")
     return render_template("admin_utenti.html", utenti=utenti_list)
 
 @app.route("/admin/toggle_permesso/<int:user_id>/<tipo>", methods=["POST"])
@@ -278,6 +279,86 @@ def aggiungi_prodotto():
             flash(f"Errore: {e}", "error")
 
     return redirect(url_for("index"))
+
+@app.route("/upload", methods=["GET", "POST"])
+def pagina_upload():
+    if "username" not in session:
+        return redirect(url_for("login"))
+        
+    if request.method == "POST":
+        file = request.files.get("file_csv")
+        if not file:
+            flash("Nessun file selezionato.", "error")
+            return redirect(url_for("pagina_upload"))
+        
+        try:
+            stream = io.TextIOWrapper(file.stream, encoding="utf-8")
+            csv_reader = csv.reader(stream)
+            
+            first_row = next(csv_reader, None)
+            if first_row and any("qr" in cell.lower() or "codice" in cell.lower() or "nome" in cell.lower() for cell in first_row):
+                pass
+            else:
+                if first_row and len(first_row) >= 2:
+                    process_csv_row(first_row)
+
+            contatore = 0
+            for row in csv_reader:
+                if len(row) >= 2 and row[0].strip():
+                    process_csv_row(row)
+                    contatore += 1
+                    
+            flash(f"Importazione completata con successo! Articoli elaborati: {contatore + (1 if first_row else 0)}", "success")
+            return redirect(url_for("index"))
+        except Exception as e:
+            flash(f"Errore durante l'importazione: {e}", "error")
+            
+    return render_template("upload.html")
+
+def process_csv_row(row):
+    qr_code = row[0].strip()
+    nome = row[1].strip()
+    sap = row[2].strip() if len(row) > 2 and row[2] else ""
+    try:
+        quantita = int(row[3].strip()) if len(row) > 3 and row[3] else 0
+    except ValueError:
+        quantita = 0
+    posizione = row[4].strip() if len(row) > 4 and row[4] else ""
+    
+    if qr_code and nome:
+        conn = get_db_connection()
+        cur = conn.cursor()
+        cur.execute(
+            """
+            INSERT INTO prodotti (qr_code, nome, sap, quantita, posizione, in_manutenzione)
+            VALUES (%s, %s, %s, %s, %s, FALSE)
+            ON CONFLICT (qr_code)
+            DO UPDATE SET quantita = prodotti.quantita + EXCLUDED.quantita,
+                          nome = EXCLUDED.nome,
+                          sap = EXCLUDED.sap,
+                          posizione = EXCLUDED.posizione;
+            """,
+            (qr_code, nome, sap, quantita, posizione)
+        )
+        conn.commit()
+        cur.close()
+        conn.close()
+
+@app.route("/stampa_tutti_qr")
+def stampa_tutti_qr():
+    if "username" not in session:
+        return redirect(url_for("login"))
+    prodotti = []
+    try:
+        conn = get_db_connection()
+        cur = conn.cursor()
+        cur.execute("SELECT * FROM prodotti ORDER BY nome ASC;")
+        prodotti = cur.fetchall()
+        cur.close()
+        conn.close()
+    except Exception as e:
+        print(f"Errore stampa massiva QR: {e}")
+    return render_template("stampa_tutti_qr.html", prodotti=prodotti)
 
 @app.route("/carico", methods=["GET", "POST"])
 def carico():
@@ -552,5 +633,5 @@ def lista_manutenzioni():
         print(f"Errore manutenzioni: {e}")
     return render_template("manutenzioni.html", prodotti=prodotti_maint)
 
-if __name__ == "_main_":
+if _name_ == "_main_":
     app.run(host="0.0.0.0", port=5000, debug=True)
