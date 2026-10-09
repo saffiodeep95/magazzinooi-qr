@@ -7,7 +7,6 @@
         body { font-family: Arial, sans-serif; margin: 20px; background-color: #f4f6f9; color: #333; }
         h1, h2 { color: #2c3e50; }
         nav { margin-bottom: 20px; }
-        nav a { margin-right: 15px; text-decoration: none; color: #007bff; font-weight: bold; }
         table { width: 100%; border-collapse: collapse; background: white; margin-top: 15px; }
         th, td { border: 1px solid #ddd; padding: 10px; text-align: left; }
         th { background-color: #2c3e50; color: white; }
@@ -17,12 +16,13 @@
         button:hover { background-color: #218838; }
         .flashes { color: red; margin-bottom: 15px; }
         .badge-maint { background: #ffc107; padding: 3px 6px; border-radius: 4px; font-size: 0.9em; }
+        .btn-nav { padding: 10px 15px; background: #007bff; color: white; text-decoration: none; border-radius: 4px; font-weight: bold; display: inline-block; }
     </style>
 </head>
 <body>
 
     <nav>
-        <a href="{{ url_for('index') }}">← Torna al Magazzino Principale</a>
+        <a href="{{ url_for('index') }}" class="btn-nav">← Torna al Magazzino Principale</a>
     </nav>
 
     <h1>Magazzino Composizione e Motori</h1>
