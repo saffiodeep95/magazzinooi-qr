@@ -33,10 +33,13 @@
 
     <div class="card">
         <h2>📦 Dettagli Articolo: {{ prodotto.nome }}</h2>
-        <div style="background: #f1f5f9; padding: 12px; border-radius: 8px; margin: 15px 0; display: inline-block;">
-            <span style="font-size: 0.9rem; color: #64748b; display: block;">QR Code Articolo:</span>
-            <code style="font-size: 1.3rem; font-weight: bold; color: #4f46e5;">{{ prodotto.qr_code }}</code>
+        
+        <!-- Campo QR Code visibile e modificabile -->
+        <div style="background: #f1f5f9; padding: 15px; border-radius: 8px; margin: 15px 0;">
+            <label>QR Code Articolo:</label>
+            <input type="text" value="{{ prodotto.qr_code }}" readonly style="background: #e2e8f0; font-weight: bold; color: #4f46e5; font-size: 1.1rem; margin-bottom: 0;">
         </div>
+
         <p><strong>Codice SAP:</strong> {{ prodotto.sap if prodotto.sap else '-' }}</p>
         <p><strong>Posizione:</strong> {{ prodotto.posizione if prodotto.posizione else '-' }}</p>
         <p><strong>Quantità in Magazzino:</strong> <span style="font-size: 1.2rem; color: #10b981; font-weight: bold;">{{ prodotto.quantita }} pz</span></p>
@@ -44,7 +47,7 @@
         {% set totale_reale = prodotto.quantita + (prodotto.quantita_manutenzione if prodotto.in_manutenzione else 0) %}
         {% if totale_reale < 2 %}
             <div style="background: #fef2f2; color: #dc2626; padding: 10px; border-radius: 6px; margin-top: 10px; font-weight: bold;">
-                ⚠️ Attenzione: il totale complessivo (magazzino + manutenzione) è sotto soglia ({% if totale_reale < 0 %}0{% else %}{{ totale_reale }}{% endif %} pz). Da riordinare!
+                ⚠️ Attenzione: il totale complessivo (magazzino + manutenzione) è sotto soglia ({% if totale_reale < 0%}0{% else %}{{ totale_reale }}{% endif %} pz). Da riordinare!
             </div>
         {% endif %}
     </div>
