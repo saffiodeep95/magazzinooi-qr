@@ -228,5 +228,5 @@ def admin_utenti():
     conn.close()
     return render_template('admin_utenti.html', utenti=utenti)
 
-if _name_ == '__main__':
+if __name__ == '__main__':
     app.run(debug=True)
