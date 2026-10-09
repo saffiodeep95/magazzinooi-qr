@@ -1,7 +1,7 @@
 import sqlite3
 from flask import Flask, render_template, request, redirect, url_for, session, flash
 
-app = Flask(_name_)
+app = Flask(__name__)
 app.secret_key = 'tua_chiave_segreta_molto_sicura'
 
 def get_db_connection():
@@ -452,5 +452,5 @@ def admin_utenti():
     conn.close()
     return render_template('admin_utenti.html', utenti=utenti)
 
-if _name_ == '_main_':
+if __name__ == '_main_':
     app.run(debug=True)
