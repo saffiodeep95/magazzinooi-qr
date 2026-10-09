@@ -3,165 +3,149 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Gestione - {{ prodotto.nome }}</title>
+    <title>Gestione Articolo - {{ prodotto.nome }}</title>
     <style>
-        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; max-width: 800px; margin: 0 auto; padding: 16px; background: #f8fafc; color: #1e293b; }
-        .card { background: #ffffff; padding: 25px; border-radius: 14px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); margin-bottom: 16px; border: 1px solid #e2e8f0; }
-        .btn { background: #4f46e5; color: white; padding: 10px 18px; border-radius: 8px; text-decoration: none; font-size: 0.9rem; font-weight: 600; border: none; cursor: pointer; display: inline-block; margin: 5px; }
-        .btn-danger { background: #ef4444; }
-        .btn-success { background: #10b981; }
-        .btn-warning { background: #f59e0b; color: white; }
-        .btn-info { background: #0284c7; color: white; }
+        body { font-family: sans-serif; max-width: 900px; margin: 0 auto; padding: 20px; background: #f8fafc; color: #1e293b; }
+        .card { background: white; padding: 25px; border-radius: 12px; border: 1px solid #e2e8f0; margin-bottom: 20px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
+        .btn { background: #4f46e5; color: white; padding: 10px 16px; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; text-decoration: none; display: inline-block; }
         .btn:hover { opacity: 0.9; }
-        input, select, textarea { width: 100%; padding: 8px 12px; border: 1px solid #e2e8f0; border-radius: 8px; font-size: 0.9rem; box-sizing: border-box; margin-top: 5px; margin-bottom: 12px; }
-        label { font-size: 0.85rem; font-weight: 600; color: #64748b; display: block; margin-top: 8px; }
-        .checkbox-group { display: flex; align-items: center; gap: 10px; margin: 12px 0; }
-        .checkbox-group input { width: 20px; height: 20px; margin: 0; }
-        .client-info-box { background: #f1f5f9; padding: 12px; border-radius: 8px; margin-bottom: 12px; font-size: 0.85rem; color: #334155; border: 1px solid #cbd5e1; }
+        .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+        @media(max-width: 768px) { .grid-2 { grid-template-columns: 1fr; } }
+        input, select, textarea { width: 100%; padding: 10px; border: 1px solid #cbd5e1; border-radius: 6px; box-sizing: border-box; margin-top: 5px; margin-bottom: 15px; }
+        label { font-weight: bold; font-size: 0.9rem; color: #475569; }
     </style>
 </head>
 <body>
 
-    <div class="card" style="text-align: center;">
-        <h1>Gestione Articolo</h1>
-        <h2>{{ prodotto.nome }}</h2>
-        <p><strong>Codice QR:</strong> <code>{{ prodotto.qr_code }}</code></p>
-        <p><strong>Codice SAP:</strong> {{ prodotto.sap if prodotto.sap else '-' }}</p>
-        <p><strong>Quantità in Magazzino:</strong> {{ prodotto.quantita }}</p>
-        <p><strong>Posizione:</strong> {{ prodotto.posizione if prodotto.posizione else '-' }}</p>
-        <p><strong>Stato:</strong> 
-            {% if prodotto.in_manutenzione %}
-                <span style="color: #d97706; font-weight: bold;">In Manutenzione ({{ prodotto.quantita_manutenzione }} pz bloccati)</span>
-            {% else %}
-                <span style="color: #10b981; font-weight: bold;">Disponibile</span>
-            {% endif %}
-        </p>
-
-        <div style="margin: 20px 0;">
-            <img src="https://api.qrserver.com/v1/create-qr-code/?size=160x160&data={{ prodotto.qr_code }}" alt="QR Code" style="border: 1px solid #e2e8f0; padding: 10px; background: white; border-radius: 8px;">
-        </div>
-
-        <div>
-            <button onclick="window.print();" class="btn">🖨️ Stampa QR</button>
-            <a href="{{ url_for('stampa_bolla', qr_code=prodotto.qr_code) }}" class="btn btn-info" target="_blank">📄 Stampa Bolla</a>
-            <a href="{{ url_for('carico', qr_code=prodotto.qr_code) }}" class="btn btn-success">➕ Carico</a>
-            <a href="{{ url_for('scarico', qr_code=prodotto.qr_code) }}" class="btn btn-danger" style="background: #ea580c;">➖ Scarico</a>
-        </div>
-
-        {% if session.get('is_admin') or session.get('puo_eliminare') %}
-        <div style="margin-top: 25px; border-top: 1px solid #e2e8f0; padding-top: 15px;">
-            <form action="{{ url_for('elimina_prodotto') }}" method="POST" onsubmit="return confirm('Sei sicuro di voler eliminare definitivamente questo articolo?');">
-                <input type="hidden" name="qr_code" value="{{ prodotto.qr_code }}">
-                <button type="submit" class="btn btn-danger">🗑️ Elimina Prodotto dal Magazzino</button>
-            </form>
-        </div>
-        {% endif %}
-    </div>
-
-    <!-- Modulo Gestione Manutenzione con Autocompilazione Rubrica -->
-    <div class="card">
-        <h3>🔧 Gestione Manutenzione e Rubrica</h3>
-        {% if session.get('is_admin') or session.get('puo_vedere_manutenzione') %}
-            
-            {% if prodotto.in_manutenzione %}
-                <div style="background: #fef3c7; border: 1px solid #f59e0b; padding: 15px; border-radius: 8px; margin-bottom: 15px; text-align: center;">
-                    <p style="margin: 0 0 10px 0; color: #92400e; font-weight: bold;">Articolo in manutenzione per: {{ prodotto.cliente_manutenzione }} ({{ prodotto.quantita_manutenzione }} pz)</p>
-                    <form action="{{ url_for('ripristina_magazzino', qr_code=prodotto.qr_code) }}" method="POST">
-                        <button type="submit" class="btn btn-success" style="width: 100%;">🔄 Ripristina in Magazzino (Riconsegna Pezzi)</button>
-                    </form>
-                </div>
-            {% endif %}
-
-            <form action="{{ url_for('manda_manutenzione', qr_code=prodotto.qr_code) }}" method="POST">
-                <div>
-                    <label>Seleziona Cliente da Rubrica</label>
-                    <select name="cliente_manutenzione" id="select_cliente" onchange="aggiornaDatiCliente()">
-                        <option value="">-- Seleziona Azienda Cliente --</option>
-                        {% for c in clienti %}
-                        <option value="{{ c.nome_azienda }}" 
-                                data-indirizzo="{{ c.indirizzo or '' }}" 
-                                data-piva="{{ c.p_iva or '' }}" 
-                                data-telefono="{{ c.telefono or '' }}" 
-                                data-email="{{ c.email or '' }}"
-                                {% if prodotto.cliente_manutenzione == c.nome_azienda %}selected{% endif %}>
-                            {{ c.nome_azienda }}
-                        </option>
-                        {% endfor %}
-                    </select>
-                </div>
-
-                <!-- Box informativo che si autocompila pescando dalla rubrica -->
-                <div id="box_info_cliente" class="client-info-box" style="display: none;">
-                    <strong>Dati Cliente in Rubrica:</strong><br>
-                    📍 Indirizzo: <span id="info_indirizzo">-</span><br>
-                    📄 P.IVA: <span id="info_piva">-</span><br>
-                    📞 Telefono: <span id="info_telefono">-</span>
-                </div>
-
-                <div>
-                    <label>Numero Pezzi da Mandare in Manutenzione</label>
-                    <input type="number" name="quantita_manutenzione" value="{{ prodotto.quantita_manutenzione if prodotto.quantita_manutenzione else 1 }}" min="1">
-                </div>
-
-                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
-                    <div>
-                        <label>Data Spedizione</label>
-                        <input type="date" name="data_spedizione" value="{{ prodotto.data_spedizione if prodotto.data_spedizione else '' }}">
-                    </div>
-                    <div>
-                        <label>Data Riconsegna Prevista</label>
-                        <input type="date" name="data_riconsegna" value="{{ prodotto.data_riconsegna if prodotto.data_riconsegna else '' }}">
-                    </div>
-                </div>
-
-                <div>
-                    <label>Vettore (es. Bartolini, DHL, Corriere)</label>
-                    <input type="text" name="vettore" value="{{ prodotto.vettore if prodotto.vettore else '' }}" placeholder="Nome corriere o vettore...">
-                </div>
-
-                <div class="checkbox-group">
-                    <input type="checkbox" id="ordine_amministrativo" name="ordine_amministrativo" {% if prodotto.ordine_amministrativo %}checked{% endif %}>
-                    <label for="ordine_amministrativo" style="margin: 0; cursor: pointer; color: #1e293b; font-weight: bold;">Ordine Amministrativo / Autorizzato</label>
-                </div>
-
-                <div>
-                    <label>Note di Manutenzione</label>
-                    <textarea name="note_manutenzione" rows="3" placeholder="Inserisci note o dettagli tecnici...">{{ prodotto.note_manutenzione if prodotto.note_manutenzione else '' }}</textarea>
-                </div>
-
-                <button type="submit" class="btn btn-warning" style="width: 100%; margin-top: 10px;">Manda in Manutenzione (Scala Pezzi)</button>
-            </form>
-        {% else %}
-            <p style="color: #991b1b; background: #fee2e2; padding: 12px; border-radius: 8px; font-size: 0.9rem; text-align: center;">
-                <strong>Accesso Limitato:</strong> Non disponi dei permessi per gestire le manutenzioni.
-            </p>
-        {% endif %}
-    </div>
-
-    <div style="text-align: center; margin-bottom: 20px;">
+    <div style="margin-bottom: 20px;">
         <a href="{{ url_for('index') }}" class="btn" style="background: #64748b;">← Torna alla Home</a>
     </div>
 
-    <script>
-        function aggiornaDatiCliente() {
-            const select = document.getElementById('select_cliente');
-            const selectedOption = select.options[select.selectedIndex];
-            const box = document.getElementById('box_info_cliente');
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+        {% for category, message in messages %}
+          <div style="background: {% if category == 'error' %}#fef2f2{% else %}#dcfce7{% endif %}; color: {% if category == 'error' %}#991b1b{% else %}#166534{% endif %}; padding: 12px; border-radius: 8px; margin-bottom: 15px; border: 1px solid {% if category == 'error' %}#fecaca{% else %}#bbf7d0{% endif %};">
+            {{ message }}
+          </div>
+        {% endfor %}
+      {% endif %}
+    {% endwith %}
 
-            if (select.value) {
-                document.getElementById('info_indirizzo').textContent = selectedOption.getAttribute('data-indirizzo') || '-';
-                document.getElementById('info_piva').textContent = selectedOption.getAttribute('data-piva') || '-';
-                document.getElementById('info_telefono').textContent = selectedOption.getAttribute('data-telefono') || '-';
-                box.style.display = 'block';
-            } else {
-                box.style.display = 'none';
-            }
-        }
+    <div class="card">
+        <h2>📦 Dettagli Articolo: {{ prodotto.nome }}</h2>
+        <p><strong>QR Code:</strong> <code>{{ prodotto.qr_code }}</code></p>
+        <p><strong>Codice SAP:</strong> {{ prodotto.sap if prodotto.sap else '-' }}</p>
+        <p><strong>Posizione:</strong> {{ prodotto.posizione if prodotto.posizione else '-' }}</p>
+        <p><strong>Quantità in Magazzino:</strong> <span style="font-size: 1.2rem; color: #10b981; font-weight: bold;">{{ prodotto.quantita }} pz</span></p>
+        
+        {% set totale_reale = prodotto.quantita + (prodotto.quantita_manutenzione if prodotto.in_manutenzione else 0) %}
+        {% if totale_reale < 2 %}
+            <div style="background: #fef2f2; color: #dc2626; padding: 10px; border-radius: 6px; margin-top: 10px; font-weight: bold;">
+                ⚠️ Attenzione: il totale complessivo (magazzino + manutenzione) è sotto soglia ({% if totale_reale < 0 %}0{% else %}{{ totale_reale }}{% endif %} pz). Da riordinare!
+            </div>
+        {% endif %}
+    </div>
 
-        // Esegue all'avvio se c'è già un cliente selezionato
-        window.onload = function() {
-            aggiornaDatiCliente();
-        };
-    </script>
+    <div class="grid-2">
+        <!-- SEZIONE CARICO RAPIDO -->
+        <div class="card" style="border-top: 4px solid #10b981;">
+            <h3>➕ Carico Rapido</h3>
+            <form action="{{ url_for('carico') }}" method="POST">
+                <input type="hidden" name="qr_code" value="{{ prodotto.qr_code }}">
+                <label>Quantità da aggiungere:</label>
+                <input type="number" name="quantita" value="1" min="1" required>
+                <button type="submit" class="btn" style="background: #10b981; width: 100%;">Registra Carico</button>
+            </form>
+        </div>
+
+        <!-- SEZIONE SCARICO RAPIDO -->
+        <div class="card" style="border-top: 4px solid #f97316;">
+            <h3>➖ Scarico Rapido</h3>
+            <form action="{{ url_for('scarico') }}" method="POST">
+                <input type="hidden" name="qr_code" value="{{ prodotto.qr_code }}">
+                <label>Quantità da scaricare:</label>
+                <input type="number" name="quantita" value="1" min="1" required>
+                <button type="submit" class="btn" style="background: #f97316; width: 100%;">Registra Scarico</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- SEZIONE MANUTENZIONE -->
+    <div class="card" style="border-top: 4px solid #d97706;">
+        <h3>🔧 Gestione Manutenzione</h3>
+        
+        {% if prodotto.in_manutenzione %}
+            <div style="background: #fffbeb; border: 1px solid #fde68a; padding: 15px; border-radius: 8px; margin-bottom: 15px;">
+                <p style="color: #b45309; font-weight: bold; margin-top: 0;">Attualmente in manutenzione</p>
+                <p><strong>Cliente/Fornitore:</strong> {{ prodotto.cliente_manutenzione }}</p>
+                <p><strong>Quantità in manutenzione:</strong> {{ prodotto.quantita_manutenzione }} pz</p>
+                <p><strong>Vettore:</strong> {{ prodotto.vettore if prodotto.vettore else '-' }}</p>
+                <p><strong>Riconsegna prevista:</strong> {{ prodotto.data_riconsegna if prodotto.data_riconsegna else '-' }}</p>
+                <p><strong>Note:</strong> {{ prodotto.note_manutenzione if prodotto.note_manutenzione else '-' }}</p>
+                
+                <div style="display: flex; gap: 10px; margin-top: 15px;">
+                    <form action="{{ url_for('ripristina_magazzino', qr_code=prodotto.qr_code) }}" method="POST" style="flex: 1;">
+                        <button type="submit" class="btn" style="background: #10b981; width: 100%;">📥 Rientrato in Magazzino</button>
+                    </form>
+                    <a href="{{ url_for('stampa_bolla', qr_code=prodotto.qr_code) }}" class="btn" style="background: #0284c7; flex: 1; text-align: center;">🖨️ Stampa Bolla</a>
+                </div>
+            </div>
+        {username_placeholder}
+        {% endif %}
+
+        {% if session.get('is_admin') or session.get('puo_vedere_manutenzione') %}
+        <form action="{{ url_for('manda_manutenzione', qr_code=prodotto.qr_code) }}" method="POST">
+            <label>Cliente / Azienda:</label>
+            <input type="text" name="cliente_manutenzione" list="clienti_list" value="{{ prodotto.cliente_manutenzione if prodotto.cliente_manutenzione else '' }}" placeholder="Nome cliente...">
+            <datalist id="clienti_list">
+                {% for c in clienti %}
+                <option value="{{ c.nome_azienda }}">
+                {% endfor %}
+            </datalist>
+
+            <label>Quantità in manutenzione:</label>
+            <input type="number" name="quantita_manutenzione" value="{{ prodotto.quantita_manutenzione if prodotto.quantita_manutenzione > 0 else 1 }}" min="1" required>
+
+            <div class="grid-2" style="margin: 0;">
+                <div>
+                    <label>Data Spedizione:</label>
+                    <input type="date" name="data_spedizione" value="{{ prodotto.data_spedizione if prodotto.data_spedizione else '' }}">
+                </div>
+                <div>
+                    <label>Data Riconsegna Prevista:</label>
+                    <input type="date" name="data_riconsegna" value="{{ prodotto.data_riconsegna if prodotto.data_riconsegna else '' }}">
+                </div>
+            </div>
+
+            <label>Vettore:</label>
+            <input type="text" name="vettore" value="{{ prodotto.vettore if prodotto.vettore else '' }}" placeholder="Es. Bartolini, corriere interno...">
+
+            <div style="margin: 10px 0;">
+                <label style="display: flex; align-items: center; gap: 10px; cursor: pointer;">
+                    <input type="checkbox" name="ordine_amministrativo" {% if prodotto.ordine_amministrativo %}checked{% endif %} style="width: auto; margin: 0;"> 
+                    Ordine Amministrativo / Lavorazione esterna
+                </label>
+            </div>
+
+            <label>Note Intervento:</label>
+            <textarea name="note_manutenzione" rows="3" placeholder="Dettagli sulla manutenzione...">{{ prodotto.note_manutenzione if prodotto.note_manutenzione else '' }}</textarea>
+
+            <button type="submit" class="btn" style="background: #d97706; width: 100%; margin-top: 10px;">Salva / Invia in Manutenzione</button>
+        </form>
+        {% endif %}
+    </div>
+
+    <!-- ELIMINAZIONE ARTICOLO -->
+    {% if session.get('is_admin') or session.get('puo_eliminare') %}
+    <div class="card" style="border-top: 4px solid #ef4444; background: #fff5f5;">
+        <h3 style="color: #991b1b;">Zona Pericolosa</h3>
+        <p style="color: #7f1d1d; font-size: 0.85rem;">L'eliminazione dell'articolo rimuoverà definitivamente il prodotto dal magazzino.</p>
+        <form action="{{ url_for('elimina_prodotto') }}" method="POST" onsubmit="return confirm('Sei sicuro di voler eliminare definitivamente questo articolo?');">
+            <input type="hidden" name="qr_code" value="{{ prodotto.qr_code }}">
+            <button type="submit" class="btn" style="background: #ef4444;">Elimina Articolo</button>
+        </form>
+    </div>
+    {% endif %}
+
 </body>
 </html>
