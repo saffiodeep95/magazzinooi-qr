@@ -6,7 +6,7 @@ from psycopg2.extras import RealDictCursor
 from flask import Flask, render_template, request, redirect, url_for, flash, session
 from werkzeug.security import generate_password_hash, check_password_hash
 
-app = Flask(_name_)
+app = Flask(__name__)
 app.secret_key = os.environ.get("SECRET_KEY", "chiave-segreta-magazzino")
 
 DATABASE_URL = os.environ.get("DATABASE_URL")
@@ -673,5 +673,5 @@ def lista_manutenzioni():
         print(f"Errore manutenzioni: {e}")
     return render_template("manutenzioni.html", prodotti=prodotti_maint)
 
-if _name_ == "_main_":
+if __name__ == "_main_":
     app.run(host="0.0.0.0", port=5000, debug=True)
