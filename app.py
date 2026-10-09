@@ -19,7 +19,6 @@ def init_db():
         conn = get_db_connection()
         cur = conn.cursor()
         
-        # Tabella prodotti principale
         cur.execute("""
             CREATE TABLE IF NOT EXISTS prodotti (
                 id SERIAL PRIMARY KEY,
@@ -41,7 +40,6 @@ def init_db():
             );
         """)
         
-        # Tabella clienti (necessaria per la rubrica e i menu a tendina)
         cur.execute("""
             CREATE TABLE IF NOT EXISTS clienti (
                 id SERIAL PRIMARY KEY,
@@ -52,7 +50,6 @@ def init_db():
             );
         """)
         
-        # Controllo e aggiunta automatica delle colonne se la tabella prodotti esisteva già
         colonne_da_aggiungere = [
             ("peso", "VARCHAR(255)"),
             ("magazzino_composizione_motori", "INT DEFAULT 0"),
@@ -94,7 +91,6 @@ def index():
 def logout():
     return redirect(url_for("index"))
 
-# Sezione Rubrica Clienti ripristinata
 @app.route("/clienti", methods=["GET", "POST"])
 def clienti():
     conn = get_db_connection()
@@ -121,18 +117,25 @@ def clienti():
     conn.close()
     return render_template("clienti.html", clienti=lista_clienti)
 
-# Sezione Pagina Upload / Importazione ripristinata
 @app.route("/pagina_upload", methods=["GET", "POST"])
 def pagina_upload():
     if request.method == "POST":
-        # Gestione upload file se presente
         file = request.files.get("file")
         if file:
             flash("File caricato ed elaborato con successo!", "success")
         return redirect(url_for("index"))
     return render_template("pagina_upload.html")
 
-# Nuova Sezione: Magazzino Composizione e Motori
+@app.route("/stampa_tutti_qr")
+def stampa_tutti_qr():
+    conn = get_db_connection()
+    cur = conn.cursor()
+    cur.execute("SELECT * FROM prodotti ORDER BY nome ASC;")
+    prodotti = cur.fetchall()
+    cur.close()
+    conn.close()
+    return render_template("stampa_tutti_qr.html", prodotti=prodotti)
+
 @app.route("/magazzino_composizione_motori")
 def magazzino_composizione_motori_view():
     conn = get_db_connection()
