@@ -3,75 +3,64 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Gestione Manutenzioni</title>
+    <title>Manutenzioni Attive - Magazzino</title>
     <style>
-        :root {
-            --primary: #0284c7;
-            --bg-color: #f8fafc;
-            --card-bg: #ffffff;
-            --text-main: #1e293b;
-            --text-muted: #64748b;
-            --border-color: #e2e8f0;
-        }
-        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; max-width: 1100px; margin: 0 auto; padding: 16px; background: var(--bg-color); color: var(--text-main); }
-        .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; background: var(--card-bg); padding: 15px 20px; border-radius: 12px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); border: 1px solid var(--border-color); }
-        .btn { background: var(--primary); color: white; padding: 8px 14px; border-radius: 8px; text-decoration: none; font-size: 0.85rem; font-weight: 600; border: none; cursor: pointer; display: inline-block; }
+        body { font-family: sans-serif; max-width: 1100px; margin: 0 auto; padding: 20px; background: #f8fafc; color: #1e293b; }
+        .card { background: white; padding: 20px; border-radius: 12px; border: 1px solid #e2e8f0; margin-bottom: 20px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
+        .btn { background: #4f46e5; color: white; padding: 8px 14px; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; text-decoration: none; display: inline-block; margin: 3px; }
         .btn:hover { opacity: 0.9; }
-        .card { background: var(--card-bg); padding: 20px; border-radius: 14px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); margin-bottom: 16px; border: 1px solid var(--border-color); }
-        h1, h2 { font-size: 1.2rem; color: var(--text-main); margin-top: 0; }
         table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 0.9rem; }
-        th, td { padding: 10px; text-align: left; border-bottom: 1px solid var(--border-color); vertical-align: middle; }
-        th { background: #f1f5f9; color: var(--text-muted); font-weight: 600; }
-        .badge-admin { background: #dcfce7; color: #166534; padding: 3px 8px; border-radius: 6px; font-size: 0.75rem; font-weight: bold; }
-        .badge-no { background: #fee2e2; color: #991b1b; padding: 3px 8px; border-radius: 6px; font-size: 0.75rem; font-weight: bold; }
+        th, td { padding: 10px; border-bottom: 1px solid #e2e8f0; text-align: left; }
+        th { background: #f1f5f9; }
     </style>
 </head>
 <body>
 
-    <div class="header">
-        <h1>🔧 Prodotti in Manutenzione</h1>
-        <a href="{{ url_for('index') }}" class="btn" style="background: #64748b;">← Torna alla Home</a>
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; flex-wrap: wrap; gap: 10px;">
+        <h1>🔧 Gestione Manutenzioni Attive</h1>
+        <div>
+            <a href="{{ url_for('storico_manutenzioni') }}" class="btn" style="background: #3b82f6;">📜 Vedi Storico Completo</a>
+            <a href="{{ url_for('index') }}" class="btn" style="background: #64748b;">← Torna alla Home</a>
+        </div>
     </div>
 
+    {% with messages = get_flashed_messages() %}
+      {% if messages %}
+        {% for message in messages %}
+          <div style="background: #dcfce7; color: #166534; padding: 10px; border-radius: 8px; margin-bottom: 15px; border: 1px solid #bbf7d0;">{{ message }}</div>
+        {% endfor %}
+      {% endif %}
+    {% endwith %}
+
     <div class="card">
-        <h2>📋 Elenco Interventi & Scadenze</h2>
+        <h3>Elenco Articoli Attualmente Fuori per Manutenzione</h3>
         {% if prodotti %}
         <div style="overflow-x: auto;">
             <table>
                 <thead>
                     <tr>
-                        <th>Prodotto / QR</th>
-                        <th>Cliente</th>
-                        <th>Pezzi</th>
-                        <th>Spedizione / Riconsegna</th>
-                        <th>Vettore</th>
-                        <th>Ordine Amm.vo</th>
-                        <th>Azioni</th>
+                        <th>Articolo</th>
+                        <th>QR Code</th>
+                        <th>SAP</th>
+                        <th>Cliente / Fornitore</th>
+                        <th>Quantità</th>
+                        <th>Spedizione</th>
+                        <th>Riconsegna Prevista</th>
+                        <th>Azione</th>
                     </tr>
                 </thead>
                 <tbody>
                     {% for p in prodotti %}
                     <tr>
-                        <td>
-                            <strong>{{ p.nome }}</strong><br>
-                            <code>{{ p.qr_code }}</code>
-                        </td>
+                        <td><strong>{{ p.nome }}</strong></td>
+                        <td><code>{{ p.qr_code }}</code></td>
+                        <td>{{ p.sap if p.sap else '-' }}</td>
                         <td>{{ p.cliente_manutenzione if p.cliente_manutenzione else '-' }}</td>
-                        <td><strong>{{ p.quantita_manutenzione if p.quantita_manutenzione else 1 }}</strong> pz</td>
+                        <td><span style="color: #d97706; font-weight: bold;">{{ p.quantita_manutenzione }} pz</span></td>
+                        <td>{{ p.data_spedizione if p.data_spedizione else '-' }}</td>
+                        <td>{{ p.data_riconsegna if p.data_riconsegna else '-' }}</td>
                         <td>
-                            Sped: {{ p.data_spedizione if p.data_spedizione else '-' }}<br>
-                            Scad: <strong style="color: #d97706;">{{ p.data_riconsegna if p.data_riconsegna else '-' }}</strong>
-                        </td>
-                        <td>{{ p.vettore if p.vettore else '-' }}</td>
-                        <td>
-                            {% if p.ordine_amministrativo %}
-                                <span class="badge-admin">Sì (OK)</span>
-                            {% else %}
-                                <span class="badge-no">No</span>
-                            {% endif %}
-                        </td>
-                        <td>
-                            <a href="{{ url_for('gestisci_prodotto', qr_code=p.qr_code) }}" class="btn" style="padding: 4px 8px; font-size: 0.75rem;">Gestisci</a>
+                            <a href="{{ url_for('gestisci_prodotto', qr_code=p.qr_code) }}" class="btn" style="padding: 5px 10px; font-size: 0.8rem; background: #4f46e5;">Gestisci</a>
                         </td>
                     </tr>
                     {% endfor %}
@@ -79,7 +68,7 @@
             </table>
         </div>
         {% else %}
-            <p style="color: var(--text-muted); font-size: 0.9rem;">Nessun prodotto attualmente registrato in manutenzione.</p>
+            <p style="color: #64748b;">Nessun articolo attualmente in manutenzione.</p>
         {% endif %}
     </div>
 
