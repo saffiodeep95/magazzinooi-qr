@@ -2,27 +2,23 @@
 <html lang="it">
 <head>
     <meta charset="UTF-8">
-    <title>Gestione Utenti - Admin</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gestione Utenti e Permessi</title>
     <style>
-        body { font-family: sans-serif; max-width: 1000px; margin: 0 auto; padding: 20px; background: #f8fafc; color: #1e293b; }
+        body { font-family: sans-serif; max-width: 1100px; margin: 0 auto; padding: 20px; background: #f8fafc; color: #1e293b; }
         .card { background: white; padding: 20px; border-radius: 12px; border: 1px solid #e2e8f0; margin-bottom: 20px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
-        table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 0.85rem; }
-        th, td { padding: 10px; border-bottom: 1px solid #e2e8f0; text-align: left; vertical-align: middle; }
+        .btn { background: #4f46e5; color: white; padding: 6px 12px; border: none; border-radius: 6px; font-weight: bold; cursor: pointer; text-decoration: none; display: inline-block; font-size: 0.85rem; }
+        .btn:hover { opacity: 0.9; }
+        table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 0.9rem; }
+        th, td { padding: 10px; border-bottom: 1px solid #e2e8f0; text-align: left; }
         th { background: #f1f5f9; }
-        .btn { padding: 6px 10px; border: none; border-radius: 6px; cursor: pointer; font-size: 0.75rem; font-weight: bold; color: white; text-decoration: none; display: inline-block; margin: 2px; }
-        .btn-danger { background: #ef4444; }
-        .btn-toggle { background: #0284c7; }
-        .btn-warning { background: #d97706; }
-        .btn-back { background: #64748b; padding: 8px 14px; text-decoration: none; border-radius: 6px; display: inline-block; color: white; font-weight: bold; }
-        .badge-yes { color: #166534; background: #dcfce7; padding: 3px 6px; border-radius: 4px; font-weight: bold; }
-        .badge-no { color: #991b1b; background: #fee2e2; padding: 3px 6px; border-radius: 4px; font-weight: bold; }
-        input[type="text"] { padding: 4px; width: 100px; border: 1px solid #cbd5e1; border-radius: 4px; }
     </style>
 </head>
 <body>
+
     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
-        <h1>👑 Amministrazione Utenti & Permessi</h1>
-        <a href="{{ url_for('index') }}" class="btn-back">← Torna alla Home</a>
+        <h1>👑 Gestione Utenti e Permessi</h1>
+        <a href="{{ url_for('index') }}" class="btn" style="background: #64748b;">← Torna alla Home</a>
     </div>
 
     {% with messages = get_flashed_messages() %}
@@ -35,66 +31,77 @@
 
     <div class="card">
         <h3>Elenco Utenti Registrati</h3>
+        {% if utenti %}
         <div style="overflow-x: auto;">
             <table>
                 <thead>
                     <tr>
-                        <th>ID</th>
                         <th>Username</th>
-                        <th>Ruolo</th>
-                        <th>Manutenzione</th>
-                        <th>Eliminazione Articoli</th>
-                        <th>Reset Password</th>
-                        <th>Azioni Account</th>
+                        <th>Ruolo Admin</th>
+                        <th>Permesso Manutenzioni</th>
+                        <th>Permesso Elimina Prodotti</th>
+                        <th>Permesso Elimina Storico</th>
+                        <th>Azioni Password</th>
+                        <th>Elimina Utente</th>
                     </tr>
                 </thead>
                 <tbody>
                     {% for u in utenti %}
                     <tr>
-                        <td>{{ u.id }}</td>
                         <td><strong>{{ u.username }}</strong></td>
-                        <td>{% if u.is_admin %} <span style="color: #10b981; font-weight: bold;">Admin</span> {% else %} Standard {% endif %}</td>
                         <td>
-                            {% if u.puo_vedere_manutenzione %}
-                                <span class="badge-yes">Sì</span>
+                            {% if u.is_admin %}
+                                <span style="color: #7c3aed; font-weight: bold;">Admin</span>
                             {% else %}
-                                <span class="badge-no">No</span>
-                            {% endif %}
-                            {% if u.username != 'admin' %}
-                            <form action="{{ url_for('toggle_permesso', user_id=u.id, tipo='manutenzione') }}" method="POST" style="margin-top: 4px;">
-                                <button type="submit" class="btn btn-toggle">Cambia</button>
-                            </form>
+                                <span style="color: #64748b;">Standard</span>
                             {% endif %}
                         </td>
                         <td>
-                            {% if u.puo_eliminare %}
-                                <span class="badge-yes">Sì</span>
-                            {% else %}
-                                <span class="badge-no">No</span>
-                            {% endif %}
-                            {% if u.username != 'admin' %}
-                            <form action="{{ url_for('toggle_permesso', user_id=u.id, tipo='eliminazione') }}" method="POST" style="margin-top: 4px;">
-                                <button type="submit" class="btn btn-toggle">Cambia</button>
-                            </form>
-                            {% endif %}
-                        </td>
-                        <td>
-                            {% if u.username != 'admin' %}
-                            <form action="{{ url_for('reset_password', user_id=u.id) }}" method="POST" style="display: flex; gap: 4px; align-items: center;">
-                                <input type="text" name="nuova_password" placeholder="Nuova pwd" required>
-                                <button type="submit" class="btn btn-warning">Salva</button>
+                            {% if not u.is_admin %}
+                            <form action="{{ url_for('toggle_permesso', user_id=u.id, tipo='manutenzione') }}" method="POST" style="display:inline;">
+                                <button type="submit" class="btn" style="background: {% if u.puo_vedere_manutenzione %}#10b981{% else %}#cbd5e1{% color %};">
+                                    {{ 'Abilitato' if u.puo_vedere_manutenzione else 'Disabilitato' }}
+                                </button>
                             </form>
                             {% else %}
-                            -
+                                <span style="color: #10b981; font-weight: bold;">Sempre attivo</span>
                             {% endif %}
                         </td>
                         <td>
-                            {% if u.username != 'admin' %}
-                            <form action="{{ url_for('elimina_utente', user_id=u.id) }}" method="POST" onsubmit="return confirm('Eliminare utente {{ u.username }}?');" style="margin: 0;">
-                                <button type="submit" class="btn btn-danger">Elimina</button>
+                            {% if not u.is_admin %}
+                            <form action="{{ url_for('toggle_permesso', user_id=u.id, tipo='eliminazione') }}" method="POST" style="display:inline;">
+                                <button type="submit" class="btn" style="background: {% if u.puo_eliminare %}#10b981{% else %}#cbd5e1{% endif %};">
+                                    {{ 'Abilitato' if u.puo_eliminare else 'Disabilitato' }}
+                                </button>
                             </form>
                             {% else %}
-                            -
+                                <span style="color: #10b981; font-weight: bold;">Sempre attivo</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if not u.is_admin %}
+                            <form action="{{ url_for('toggle_permesso', user_id=u.id, tipo='eliminazione_storico') }}" method="POST" style="display:inline;">
+                                <button type="submit" class="btn" style="background: {% if u.puo_eliminare_storico %}#10b981{% else %}#cbd5e1{% endif %};">
+                                    {{ 'Abilitato' if u.puo_eliminare_storico else 'Disabilitato' }}
+                                </button>
+                            </form>
+                            {% else %}
+                                <span style="color: #10b981; font-weight: bold;">Sempre attivo</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <form action="{{ url_for('reset_password', user_id=u.id) }}" method="POST" style="display: flex; gap: 5px;">
+                                <input type="text" name="nuova_password" placeholder="Nuova password..." required style="padding: 4px; font-size: 0.8rem; width: 120px; margin: 0;">
+                                <button type="submit" class="btn" style="background: #3b82f6; padding: 4px 8px;">Reset</button>
+                            </form>
+                        </td>
+                        <td>
+                            {% if u.username != 'admin' %}
+                            <form action="{{ url_for('elimina_utente', user_id=u.id) }}" method="POST" onsubmit="return confirm('Vuoi davvero eliminare questo utente?');">
+                                <button type="submit" class="btn" style="background: #ef4444; padding: 4px 8px;">Elimina</button>
+                            </form>
+                            {% else %}
+                                <span style="color: #64748b; font-size: 0.8rem;">Protetto</span>
                             {% endif %}
                         </td>
                     </tr>
@@ -102,6 +109,10 @@
                 </tbody>
             </table>
         </div>
+        {% else %}
+            <p style="color: #64748b;">Nessun utente registrato.</p>
+        {% endif %}
     </div>
+
 </body>
 </html>
