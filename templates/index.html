@@ -13,6 +13,7 @@
         th, td { padding: 12px; border-bottom: 1px solid #e2e8f0; text-align: left; }
         th { background: #f1f5f9; }
         .menu-grid { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 20px; }
+        input { width: 100%; padding: 10px; border: 1px solid #cbd5e1; border-radius: 6px; box-sizing: border-box; }
     </style>
 </head>
 <body>
@@ -45,18 +46,20 @@
         {% endif %}
     </div>
 
+    <!-- MODULO AGGIUNGI ARTICOLO (RIPRISTINATO) -->
     <div class="card">
         <h3>➕ Aggiungi Nuovo Articolo in Magazzino</h3>
         <form action="{{ url_for('aggiungi_prodotto') }}" method="POST" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 10px; margin-top: 15px;">
-            <input type="text" name="qr_code" placeholder="Codice univoco QR..." required style="padding: 10px; border: 1px solid #cbd5e1; border-radius: 6px;">
-            <input type="text" name="nome" placeholder="Nome articolo..." required style="padding: 10px; border: 1px solid #cbd5e1; border-radius: 6px;">
-            <input type="text" name="sap" placeholder="Codice SAP..." style="padding: 10px; border: 1px solid #cbd5e1; border-radius: 6px;">
-            <input type="number" name="quantita" placeholder="Quantità iniziale..." value="0" min="0" style="padding: 10px; border: 1px solid #cbd5e1; border-radius: 6px;">
-            <input type="text" name="posizione" placeholder="Posizione (es. Scaffale A)..." style="padding: 10px; border: 1px solid #cbd5e1; border-radius: 6px;">
+            <input type="text" name="qr_code" placeholder="Codice univoco QR..." required>
+            <input type="text" name="nome" placeholder="Nome articolo..." required>
+            <input type="text" name="sap" placeholder="Codice SAP...">
+            <input type="number" name="quantita" placeholder="Quantità iniziale..." value="0" min="0">
+            <input type="text" name="posizione" placeholder="Posizione (es. Scaffale A)...">
             <button type="submit" class="btn" style="background: #4f46e5; grid-column: 1 / -1;">Salva Articolo</button>
         </form>
     </div>
 
+    <!-- TABELLA ARTICOLI CON QR CODE VISIBILE -->
     <div class="card">
         <h3>📋 Elenco Articoli in Magazzino</h3>
         {% if prodotti %}
