@@ -20,7 +20,7 @@ def get_db_connection():
 def init_db():
     conn = get_db_connection()
     
-    # Tabella Utenti (aggiunto flag o permesso specifico per i pesanti, es. puo_vedere_pesanti)
+    # Tabella Utenti
     conn.execute('''
         CREATE TABLE IF NOT EXISTS users (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -31,7 +31,7 @@ def init_db():
         )
     ''')
     
-    # Tabella Magazzino Standard e Pesante (con campo peso e flag is_pesante)
+    # Tabella Magazzino Standard e Pesante
     conn.execute('''
         CREATE TABLE IF NOT EXISTS rulli (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -59,7 +59,21 @@ def init_db():
         )
     ''')
     
-    # Assicura che l'admin esista e abbia accesso completo ai pesanti
+    # Controlla e aggiunge colonne mancanti se il DB esisteva già con una struttura vecchia
+    cursor = conn.cursor()
+    cursor.execute("PRAGMA table_info(users)")
+    user_columns = [col['name'] for col in cursor.fetchall()]
+    if 'puo_vedere_pesanti' not in user_columns:
+        conn.execute('ALTER TABLE users ADD COLUMN puo_vedere_pesanti INTEGER NOT NULL DEFAULT 0')
+
+    cursor.execute("PRAGMA table_info(rulli)")
+    rulli_columns = [col['name'] for col in cursor.fetchall()]
+    if 'is_pesante' not in rulli_columns:
+        conn.execute('ALTER TABLE rulli ADD COLUMN is_pesante INTEGER NOT NULL DEFAULT 0')
+    if 'peso' not in rulli_columns:
+        conn.execute('ALTER TABLE rulli ADD COLUMN peso REAL DEFAULT 0.0')
+
+    # Assicura che l'admin esista sempre e abbia accesso completo
     conn.execute('''
         INSERT INTO users (id, username, password, role, puo_vedere_pesanti) 
         VALUES (1, 'admin', 'admin123', 'admin', 1)
@@ -133,7 +147,7 @@ def delete_user(id):
     flash("Utente eliminato.", "success")
     return redirect(url_for('manage_users'))
 
-# --- GESTIONE MAGAZZINO STANDARD E SEZIONE PESANTE (Rulli, Riduttori, Motori con Peso) ---
+# --- GESTIONE MAGAZZINO STANDARD E SEZIONE PESANTE ---
 @app.route('/rulli', methods=['GET', 'POST'])
 @login_required
 def gestione_rulli():
@@ -145,7 +159,6 @@ def gestione_rulli():
         soglia_minima = int(request.form['soglia_minima'])
         is_pesante = 1 if 'is_pesante' in request.form else 0
         
-        # Se prova ad aggiungere un articolo pesante senza averne i permessi (e non è admin)
         if is_pesante == 1 and current_user.role != 'admin' and current_user.puo_vedere_pesanti == 0:
             flash("Non hai i permessi per aggiungere componenti nella sezione pesante.", "danger")
             return redirect(url_for('gestione_rulli'))
@@ -165,7 +178,6 @@ def gestione_rulli():
         
     rulli = conn.execute('SELECT * FROM rulli WHERE is_pesante = 0').fetchall()
     
-    # Protezione visualizzazione sezione pesante in base alle concessioni dell'utente
     pesanti = []
     if current_user.role == 'admin' or current_user.puo_vedere_pesanti == 1:
         pesanti = conn.execute('SELECT * FROM rulli WHERE is_pesante = 1').fetchall()
@@ -173,7 +185,7 @@ def gestione_rulli():
     conn.close()
     return render_template('rulli.html', rulli=rulli, pesanti=pesanti, puo_vedere_pesanti=(current_user.role == 'admin' or current_user.puo_vedere_pesanti == 1))
 
-# --- REGISTRO MANUTENZIONI (Invariato e integrato con QR code / scansione) ---
+# --- REGISTRO MANUTENZIONI ---
 @app.route('/manutenzioni', methods=['GET', 'POST'])
 @login_required
 def manutenzioni():
@@ -209,7 +221,6 @@ def manutenzioni():
         ORDER BY m.data DESC
     ''').fetchall()
     
-    # Mostra nel select dei ricambi solo quelli accessibili all'utente
     if current_user.role == 'admin' or current_user.puo_vedere_pesanti == 1:
         rulli_totali = conn.execute('SELECT * FROM rulli').fetchall()
     else:
