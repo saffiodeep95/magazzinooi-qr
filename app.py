@@ -46,7 +46,7 @@ def init_db():
         )
     ''')
     
-    # Aggiunge in sicurezza la colonna puo_vedere_pesanti se il DB esiste già senza di essa
+    # Aggiornamenti sicuri se le tabelle esistono già
     cursor.execute("PRAGMA table_info(utenti)")
     colonne_utenti = [col[1] for col in cursor.fetchall()]
     if 'puo_vedere_pesanti' not in colonne_utenti:
@@ -94,6 +94,29 @@ def login():
             
     return render_template('login.html')
 
+@app.route('/registra', methods=['GET', 'POST'])
+def registra():
+    if request.method == 'POST':
+        username = request.form.get('username')
+        password = request.form.get('password')
+        
+        conn = get_db_connection()
+        try:
+            # I nuovi utenti registrati partono senza permessi speciali o admin
+            conn.execute('''
+                INSERT INTO utenti (username, password, is_admin, puo_vedere_manutenzione, puo_eliminare, puo_vedere_pesanti)
+                VALUES (?, ?, 0, 0, 0, 0)
+            ''', (username, password))
+            conn.commit()
+            flash('Registrazione completata! Ora puoi effettuare il login.', 'success')
+            conn.close()
+            return redirect(url_for('login'))
+        except sqlite3.IntegrityError:
+            flash('Nome utente già esistente.', 'error')
+            conn.close()
+            
+    return render_template('registra.html')
+
 @app.route('/logout')
 def logout():
     session.clear()
@@ -114,7 +137,7 @@ def sezione_pesanti():
     if 'username' not in session:
         return redirect(url_for('login'))
     
-    # Controllo accesso rigoroso: solo Admin o chi ha il permesso abilitato
+    # Controllo accesso: solo Admin o chi ha il permesso abilitato
     if not session.get('is_admin') and not session.get('puo_vedere_pesanti'):
         flash('Accesso non autorizzato alla sezione motori e riduttori.', 'error')
         return redirect(url_for('index'))
@@ -228,5 +251,5 @@ def admin_utenti():
     conn.close()
     return render_template('admin_utenti.html', utenti=utenti)
 
-if __name__ == '__main__':
+if __name__ == '_main_':
     app.run(debug=True)
