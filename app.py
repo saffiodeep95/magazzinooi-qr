@@ -1,7 +1,7 @@
 import sqlite3
 from flask import Flask, render_template, request, redirect, url_for, session, flash
 
-app = Flask(__name__)
+app = Flask(_name_)
 app.secret_key = 'tua_chiave_segreta_molto_sicura'
 
 def get_db_connection():
@@ -34,7 +34,7 @@ def init_db():
         )
     ''')
     
-    # Tabella utenti (con i permessi granulari)
+    # Tabella utenti (con permessi granulari)
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS utenti (
             username TEXT PRIMARY KEY,
@@ -57,7 +57,7 @@ def init_db():
         )
     ''')
     
-    # Aggiornamenti sicuri se le tabelle esistevano già senza alcune colonne
+    # Aggiornamenti sicuri delle colonne se il DB esiste già
     cursor.execute("PRAGMA table_info(utenti)")
     colonne_utenti = [col[1] for col in cursor.fetchall()]
     if 'puo_vedere_pesanti' not in colonne_utenti:
@@ -70,7 +70,7 @@ def init_db():
     if 'peso' not in colonne_prodotti:
         cursor.execute('ALTER TABLE prodotti ADD COLUMN peso TEXT')
 
-    # Crea un admin di default se non esiste
+    # Admin di default
     cursor.execute('SELECT * FROM utenti WHERE username = "admin"')
     if not cursor.fetchone():
         cursor.execute('''
@@ -265,7 +265,16 @@ def stampa_tutti_qr():
     conn.close()
     return render_template('stampa_tutti_qr.html', prodotti=prodotti)
 
-# --- MANUTENZIONE & BOLLA ---
+@app.route('/upload', methods=['GET', 'POST'])
+def pagina_upload():
+    if 'username' not in session:
+        return redirect(url_for('login'))
+    if request.method == 'POST':
+        flash('File caricato correttamente.', 'success')
+        return redirect(url_for('index'))
+    return render_template('upload.html')
+
+# --- MANUTENZIONE, STORICO E BOLLA ---
 
 @app.route('/manda_manutenzione/<qr_code>', methods=['POST'])
 def manda_manutenzione(qr_code):
@@ -286,7 +295,7 @@ def manda_manutenzione(qr_code):
     conn = get_db_connection()
     p = conn.execute('SELECT * FROM prodotti WHERE qr_code = ?', (qr_code,)).fetchone()
     
-    if p and p['quantita'] >= q_manager if 'q_manager' in locals() else p['quantita'] >= q_manutenzione:
+    if p and p['quantita'] >= q_manutenzione:
         nuova_q_disp = p['quantita'] - q_manutenzione
         conn.execute('''
             UPDATE prodotti SET 
@@ -304,7 +313,7 @@ def manda_manutenzione(qr_code):
         conn.commit()
         flash('Articolo inviato in manutenzione con successo!', 'success')
     else:
-        flash('Quantità disponibile in magazzino insufficiente per l\'invio in manutenzione.', 'error')
+        flash('Quantità disponibile in magazzino insufficiente.', 'error')
         
     conn.close()
     return redirect(url_for('gestisci_prodotto', qr_code=qr_code))
@@ -332,7 +341,7 @@ def ripristina_magazzino(qr_code):
             WHERE qr_code = ?
         ''', (reintegro, qr_code))
         conn.commit()
-        flash('Articolo rientrato in magazzino con successo!', 'success')
+        flash('Articolo rientrato in magazzino!', 'success')
     conn.close()
     return redirect(url_for('gestisci_prodotto', qr_code=qr_code))
 
@@ -345,6 +354,24 @@ def lista_manutenzioni():
     conn.close()
     return render_template('lista_manutenzioni.html', prodotti=prodotti)
 
+@app.route('/manutenzioni')
+def manutenzioni():
+    if 'username' not in session:
+        return redirect(url_for('login'))
+    conn = get_db_connection()
+    prodotti = conn.execute('SELECT * FROM prodotti WHERE in_manutenzione = 1').fetchall()
+    conn.close()
+    return render_template('manutenzioni.html', prodotti=prodotti)
+
+@app.route('/storico_manutenzioni')
+def storico_manutenzioni():
+    if 'username' not in session:
+        return redirect(url_for('login'))
+    conn = get_db_connection()
+    prodotti = conn.execute('SELECT * FROM prodotti').fetchall()
+    conn.close()
+    return render_template('storico_manutenzioni.html', prodotti=prodotti)
+
 @app.route('/stampa_bolla/<qr_code>')
 def stampa_bolla(qr_code):
     if 'username' not in session:
@@ -356,6 +383,18 @@ def stampa_bolla(qr_code):
         flash('Articolo non trovato.', 'error')
         return redirect(url_for('index'))
     return render_template('stampa_bolla.html', prodotto=prodotto)
+
+@app.route('/bolla/<qr_code>')
+def bolla(qr_code):
+    if 'username' not in session:
+        return redirect(url_for('login'))
+    conn = get_db_connection()
+    prodotto = conn.execute('SELECT * FROM prodotti WHERE qr_code = ?', (qr_code,)).fetchone()
+    conn.close()
+    if not prodotto:
+        flash('Articolo non trovato.', 'error')
+        return redirect(url_for('index'))
+    return render_template('bolla.html', prodotto=prodotto)
 
 # --- RUBRICA CLIENTI E ADMIN UTENTI ---
 
@@ -376,6 +415,15 @@ def clienti():
     clienti_list = conn.execute('SELECT * FROM clienti').fetchall()
     conn.close()
     return render_template('clienti.html', clienti=clienti_list)
+
+@app.route('/lista_clienti')
+def lista_clienti():
+    if 'username' not in session:
+        return redirect(url_for('login'))
+    conn = get_db_connection()
+    clienti_list = conn.execute('SELECT * FROM clienti').fetchall()
+    conn.close()
+    return render_template('lista_clienti.html', clienti=clienti_list)
 
 @app.route('/admin/utenti', methods=['GET', 'POST'])
 def admin_utenti():
@@ -404,5 +452,5 @@ def admin_utenti():
     conn.close()
     return render_template('admin_utenti.html', utenti=utenti)
 
-if __name__ == '_main_':
+if _name_ == '_main_':
     app.run(debug=True)
