@@ -77,6 +77,8 @@ def init_db():
 
 init_db()
 
+# --- ROTTE PRINCIPALI E DI NAVIGAZIONE ---
+
 @app.route("/")
 def index():
     conn = get_db_connection()
@@ -91,18 +93,23 @@ def index():
 def logout():
     return redirect(url_for("index"))
 
-# Rotta collegata a clienti.html
+@app.route("/login")
+def login():
+    return render_template("login.html")
+
+@app.route("/admin_utenti")
+def admin_utenti():
+    return render_template("admin_utenti.html")
+
 @app.route("/clienti", methods=["GET", "POST"])
 def clienti():
     conn = get_db_connection()
     cur = conn.cursor()
-    
     if request.method == "POST":
         nome_azienda = request.form.get("nome_azienda")
         referente = request.form.get("referente", "")
         telefono = request.form.get("telefono", "")
         email = request.form.get("email", "")
-        
         if nome_azienda:
             cur.execute(
                 "INSERT INTO clienti (nome_azienda, referente, telefono, email) VALUES (%s, %s, %s, %s);",
@@ -111,24 +118,24 @@ def clienti():
             conn.commit()
             flash("Cliente aggiunto con successo!", "success")
         return redirect(url_for("clienti"))
-        
     cur.execute("SELECT * FROM clienti ORDER BY nome_azienda ASC;")
     lista_clienti = cur.fetchall()
     cur.close()
     conn.close()
     return render_template("clienti.html", clienti=lista_clienti)
 
-# Rotta collegata a upload.html (visto nella tua lista)
-@app.route("/pagina_upload", methods=["GET", "POST"])
-def pagina_upload():
-    if request.method == "POST":
-        file = request.files.get("file")
-        if file:
-            flash("File caricato ed elaborato con successo!", "success")
-        return redirect(url_for("index"))
+@app.route("/lista_clienti")
+def lista_clienti():
+    return redirect(url_for("clienti"))
+
+@app.route("/upload")
+def upload():
     return render_template("upload.html")
 
-# Rotta collegata a stampa_tutti_qr.html
+@app.route("/pagina_upload", methods=["GET", "POST"])
+def pagina_upload():
+    return redirect(url_for("upload"))
+
 @app.route("/stampa_tutti_qr")
 def stampa_tutti_qr():
     conn = get_db_connection()
@@ -139,7 +146,7 @@ def stampa_tutti_qr():
     conn.close()
     return render_template("stampa_tutti_qr.html", prodotti=prodotti)
 
-# Rotta collegata al nuovo file magazzino_composizione.html (o magazzino_composizione_motori.html a seconda di come l'hai salvato)
+# --- NUOVA SEZIONE MAGAZZINO COMPOSIZIONE E MOTORI ---
 @app.route("/magazzino_composizione_motori")
 def magazzino_composizione_motori_view():
     conn = get_db_connection()
@@ -148,8 +155,44 @@ def magazzino_composizione_motori_view():
     prodotti = cur.fetchall()
     cur.close()
     conn.close()
-    # Usa il nome esatto del file presente nella tua schermata di GitHub
     return render_template("magazzino_composizione.html", prodotti=prodotti)
+
+# --- GESTIONE MANUTENZIONI E DOCUMENTI ---
+@app.route("/manutenzioni")
+def manutenzioni():
+    conn = get_db_connection()
+    cur = conn.cursor()
+    cur.execute("SELECT * FROM prodotti WHERE in_manutenzione = 1 ORDER BY nome ASC;")
+    prodotti = cur.fetchall()
+    cur.close()
+    conn.close()
+    return render_template("manutenzioni.html", prodotti=prodotti)
+
+@app.route("/lista_manutenzioni")
+def lista_manutenzioni():
+    return redirect(url_for("manutenzioni"))
+
+@app.route("/storico_manutenzioni")
+def storico_manutenzioni():
+    return render_template("storico_manutenzioni.html")
+
+@app.route("/bolla")
+def bolla():
+    return render_template("bolla.html")
+
+@app.route("/registra")
+def registra():
+    return render_template("registra.html")
+
+@app.route("/carico_pagina")
+def carico_pagina():
+    return render_template("carico.html")
+
+@app.route("/scarico_pagina")
+def scarico_pagina():
+    return render_template("scarico.html")
+
+# --- OPERAZIONI SUI PRODOTTI ---
 
 @app.route("/gestisci/<qr_code>")
 def gestisci_prodotto(qr_code):
@@ -319,7 +362,7 @@ def manutenzione(qr_code):
                     UPDATE prodotti SET 
                         quantita = quantita + %s,
                         in_manutenzione = 0,
-                C        cliente_manutenzione = NULL,
+                        cliente_manutenzione = NULL,
                         quantita_manutenzione = 0,
                         data_spedizione = NULL,
                         data_riconsegna = NULL,
