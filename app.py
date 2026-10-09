@@ -397,7 +397,7 @@ def carico():
                 cur.close()
                 conn.close()
                 flash(f"Carico di {quantita} pz effettuato!", "success")
-                return redirect(url_for("gestisci_prodotto", qr_code=qr_code))
+                return redirect(url_for("carico"))
             except Exception as e:
                 flash(f"Errore: {e}", "error")
     return render_template("carico.html")
@@ -432,10 +432,12 @@ def scarico():
                         flash(f"⚠️ ATTENZIONE: Il totale complessivo del prodotto '{prod['nome']}' (tra magazzino e manutenzione) è sceso a {nuovo_totale} pz! È necessario riordinarlo.", "error")
                     else:
                         flash(f"Scarico di {quantita} pz effettuato!", "success")
+                else:
+                    flash("Articolo non trovato con questo QR Code!", "error")
                 
                 cur.close()
                 conn.close()
-                return redirect(url_for("gestisci_prodotto", qr_code=qr_code))
+                return redirect(url_for("scarico"))
             except Exception as e:
                 flash(f"Errore: {e}", "error")
     return render_template("scarico.html")
