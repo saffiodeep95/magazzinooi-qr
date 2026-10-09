@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Stampa Massiva QR Code</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    <style>
+        body { font-family: sans-serif; margin: 0; padding: 10px; background: white; color: black; }
+        .no-print { text-align: center; margin-bottom: 15px; padding: 15px; background: #f1f5f9; border-radius: 8px; }
+        .btn { background: #4f46e5; color: white; padding: 8px 16px; border: none; border-radius: 6px; font-weight: bold; cursor: pointer; text-decoration: none; display: inline-block; margin: 2px; }
+        
+        .selection-bar { margin-bottom: 10px; }
+        
+        /* Griglia compatta per risparmiare carta */
+        .grid-qr {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+            gap: 6px;
+        }
+        .qr-item {
+            border: 1px dashed #cbd5e1;
+            padding: 6px;
+            text-align: center;
+            border-radius: 4px;
+            background: #fff;
+            position: relative;
+            page-break-inside: avoid;
+            break-inside: avoid;
+        }
+        .qr-item h4 {
+            margin: 2px 0 4px 0;
+            font-size: 11px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .qr-item small {
+            font-size: 9px;
+            color: #64748b;
+            display: block;
+            margin-top: 2px;
+        }
+        .qrcode-box img {
+            margin: 0 auto;
+            display: block;
+        }
+        .qr-checkbox {
+            position: absolute;
+            top: 4px;
+            left: 4px;
+        }
+
+        @media print {
+            .no-print, .qr-checkbox { display: none !important; }
+            body { padding: 0; }
+            .grid-qr { gap: 4px; }
+            .qr-item { border: 1px solid #000; padding: 4px; }
+            .qr-item.hidden-print { display: none !important; }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="no-print">
+        <a href="{{ url_for('index') }}" class="btn" style="background: #64748b;">← Torna alla Home</a>
+        <button onclick="selezionaTutti(true)" class="btn" style="background: #0284c7;">Seleziona Tutti</button>
+        <button onclick="selezionaTutti(false)" class="btn" style="background: #64748b;">Deseleziona Tutti</button>
+        <button onclick="stampaSelezionati()" class="btn" style="background: #10b981;">🖨️ Stampa Selezionati</button>
+    </div>
+
+    <div class="grid-qr" id="qr-grid">
+        {% for p in prodotti %}
+        <div class="qr-item" data-id="{{ loop.index }}">
+            <input type="checkbox" class="qr-checkbox" checked onchange="aggiornaStampa(this)">
+            <h4>{{ p.nome }}</h4>
+            <div class="qrcode-box" id="qr-{{ loop.index }}" data-code="{{ p.qr_code }}"></div>
+            <small>{{ p.qr_code }}</small>
+        </div>
+        {% endfor %}
+    </div>
+
+    <script>
+        document.addEventListener("DOMContentLoaded", function() {
+            document.querySelectorAll(".qrcode-box").forEach(function(el) {
+                let code = el.getAttribute("data-code");
+                if(code) {
+                    new QRCode(el, {
+                        text: code,
+                        width: 90,
+                        height: 90,
+                        colorDark: "#000000",
+                        colorLight: "#ffffff",
+                        correctLevel: QRCode.CorrectLevel.H
+                    });
+                }
+            });
+        });
+
+        function selezionaTutti(stato) {
+            document.querySelectorAll(".qr-checkbox").forEach(cb => {
+                cb.checked = stato;
+                aggiornaStampa(cb);
+            });
+        }
+
+        function aggiornaStampa(checkbox) {
+            let item = checkbox.closest(".qr-item");
+            if (checkbox.checked) {
+                item.classList.remove("hidden-print");
+            } else {
+                item.classList.add("hidden-print");
+            }
+        }
+
+        function stampaSelezionati() {
+            // Nasconde temporaneamente quelli non spuntati prima della stampa
+            document.querySelectorAll(".qr-item").forEach(item => {
+                let cb = item.querySelector(".qr-checkbox");
+                if (!cb.checked) {
+                    item.classList.add("hidden-print");
+                }
+            });
+            window.print();
+        }
+    </script>
+</body>
+</html>
