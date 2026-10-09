@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lista Clienti - Magazzino OMG</title>
+    <style>
+        body { font-family: sans-serif; max-width: 800px; margin: 0 auto; padding: 20px; background: #f8fafc; color: #1e293b; }
+        a { color: #4f46e5; text-decoration: none; font-weight: bold; }
+        .card { background: white; padding: 20px; border-radius: 10px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); margin-top: 20px; }
+        .client-row { border-bottom: 1px solid #e2e8f0; padding: 10px 0; display: flex; justify-content: space-between; align-items: center; }
+    </style>
+</head>
+<body>
+    <a href="{{ url_for('index') }}">← Torna alla Home</a>
+    <div class="card">
+        <h2>Elenco Clienti</h2>
+        {% if clienti %}
+            {% for c in clienti %}
+            <div class="client-row">
+                <div>
+                    <strong>{{ c.nome_azienda }}</strong><br>
+                    <small>Tel: {{ c.telefono if c.telefono else 'N/D' }} | Email: {{ c.email if c.email else 'N/D' }}</small>
+                </div>
+            </div>
+            {% endfor %}
+        {% else %}
+            <p>Nessun cliente registrato.</p>
+        {% endif %}
+    </div>
+</body>
+</html>
