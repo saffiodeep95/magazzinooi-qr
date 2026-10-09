@@ -33,7 +33,10 @@
 
     <div class="card">
         <h2>📦 Dettagli Articolo: {{ prodotto.nome }}</h2>
-        <p><strong>QR Code:</strong> <code>{{ prodotto.qr_code }}</code></p>
+        <div style="background: #f1f5f9; padding: 12px; border-radius: 8px; margin: 15px 0; display: inline-block;">
+            <span style="font-size: 0.9rem; color: #64748b; display: block;">QR Code Articolo:</span>
+            <code style="font-size: 1.3rem; font-weight: bold; color: #4f46e5;">{{ prodotto.qr_code }}</code>
+        </div>
         <p><strong>Codice SAP:</strong> {{ prodotto.sap if prodotto.sap else '-' }}</p>
         <p><strong>Posizione:</strong> {{ prodotto.posizione if prodotto.posizione else '-' }}</p>
         <p><strong>Quantità in Magazzino:</strong> <span style="font-size: 1.2rem; color: #10b981; font-weight: bold;">{{ prodotto.quantita }} pz</span></p>
@@ -90,7 +93,6 @@
                     <a href="{{ url_for('stampa_bolla', qr_code=prodotto.qr_code) }}" class="btn" style="background: #0284c7; flex: 1; text-align: center;">🖨️ Stampa Bolla</a>
                 </div>
             </div>
-        {username_placeholder}
         {% endif %}
 
         {% if session.get('is_admin') or session.get('puo_vedere_manutenzione') %}
