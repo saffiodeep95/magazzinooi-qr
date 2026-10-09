@@ -6,7 +6,7 @@ from psycopg2.extras import RealDictCursor
 from flask import Flask, render_template, request, redirect, url_for, flash, session
 from werkzeug.security import generate_password_hash, check_password_hash
 
-app = Flask(__name__)
+app = Flask(_name_)
 app.secret_key = os.environ.get("SECRET_KEY", "chiave-segreta-magazzino")
 
 DATABASE_URL = os.environ.get("DATABASE_URL")
@@ -52,6 +52,20 @@ def init_db():
                 p_iva VARCHAR(50),
                 telefono VARCHAR(50),
                 email VARCHAR(100)
+            );
+            CREATE TABLE IF NOT EXISTS storico_manutenzioni (
+                id SERIAL PRIMARY KEY,
+                qr_code VARCHAR(255) NOT NULL,
+                nome_prodotto VARCHAR(255) NOT NULL,
+                sap VARCHAR(255),
+                cliente VARCHAR(255),
+                quantita INT,
+                data_spedizione DATE,
+                data_riconsegna DATE,
+                vettore VARCHAR(255),
+                ordine_amministrativo BOOLEAN,
+                note TEXT,
+                registrato_il TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             );
         """)
         cur.execute("ALTER TABLE utenti ADD COLUMN IF NOT EXISTS puo_vedere_manutenzione BOOLEAN DEFAULT FALSE;")
@@ -452,7 +466,7 @@ def manda_manutenzione(qr_code):
                 ON CONFLICT (nome_azienda) DO NOTHING;
             """, (cliente,))
 
-        cur.execute("SELECT quantita, in_manutenzione FROM prodotti WHERE qr_code = %s;", (qr_code,))
+        cur.execute("SELECT * FROM prodotti WHERE qr_code = %s;", (qr_code,))
         prod = cur.fetchone()
         
         if prod:
@@ -476,10 +490,16 @@ def manda_manutenzione(qr_code):
                     WHERE qr_code = %s;
                 """, (cliente if cliente else None, qta_maint, data_spedizione, data_riconsegna, ordine_amministrativo, vettore if vettore else None, note, qr_code))
 
+            # Salva nello storico manutenzioni
+            cur.execute("""
+                INSERT INTO storico_manutenzioni (qr_code, nome_prodotto, sap, cliente, quantita, data_spedizione, data_riconsegna, vettore, ordine_amministrativo, note)
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s);
+            """, (qr_code, prod["nome"], prod["sap"], cliente, qta_maint, data_spedizione, data_riconsegna, vettore, ordine_amministrativo, note))
+
         conn.commit()
         cur.close()
         conn.close()
-        flash("Manutenzione salvata e cliente sincronizzato in rubrica!", "success")
+        flash("Manutenzione salvata e registrata nello storico!", "success")
     except Exception as e:
         flash(f"Errore: {e}", "error")
         
@@ -520,6 +540,26 @@ def ripristina_magazzino(qr_code):
         flash(f"Errore: {e}", "error")
 
     return redirect(url_for("gestisci_prodotto", qr_code=qr_code))
+
+@app.route("/storico_manutenzioni")
+def storico_manutenzioni():
+    if "username" not in session:
+        return redirect(url_for("login"))
+    if not session.get("is_admin") and not session.get("puo_vedere_manutenzione"):
+        flash("Accesso negato.", "error")
+        return redirect(url_for("index"))
+
+    storico = []
+    try:
+        conn = get_db_connection()
+        cur = conn.cursor()
+        cur.execute("SELECT * FROM storico_manutenzioni ORDER BY id DESC;")
+        storico = cur.fetchall()
+        cur.close()
+        conn.close()
+    except Exception as e:
+        print(f"Errore storico: {e}")
+    return render_template("storico_manutenzioni.html", storico=storico)
 
 @app.route("/bolla/<qr_code>")
 def stampa_bolla(qr_code):
@@ -633,5 +673,5 @@ def lista_manutenzioni():
         print(f"Errore manutenzioni: {e}")
     return render_template("manutenzioni.html", prodotti=prodotti_maint)
 
-if __name__ == "_main_":
+if _name_ == "_main_":
     app.run(host="0.0.0.0", port=5000, debug=True)
