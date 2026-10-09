@@ -4,7 +4,7 @@ import sqlite3
 import os
 
 app = Flask(__name__)
-app.secret_key = 'chiave_segreta_magazzino'
+app.secret_key = 'chiave_segreta_magazzino_sicura'
 
 login_manager = LoginManager()
 login_manager.init_app(app)
@@ -31,7 +31,7 @@ def init_db():
         )
     ''')
     
-    # Tabella Magazzino Standard e Pesante
+    # Tabella Magazzino (Standard e Sezione Pesante: Rulli, Riduttori, Motori con peso)
     conn.execute('''
         CREATE TABLE IF NOT EXISTS rulli (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -59,7 +59,7 @@ def init_db():
         )
     ''')
     
-    # Controlla e aggiunge colonne mancanti se il DB esisteva già con una struttura vecchia
+    # Migrazione automatica delle colonne se il DB esisteva già
     cursor = conn.cursor()
     cursor.execute("PRAGMA table_info(users)")
     user_columns = [col['name'] for col in cursor.fetchall()]
@@ -73,7 +73,7 @@ def init_db():
     if 'peso' not in rulli_columns:
         conn.execute('ALTER TABLE rulli ADD COLUMN peso REAL DEFAULT 0.0')
 
-    # Assicura che l'admin esista sempre e abbia accesso completo
+    # Admin di default
     conn.execute('''
         INSERT INTO users (id, username, password, role, puo_vedere_pesanti) 
         VALUES (1, 'admin', 'admin123', 'admin', 1)
@@ -96,7 +96,8 @@ def load_user(user_id):
     user = conn.execute('SELECT * FROM users WHERE id = ?', (user_id,)).fetchone()
     conn.close()
     if user:
-        return User(user['id'], user['username'], user['role'], user['puo_vedere_pesanti'])
+        pesanti_val = user['puo_vedere_pesanti'] if 'puo_vedere_pesanti' in user.keys() else 1
+        return User(user['id'], user['username'], user['role'], pesanti_val)
     return None
 
 @app.route('/')
@@ -104,7 +105,6 @@ def load_user(user_id):
 def index():
     return render_template('index.html')
 
-# --- GESTIONE UTENTI E CONCESSIONI (Admin) ---
 @app.route('/users', methods=['GET', 'POST'])
 @login_required
 def manage_users():
@@ -147,7 +147,6 @@ def delete_user(id):
     flash("Utente eliminato.", "success")
     return redirect(url_for('manage_users'))
 
-# --- GESTIONE MAGAZZINO STANDARD E SEZIONE PESANTE ---
 @app.route('/rulli', methods=['GET', 'POST'])
 @login_required
 def gestione_rulli():
@@ -185,7 +184,6 @@ def gestione_rulli():
     conn.close()
     return render_template('rulli.html', rulli=rulli, pesanti=pesanti, puo_vedere_pesanti=(current_user.role == 'admin' or current_user.puo_vedere_pesanti == 1))
 
-# --- REGISTRO MANUTENZIONI ---
 @app.route('/manutenzioni', methods=['GET', 'POST'])
 @login_required
 def manutenzioni():
@@ -229,7 +227,6 @@ def manutenzioni():
     conn.close()
     return render_template('manutenzioni.html', storico=storico, rulli=rulli_totali)
 
-# --- LOGIN / LOGOUT ---
 @app.route('/login', methods=['GET', 'POST'])
 def login():
     if request.method == 'POST':
@@ -241,9 +238,11 @@ def login():
         conn.close()
         
         if user_data:
-            user = User(user_data['id'], user_data['username'], user_data['role'], user_data['puo_vedere_pesanti'])
+            pesanti_val = user_data['puo_vedere_pesanti'] if 'puo_vedere_pesanti' in user_data.keys() else 1
+            user = User(user_data['id'], user_data['username'], user_data['role'], pesanti_val)
             login_user(user)
             return redirect(url_for('index'))
+            
         flash("Credenziali non valide.", "danger")
     return render_template('login.html')
 
