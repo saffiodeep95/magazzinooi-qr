@@ -7,31 +7,36 @@
     <style>
         body { font-family: sans-serif; max-width: 1000px; margin: 0 auto; padding: 20px; background: #f8fafc; color: #1e293b; }
         .card { background: white; padding: 20px; border-radius: 12px; border: 1px solid #e2e8f0; margin-bottom: 20px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
-        .btn { background: #4f46e5; color: white; padding: 8px 14px; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; text-decoration: none; display: inline-block; }
+        .btn { background: #4f46e5; color: white; padding: 8px 14px; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; text-decoration: none; display: inline-block; margin: 3px; }
         .btn:hover { opacity: 0.9; }
         table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 0.9rem; }
         th, td { padding: 10px; border-bottom: 1px solid #e2e8f0; text-align: left; }
         th { background: #f1f5f9; }
         input, select { width: 100%; padding: 8px; margin: 6px 0 12px 0; border: 1px solid #cbd5e1; border-radius: 6px; box-sizing: border-box; }
         .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+        .menu-bar { display: flex; flex-wrap: wrap; gap: 5px; align-items: center; margin-bottom: 20px; background: white; padding: 12px; border-radius: 12px; border: 1px solid #e2e8f0; }
     </style>
 </head>
 <body>
 
-    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
         <h1>📦 Magazzino OMG</h1>
-        <div>
-            <a href="{{ url_for('carico') }}" class="btn" style="background: #10b981;">➕ Carico</a>
-            <a href="{{ url_for('scarico') }}" class="btn" style="background: #ea580c;">➖ Scarico</a>
-            <a href="{{ url_for('clienti') }}" class="btn" style="background: #0284c7;">📇 Rubrica</a>
-            {% if session.get('is_admin') or session.get('puo_vedere_manutenzione') %}
-            <a href="{{ url_for('lista_manutenzioni') }}" class="btn" style="background: #d97706;">🔧 Manutenzioni</a>
-            {% endif %}
-            {% if session.get('is_admin') %}
-            <a href="{{ url_for('admin_utenti') }}" class="btn" style="background: #7c3aed;">👑 Utenti</a>
-            {% endif %}
-            <a href="{{ url_for('logout') }}" class="btn" style="background: #ef4444;">Esci</a>
-        </div>
+        <a href="{{ url_for('logout') }}" class="btn" style="background: #ef4444;">Esci</a>
+    </div>
+
+    <!-- Barra di navigazione comandi -->
+    <div class="menu-bar">
+        <a href="{{ url_for('carico') }}" class="btn" style="background: #10b981;">➕ Carico</a>
+        <a href="{{ url_for('scarico') }}" class="btn" style="background: #ea580c;">➖ Scarico</a>
+        <a href="{{ url_for('clienti') }}" class="btn" style="background: #0284c7;">📇 Rubrica</a>
+        <a href="{{ url_for('pagina_upload') }}" class="btn" style="background: #0284c7;">📁 Upload CSV</a>
+        <a href="{{ url_for('stampa_tutti_qr') }}" class="btn" style="background: #8b5cf6;">🖨️ Stampa Tutti i QR</a>
+        {% if session.get('is_admin') or session.get('puo_vedere_manutenzione') %}
+        <a href="{{ url_for('lista_manutenzioni') }}" class="btn" style="background: #d97706;">🔧 Manutenzioni</a>
+        {% endif %}
+        {% if session.get('is_admin') %}
+        <a href="{{ url_for('admin_utenti') }}" class="btn" style="background: #7c3aed;">👑 Utenti</a>
+        {% endif %}
     </div>
 
     {% with messages = get_flashed_messages() %}
@@ -69,7 +74,7 @@
                 <label>Posizione in Magazzino</label>
                 <input type="text" name="posizione" placeholder="Es. Scaffale A, Corsia 2...">
             </div>
-            <button type="submit" class="btn" style="width: 100%; margin-top: 5px;">Salva Articolo</button>
+            <button type="submit" class="btn" style="width: 100%; margin-top: 5px; background: #4f46e5;">Salva Articolo</button>
         </form>
     </div>
 
@@ -106,7 +111,7 @@
                         </td>
                         <td>{{ p.posizione if p.posizione else '-' }}</td>
                         <td>
-                            <a href="{{ url_for('gestisci_prodotto', qr_code=p.qr_code) }}" class="btn" style="padding: 5px 10px; font-size: 0.8rem;">Gestisci</a>
+                            <a href="{{ url_for('gestisci_prodotto', qr_code=p.qr_code) }}" class="btn" style="padding: 5px 10px; font-size: 0.8rem; background: #4f46e5;">Gestisci</a>
                         </td>
                     </tr>
                     {% endfor %}
