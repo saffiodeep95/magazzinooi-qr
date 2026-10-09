@@ -3,7 +3,7 @@ import psycopg2
 from psycopg2.extras import RealDictCursor
 from flask import Flask, render_template, request, redirect, url_for, flash
 
-app = Flask(__name__)
+app = Flask(_name_)
 app.secret_key = os.environ.get("SECRET_KEY", "chiave-segreta-magazzino")
 
 DATABASE_URL = os.environ.get("DATABASE_URL")
@@ -18,6 +18,8 @@ def init_db():
     try:
         conn = get_db_connection()
         cur = conn.cursor()
+        
+        # Tabella prodotti principale con supporto per la nuova sezione e manutenzione
         cur.execute("""
             CREATE TABLE IF NOT EXISTS prodotti (
                 id SERIAL PRIMARY KEY,
@@ -27,7 +29,7 @@ def init_db():
                 peso VARCHAR(255),
                 quantita INT DEFAULT 0,
                 posizione VARCHAR(255),
-                is_pesante INT DEFAULT 0,
+                magazzino_composizione_motori INT DEFAULT 0,
                 in_manutenzione INT DEFAULT 0,
                 cliente_manutenzione VARCHAR(255),
                 quantita_manutenzione INT DEFAULT 0,
@@ -38,10 +40,30 @@ def init_db():
                 note_manutenzione TEXT
             );
         """)
+        
+        # Controllo e aggiunta automatica delle colonne se la tabella esisteva già
+        colonne_da_aggiungere = [
+            ("peso", "VARCHAR(255)"),
+            ("magazzino_composizione_motori", "INT DEFAULT 0"),
+            ("in_manutenzione", "INT DEFAULT 0"),
+            ("cliente_manutenzione", "VARCHAR(255)"),
+            ("quantita_manutenzione", "INT DEFAULT 0"),
+            ("data_spedizione", "VARCHAR(255)"),
+            ("data_riconsegna", "VARCHAR(255)"),
+            ("vettore", "VARCHAR(255)"),
+            ("ordine_amministrativo", "INT DEFAULT 0"),
+            ("note_manutenzione", "TEXT")
+        ]
+        
+        for col_nome, col_tipo in colonne_da_aggiungere:
+            cur.execute(f"""
+                ALTER TABLE prodotti ADD COLUMN IF NOT EXISTS {col_nome} {col_tipo};
+            """)
+
         conn.commit()
         cur.close()
         conn.close()
-        print("Inizializzazione tabella prodotti completata con successo.")
+        print("Inizializzazione database completata con successo.")
     except Exception as e:
         print(f"Errore durante l'inizializzazione del database: {e}")
 
@@ -51,20 +73,19 @@ init_db()
 def index():
     conn = get_db_connection()
     cur = conn.cursor()
-    # Mostra i prodotti normali (esclusi quelli di composizione e motori)
-    cur.execute("SELECT * FROM prodotti WHERE is_pesante = 0 OR is_pesante IS NULL ORDER BY nome ASC;")
+    # Mostra i prodotti del magazzino standard (esclusi quelli della nuova sezione)
+    cur.execute("SELECT * FROM prodotti WHERE magazzino_composizione_motori = 0 OR magazzino_composizione_motori IS NULL ORDER BY nome ASC;")
     prodotti = cur.fetchall()
     cur.close()
     conn.close()
     return render_template("index.html", prodotti=prodotti)
 
-# Nuova Sezione: Magazzino Composizione e Motori
+# Sezione dedicata Magazzino Composizione e Motori
 @app.route("/magazzino_composizione_motori")
-def magazzino_composizione_motori():
+def magazzino_composizione_motori_view():
     conn = get_db_connection()
     cur = conn.cursor()
-    # Mostra solo i prodotti con il flag attivo
-    cur.execute("SELECT * FROM prodotti WHERE is_pesante = 1 ORDER BY nome ASC;")
+    cur.execute("SELECT * FROM prodotti WHERE magazzino_composizione_motori = 1 ORDER BY nome ASC;")
     prodotti = cur.fetchall()
     cur.close()
     conn.close()
@@ -101,7 +122,8 @@ def aggiungi_prodotto():
     peso = request.form.get("peso", "")
     quantita = int(request.form.get("quantita", 0))
     posizione = request.form.get("posizione", "")
-    is_pesante = 1 if request.form.get("magazzino_composizione_motori") else 0
+    # Legge il flag specifico per questa sezione
+    flag_sezione = 1 if request.form.get("magazzino_composizione_motori") else 0
 
     if not qr_code or not nome:
         flash("QR Code e Nome sono obbligatori!", "error")
@@ -112,7 +134,7 @@ def aggiungi_prodotto():
         cur = conn.cursor()
         cur.execute(
             """
-            INSERT INTO prodotti (qr_code, nome, sap, peso, quantita, posizione, is_pesante)
+            INSERT INTO prodotti (qr_code, nome, sap, peso, quantita, posizione, magazzino_composizione_motori)
             VALUES (%s, %s, %s, %s, %s, %s, %s)
             ON CONFLICT (qr_code)
             DO UPDATE SET 
@@ -121,9 +143,9 @@ def aggiungi_prodotto():
                 sap = EXCLUDED.sap,
                 peso = EXCLUDED.peso,
                 posizione = EXCLUDED.posizione,
-                is_pesante = EXCLUDED.is_pesante;
+                magazzino_composizione_motori = EXCLUDED.magazzino_composizione_motori;
             """,
-            (qr_code, nome, sap, peso, quantita, posizione, is_pesante)
+            (qr_code, nome, sap, peso, quantita, posizione, flag_sezione)
         )
         conn.commit()
         cur.close()
@@ -132,8 +154,8 @@ def aggiungi_prodotto():
     except Exception as e:
         flash(f"Errore nell'inserimento: {e}", "error")
 
-    if is_pesante:
-        return redirect(url_for("magazzino_composizione_motori"))
+    if flag_sezione:
+        return redirect(url_for("magazzino_composizione_motori_view"))
     return redirect(url_for("index"))
 
 @app.route("/carico", methods=["GET", "POST"])
@@ -277,5 +299,5 @@ def elimina_prodotto():
 
     return redirect(url_for("index"))
 
-if __name__ == "_main_":
+if _name_ == "_main_":
     app.run(debug=True)
