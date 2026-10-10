@@ -22,7 +22,7 @@ def init_db():
         conn = get_db_connection()
         cur = conn.cursor()
         
-        # Tabella Prodotti
+        # Tabella Prodotti unificata
         cur.execute("""
             CREATE TABLE IF NOT EXISTS prodotti (
                 id SERIAL PRIMARY KEY,
@@ -87,7 +87,7 @@ def init_db():
             );
         """)
         
-        # Aggiunta sicura di tutte le colonne nel caso la tabella esista già senza di esse
+        # Sicurezza colonne esistenti
         cur.execute("ALTER TABLE prodotti ADD COLUMN IF NOT EXISTS magazzino_composizione INT DEFAULT 0;")
         cur.execute("ALTER TABLE prodotti ADD COLUMN IF NOT EXISTS in_manutenzione INT DEFAULT 0;")
         cur.execute("ALTER TABLE prodotti ADD COLUMN IF NOT EXISTS cliente_manutenzione VARCHAR(255);")
@@ -98,7 +98,7 @@ def init_db():
         cur.execute("ALTER TABLE prodotti ADD COLUMN IF NOT EXISTS ordine_amministrativo INT DEFAULT 0;")
         cur.execute("ALTER TABLE prodotti ADD COLUMN IF NOT EXISTS note_manutenzione TEXT;")
 
-        # Crea un utente admin predefinito se non esiste
+        # Utente admin predefinito
         cur.execute("SELECT * FROM utenti WHERE username = 'admin';")
         if not cur.fetchone():
             hashed_pw = generate_password_hash("admin")
@@ -121,12 +121,16 @@ def require_login():
 
 @app.route("/")
 def index():
-    conn = get_db_connection()
-    cur = conn.cursor()
-    cur.execute("SELECT * FROM prodotti WHERE magazzino_composizione = 0 OR magazzino_composizione IS NULL ORDER BY nome ASC;")
-    prodotti = cur.fetchall()
-    cur.close()
-    conn.close()
+    prodotti = []
+    try:
+        conn = get_db_connection()
+        cur = conn.cursor()
+        cur.execute("SELECT * FROM prodotti WHERE magazzino_composizione = 0 OR magazzino_composizione IS NULL ORDER BY nome ASC;")
+        prodotti = cur.fetchall()
+        cur.close()
+        conn.close()
+    except Exception as e:
+        print(f"Errore index: {e}")
     return render_template("index.html", prodotti=prodotti)
 
 @app.route("/login", methods=["GET", "POST"])
@@ -134,22 +138,25 @@ def login():
     if request.method == "POST":
         username = request.form.get("username")
         password = request.form.get("password")
-        conn = get_db_connection()
-        cur = conn.cursor()
-        cur.execute("SELECT * FROM utenti WHERE username = %s;", (username,))
-        user = cur.fetchone()
-        cur.close()
-        conn.close()
-        
-        if user and check_password_hash(user['password'], password):
-            session['username'] = user['username']
-            session['is_admin'] = user['is_admin']
-            session['puo_vedere_manutenzione'] = user['puo_vedere_manutenzione']
-            session['puo_eliminare'] = user['puo_eliminare']
-            session['puo_eliminare_storico'] = user['puo_eliminare_storico']
-            return redirect(url_for('index'))
-        else:
-            flash("Credenziali non valide!", "error")
+        try:
+            conn = get_db_connection()
+            cur = conn.cursor()
+            cur.execute("SELECT * FROM utenti WHERE username = %s;", (username,))
+            user = cur.fetchone()
+            cur.close()
+            conn.close()
+            
+            if user and check_password_hash(user['password'], password):
+                session['username'] = user['username']
+                session['is_admin'] = user['is_admin']
+                session['puo_vedere_manutenzione'] = user['puo_vedere_manutenzione']
+                session['puo_eliminare'] = user['puo_eliminare']
+                session['puo_eliminare_storico'] = user['puo_eliminare_storico']
+                return redirect(url_for('index'))
+            else:
+                flash("Credenziali non valide!", "error")
+        except Exception as e:
+            flash(f"Errore login: {e}", "error")
     return render_template("login.html")
 
 @app.route("/logout")
@@ -182,12 +189,16 @@ def admin_utenti():
     if not session.get('is_admin'):
         flash("Accesso negato.", "error")
         return redirect(url_for('index'))
-    conn = get_db_connection()
-    cur = conn.cursor()
-    cur.execute("SELECT * FROM utenti ORDER BY username ASC;")
-    utenti = cur.fetchall()
-    cur.close()
-    conn.close()
+    utenti = []
+    try:
+        conn = get_db_connection()
+        cur = conn.cursor()
+        cur.execute("SELECT * FROM utenti ORDER BY username ASC;")
+        utenti = cur.fetchall()
+        cur.close()
+        conn.close()
+    except Exception as e:
+        print(f"Errore admin: {e}")
     return render_template("admin_utenti.html", utenti=utenti)
 
 @app.route("/toggle_permesso/<int:user_id>/<tipo>", methods=["POST"])
@@ -342,22 +353,30 @@ def stampa_tutti_qr():
 
 @app.route("/magazzino_composizione")
 def magazzino_composizione():
-    conn = get_db_connection()
-    cur = conn.cursor()
-    cur.execute("SELECT * FROM prodotti WHERE magazzino_composizione = 1 ORDER BY nome ASC;")
-    prodotti = cur.fetchall()
-    cur.close()
-    conn.close()
+    prodotti = []
+    try:
+        conn = get_db_connection()
+        cur = conn.cursor()
+        cur.execute("SELECT * FROM prodotti WHERE magazzino_composizione = 1 ORDER BY nome ASC;")
+        prodotti = cur.fetchall()
+        cur.close()
+        conn.close()
+    except Exception as e:
+        print(f"Errore magazzino_composizione: {e}")
     return render_template("magazzino_composizione.html", prodotti=prodotti)
 
 @app.route("/manutenzioni")
 def manutenzioni():
-    conn = get_db_connection()
-    cur = conn.cursor()
-    cur.execute("SELECT * FROM prodotti WHERE in_manutenzione = 1 ORDER BY nome ASC;")
-    prodotti = cur.fetchall()
-    cur.close()
-    conn.close()
+    prodotti = []
+    try:
+        conn = get_db_connection()
+        cur = conn.cursor()
+        cur.execute("SELECT * FROM prodotti WHERE in_manutenzione = 1 ORDER BY nome ASC;")
+        prodotti = cur.fetchall()
+        cur.close()
+        conn.close()
+    except Exception as e:
+        print(f"Errore manutenzioni: {e}")
     return render_template("manutenzioni.html", prodotti=prodotti)
 
 @app.route("/lista_manutenzioni")
@@ -366,12 +385,16 @@ def lista_manutenzioni():
 
 @app.route("/storico_manutenzioni")
 def storico_manutenzioni():
-    conn = get_db_connection()
-    cur = conn.cursor()
-    cur.execute("SELECT * FROM storico_manutenzioni ORDER BY registrato_il DESC;")
-    storico = cur.fetchall()
-    cur.close()
-    conn.close()
+    storico = []
+    try:
+        conn = get_db_connection()
+        cur = conn.cursor()
+        cur.execute("SELECT * FROM storico_manutenzioni ORDER BY registrato_il DESC;")
+        storico = cur.fetchall()
+        cur.close()
+        conn.close()
+    except Exception as e:
+        print(f"Errore storico: {e}")
     return render_template("storico_manutenzioni.html", storico=storico)
 
 @app.route("/elimina_storico_manutenzione/<int:storico_id>", methods=["POST"])
