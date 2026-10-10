@@ -87,7 +87,16 @@ def init_db():
             );
         """)
         
+        # Aggiunta sicura di tutte le colonne nel caso la tabella esista già senza di esse
         cur.execute("ALTER TABLE prodotti ADD COLUMN IF NOT EXISTS magazzino_composizione INT DEFAULT 0;")
+        cur.execute("ALTER TABLE prodotti ADD COLUMN IF NOT EXISTS in_manutenzione INT DEFAULT 0;")
+        cur.execute("ALTER TABLE prodotti ADD COLUMN IF NOT EXISTS cliente_manutenzione VARCHAR(255);")
+        cur.execute("ALTER TABLE prodotti ADD COLUMN IF NOT EXISTS quantita_manutenzione INT DEFAULT 0;")
+        cur.execute("ALTER TABLE prodotti ADD COLUMN IF NOT EXISTS data_spedizione VARCHAR(255);")
+        cur.execute("ALTER TABLE prodotti ADD COLUMN IF NOT EXISTS data_riconsegna VARCHAR(255);")
+        cur.execute("ALTER TABLE prodotti ADD COLUMN IF NOT EXISTS vettore VARCHAR(255);")
+        cur.execute("ALTER TABLE prodotti ADD COLUMN IF NOT EXISTS ordine_amministrativo INT DEFAULT 0;")
+        cur.execute("ALTER TABLE prodotti ADD COLUMN IF NOT EXISTS note_manutenzione TEXT;")
 
         # Crea un utente admin predefinito se non esiste
         cur.execute("SELECT * FROM utenti WHERE username = 'admin';")
