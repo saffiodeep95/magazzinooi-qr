@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Magazzino Composizione</title>
+    <title>Magazzino Pesante</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     <style>
         body { font-family: sans-serif; max-width: 1200px; margin: 0 auto; padding: 20px; background: #f8fafc; color: #1e293b; }
@@ -19,12 +19,12 @@
 <body>
 
     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; flex-wrap: wrap; gap: 10px;">
-        <h1>⚙️ Magazzino Composizione</h1>
+        <h1>⚖️ Magazzino Pesante</h1>
         <a href="{{ url_for('index') }}" class="btn" style="background: #64748b;">← Torna alla Home Principale</a>
     </div>
 
     <div class="card">
-        <h3>📋 Elenco Articoli in Magazzino Composizione</h3>
+        <h3>📋 Elenco Articoli in Magazzino Pesante</h3>
         {% if prodotti %}
         <div style="overflow-x: auto;">
             <table>
@@ -43,7 +43,7 @@
                     <tr>
                         <td><strong>{{ p.nome }}</strong></td>
                         <td>
-                            <div class="qrcode-container" id="qr-comp-{{ loop.index }}" data-code="{{ p.qr_code }}"></div>
+                            <div class="qrcode-container" id="qr-pesante-{{ loop.index }}" data-code="{{ p.qr_code }}"></div>
                             <small style="color: #64748b; font-family: monospace;">{{ p.qr_code }}</small>
                         </td>
                         <td>{{ p.sap if p.sap else '-' }}</td>
@@ -58,7 +58,7 @@
             </table>
         </div>
         {% else %}
-            <p style="color: #64748b;">Nessun articolo presente nel Magazzino Composizione.</p>
+            <p style="color: #64748b;">Nessun articolo presente nel Magazzino Pesante.</p>
         {% endif %}
     </div>
 
