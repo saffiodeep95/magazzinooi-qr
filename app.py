@@ -22,7 +22,7 @@ def init_db():
         conn = get_db_connection()
         cur = conn.cursor()
         
-        # Tabella Prodotti
+        # Tabella Prodotti con magazzino_pesante
         cur.execute("""
             CREATE TABLE IF NOT EXISTS prodotti (
                 id SERIAL PRIMARY KEY,
@@ -32,7 +32,7 @@ def init_db():
                 peso VARCHAR(255),
                 quantita INT DEFAULT 0,
                 posizione VARCHAR(255),
-                magazzino_composizione INT DEFAULT 0,
+                magazzino_pesante INT DEFAULT 0,
                 in_manutenzione INT DEFAULT 0,
                 cliente_manutenzione VARCHAR(255),
                 quantita_manutenzione INT DEFAULT 0,
@@ -87,8 +87,8 @@ def init_db():
             );
         """)
         
-        # Aggiunta sicura delle colonne se mancanti
-        cur.execute("ALTER TABLE prodotti ADD COLUMN IF NOT EXISTS magazzino_composizione INT DEFAULT 0;")
+        # Aggiunta sicura delle colonne (incluso supporto per migrazione da vecchi nomi)
+        cur.execute("ALTER TABLE prodotti ADD COLUMN IF NOT EXISTS magazzino_pesante INT DEFAULT 0;")
         cur.execute("ALTER TABLE prodotti ADD COLUMN IF NOT EXISTS in_manutenzione INT DEFAULT 0;")
         cur.execute("ALTER TABLE prodotti ADD COLUMN IF NOT EXISTS cliente_manutenzione VARCHAR(255);")
         cur.execute("ALTER TABLE prodotti ADD COLUMN IF NOT EXISTS quantita_manutenzione INT DEFAULT 0;")
@@ -125,7 +125,7 @@ def index():
     try:
         conn = get_db_connection()
         cur = conn.cursor()
-        cur.execute("SELECT * FROM prodotti WHERE magazzino_composizione != 1 OR magazzino_composizione IS NULL ORDER BY nome ASC;")
+        cur.execute("SELECT * FROM prodotti WHERE magazzino_pesante != 1 OR magazzino_pesante IS NULL ORDER BY nome ASC;")
         prodotti = cur.fetchall()
         cur.close()
         conn.close()
@@ -351,19 +351,19 @@ def stampa_tutti_qr():
     conn.close()
     return render_template("stampa_tutti_qr.html", prodotti=prodotti)
 
-@app.route("/magazzino_composizione")
-def magazzino_composizione():
+@app.route("/magazzino_pesante")
+def magazzino_pesante():
     prodotti = []
     try:
         conn = get_db_connection()
         cur = conn.cursor()
-        cur.execute("SELECT * FROM prodotti WHERE magazzino_composizione = 1 ORDER BY nome ASC;")
+        cur.execute("SELECT * FROM prodotti WHERE magazzino_pesante = 1 ORDER BY nome ASC;")
         prodotti = cur.fetchall()
         cur.close()
         conn.close()
     except Exception as e:
-        print(f"Errore magazzino_composizione: {e}")
-    return render_template("magazzino_composizione.html", prodotti=prodotti)
+        print(f"Errore magazzino_pesante: {e}")
+    return render_template("magazzino_pesante.html", prodotti=prodotti)
 
 @app.route("/manutenzioni")
 def manutenzioni():
@@ -505,7 +505,7 @@ def aggiungi_prodotto():
     peso = request.form.get("peso", "")
     quantita = int(request.form.get("quantita", 0))
     posizione = request.form.get("posizione", "")
-    flag_sezione = 1 if request.form.get("magazzino_composizione") else 0
+    flag_sezione = 1 if request.form.get("magazzino_pesante") else 0
 
     if not qr_code or not nome:
         flash("QR Code e Nome sono obbligatori!", "error")
@@ -516,7 +516,7 @@ def aggiungi_prodotto():
         cur = conn.cursor()
         cur.execute(
             """
-            INSERT INTO prodotti (qr_code, nome, sap, peso, quantita, posizione, magazzino_composizione)
+            INSERT INTO prodotti (qr_code, nome, sap, peso, quantita, posizione, magazzino_pesante)
             VALUES (%s, %s, %s, %s, %s, %s, %s)
             ON CONFLICT (qr_code)
             DO UPDATE SET 
@@ -525,7 +525,7 @@ def aggiungi_prodotto():
                 sap = EXCLUDED.sap,
                 peso = EXCLUDED.peso,
                 posizione = EXCLUDED.posizione,
-                magazzino_composizione = EXCLUDED.magazzino_composizione;
+                magazzino_pesante = EXCLUDED.magazzino_pesante;
             """,
             (qr_code, nome, sap, peso, quantita, posizione, flag_sezione)
         )
@@ -537,7 +537,7 @@ def aggiungi_prodotto():
         flash(f"Errore nell'inserimento: {e}", "error")
 
     if flag_sezione == 1:
-        return redirect(url_for("magazzino_composizione"))
+        return redirect(url_for("magazzino_pesante"))
     return redirect(url_for("index"))
 
 @app.route("/manda_manutenzione/<qr_code>", methods=["POST"])
