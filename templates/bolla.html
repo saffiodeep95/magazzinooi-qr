@@ -2,91 +2,90 @@
 <html lang="it">
 <head>
     <meta charset="UTF-8">
-    <title>Bolla di Manutenzione - {{ prodotto.nome }}</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bolla / Documento Manutenzione</title>
     <style>
-        body { font-family: Arial, sans-serif; max-width: 800px; margin: 0 auto; padding: 30px; color: #000; background: #fff; }
-        .header-bolla { display: flex; justify-content: space-between; border-bottom: 2px solid #000; padding-bottom: 15px; margin-bottom: 20px; }
-        .company-title { font-size: 1.5rem; font-weight: bold; }
-        .info-box { border: 1px solid #000; padding: 15px; border-radius: 6px; margin-bottom: 20px; }
+        body { font-family: sans-serif; max-width: 800px; margin: 0 auto; padding: 30px; background: white; color: #1e293b; }
+        .header { display: flex; justify-content: space-between; border-bottom: 2px solid #e2e8f0; padding-bottom: 20px; margin-bottom: 20px; }
+        .section { margin-bottom: 20px; }
         table { width: 100%; border-collapse: collapse; margin-top: 15px; }
-        th, td { border: 1px solid #000; padding: 10px; text-align: left; font-size: 0.95rem; }
-        th { background: #f3f4f6; }
-        .footer-print { margin-top: 40px; display: flex; justify-content: space-between; text-align: center; }
-        .signature-line { border-top: 1px solid #000; width: 200px; margin-top: 50px; padding-top: 5px; }
-        @media print {
-            .no-print { display: none; }
-        }
+        th, td { padding: 10px; border: 1px solid #cbd5e1; text-align: left; font-size: 0.9rem; }
+        th { background: #f1f5f9; }
+        .btn { background: #4f46e5; color: white; padding: 10px 16px; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; text-decoration: none; display: inline-block; }
+        @media print { .no-print { display: none; } }
     </style>
 </head>
 <body>
 
-    <div class="no-print" style="margin-bottom: 20px; text-align: right;">
-        <button onclick="window.print();" style="padding: 10px 20px; background: #000; color: #fff; border: none; border-radius: 5px; cursor: pointer; font-size: 1rem;">🖨️ Stampa Bolla</button>
-        <a href="{{ url_for('gestisci_prodotto', qr_code=prodotto.qr_code) }}" style="margin-left: 10px; text-decoration: none; padding: 10px 20px; background: #6b7280; color: #fff; border-radius: 5px;">Indietro</a>
+    <div class="no-print" style="text-align: right; margin-bottom: 20px;">
+        <button onclick="window.print();" class="btn" style="background: #10b981;">🖨️ Stampa / Salva PDF</button>
+        <a href="{{ url_for('index') }}" class="btn" style="background: #64748b;">Torna alla Home</a>
     </div>
 
-    <div class="header-bolla">
+    <div class="header">
         <div>
-            <div class="company-title">MAGAZZINO OMG</div>
-            <div>Documento di Spedizione / Manutenzione</div>
+            <h2>DOCUMENTO DI SPEDIZIONE / RIPARAZIONE</h2>
+            <p><strong>Causale:</strong> Invio in Manutenzione / Conto Lavoro</p>
         </div>
         <div style="text-align: right;">
-            <div><strong>Data Spedizione:</strong> {{ prodotto.data_spedizione if prodotto.data_spedizione else '-' }}</div>
-            <div><strong>Riconsegna Prevista:</strong> {{ prodotto.data_riconsegna if prodotto.data_riconsegna else '-' }}</div>
+            <p><strong>Data:</strong> {{ prodotto.data_spedizione or '-' }}</p>
         </div>
     </div>
 
-    <div class="info-box">
-        <h3>Dati Destinatario / Cliente</h3>
-        {% if cliente %}
-            <p><strong>Azienda:</strong> {{ cliente.nome_azienda }}</p>
-            <p><strong>Indirizzo:</strong> {{ cliente.indirizzo if cliente.indirizzo else '-' }}</p>
-            <p><strong>Partita IVA / CF:</strong> {{ cliente.p_iva if cliente.p_iva else '-' }}</p>
-            <p><strong>Telefono / Email:</strong> {{ cliente.telefono if cliente.telefono else '-' }} / {{ cliente.email if cliente.email else '-' }}</p>
-        {% else %}
-            <p><strong>Cliente specificato:</strong> {{ prodotto.cliente_manutenzione if prodotto.cliente_manutenzione else 'Nessun cliente associato' }}</p>
-        {% endif %}
+    <div style="display: flex; justify-content: space-between; margin-bottom: 30px;">
+        <div style="width: 48%;">
+            <h4>Mittente:</h4>
+            <p><strong>Magazzino Interno OMG</strong><br>Reparto Manutenzione e Logistica</p>
+        </div>
+        <div style="width: 48%;">
+            <h4>Destinatario / Cliente:</h4>
+            {% if cliente %}
+                <p><strong>{{ cliente.nome_azienda }}</strong><br>
+                Indirizzo: {{ cliente.indirizzo or '-' }}<br>
+                P.IVA: {{ cliente.p_iva or '-' }}<br>
+                Tel: {{ cliente.telefono or '-' }}</p>
+            {% else %}
+                <p><strong>{{ prodotto.cliente_manutenzione or 'N.D.' }}</strong></p>
+            {% endif %}
+        </div>
     </div>
 
-    <div class="info-box">
-        <h3>Dettagli Vettore & Amministrativi</h3>
-        <p><strong>Vettore incaricato:</strong> {{ prodotto.vettore if prodotto.vettore else 'Non specificato' }}</p>
-        <p><strong>Ordine Amministrativo / Autorizzato:</strong> {% if prodotto.ordine_amministrativo %} <strong>SÌ (Autorizzato)</strong> {% else %} No {% endif %}</p>
+    <div class="section">
+        <table>
+            <thead>
+                <tr>
+                    <th>Codice QR / Articolo</th>
+                    <th>Codice SAP</th>
+                    <th>Quantità</th>
+                    <th>Vettore</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td><strong>{{ prodotto.nome }}</strong><br><small>{{ prodotto.qr_code }}</small></td>
+                    <td>{{ prodotto.sap if prodotto.sap else '-' }}</td>
+                    <td><strong>{{ prodotto.quantita_manutenzione }} pz</strong></td>
+                    <td>{{ prodotto.vettore if prodotto.vettore else '-' }}</td>
+                </tr>
+            </tbody>
+        </table>
     </div>
-
-    <h3>Articoli in Oggetto</h3>
-    <table>
-        <thead>
-            <tr>
-                <th>Codice QR / Articolo</th>
-                <th>Descrizione Prodotto</th>
-                <th>Codice SAP</th>
-                <th>Quantità Pezzi</th>
-            </tr>
-        </thead>
-        <tbody>
-            <tr>
-                <td><code>{{ prodotto.qr_code }}</code></td>
-                <td><strong>{{ prodotto.nome }}</strong></td>
-                <td>{{ prodotto.sap if prodotto.sap else '-' }}</td>
-                <td><strong>{{ prodotto.quantita_manutenzione if prodotto.quantita_manutenzione else 1 }}</strong> pz</td>
-            </tr>
-        </tbody>
-    </table>
 
     {% if prodotto.note_manutenzione %}
-    <div style="margin-top: 20px; border: 1px solid #000; padding: 15px;">
-        <strong>Note e Lavorazioni Richieste:</strong>
-        <p>{{ prodotto.note_manutenzione }}</p>
+    <div class="section">
+        <h4>Note / Descrizione Intervento:</h4>
+        <p style="background: #f8fafc; padding: 12px; border: 1px solid #e2e8f0; border-radius: 6px;">{{ prodotto.note_manutenzione }}</p>
     </div>
     {% endif %}
 
-    <div class="footer-print">
-        <div>
-            <div class="signature-line">Firma Mittente</div>
+    <div style="margin-top: 60px; display: flex; justify-content: space-between;">
+        <div style="text-align: center; width: 40%;">
+            <p>Firma del Mittente</p>
+            <hr style="border: 0; border-top: 1px solid #000; margin-top: 40px;">
         </div>
-        <div>
-            <div class="signature-line">Firma per Ricevuta / Vettore</div>
+        <div style="text-align: center; width: 40%;">
+            <p>Firma per Ricevuta / Accettazione</p>
+            <hr style="border: 0; border-top: 1px solid #000; margin-top: 40px;">
         </div>
     </div>
 
