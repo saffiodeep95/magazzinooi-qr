@@ -22,7 +22,7 @@ def init_db():
         conn = get_db_connection()
         cur = conn.cursor()
         
-        # Tabella Prodotti con magazzino_pesante
+        # Tabella Prodotti
         cur.execute("""
             CREATE TABLE IF NOT EXISTS prodotti (
                 id SERIAL PRIMARY KEY,
@@ -87,7 +87,7 @@ def init_db():
             );
         """)
         
-        # Aggiunta sicura della colonna se mancante
+        # Aggiunta sicura delle colonne
         cur.execute("ALTER TABLE prodotti ADD COLUMN IF NOT EXISTS magazzino_pesante INT DEFAULT 0;")
         cur.execute("ALTER TABLE prodotti ADD COLUMN IF NOT EXISTS in_manutenzione INT DEFAULT 0;")
         cur.execute("ALTER TABLE prodotti ADD COLUMN IF NOT EXISTS cliente_manutenzione VARCHAR(255);")
@@ -130,10 +130,11 @@ def index():
         cur.close()
         conn.close()
         
-        # Filtro sicuro in Python per escludere il magazzino pesante
+        # Filtro sicuro in Python (esclude magazzino pesante e articoli in manutenzione se necessario, o mostra magazzino principale)
         for p in tutti:
-            val = p.get('magazzino_pesante')
-            if not (val == 1 or val == '1' or val is True or val == 1.0):
+            val_pesante = p.get('magazzino_pesante')
+            is_pesante = (val_pesante == 1 or val_pesante == '1' or val_pesante is True or val_pesante == 1.0)
+            if not is_pesante:
                 prodotti.append(p)
     except Exception as e:
         print(f"Errore index: {e}")
@@ -368,7 +369,7 @@ def magazzino_pesante():
         cur.close()
         conn.close()
         
-        # Filtro sicuro in Python per il magazzino pesante
+        # Filtro sicuro al 100% in Python
         for p in tutti:
             val = p.get('magazzino_pesante')
             if val == 1 or val == '1' or val is True or val == 1.0:
@@ -385,12 +386,20 @@ def manutenzioni():
     try:
         conn = get_db_connection()
         cur = conn.cursor()
-        cur.execute("SELECT * FROM prodotti WHERE in_manutenzione = 1 ORDER BY nome ASC;")
-        prodotti = cur.fetchall()
+        cur.execute("SELECT * FROM prodotti ORDER BY nome ASC;")
+        tutti = cur.fetchall()
         cur.close()
         conn.close()
+        
+        # Filtro sicuro in Python per le manutenzioni (evita l'errore boolean = integer)
+        for p in tutti:
+            val = p.get('in_manutenzione')
+            if val == 1 or val == '1' or val is True or val == 1.0:
+                prodotti.append(p)
     except Exception as e:
         print(f"Errore manutenzioni: {e}")
+        prodotti = []
+        
     return render_template("manutenzioni.html", prodotti=prodotti)
 
 @app.route("/lista_manutenzioni")
