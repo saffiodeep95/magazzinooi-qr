@@ -130,9 +130,8 @@ def stampa_tutti_qr():
     conn.close()
     return render_template("stampa_tutti_qr.html", prodotti=prodotti)
 
-# --- ROTTA CORRETTA PER IL MAGAZZINO COMPOSIZIONE ---
 @app.route("/magazzino_composizione")
-def magazzino_composizione_view():
+def magazzino_composizione():
     conn = get_db_connection()
     cur = conn.cursor()
     cur.execute("SELECT * FROM prodotti WHERE magazzino_composizione = 1 ORDER BY nome ASC;")
@@ -244,7 +243,7 @@ def aggiungi_prodotto():
         flash(f"Errore nell'inserimento: {e}", "error")
 
     if flag_sezione:
-        return redirect(url_for("magazzino_composizione_view"))
+        return redirect(url_for("magazzino_composizione"))
     return redirect(url_for("index"))
 
 @app.route("/carico", methods=["GET", "POST"])
