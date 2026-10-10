@@ -87,7 +87,7 @@ def init_db():
             );
         """)
         
-        # Aggiunta sicura delle colonne (incluso supporto per migrazione da vecchi nomi)
+        # Aggiunta sicura delle colonne
         cur.execute("ALTER TABLE prodotti ADD COLUMN IF NOT EXISTS magazzino_pesante INT DEFAULT 0;")
         cur.execute("ALTER TABLE prodotti ADD COLUMN IF NOT EXISTS in_manutenzione INT DEFAULT 0;")
         cur.execute("ALTER TABLE prodotti ADD COLUMN IF NOT EXISTS cliente_manutenzione VARCHAR(255);")
@@ -125,10 +125,16 @@ def index():
     try:
         conn = get_db_connection()
         cur = conn.cursor()
-        cur.execute("SELECT * FROM prodotti WHERE magazzino_pesante != 1 OR magazzino_pesante IS NULL ORDER BY nome ASC;")
-        prodotti = cur.fetchall()
+        cur.execute("SELECT * FROM prodotti ORDER BY nome ASC;")
+        tutti = cur.fetchall()
         cur.close()
         conn.close()
+        
+        # Filtra in Python per escludere il magazzino pesante ed evitare qualsiasi errore SQL
+        for p in tutti:
+            val = p.get('magazzino_pesante')
+            if not (val == 1 or val == '1' or val is True or val == 1.0):
+                prodotti.append(p)
     except Exception as e:
         print(f"Errore index: {e}")
     return render_template("index.html", prodotti=prodotti)
@@ -357,12 +363,20 @@ def magazzino_pesante():
     try:
         conn = get_db_connection()
         cur = conn.cursor()
-        cur.execute("SELECT * FROM prodotti WHERE magazzino_pesante = 1 ORDER BY nome ASC;")
-        prodotti = cur.fetchall()
+        cur.execute("SELECT * FROM prodotti ORDER BY nome ASC;")
+        tutti = cur.fetchall()
         cur.close()
         conn.close()
+        
+        # Filtro sicuro in Python per evitare errori 500 su PostgreSQL
+        for p in tutti:
+            val = p.get('magazzino_pesante')
+            if val == 1 or val == '1' or val is True or val == 1.0:
+                prodotti.append(p)
     except Exception as e:
         print(f"Errore magazzino_pesante: {e}")
+        prodotti = []
+        
     return render_template("magazzino_pesante.html", prodotti=prodotti)
 
 @app.route("/manutenzioni")
