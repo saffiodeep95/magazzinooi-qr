@@ -5,63 +5,58 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Rubrica Clienti</title>
     <style>
-        body { font-family: sans-serif; max-width: 900px; margin: 0 auto; padding: 20px; background: #f8fafc; color: #1e293b; }
+        body { font-family: sans-serif; max-width: 1000px; margin: 0 auto; padding: 20px; background: #f8fafc; color: #1e293b; }
         .card { background: white; padding: 20px; border-radius: 12px; border: 1px solid #e2e8f0; margin-bottom: 20px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
-        .btn { background: #4f46e5; color: white; padding: 8px 14px; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; text-decoration: none; display: inline-block; }
-        .btn-danger { background: #ef4444; padding: 5px 10px; font-size: 0.8rem; }
+        .btn { background: #4f46e5; color: white; padding: 10px 16px; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; text-decoration: none; display: inline-block; margin: 4px; }
         .btn:hover { opacity: 0.9; }
-        input { width: 100%; padding: 8px 12px; margin: 6px 0 12px 0; border: 1px solid #cbd5e1; border-radius: 8px; box-sizing: border-box; }
-        label { font-size: 0.85rem; font-weight: bold; color: #64748b; }
         table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 0.9rem; }
         th, td { padding: 10px; border-bottom: 1px solid #e2e8f0; text-align: left; }
         th { background: #f1f5f9; }
-        .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
-        @media(max-width: 768px) { .grid-2 { grid-template-columns: 1fr; } }
+        input { width: 100%; padding: 10px; margin-top: 5px; margin-bottom: 15px; border: 1px solid #cbd5e1; border-radius: 6px; box-sizing: border-box; }
+        label { font-weight: bold; font-size: 0.9rem; color: #475569; }
     </style>
 </head>
 <body>
 
     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
-        <h1>📇 Rubrica Clienti & Aziende</h1>
+        <h1>📖 Rubrica Clienti e Fornitori</h1>
         <a href="{{ url_for('index') }}" class="btn" style="background: #64748b;">← Torna alla Home</a>
     </div>
 
     {% with messages = get_flashed_messages() %}
       {% if messages %}
         {% for message in messages %}
-          <div style="background: #dcfce7; color: #166534; padding: 10px; border-radius: 8px; margin-bottom: 15px; border: 1px solid #bbf7d0;">{{ message }}</div>
+          <div style="background: #dcfce7; color: #166534; padding: 10px; border-radius: 8px; margin-bottom: 15px;">{{ message }}</div>
         {% endfor %}
       {% endif %}
     {% endwith %}
 
     <div class="card">
-        <h3>➕ Aggiungi o Aggiorna Cliente in Rubrica</h3>
-        <form action="{{ url_for('aggiungi_cliente') }}" method="POST">
-            <div class="grid-2">
+        <h3>➕ Aggiungi Nuovo Cliente / Fornitore</h3>
+        <form method="POST">
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 10px;">
                 <div>
-                    <label>Nome Azienda / Cliente *</label>
-                    <input type="text" name="nome_azienda" required placeholder="Es. Rossi S.r.l.">
+                    <label>Nome Azienda *</label>
+                    <input type="text" name="nome_azienda" required>
                 </div>
                 <div>
-                    <label>Partita IVA / Codice Fiscale</label>
-                    <input type="text" name="p_iva" placeholder="P.IVA o C.F.">
+                    <label>Indirizzo</label>
+                    <input type="text" name="indirizzo">
+                </div>
+                <div>
+                    <label>Partita IVA</label>
+                    <input type="text" name="p_iva">
+                </div>
+                <div>
+                    <label>Telefono</label>
+                    <input type="text" name="telefono">
+                </div>
+                <div>
+                    <label>Email</label>
+                    <input type="email" name="email">
                 </div>
             </div>
-            <div class="grid-2">
-                <div>
-                    <label>Indirizzo Sede</label>
-                    <input type="text" name="indirizzo" placeholder="Via, Città (CAP)...">
-                </div>
-                <div>
-                    <label>Telefono / Contatto</label>
-                    <input type="text" name="telefono" placeholder="Numero telefonico...">
-                </div>
-            </div>
-            <div>
-                <label>Email</label>
-                <input type="email" name="email" placeholder="indirizzo@email.it">
-            </div>
-            <button type="submit" class="btn" style="width: 100%; margin-top: 10px;">Salva Cliente in Rubrica</button>
+            <button type="submit" class="btn" style="background: #0284c7; width: 100%; margin-top: 10px;">Salva Cliente</button>
         </form>
     </div>
 
@@ -77,7 +72,7 @@
                         <th>P.IVA</th>
                         <th>Telefono</th>
                         <th>Email</th>
-                        <th>Azioni</th>
+                        <th>Azione</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -89,8 +84,8 @@
                         <td>{{ c.telefono if c.telefono else '-' }}</td>
                         <td>{{ c.email if c.email else '-' }}</td>
                         <td>
-                            <form action="{{ url_for('elimina_cliente', cliente_id=c.id) }}" method="POST" onsubmit="return confirm('Vuoi eliminare {{ c.nome_azienda }} dalla rubrica?');" style="margin: 0;">
-                                <button type="submit" class="btn btn-danger">Elimina</button>
+                            <form action="{{ url_for('elimina_cliente', cliente_id=c.id) }}" method="POST" onsubmit="return confirm('Eliminare questo cliente?');" style="display:inline;">
+                               <button type="submit" class="btn" style="background: #ef4444; padding: 5px 10px; font-size: 0.8rem;">Elimina</button>
                             </form>
                         </td>
                     </tr>
@@ -99,9 +94,8 @@
             </table>
         </div>
         {% else %}
-            <p style="color: #64748b;">Nessun cliente salvato nella rubrica.</p>
+            <p style="color: #64748b;">Nessun cliente registrato.</p>
         {% endif %}
     </div>
-
 </body>
 </html>
