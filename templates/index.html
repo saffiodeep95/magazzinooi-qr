@@ -1,248 +1,146 @@
-<!DOCTYPE html>
+[08:19, 10/10/2026] Marco Pavan: prodot…
+[08:22, 10/10/2026] Marco Pavan: <!DOCTYPE html>
 <html lang="it">
 <head>
     <meta charset="UTF-8">
-    <title>Gestione Magazzino</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Magazzino - Home</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     <style>
-        body { 
-            font-family: Arial, sans-serif; 
-            margin: 0; 
-            padding: 20px; 
-            background-color: #f4f6f9; 
-            color: #333333; 
-        }
-
-        .container { 
-            max-width: 1300px; 
-            margin: auto; 
-            background: #ffffff; 
-            padding: 25px; 
-            border-radius: 8px; 
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08); 
-        }
-
-        h1, h2, h3 { 
-            color: #2c3e50; 
-            border-bottom: 2px solid #eaeaea;
-            padding-bottom: 8px;
-            margin-top: 0;
-        }
-
-        .nav-links { 
-            margin-bottom: 25px; 
-            display: flex; 
-            flex-wrap: wrap; 
-            gap: 10px; 
-            background: #f8f9fa;
-            padding: 12px;
-            border-radius: 6px;
-            border: 1px solid #e1e4e8;
-        }
-
-        .btn { 
-            display: inline-block; 
-            padding: 8px 14px; 
-            background: #007bff; 
-            color: #ffffff; 
-            text-decoration: none; 
-            border-radius: 4px; 
-            font-weight: 600; 
-            border: none;
-            cursor: pointer; 
-            transition: background 0.2s;
-        }
-
-        .btn:hover { 
-            background: #0056b3; 
-        }
-
-        .btn-success { background: #28a745; }
-        .btn-success:hover { background: #218838; }
-
-        .btn-primary { background: #17a2b8; }
-        .btn-primary:hover { background: #138496; }
-
-        .btn-warning { background: #ffc107; color: #212529; }
-        .btn-warning:hover { background: #e0a800; }
-
-        .btn-admin { background: #6f42c1; color: #ffffff; }
-        .btn-admin:hover { background: #5a32a3; }
-
-        .form-section { 
-            background: #fafbfc; 
-            padding: 20px; 
-            border-radius: 6px; 
-            border: 1px solid #e1e4e8; 
-            margin-bottom: 25px; 
-        }
-
-        label {
-            color: #2c3e50;
-            font-size: 14px;
-        }
-
-        input[type="text"], input[type="number"] { 
-            width: 100%; 
-            padding: 10px; 
-            margin-top: 5px; 
-            margin-bottom: 15px; 
-            background: #ffffff; 
-            border: 1px solid #ced4da; 
-            color: #333333;
-            border-radius: 4px; 
-            box-sizing: border-box; 
-        }
-
-        input[type="text"]:focus, input[type="number"]:focus {
-            border-color: #80bdff;
-            outline: none;
-            box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25);
-        }
-
-        table { 
-            width: 100%; 
-            border-collapse: collapse; 
-            margin-top: 20px; 
-            background: #ffffff; 
-            border: 1px solid #e1e4e8;
-            border-radius: 6px;
-            overflow: hidden;
-        }
-
-        th, td { 
-            border: 1px solid #e1e4e8; 
-            padding: 12px; 
-            text-align: left; 
-        }
-
-        th { 
-            background-color: #007bff; 
-            color: #ffffff; 
-            font-weight: 600;
-            text-transform: uppercase;
-            font-size: 13px;
-        }
-
-        tr:nth-child(even) { background-color: #f8f9fa; }
-        tr:hover { background-color: #f1f3f5; }
-
-        .btn-small { 
-            padding: 5px 10px; 
-            background: #6c757d; 
-            color: #ffffff; 
-            text-decoration: none; 
-            border-radius: 3px; 
-            font-size: 13px; 
-        }
-        .btn-small:hover { background: #5a6268; }
-
-        .flash-messages { list-style: none; padding: 0; margin-bottom: 20px; }
-        .flash-messages li { padding: 12px; margin-bottom: 5px; border-radius: 4px; font-weight: 500; }
-        .flash-messages .success { background-color: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
-        .flash-messages .error { background-color: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }
+        body { font-family: sans-serif; max-width: 1200px; margin: 0 auto; padding: 20px; background: #f8fafc; color: #1e293b; }
+        .card { background: white; padding: 20px; border-radius: 12px; border: 1px solid #e2e8f0; margin-bottom: 20px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
+        .btn { background: #4f46e5; color: white; padding: 10px 16px; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; text-decoration: none; display: inline-block; margin: 4px; }
+        .btn:hover { opacity: 0.9; }
+        table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 0.9rem; }
+        th, td { padding: 12px; border-bottom: 1px solid #e2e8f0; text-align: left; vertical-align: middle; }
+        th { background: #f1f5f9; }
+        .menu-grid { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 20px; }
+        input { width: 100%; padding: 10px; border: 1px solid #cbd5e1; border-radius: 6px; box-sizing: border-box; }
+        .qrcode-container canvas, .qrcode-container img { display: block; border-radius: 4px; }
     </style>
 </head>
 <body>
-    <div class="container">
-        <h1>Gestione Magazzino Principale</h1>
-        
-        <!-- Barra di navigazione chiara e pulita -->
-        <div class="nav-links">
-            <a href="{{ url_for('index') }}" class="btn">Home Magazzino</a>
-            <a href="{{ url_for('magazzino_composizione') }}" class="btn btn-success">Magazzino Composizione</a>
-            <a href="{{ url_for('clienti') }}" class="btn btn-primary">Clienti</a>
-            <a href="{{ url_for('manutenzioni') }}" class="btn btn-warning">Manutenzioni</a>
-            <a href="{{ url_for('admin_utenti') }}" class="btn btn-admin">Admin Utenti</a>
-            <a href="{{ url_for('stampa_tutti_qr') }}" class="btn" style="background-color: #6c757d;">Stampa Tutti i QR</a>
-            <a href="{{ url_for('upload') }}" class="btn" style="background-color: #343a40;">Upload</a>
+
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; flex-wrap: wrap; gap: 10px;">
+        <h1>📦 Gestione Magazzino OMG</h1>
+        <div style="display: flex; align-items: center; gap: 15px;">
+            <span>Utente: <strong>{{ session.username }}</strong></span>
+            <a href="{{ url_for('logout') }}" class="btn" style="background: #ef4444; padding: 6px 12px;">Esci</a>
         </div>
-
-        <!-- Messaggi flash -->
-        {% with messages = get_flashed_messages(with_categories=true) %}
-            {% if messages %}
-                <ul class="flash-messages">
-                    {% for category, message in messages %}
-                        <li class="{{ category }}">{{ message }}</li>
-                    {% endfor %}
-                </ul>
-            {% endif %}
-        {% endwith %}
-
-        <!-- Sezione Inserimento / Aggiunta Prodotto -->
-        <div class="form-section">
-            <h3>Aggiungi o Aggiorna Prodotto</h3>
-            <form action="{{ url_for('aggiungi_prodotto') }}" method="POST">
-                <div class="form-group">
-                    <label><strong>QR Code:</strong></label>
-                    <input type="text" name="qr_code" required placeholder="Es. QR34">
-                </div>
-                <div class="form-group">
-                    <label><strong>Nome Prodotto:</strong></label>
-                    <input type="text" name="nome" required placeholder="Es. Cavo 3 metri">
-                </div>
-                <div class="form-group">
-                    <label><strong>SAP:</strong></label>
-                    <input type="text" name="sap" placeholder="Codice SAP opzionale">
-                </div>
-                <div class="form-group">
-                    <label><strong>Peso:</strong></label>
-                    <input type="text" name="peso" placeholder="Es. 1.2 kg">
-                </div>
-                <div class="form-group">
-                    <label><strong>Quantità Iniziale:</strong></label>
-                    <input type="number" name="quantita" value="0">
-                </div>
-                <div class="form-group">
-                    <label><strong>Posizione:</strong></label>
-                    <input type="text" name="posizione" placeholder="Es. Settore A - Scaffale 2">
-                </div>
-                
-                <!-- Spunta per destinare al Magazzino Composizione -->
-                <div class="form-group" style="margin: 20px 0; background: #eef9ff; padding: 12px; border-left: 4px solid #007bff; border-radius: 4px;">
-                    <label style="cursor: pointer; font-weight: bold; display: flex; align-items: center;">
-                        <input type="checkbox" name="magazzino_composizione" value="1" style="transform: scale(1.3); margin-right: 12px;">
-                        Destina a Magazzino Composizione
-                    </label>
-                </div>
-
-                <button type="submit" class="btn" style="padding: 10px 20px; font-size: 15px;">Salva Prodotto</button>
-            </form>
-        </div>
-
-        <!-- Tabella Prodotti -->
-        <h2>Elenco Prodotti Magazzino Principale</h2>
-        <table>
-            <thead>
-                <tr>
-                    <th>QR Code</th>
-                    <th>Nome</th>
-                    <th>SAP</th>
-                    <th>Peso</th>
-                    <th>Quantità</th>
-                    <th>Posizione</th>
-                    <th>Azioni</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for prodotto in prodotti %}
-                <tr>
-                    <td><strong>{{ prodotto.qr_code }}</strong></td>
-                    <td>{{ prodotto.nome }}</td>
-                    <td>{{ prodotto.sap }}</td>
-                    <td>{{ prodotto.peso }}</td>
-                    <td><span style="color: #007bff; font-weight: bold;">{{ prodotto.quantita }}</span></td>
-                    <td>{{ prodotto.posizione }}</td>
-                    <td>
-                        <a href="{{ url_for('gestisci_prodotto', qr_code=prodotto.qr_code) }}" class="btn-small">Gestisci</a>
-                    </td>
-                </tr>
-                {% else %}
-                <tr>
-                    <td colspan="7" style="text-align: center; color: #6c757d; padding: 20px;">Nessun prodotto presente nel magazzino principale.</td>
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
     </div>
+
+    {% with messages = get_flashed_messages() %}
+      {% if messages %}
+        {% for message in messages %}
+          <div style="background: #dcfce7; color: #166534; padding: 12px; border-radius: 8px; margin-bottom: 15px; border: 1px solid #bbf7d0;">{{ message }}</div>
+        {% endfor %}
+      {% endif %}
+    {% endwith %}
+
+    <div class="menu-grid">
+        <a href="{{ url_for('carico') }}" class="btn" style="background: #10b981;">➕ Carico (Fotocamera)</a>
+        <a href="{{ url_for('scarico') }}" class="btn" style="background: #f97316;">➖ Scarico (Fotocamera)</a>
+        <a href="{{ url_for('magazzino_composizione') }}" class="btn" style="background: #2563eb;">⚙️ Magazzino Composizione</a>
+        <a href="{{ url_for('clienti') }}" class="btn" style="background: #0284c7;">📖 Rubrica Clienti</a>
+        <a href="{{ url_for('pagina_upload') }}" class="btn" style="background: #0ea5e9;">📁 Upload CSV</a>
+        <a href="{{ url_for('stampa_tutti_qr') }}" class="btn" style="background: #8b5cf6;">🖨️ Stampa Tutti i QR</a>
+        <a href="{{ url_for('lista_manutenzioni') }}" class="btn" style="background: #d97706;">🔧 Manutenzioni</a>
+        {% if session.get('is_admin') %}
+        <a href="{{ url_for('admin_utenti') }}" class="btn" style="background: #7c3aed;">👑 Utenti</a>
+        {% endif %}
+    </div>
+
+    <!-- MODULO AGGIUNGI ARTICOLO -->
+    <div class="card">
+        <h3>➕ Aggiungi Nuovo Articolo in Magazzino Principale</h3>
+        <form action="{{ url_for('aggiungi_prodotto') }}" method="POST" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 10px; margin-top: 15px;">
+            <input type="text" name="qr_code" placeholder="Codice univoco QR..." required>
+            <input type="text" name="nome" placeholder="Nome articolo..." required>
+            <input type="text" name="sap" placeholder="Codice SAP...">
+            <input type="number" name="quantita" placeholder="Quantità iniziale..." value="0" min="0">
+            <input type="text" name="posizione" placeholder="Posizione (es. Scaffale A)...">
+            
+            <div style="grid-column: 1 / -1; display: flex; align-items: center; gap: 10px; background: #f1f5f9; padding: 10px; border-radius: 6px;">
+                <input type="checkbox" name="magazzino_composizione" value="1" style="width: auto; transform: scale(1.2);">
+                <label style="margin: 0; cursor: pointer; font-weight: bold;">Destina direttamente al Magazzino Composizione</label>
+            </div>
+
+            <button type="submit" class="btn" style="background: #4f46e5; grid-column: 1 / -1;">Salva Articolo</button>
+        </form>
+    </div>
+
+    <!-- TABELLA ARTICOLI -->
+    <div class="card">
+        <h3>📋 Elenco Articoli in Magazzino Principale</h3>
+        {% if prodotti %}
+        <div style="overflow-x: auto;">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Nome Articolo</th>
+                        <th>QR Code (Immagine)</th>
+                        <th>SAP</th>
+                        <th>Quantità Disp.</th>
+                        <th>In Manutenzione</th>
+                        <th>Posizione</th>
+                        <th>Azione</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for p in prodotti %}
+                    {% set totale_reale = p.quantita + (p.quantita_manutenzione if p.in_manutenzione else 0) %}
+                    <tr style="{% if totale_reale < 2 and totale_reale > 0 %}background: #fef2f2;{% endif %}">
+                        <td>
+                            <strong>{{ p.nome }}</strong>
+                            {% if totale_reale < 2 and totale_reale > 0 %}
+                                <br><span style="color: #dc2626; font-size: 0.75rem; font-weight: bold;">⚠️ Sotto soglia (Da Riordinare)</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <div class="qrcode-container" id="qr-{{ loop.index }}" data-code="{{ p.qr_code }}"></div>
+                            <small style="color: #64748b; font-family: monospace;">{{ p.qr_code }}</small>
+                        </td>
+                        <td>{{ p.sap if p.sap else '-' }}</td>
+                        <td><span style="color: {% if p.quantita < 2 %}#dc2626{% else %}#10b981{% endif %}; font-weight: bold; font-size: 1.1rem;">{{ p.quantita }}</span> pz</td>
+                        <td>
+                            {% if p.in_manutenzione %}
+                                <span style="color: #d97706; font-weight: bold;">{{ p.quantita_manutenzione }} pz</span><br>
+                                <small style="color: #64748b;">({{ p.cliente_manutenzione }})</small>
+                            {% else %}
+                                <span style="color: #64748b;">0 pz</span>
+                            {% endif %}
+                        </td>
+                        <td>{{ p.posizione if p.posizione else '-' }}</td>
+                        <td>
+                            <a href="{{ url_for('gestisci_prodotto', qr_code=p.qr_code) }}" class="btn" style="padding: 6px 12px; font-size: 0.85rem; background: #4f46e5;">Gestisci</a>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+            <p style="color: #64748b;">Nessun articolo presente nel magazzino principale.</p>
+        {% endif %}
+    </div>
+
+    <script>
+        document.addEventListener("DOMContentLoaded", function() {
+            document.querySelectorAll(".qrcode-container").forEach(function(el) {
+                let code = el.getAttribute("data-code");
+                if(code) {
+                    new QRCode(el, {
+                        text: code,
+                        width: 80,
+                        height: 80,
+                        colorDark: "#000000",
+                        colorLight: "#ffffff",
+                        correctLevel: QRCode.CorrectLevel.H
+                    });
+                }
+            });
+        });
+    </script>
+
 </body>
 </html>
