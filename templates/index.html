@@ -39,7 +39,7 @@
     <div class="menu-grid">
         <a href="{{ url_for('carico') }}" class="btn" style="background: #10b981;">➕ Carico (Fotocamera)</a>
         <a href="{{ url_for('scarico') }}" class="btn" style="background: #f97316;">➖ Scarico (Fotocamera)</a>
-        <a href="{{ url_for('magazzino_composizione') }}" class="btn" style="background: #2563eb;">⚙️ Magazzino Composizione</a>
+        <a href="{{ url_for('magazzino_pesante') }}" class="btn" style="background: #2563eb;">⚖️ Magazzino Pesante</a>
         <a href="{{ url_for('clienti') }}" class="btn" style="background: #0284c7;">📖 Rubrica Clienti</a>
         <a href="{{ url_for('pagina_upload') }}" class="btn" style="background: #0ea5e9;">📁 Upload CSV</a>
         <a href="{{ url_for('stampa_tutti_qr') }}" class="btn" style="background: #8b5cf6;">🖨️ Stampa Tutti i QR</a>
@@ -60,8 +60,8 @@
             <input type="text" name="posizione" placeholder="Posizione (es. Scaffale A)...">
             
             <div style="grid-column: 1 / -1; display: flex; align-items: center; gap: 10px; background: #f1f5f9; padding: 10px; border-radius: 6px;">
-                <input type="checkbox" name="magazzino_composizione" value="1" style="width: auto; transform: scale(1.2);">
-                <label style="margin: 0; cursor: pointer; font-weight: bold;">Destina direttamente al Magazzino Composizione</label>
+                <input type="checkbox" name="magazzino_pesante" value="1" style="width: auto; transform: scale(1.2);">
+                <label style="margin: 0; cursor: pointer; font-weight: bold;">Destina direttamente al Magazzino Pesante</label>
             </div>
 
             <button type="submit" class="btn" style="background: #4f46e5; grid-column: 1 / -1;">Salva Articolo</button>
