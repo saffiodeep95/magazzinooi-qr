@@ -87,7 +87,7 @@ def init_db():
             );
         """)
         
-        # Sicurezza colonne esistenti
+        # Aggiunta sicura colonne
         cur.execute("ALTER TABLE prodotti ADD COLUMN IF NOT EXISTS magazzino_composizione INT DEFAULT 0;")
         cur.execute("ALTER TABLE prodotti ADD COLUMN IF NOT EXISTS in_manutenzione INT DEFAULT 0;")
         cur.execute("ALTER TABLE prodotti ADD COLUMN IF NOT EXISTS cliente_manutenzione VARCHAR(255);")
@@ -98,7 +98,11 @@ def init_db():
         cur.execute("ALTER TABLE prodotti ADD COLUMN IF NOT EXISTS ordine_amministrativo INT DEFAULT 0;")
         cur.execute("ALTER TABLE prodotti ADD COLUMN IF NOT EXISTS note_manutenzione TEXT;")
 
-        # Utente admin predefinito
+        # Correzione forzata del tipo di dato per evitare conflitti su PostgreSQL
+        cur.execute("ALTER TABLE prodotti ALTER COLUMN magazzino_composizione TYPE INT USING (CASE WHEN magazzino_composizione IS TRUE THEN 1 WHEN magazzino_composizione IS FALSE THEN 0 ELSE COALESCE(NULLIF(magazzino_composizione::text, '')::integer, 0) END);")
+        cur.execute("ALTER TABLE prodotti ALTER COLUMN in_manutenzione TYPE INT USING (CASE WHEN in_manutenzione IS TRUE THEN 1 WHEN in_manutenzione IS FALSE THEN 0 ELSE COALESCE(NULLIF(in_manutenzione::text, '')::integer, 0) END);")
+
+        # Admin predefinito
         cur.execute("SELECT * FROM utenti WHERE username = 'admin';")
         if not cur.fetchone():
             hashed_pw = generate_password_hash("admin")
@@ -107,9 +111,9 @@ def init_db():
         conn.commit()
         cur.close()
         conn.close()
-        print("Inizializzazione database completata con successo.")
+        print("Database inizializzato con successo.")
     except Exception as e:
-        print(f"Errore durante l'inizializzazione del database: {e}")
+        print(f"Errore init_db: {e}")
 
 init_db()
 
