@@ -22,7 +22,7 @@ def init_db():
         conn = get_db_connection()
         cur = conn.cursor()
         
-        # Tabella Prodotti unificata
+        # Tabella Prodotti
         cur.execute("""
             CREATE TABLE IF NOT EXISTS prodotti (
                 id SERIAL PRIMARY KEY,
@@ -87,7 +87,7 @@ def init_db():
             );
         """)
         
-        # Aggiunta sicura colonne
+        # Aggiunta sicura delle colonne se mancanti
         cur.execute("ALTER TABLE prodotti ADD COLUMN IF NOT EXISTS magazzino_composizione INT DEFAULT 0;")
         cur.execute("ALTER TABLE prodotti ADD COLUMN IF NOT EXISTS in_manutenzione INT DEFAULT 0;")
         cur.execute("ALTER TABLE prodotti ADD COLUMN IF NOT EXISTS cliente_manutenzione VARCHAR(255);")
@@ -97,10 +97,6 @@ def init_db():
         cur.execute("ALTER TABLE prodotti ADD COLUMN IF NOT EXISTS vettore VARCHAR(255);")
         cur.execute("ALTER TABLE prodotti ADD COLUMN IF NOT EXISTS ordine_amministrativo INT DEFAULT 0;")
         cur.execute("ALTER TABLE prodotti ADD COLUMN IF NOT EXISTS note_manutenzione TEXT;")
-
-        # Correzione forzata del tipo di dato per evitare conflitti su PostgreSQL
-        cur.execute("ALTER TABLE prodotti ALTER COLUMN magazzino_composizione TYPE INT USING (CASE WHEN magazzino_composizione IS TRUE THEN 1 WHEN magazzino_composizione IS FALSE THEN 0 ELSE COALESCE(NULLIF(magazzino_composizione::text, '')::integer, 0) END);")
-        cur.execute("ALTER TABLE prodotti ALTER COLUMN in_manutenzione TYPE INT USING (CASE WHEN in_manutenzione IS TRUE THEN 1 WHEN in_manutenzione IS FALSE THEN 0 ELSE COALESCE(NULLIF(in_manutenzione::text, '')::integer, 0) END);")
 
         # Admin predefinito
         cur.execute("SELECT * FROM utenti WHERE username = 'admin';")
@@ -129,7 +125,7 @@ def index():
     try:
         conn = get_db_connection()
         cur = conn.cursor()
-        cur.execute("SELECT * FROM prodotti WHERE magazzino_composizione = 0 OR magazzino_composizione IS NULL ORDER BY nome ASC;")
+        cur.execute("SELECT * FROM prodotti WHERE magazzino_composizione != 1 OR magazzino_composizione IS NULL ORDER BY nome ASC;")
         prodotti = cur.fetchall()
         cur.close()
         conn.close()
@@ -536,11 +532,11 @@ def aggiungi_prodotto():
         conn.commit()
         cur.close()
         conn.close()
-        flash("Prodotto aggiunto o aggiornato con successo!", "success")
+        flash("Prodotto salvato con successo!", "success")
     except Exception as e:
         flash(f"Errore nell'inserimento: {e}", "error")
 
-    if flag_sezione:
+    if flag_sezione == 1:
         return redirect(url_for("magazzino_composizione"))
     return redirect(url_for("index"))
 
