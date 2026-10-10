@@ -9,17 +9,17 @@
     <div class="container">
         <h1>Gestione Magazzino Principale</h1>
         
-        <!-- Barra di navigazione e pulsanti principali -->
+        <!-- Barra di navigazione -->
         <div class="nav-links" style="margin-bottom: 20px;">
             <a href="{{ url_for('index') }}" class="btn">Home Magazzino</a>
-            <a href="{{ url_for('magazzino_composizione_motori_view') }}" class="btn" style="background-color: #28a745; color: white;">Magazzino Composizione e Motori</a>
+            <a href="{{ url_for('magazzino_composizione') }}" class="btn" style="background-color: #28a745; color: white;">Magazzino Composizione</a>
             <a href="{{ url_for('clienti') }}" class="btn">Clienti</a>
             <a href="{{ url_for('manutenzioni') }}" class="btn">Manutenzioni</a>
             <a href="{{ url_for('stampa_tutti_qr') }}" class="btn">Stampa Tutti i QR</a>
             <a href="{{ url_for('upload') }}" class="btn">Upload</a>
         </div>
 
-        <!-- Messaggi flash di notifica -->
+        <!-- Messaggi flash -->
         {% with messages = get_flashed_messages(with_categories=true) %}
             {% if messages %}
                 <ul class="flash-messages">
@@ -61,11 +61,11 @@
                     <input type="text" name="posizione" style="width: 100%; padding: 6px;">
                 </div>
                 
-                <!-- Spunta per destinare al Magazzino Composizione e Motori -->
+                <!-- Spunta per destinare al Magazzino Composizione -->
                 <div class="form-group" style="margin: 15px 0; background: #eef9ff; padding: 10px; border-left: 4px solid #007bff;">
                     <label style="cursor: pointer; font-weight: bold;">
-                        <input type="checkbox" name="magazzino_composizione_motori" value="1" style="transform: scale(1.2); margin-right: 8px;">
-                        Destina a Magazzino Composizione e Motori
+                        <input type="checkbox" name="magazzino_composizione" value="1" style="transform: scale(1.2); margin-right: 8px;">
+                        Destina a Magazzino Composizione
                     </label>
                 </div>
 
@@ -75,7 +75,7 @@
 
         <hr style="margin: 20px 0;">
 
-        <!-- Tabella Prodotti del Magazzino Principale -->
+        <!-- Tabella Prodotti -->
         <h2>Elenco Prodotti Magazzino Principale</h2>
         <table>
             <thead>
