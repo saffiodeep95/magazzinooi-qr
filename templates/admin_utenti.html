@@ -3,15 +3,16 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Gestione Utenti e Permessi</title>
+    <title>Gestione Utenti</title>
     <style>
-        body { font-family: sans-serif; max-width: 1100px; margin: 0 auto; padding: 20px; background: #f8fafc; color: #1e293b; }
+        body { font-family: sans-serif; max-width: 1000px; margin: 0 auto; padding: 20px; background: #f8fafc; color: #1e293b; }
         .card { background: white; padding: 20px; border-radius: 12px; border: 1px solid #e2e8f0; margin-bottom: 20px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
-        .btn { background: #4f46e5; color: white; padding: 6px 12px; border: none; border-radius: 6px; font-weight: bold; cursor: pointer; text-decoration: none; display: inline-block; font-size: 0.85rem; }
+        .btn { background: #4f46e5; color: white; padding: 8px 12px; border: none; border-radius: 6px; font-weight: bold; cursor: pointer; text-decoration: none; display: inline-block; margin: 2px; }
         .btn:hover { opacity: 0.9; }
         table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 0.9rem; }
         th, td { padding: 10px; border-bottom: 1px solid #e2e8f0; text-align: left; }
         th { background: #f1f5f9; }
+        input[type="password"] { padding: 6px; border: 1px solid #cbd5e1; border-radius: 4px; width: 120px; }
     </style>
 </head>
 <body>
@@ -24,14 +25,13 @@
     {% with messages = get_flashed_messages() %}
       {% if messages %}
         {% for message in messages %}
-          <div style="background: #dcfce7; color: #166534; padding: 10px; border-radius: 8px; margin-bottom: 15px; border: 1px solid #bbf7d0;">{{ message }}</div>
+          <div style="background: #dcfce7; color: #166534; padding: 10px; border-radius: 8px; margin-bottom: 15px;">{{ message }}</div>
         {% endfor %}
       {% endif %}
     {% endwith %}
 
     <div class="card">
         <h3>Elenco Utenti Registrati</h3>
-        {% if utenti %}
         <div style="overflow-x: auto;">
             <table>
                 <thead>
@@ -39,69 +39,63 @@
                         <th>Username</th>
                         <th>Ruolo Admin</th>
                         <th>Permesso Manutenzioni</th>
-                        <th>Permesso Elimina Prodotti</th>
-                        <th>Permesso Elimina Storico</th>
-                        <th>Azioni Password</th>
-                        <th>Elimina Utente</th>
+                        <th>Permesso Eliminazione Articoli</th>
+                        <th>Permesso Elim. Storico</th>
+                        <th>Cambia Password</th>
+                        <th>Azioni</th>
                     </tr>
                 </thead>
                 <tbody>
                     {% for u in utenti %}
                     <tr>
                         <td><strong>{{ u.username }}</strong></td>
+                        <td>{{ 'Admin 👑' if u.is_admin else 'Utente Standard' }}</td>
                         <td>
-                            {% if u.is_admin %}
-                                <span style="color: #7c3aed; font-weight: bold;">Admin</span>
-                            {% else %}
-                                <span style="color: #64748b;">Standard</span>
-                            {% endif %}
-                        </td>
-                        <td>
-                            {% if not u.is_admin %}
+                            {% if u.username != 'admin' %}
                             <form action="{{ url_for('toggle_permesso', user_id=u.id, tipo='manutenzione') }}" method="POST" style="display:inline;">
-                                <button type="submit" class="btn" style="background: {{ '#10b981' if u.puo_vedere_manutenzione else '#cbd5e1' }};">
-                                    {{ 'Abilitato' if u.puo_vedere_manutenzione else 'Disabilitato' }}
+                                <button type="submit" class="btn" style="background: {{ '#10b981' if u.puo_vedere_manutenzione else '#64748b' }}; font-size: 0.8rem;">
+                                    {{ 'Consentito' if u.puo_vedere_manutenzione else 'Negato' }}
                                 </button>
                             </form>
                             {% else %}
-                                <span style="color: #10b981; font-weight: bold;">Sempre attivo</span>
+                                <span>Totale</span>
                             {% endif %}
                         </td>
                         <td>
-                            {% if not u.is_admin %}
+                            {% if u.username != 'admin' %}
                             <form action="{{ url_for('toggle_permesso', user_id=u.id, tipo='eliminazione') }}" method="POST" style="display:inline;">
-                                <button type="submit" class="btn" style="background: {{ '#10b981' if u.puo_eliminare else '#cbd5e1' }};">
-                                    {{ 'Abilitato' if u.puo_eliminare else 'Disabilitato' }}
+                                <button type="submit" class="btn" style="background: {{ '#10b981' if u.puo_eliminare else '#64748b' }}; font-size: 0.8rem;">
+                                    {{ 'Consentito' if u.puo_eliminare else 'Negato' }}
                                 </button>
                             </form>
                             {% else %}
-                                <span style="color: #10b981; font-weight: bold;">Sempre attivo</span>
+                                <span>Totale</span>
                             {% endif %}
                         </td>
                         <td>
-                            {% if not u.is_admin %}
+                            {% if u.username != 'admin' %}
                             <form action="{{ url_for('toggle_permesso', user_id=u.id, tipo='eliminazione_storico') }}" method="POST" style="display:inline;">
-                                <button type="submit" class="btn" style="background: {{ '#10b981' if u.puo_eliminare_storico else '#cbd5e1' }};">
-                                    {{ 'Abilitato' if u.puo_eliminare_storico else 'Disabilitato' }}
+                                <button type="submit" class="btn" style="background: {{ '#10b981' if u.puo_eliminare_storico else '#64748b' }}; font-size: 0.8rem;">
+                                    {{ 'Consentito' if u.puo_eliminare_storico else 'Negato' }}
                                 </button>
                             </form>
                             {% else %}
-                                <span style="color: #10b981; font-weight: bold;">Sempre attivo</span>
+                                <span>Totale</span>
                             {% endif %}
                         </td>
                         <td>
                             <form action="{{ url_for('reset_password', user_id=u.id) }}" method="POST" style="display: flex; gap: 5px;">
-                                <input type="text" name="nuova_password" placeholder="Nuova password..." required style="padding: 4px; font-size: 0.8rem; width: 120px; margin: 0;">
-                                <button type="submit" class="btn" style="background: #3b82f6; padding: 4px 8px;">Reset</button>
+                                <input type="password" name="nuova_password" placeholder="Nuova pass" required>
+                                <button type="submit" class="btn" style="background: #0284c7; padding: 6px 10px; font-size: 0.8rem;">Aggiorna</button>
                             </form>
                         </td>
                         <td>
                             {% if u.username != 'admin' %}
-                            <form action="{{ url_for('elimina_utente', user_id=u.id) }}" method="POST" onsubmit="return confirm('Vuoi davvero eliminare questo utente?');">
-                                <button type="submit" class="btn" style="background: #ef4444; padding: 4px 8px;">Elimina</button>
+                            <form action="{{ url_for('elimina_utente', user_id=u.id) }}" method="POST" onsubmit="return confirm('Eliminare questo utente?');" style="display:inline;">
+                                <button type="submit" class="btn" style="background: #ef4444; padding: 6px 10px; font-size: 0.8rem;">Elimina</button>
                             </form>
                             {% else %}
-                                <span style="color: #64748b; font-size: 0.8rem;">Protetto</span>
+                                <span style="color: #64748b;">Protetto</span>
                             {% endif %}
                         </td>
                     </tr>
@@ -109,10 +103,6 @@
                 </tbody>
             </table>
         </div>
-        {% else %}
-            <p style="color: #64748b;">Nessun utente registrato.</p>
-        {% endif %}
     </div>
-
 </body>
 </html>
