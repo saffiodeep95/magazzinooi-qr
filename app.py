@@ -87,7 +87,7 @@ def init_db():
             );
         """)
         
-        # Aggiunta sicura delle colonne
+        # Aggiunta sicura della colonna se mancante
         cur.execute("ALTER TABLE prodotti ADD COLUMN IF NOT EXISTS magazzino_pesante INT DEFAULT 0;")
         cur.execute("ALTER TABLE prodotti ADD COLUMN IF NOT EXISTS in_manutenzione INT DEFAULT 0;")
         cur.execute("ALTER TABLE prodotti ADD COLUMN IF NOT EXISTS cliente_manutenzione VARCHAR(255);")
@@ -130,7 +130,7 @@ def index():
         cur.close()
         conn.close()
         
-        # Filtra in Python per escludere il magazzino pesante ed evitare qualsiasi errore SQL
+        # Filtro sicuro in Python per escludere il magazzino pesante
         for p in tutti:
             val = p.get('magazzino_pesante')
             if not (val == 1 or val == '1' or val is True or val == 1.0):
@@ -368,7 +368,7 @@ def magazzino_pesante():
         cur.close()
         conn.close()
         
-        # Filtro sicuro in Python per evitare errori 500 su PostgreSQL
+        # Filtro sicuro in Python per il magazzino pesante
         for p in tutti:
             val = p.get('magazzino_pesante')
             if val == 1 or val == '1' or val is True or val == 1.0:
