@@ -68,7 +68,8 @@ def init_db():
                 is_admin INT DEFAULT 0,
                 puo_vedere_manutenzione INT DEFAULT 1,
                 puo_eliminare INT DEFAULT 0,
-                puo_eliminare_storico INT DEFAULT 0
+                puo_eliminare_storico INT DEFAULT 0,
+                puo_gestire_documenti INT DEFAULT 1
             );
         """)
 
@@ -118,11 +119,12 @@ def init_db():
         cur.execute("ALTER TABLE prodotti ADD COLUMN IF NOT EXISTS ordine_amministrativo BOOLEAN DEFAULT FALSE;")
         cur.execute("ALTER TABLE prodotti ADD COLUMN IF NOT EXISTS note_manutenzione TEXT;")
         cur.execute("ALTER TABLE storico_manutenzioni ADD COLUMN IF NOT EXISTS ordine_amministrativo BOOLEAN DEFAULT FALSE;")
+        cur.execute("ALTER TABLE utenti ADD COLUMN IF NOT EXISTS puo_gestire_documenti INT DEFAULT 1;")
 
         cur.execute("SELECT * FROM utenti WHERE username = 'admin';")
         if not cur.fetchone():
             hashed_pw = generate_password_hash("admin")
-            cur.execute("INSERT INTO utenti (username, password, is_admin, puo_vedere_manutenzione, puo_eliminare, puo_eliminare_storico) VALUES (%s, %s, 1, 1, 1, 1);", ('admin', hashed_pw))
+            cur.execute("INSERT INTO utenti (username, password, is_admin, puo_vedere_manutenzione, puo_eliminare, puo_eliminare_storico, puo_gestire_documenti) VALUES (%s, %s, 1, 1, 1, 1, 1);", ('admin', hashed_pw))
 
         conn.commit()
         cur.close()
@@ -178,6 +180,7 @@ def login():
                 session['puo_vedere_manutenzione'] = user['puo_vedere_manutenzione']
                 session['puo_eliminare'] = user['puo_eliminare']
                 session['puo_eliminare_storico'] = user['puo_eliminare_storico']
+                session['puo_gestire_documenti'] = user.get('puo_gestire_documenti', 1)
                 return redirect(url_for('index'))
             else:
                 flash("Credenziali non valide!", "error")
@@ -239,6 +242,8 @@ def toggle_permesso(user_id, tipo):
         cur.execute("UPDATE utenti SET puo_eliminare = NOT puo_eliminare WHERE id = %s;", (user_id,))
     elif tipo == 'eliminazione_storico':
         cur.execute("UPDATE utenti SET puo_eliminare_storico = NOT puo_eliminare_storico WHERE id = %s;", (user_id,))
+    elif tipo == 'documenti':
+        cur.execute("UPDATE utenti SET puo_gestire_documenti = NOT puo_gestire_documenti WHERE id = %s;", (user_id,))
     conn.commit()
     cur.close()
     conn.close()
@@ -687,10 +692,14 @@ def elimina_prodotto():
 
     return redirect(url_for("index"))
 
-# --- GESTIONE DOCUMENTALE (CARTELLE E FILE) ---
+# --- GESTIONE DOCUMENTALE CON PERMESSI ---
 @app.route("/documenti", defaults={"cartella_id": None}, methods=["GET", "POST"])
 @app.route("/documenti/<int:cartella_id>", methods=["GET", "POST"])
 def documenti(cartella_id):
+    if not (session.get('is_admin') or session.get('puo_gestire_documenti')):
+        flash("Accesso ai documenti non autorizzato.", "error")
+        return redirect(url_for('index'))
+
     conn = get_db_connection()
     cur = conn.cursor()
 
@@ -761,6 +770,10 @@ def documenti(cartella_id):
 
 @app.route("/scarica_file/<int:file_id>")
 def scarica_file(file_id):
+    if not (session.get('is_admin') or session.get('puo_gestire_documenti')):
+        flash("Accesso negato.", "error")
+        return redirect(url_for('index'))
+
     conn = get_db_connection()
     cur = conn.cursor()
     cur.execute("SELECT nome_file, tipo_file, dati_file FROM documenti WHERE id = %s;", (file_id,))
@@ -780,6 +793,10 @@ def scarica_file(file_id):
 
 @app.route("/elimina_cartella/<int:cartella_id>", methods=["POST"])
 def elimina_cartella(cartella_id):
+    if not session.get('is_admin'):
+        flash("Solo l'amministratore può eliminare le cartelle.", "error")
+        return redirect(url_for('documenti'))
+
     conn = get_db_connection()
     cur = conn.cursor()
     cur.execute("SELECT parent_id FROM cartelle WHERE id = %s;", (cartella_id,))
@@ -790,7 +807,7 @@ def elimina_cartella(cartella_id):
     conn.commit()
     cur.close()
     conn.close()
-    flash("Cartella eliminata.", "success")
+    flash("Cartella eliminata con successo.", "success")
     
     if parent_id:
         return redirect(url_for("documenti", cartella_id=parent_id))
@@ -798,6 +815,10 @@ def elimina_cartella(cartella_id):
 
 @app.route("/elimina_file/<int:file_id>", methods=["POST"])
 def elimina_file(file_id):
+    if not session.get('is_admin'):
+        flash("Solo l'amministratore può eliminare i documenti.", "error")
+        return redirect(url_for('documenti'))
+
     conn = get_db_connection()
     cur = conn.cursor()
     cur.execute("SELECT cartella_id FROM documenti WHERE id = %s;", (file_id,))
@@ -808,7 +829,7 @@ def elimina_file(file_id):
     conn.commit()
     cur.close()
     conn.close()
-    flash("File eliminato.", "success")
+    flash("File eliminato con successo.", "success")
     
     if cartella_id:
         return redirect(url_for("documenti", cartella_id=cartella_id))
