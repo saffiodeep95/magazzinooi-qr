@@ -1,4 +1,5 @@
-import os
+[09:48, 13/10/2026] Marco Pavan: display: inline-…
+[09:52, 13/10/2026] Marco Pavan: import os
 import csv
 import io
 import psycopg2
@@ -22,7 +23,6 @@ def init_db():
         conn = get_db_connection()
         cur = conn.cursor()
         
-        # Tabella Prodotti con tipi booleani sicuri
         cur.execute("""
             CREATE TABLE IF NOT EXISTS prodotti (
                 id SERIAL PRIMARY KEY,
@@ -44,7 +44,6 @@ def init_db():
             );
         """)
         
-        # Tabella Clienti
         cur.execute("""
             CREATE TABLE IF NOT EXISTS clienti (
                 id SERIAL PRIMARY KEY,
@@ -56,7 +55,6 @@ def init_db():
             );
         """)
 
-        # Tabella Utenti
         cur.execute("""
             CREATE TABLE IF NOT EXISTS utenti (
                 id SERIAL PRIMARY KEY,
@@ -69,7 +67,6 @@ def init_db():
             );
         """)
 
-        # Tabella Storico Manutenzioni con ordine_amministrativo BOOLEAN
         cur.execute("""
             CREATE TABLE IF NOT EXISTS storico_manutenzioni (
                 id SERIAL PRIMARY KEY,
@@ -87,7 +84,6 @@ def init_db():
             );
         """)
         
-        # Aggiunta sicura delle colonne se mancanti
         cur.execute("ALTER TABLE prodotti ADD COLUMN IF NOT EXISTS magazzino_pesante INT DEFAULT 0;")
         cur.execute("ALTER TABLE prodotti ADD COLUMN IF NOT EXISTS in_manutenzione BOOLEAN DEFAULT FALSE;")
         cur.execute("ALTER TABLE prodotti ADD COLUMN IF NOT EXISTS cliente_manutenzione VARCHAR(255);")
@@ -97,10 +93,8 @@ def init_db():
         cur.execute("ALTER TABLE prodotti ADD COLUMN IF NOT EXISTS vettore VARCHAR(255);")
         cur.execute("ALTER TABLE prodotti ADD COLUMN IF NOT EXISTS ordine_amministrativo BOOLEAN DEFAULT FALSE;")
         cur.execute("ALTER TABLE prodotti ADD COLUMN IF NOT EXISTS note_manutenzione TEXT;")
-
         cur.execute("ALTER TABLE storico_manutenzioni ADD COLUMN IF NOT EXISTS ordine_amministrativo BOOLEAN DEFAULT FALSE;")
 
-        # Admin predefinito
         cur.execute("SELECT * FROM utenti WHERE username = 'admin';")
         if not cur.fetchone():
             hashed_pw = generate_password_hash("admin")
@@ -519,6 +513,27 @@ def gestisci_prodotto(qr_code):
 
     return render_template("gestisci.html", prodotto=prodotto, clienti=lista_clienti)
 
+@app.route("/aggiorna/<qr_code>", methods=["POST"])
+def aggiorna_prodotto(qr_code):
+    nome = request.form.get("nome")
+    sap = request.form.get("sap", "")
+    posizione = request.form.get("posizione", "")
+    try:
+        conn = get_db_connection()
+        cur = conn.cursor()
+        cur.execute("""
+            UPDATE prodotti 
+            SET nome = %s, sap = %s, posizione = %s
+            WHERE qr_code = %s;
+        """, (nome, sap, posizione, qr_code))
+        conn.commit()
+        cur.close()
+        conn.close()
+        flash("Articolo e posizione aggiornati con successo!", "success")
+    except Exception as e:
+        flash(f"Errore durante l'aggiornamento: {e}", "error")
+    return redirect(url_for("gestisci_prodotto", qr_code=qr_code))
+
 @app.route("/aggiungi", methods=["POST"])
 def aggiungi_prodotto():
     qr_code = request.form.get("qr_code")
@@ -567,7 +582,6 @@ def manda_manutenzione(qr_code):
     cliente_manutenzione = request.form.get("cliente_manutenzione")
     quantita_manutenzione = int(request.form.get("quantita_manutenzione", 1))
     
-    # Gestione sicura delle date vuote per evitare errori di sintassi su PostgreSQL
     data_spedizione = request.form.get("data_spedizione", "").strip()
     if not data_spedizione:
         data_spedizione = None
