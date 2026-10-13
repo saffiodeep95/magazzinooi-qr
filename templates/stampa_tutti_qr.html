@@ -27,17 +27,16 @@
         .qr-card h4 { font-size: 0.85rem; margin: 4px 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
         .qr-card p { font-size: 0.72rem; margin: 2px 0; color: #475569; }
         
-        /* Forza la selezione totale del testo del QR */
+        /* Codice testuale 100% selezionabile */
         .qr-code-text { 
             font-family: monospace; 
             font-size: 0.75rem; 
             color: #1e293b; 
             font-weight: bold; 
-            user-select: text !important;
-            -webkit-user-select: text !important;
-            -moz-user-select: text !important;
+            user-select: text;
+            -webkit-user-select: text;
             background: #f1f5f9;
-            padding: 2px 4px;
+            padding: 2px 6px;
             border-radius: 3px;
             display: inline-block;
         }
