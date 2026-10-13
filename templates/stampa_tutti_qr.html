@@ -10,7 +10,6 @@
         .no-print { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; padding: 10px; background: #f8fafc; border-bottom: 1px solid #e2e8f0; }
         .btn { background: #4f46e5; color: white; padding: 10px 16px; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; text-decoration: none; display: inline-block; }
         
-        /* Griglia compatta per risparmiare carta */
         .grid-container {
             display: grid;
             grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
@@ -28,21 +27,19 @@
         .qr-card h4 { font-size: 0.85rem; margin: 4px 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
         .qr-card p { font-size: 0.72rem; margin: 2px 0; color: #475569; }
         
-        /* Codice QR selezionabile e copiabile */
+        /* Forza la selezione totale del testo del QR */
         .qr-code-text { 
             font-family: monospace; 
             font-size: 0.75rem; 
             color: #1e293b; 
             font-weight: bold; 
-            user-select: all; 
-            -webkit-user-select: all; 
-            -moz-user-select: all; 
-            -ms-user-select: all;
+            user-select: text !important;
+            -webkit-user-select: text !important;
+            -moz-user-select: text !important;
             background: #f1f5f9;
             padding: 2px 4px;
             border-radius: 3px;
             display: inline-block;
-            cursor: pointer;
         }
         
         .qrcode-container { display: flex; justify-content: center; margin: 4px 0; }
@@ -72,7 +69,7 @@
         <div class="qr-card">
             <h4>{{ p.nome }}</h4>
             <div class="qrcode-container" id="qr-print-{{ loop.index }}" data-code="{{ p.qr_code }}"></div>
-            <p><span class="qr-code-text" title="Clicca per selezionare">{{ p.qr_code }}</span></p>
+            <p><span class="qr-code-text">{{ p.qr_code }}</span></p>
             {% if p.sap %}<p>SAP: {{ p.sap }}</p>{% endif %}
             <p style="font-weight: bold; color: #2563eb; font-size: 0.75rem;">📍 {{ p.posizione if p.posizione else 'Nessuna posizione' }}</p>
         </div>
