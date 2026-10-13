@@ -13,7 +13,7 @@
         /* Griglia compatta per risparmiare carta */
         .grid-container {
             display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+            grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
             gap: 10px;
             page-break-inside: avoid;
         }
@@ -26,22 +26,41 @@
             break-inside: avoid;
         }
         .qr-card h4 { font-size: 0.85rem; margin: 4px 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-        .qr-card p { font-size: 0.75rem; margin: 2px 0; color: #64748b; font-family: monospace; }
+        .qr-card p { font-size: 0.72rem; margin: 2px 0; color: #475569; }
+        
+        /* Codice QR selezionabile e copiabile */
+        .qr-code-text { 
+            font-family: monospace; 
+            font-size: 0.75rem; 
+            color: #1e293b; 
+            font-weight: bold; 
+            user-select: all; 
+            -webkit-user-select: all; 
+            -moz-user-select: all; 
+            -ms-user-select: all;
+            background: #f1f5f9;
+            padding: 2px 4px;
+            border-radius: 3px;
+            display: inline-block;
+            cursor: pointer;
+        }
+        
         .qrcode-container { display: flex; justify-content: center; margin: 4px 0; }
-        .qrcode-container canvas, .qrcode-container img { width: 90px !important; height: 90px !important; }
+        .qrcode-container canvas, .qrcode-container img { width: 85px !important; height: 85px !important; }
 
         @media print {
             .no-print { display: none; }
             body { padding: 0; }
             .grid-container { gap: 6px; }
             .qr-card { border: 1px solid #000; padding: 4px; }
+            .qr-code-text { background: none; padding: 0; }
         }
     </style>
 </head>
 <body>
 
     <div class="no-print">
-        <h1>🖨️ Stampa Etichette QR</h1>
+        <h1>🖨️ Stampa Etichette QR con Posizione</h1>
         <div>
             <button onclick="window.print()" class="btn" style="background: #10b981;">🖨️ Stampa Ora</button>
             <a href="{{ url_for('index') }}" class="btn" style="background: #64748b; margin-left: 10px;">← Torna alla Home</a>
@@ -53,8 +72,9 @@
         <div class="qr-card">
             <h4>{{ p.nome }}</h4>
             <div class="qrcode-container" id="qr-print-{{ loop.index }}" data-code="{{ p.qr_code }}"></div>
-            <p>{{ p.qr_code }}</p>
-            {% if p.sap %}<p style="font-size: 0.7rem;">SAP: {{ p.sap }}</p>{% endif %}
+            <p><span class="qr-code-text" title="Clicca per selezionare">{{ p.qr_code }}</span></p>
+            {% if p.sap %}<p>SAP: {{ p.sap }}</p>{% endif %}
+            <p style="font-weight: bold; color: #2563eb; font-size: 0.75rem;">📍 {{ p.posizione if p.posizione else 'Nessuna posizione' }}</p>
         </div>
         {% endfor %}
     </div>
@@ -66,8 +86,8 @@
                 if(code) {
                     new QRCode(el, {
                         text: code,
-                        width: 90,
-                        height: 90,
+                        width: 85,
+                        height: 85,
                         colorDark: "#000000",
                         colorLight: "#ffffff",
                         correctLevel: QRCode.CorrectLevel.H
