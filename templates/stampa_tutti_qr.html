@@ -3,12 +3,12 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Stampa QR Code - Risparmio Carta</title>
+    <title>Stampa QR Code Selezionati</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     <style>
         body { font-family: sans-serif; margin: 0; padding: 10px; background: white; color: #000; }
-        .no-print { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; padding: 10px; background: #f8fafc; border-bottom: 1px solid #e2e8f0; }
-        .btn { background: #4f46e5; color: white; padding: 10px 16px; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; text-decoration: none; display: inline-block; }
+        .no-print { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; padding: 10px; background: #f8fafc; border-bottom: 1px solid #e2e8f0; flex-wrap: wrap; gap: 10px; }
+        .btn { background: #4f46e5; color: white; padding: 8px 14px; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; text-decoration: none; display: inline-block; font-size: 0.9rem; }
         
         .grid-container {
             display: grid;
@@ -23,11 +23,19 @@
             border-radius: 6px;
             background: #fff;
             break-inside: avoid;
+            position: relative;
         }
         .qr-card h4 { font-size: 0.85rem; margin: 4px 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
         .qr-card p { font-size: 0.72rem; margin: 2px 0; color: #475569; }
         
-        /* Codice testuale 100% selezionabile */
+        .qr-checkbox {
+            position: absolute;
+            top: 6px;
+            left: 6px;
+            transform: scale(1.3);
+            cursor: pointer;
+        }
+
         .qr-code-text { 
             font-family: monospace; 
             font-size: 0.75rem; 
@@ -45,10 +53,12 @@
         .qrcode-container canvas, .qrcode-container img { width: 85px !important; height: 85px !important; }
 
         @media print {
-            .no-print { display: none; }
+            .no-print, .qr-checkbox { display: none !important; }
             body { padding: 0; }
             .grid-container { gap: 6px; }
             .qr-card { border: 1px solid #000; padding: 4px; }
+            /* Nasconde gli elementi non selezionati durante la stampa */
+            .qr-card.no-print-card { display: none !important; }
             .qr-code-text { background: none; padding: 0; }
         }
     </style>
@@ -56,16 +66,19 @@
 <body>
 
     <div class="no-print">
-        <h1>🖨️ Stampa Etichette QR con Posizione</h1>
+        <h1>🖨️ Stampa QR Code</h1>
         <div>
-            <button onclick="window.print()" class="btn" style="background: #10b981;">🖨️ Stampa Ora</button>
-            <a href="{{ url_for('index') }}" class="btn" style="background: #64748b; margin-left: 10px;">← Torna alla Home</a>
+            <button onclick="selezionaTutti(true)" class="btn" style="background: #0284c7;">✅ Seleziona Tutti</button>
+            <button onclick="selezionaTutti(false)" class="btn" style="background: #64748b;">❌ Deseleziona Tutti</button>
+            <button onclick="avviaStampaSelezionati()" class="btn" style="background: #10b981; margin-left: 10px;">🖨️ Stampa Selezionati</button>
+            <a href="{{ url_for('index') }}" class="btn" style="background: #475569; margin-left: 10px;">← Home</a>
         </div>
     </div>
 
     <div class="grid-container">
         {% for p in prodotti %}
-        <div class="qr-card">
+        <div class="qr-card" id="card-{{ loop.index }}">
+            <input type="checkbox" class="qr-checkbox" checked onchange="aggiornaVisibilitaCard({{ loop.index }}, this.checked)">
             <h4>{{ p.nome }}</h4>
             <div class="qrcode-container" id="qr-print-{{ loop.index }}" data-code="{{ p.qr_code }}"></div>
             <p><span class="qr-code-text">{{ p.qr_code }}</span></p>
@@ -91,6 +104,27 @@
                 }
             });
         });
+
+        function aggiornaVisibilitaCard(index, isChecked) {
+            let card = document.getElementById('card-' + index);
+            if (isChecked) {
+                card.classList.remove('no-print-card');
+            } else {
+                card.classList.add('no-print-card');
+            }
+        }
+
+        function selezionaTutti(stato) {
+            let checkboxes = document.querySelectorAll('.qr-checkbox');
+            checkboxes.forEach((cb, idx) => {
+                cb.checked = stato;
+                aggiornaVisibilitaCard(idx + 1, stato);
+            });
+        }
+
+        function avviaStampaSelezionati() {
+            window.print();
+        }
     </script>
 
 </body>
