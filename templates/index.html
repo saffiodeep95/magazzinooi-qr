@@ -1,3 +1,10 @@
+<!--
+========================================================================
+  Magazzino Web Application
+  Copyright (c) 2026 Marco Pavan. All Rights Reserved.
+  Developed and Designed by Marco Pavan.
+========================================================================
+-->
 <!DOCTYPE html>
 <html lang="it">
 <head>
@@ -17,13 +24,14 @@
         th { background: #f1f5f9; color: #475569; font-weight: bold; }
         tr:hover { background: #f8fafc; }
         .menu-grid { display: flex; flex-wrap: wrap; gap: 5px; margin-bottom: 15px; }
+        footer { text-align: center; margin-top: 30px; padding: 15px 0; color: #64748b; font-size: 0.8rem; border-top: 1px solid #e2e8f0; }
     </style>
 </head>
 <body>
 
     <h1 style="font-size: 1.5rem; margin-bottom: 15px;">📦 Gestione Magazzino</h1>
 
-    <!-- MENU PRINCIPALE PULITO -->
+    <!-- MENU PRINCIPALE -->
     <div class="menu-grid">
         <a href="{{ url_for('carico') }}" class="btn" style="background: #10b981;">➕ Carico</a>
         <a href="{{ url_for('scarico') }}" class="btn" style="background: #f97316;">➖ Scarico</a>
@@ -32,6 +40,7 @@
         <a href="{{ url_for('stampa_tutti_qr') }}" class="btn" style="background: #0284c7;">🖨️ Stampa QR</a>
         <a href="{{ url_for('clienti') }}" class="btn" style="background: #475569;">👥 Clienti</a>
         <a href="{{ url_for('upload') }}" class="btn" style="background: #0d9488;">📁 CSV</a>
+        <a href="{{ url_for('documenti') }}" class="btn" style="background: #0284c7;">📁 Documenti</a>
         {% if session.get('is_admin') %}
         <a href="{{ url_for('admin_utenti') }}" class="btn" style="background: #7c3aed;">🛡️ Admin</a>
         {% endif %}
@@ -46,7 +55,7 @@
       {% endif %}
     {% endwith %}
 
-    <!-- AGGIUNGI NUOVO ARTICOLO (LAYOUT VERTICALE PULITO) -->
+    <!-- AGGIUNGI NUOVO ARTICOLO -->
     <div class="card">
         <h3 style="margin-top: 0; font-size: 1.1rem; margin-bottom: 12px;">➕ Aggiungi Nuovo Articolo</h3>
         <form action="{{ url_for('aggiungi_prodotto') }}" method="POST">
@@ -128,6 +137,12 @@
             </table>
         </div>
     </div>
+
+    <!-- FIRMA E COPYRIGHT -->
+    <footer>
+        <p style="margin: 0;">© 2026 <strong>Marco Pavan</strong> — Tutti i diritti riservati.</p>
+        <p style="margin: 3px 0 0 0; opacity: 0.75;">Sviluppato da Marco Pavan</p>
+    </footer>
 
     <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
     <script>
