@@ -3,56 +3,59 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Scarico Rapido QR</title>
-    <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
+    <title>Scarico Articolo</title>
     <style>
         body { font-family: sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; background: #f8fafc; color: #1e293b; text-align: center; }
         .card { background: white; padding: 20px; border-radius: 12px; border: 1px solid #e2e8f0; margin-bottom: 20px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
-        .btn { background: #4f46e5; color: white; padding: 10px 16px; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; text-decoration: none; display: inline-block; margin: 10px 0; }
-        input { width: 100%; padding: 10px; margin: 10px 0; border: 1px solid #cbd5e1; border-radius: 6px; box-sizing: border-box; font-size: 1rem; text-align: center; }
-        #reader { width: 100%; max-width: 400px; margin: 0 auto; border-radius: 8px; overflow: hidden; }
+        .btn { background: #4f46e5; color: white; padding: 10px 16px; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; text-decoration: none; display: inline-block; margin: 4px; }
+        input { width: 100%; padding: 12px; margin-top: 5px; margin-bottom: 15px; border: 1px solid #cbd5e1; border-radius: 6px; box-sizing: border-box; text-align: center; font-size: 1.1rem; font-family: monospace; }
+        label { font-weight: bold; font-size: 0.9rem; color: #475569; display: block; margin-bottom: 5px; }
     </style>
 </head>
 <body>
 
     <h1>➖ Scarico Articolo</h1>
-    <a href="{{ url_for('index') }}" class="btn" style="background: #64748b; margin-bottom: 20px;">← Torna alla Home</a>
-
-    {% with messages = get_flashed_messages() %}
-      {% if messages %}
-        {% for message in messages %}
-          <div style="background: #dcfce7; color: #166534; padding: 10px; border-radius: 8px; margin-bottom: 15px;">{{ message }}</div>
-        {% endfor %}
-      {% endif %}
-    {% endwith %}
+    <div style="margin-bottom: 20px;">
+        <a href="{{ url_for('index') }}" class="btn" style="background: #64748b;">← Torna alla Home</a>
+    </div>
 
     <div class="card">
-        <h3>Inquadra il QR Code (Fotocamera Posteriore)</h3>
-        <div id="reader"></div>
+        <h3>Inquadra il QR Code</h3>
+        <div id="reader" style="width: 100%; max-width: 350px; margin: 0 auto;"></div>
     </div>
 
     <div class="card">
         <form action="{{ url_for('scarico') }}" method="POST">
-            <label style="font-weight: bold;">Codice QR scansionato o digitato:</label>
+            <label>Codice QR Scansionato o Digitato:</label>
             <input type="text" id="qr_code" name="qr_code" placeholder="Codice QR..." required>
-            
-            <label style="font-weight: bold;">Quantità da scaricare:</label>
-            <input type="number" name="quantita" value="1" min="1" required>
 
-            <button type="submit" class="btn" style="background: #f97316; width: 100%;">Conferma Scarico</button>
+            <label>Quantità da scaricare:</label>
+            <input type="number" name="quantita" value="1" min="1" required style="font-family: sans-serif;">
+
+            <button type="submit" class="btn" style="background: #f97316; width: 100%; font-size: 1.1rem; padding: 12px;">Conferma Scarico</button>
         </form>
     </div>
 
+    <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
     <script>
-        function onScanSuccess(decodedText, decodedResult) {
-            document.getElementById('qr_code').value = decodedText;
-        }
-        let html5QrcodeScanner = new Html5QrcodeScanner("reader", { 
-            fps: 10, 
-            qrbox: 250,
-            aspectRatio: 1.0
-        }, false);
-        html5QrcodeScanner.render(onScanSuccess, function(error) {});
+        document.addEventListener("DOMContentLoaded", function() {
+            function onScanSuccess(decodedText, decodedResult) {
+                document.getElementById('qr_code').value = decodedText;
+                html5QrCode.stop().catch(err => {});
+            }
+
+            let html5QrCode = new Html5Qrcode("reader");
+            html5QrCode.start(
+                { facingMode: "environment" }, 
+                {
+                    fps: 10,
+                    qrbox: { width: 220, height: 220 }
+                },
+                onScanSuccess
+            ).catch(err => {
+                console.error("Impossibile avviare la fotocamera", err);
+            });
+        });
     </script>
 </body>
 </html>
