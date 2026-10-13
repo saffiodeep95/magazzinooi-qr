@@ -12,13 +12,28 @@
         .btn:hover { opacity: 0.9; }
         input, select, textarea { width: 100%; padding: 10px; margin-top: 5px; margin-bottom: 15px; border: 1px solid #cbd5e1; border-radius: 6px; box-sizing: border-box; }
         label { font-weight: bold; font-size: 0.9rem; color: #475569; }
+        .selectable-code {
+            user-select: text !important;
+            -webkit-user-select: text !important;
+            -moz-user-select: text !important;
+            background: #f1f5f9;
+            padding: 8px 12px;
+            border-radius: 6px;
+            font-family: monospace;
+            font-size: 1.1rem;
+            border: 1px solid #cbd5e1;
+            display: inline-block;
+        }
     </style>
 </head>
 <body>
 
     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
         <h1>⚙️ Gestione Articolo</h1>
-        <a href="{{ url_for('index') }}" class="btn" style="background: #64748b;">← Torna alla Home</a>
+        <div>
+            <a href="{{ url_for('stampa_tutti_qr') }}" class="btn" style="background: #0284c7;">🖨️ Stampa QR</a>
+            <a href="{{ url_for('index') }}" class="btn" style="background: #64748b;">← Torna alla Home</a>
+        </div>
     </div>
 
     {% with messages = get_flashed_messages() %}
@@ -30,14 +45,38 @@
     {% endwith %}
 
     <div class="card" style="display: flex; gap: 20px; align-items: center; flex-wrap: wrap;">
-        <div id="qrcode" style="background: white; padding: 10px; border: 1px solid #cbd5e1; border-radius: 8px; user-select: text;"></div>
-        <div>
+        <div id="qrcode" style="background: white; padding: 10px; border: 1px solid #cbd5e1; border-radius: 8px;"></div>
+        <div style="flex: 1;">
             <h2>{{ prodotto.nome }}</h2>
-            <p><strong>QR Code:</strong> <code style="user-select: all; background: #f1f5f9; padding: 2px 6px; border-radius: 4px;">{{ prodotto.qr_code }}</code></p>
-            <p><strong>Codice SAP:</strong> {{ prodotto.sap if prodotto.sap else '-' }}</p>
+            <p style="margin-bottom: 8px;"><strong>QR Code (Selezionabile e Copiabile):</strong></p>
+            <div class="selectable-code">{{ prodotto.qr_code }}</div>
+            
+            <p style="margin-top: 15px;"><strong>Codice SAP:</strong> {{ prodotto.sap if prodotto.sap else '-' }}</p>
             <p><strong>Quantità Disponibile:</strong> <span style="color: #10b981; font-size: 1.2rem; font-weight: bold;">{{ prodotto.quantita }} pz</span></p>
-            <p><strong>Posizione:</strong> {{ prodotto.posizione if prodotto.posizione else '-' }}</p>
+            <p><strong>Posizione Attuale:</strong> <span style="color: #2563eb; font-weight: bold;">{{ prodotto.posizione if prodotto.posizione else '-' }}</span></p>
         </div>
+    </div>
+
+    <!-- MODIFICA POSIZIONE E DATI BASE -->
+    <div class="card">
+        <h3>📍 Aggiorna Posizione e Dati Articolo</h3>
+        <form action="{{ url_for('aggiorna_prodotto', qr_code=prodotto.qr_code) }}" method="POST">
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+                <div>
+                    <label>Nome Articolo:</label>
+                    <input type="text" name="nome" value="{{ prodotto.nome }}" required>
+                </div>
+                <div>
+                    <label>Codice SAP:</label>
+                    <input type="text" name="sap" value="{{ prodotto.sap or '' }}">
+                </div>
+            </div>
+            
+            <label>Posizione in Magazzino (es. Scaffale A, Corsia 2...):</label>
+            <input type="text" name="posizione" value="{{ prodotto.posizione or '' }}" placeholder="Inserisci posizione...">
+
+            <button type="submit" class="btn" style="background: #2563eb; width: 100%;">Salva Modifiche Articolo</button>
+        </form>
     </div>
 
     <!-- SEZIONE CARICO E SCARICO RAPIDO SUL SINGOLO ARTICOLO -->
