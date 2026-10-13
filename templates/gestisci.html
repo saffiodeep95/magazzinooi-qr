@@ -30,10 +30,10 @@
     {% endwith %}
 
     <div class="card" style="display: flex; gap: 20px; align-items: center; flex-wrap: wrap;">
-        <div id="qrcode" style="background: white; padding: 10px; border: 1px solid #cbd5e1; border-radius: 8px;"></div>
+        <div id="qrcode" style="background: white; padding: 10px; border: 1px solid #cbd5e1; border-radius: 8px; user-select: text;"></div>
         <div>
             <h2>{{ prodotto.nome }}</h2>
-            <p><strong>QR Code:</strong> <code>{{ prodotto.qr_code }}</code></p>
+            <p><strong>QR Code:</strong> <code style="user-select: all; background: #f1f5f9; padding: 2px 6px; border-radius: 4px;">{{ prodotto.qr_code }}</code></p>
             <p><strong>Codice SAP:</strong> {{ prodotto.sap if prodotto.sap else '-' }}</p>
             <p><strong>Quantità Disponibile:</strong> <span style="color: #10b981; font-size: 1.2rem; font-weight: bold;">{{ prodotto.quantita }} pz</span></p>
             <p><strong>Posizione:</strong> {{ prodotto.posizione if prodotto.posizione else '-' }}</p>
