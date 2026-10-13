@@ -47,15 +47,12 @@
         function onScanSuccess(decodedText, decodedResult) {
             document.getElementById('qr_code').value = decodedText;
         }
-        // Forza l'uso della fotocamera posteriore (environment)
         let html5QrcodeScanner = new Html5QrcodeScanner("reader", { 
             fps: 10, 
             qrbox: 250,
             aspectRatio: 1.0
-        });
-        html5QrcodeScanner.render(onScanSuccess, function(error) {
-            // Gestione silenziosa degli errori di scansione fotocamera
-        });
+        }, false);
+        html5QrcodeScanner.render(onScanSuccess, function(error) {});
     </script>
 </body>
 </html>
