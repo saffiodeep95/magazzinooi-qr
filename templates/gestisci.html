@@ -40,6 +40,29 @@
         </div>
     </div>
 
+    <!-- SEZIONE CARICO E SCARICO RAPIDO SUL SINGOLO ARTICOLO -->
+    <div class="card" style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+        <div style="background: #f0fdf4; padding: 15px; border-radius: 8px; border: 1px solid #bbf7d0;">
+            <h3 style="color: #166534; margin-top: 0;">➕ Carico Rapido</h3>
+            <form action="{{ url_for('carico') }}" method="POST">
+                <input type="hidden" name="qr_code" value="{{ prodotto.qr_code }}">
+                <label>Quantità da aggiungere:</label>
+                <input type="number" name="quantita" value="1" min="1" required>
+                <button type="submit" class="btn" style="background: #10b981; width: 100%;">Carica +</button>
+            </form>
+        </div>
+
+        <div style="background: #fff7ed; padding: 15px; border-radius: 8px; border: 1px solid #ffedd5;">
+            <h3 style="color: #c2410c; margin-top: 0;">➖ Scarico Rapido</h3>
+            <form action="{{ url_for('scarico') }}" method="POST">
+                <input type="hidden" name="qr_code" value="{{ prodotto.qr_code }}">
+                <label>Quantità da scaricare:</label>
+                <input type="number" name="quantita" value="1" min="1" required>
+                <button type="submit" class="btn" style="background: #f97316; width: 100%;">Scarica -</button>
+            </form>
+        </div>
+    </div>
+
     {% if prodotto.in_manutenzione %}
     <div class="card" style="background: #fffbeb; border-color: #fde68a;">
         <h3 style="color: #b45309; margin-top: 0;">🔧 Articolo attualmente in Manutenzione</h3>
