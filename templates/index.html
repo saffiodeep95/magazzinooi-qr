@@ -1,10 +1,21 @@
-<!DOCTYPE html>
+[13:35, 13/10/2026] Marco Pavan: <!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Amministrazione Utenti e Permessi</title>
+    <style>
+        body { font-family: sans-serif; max-width: 1000px; margin: 0 auto; padding: 20px; background: #f8fafc; color: #1e293b; }
+        .card { background: white; padding: 20px; border-radius: 12px; border: 1px solid #e2e8f0; margin-bottom: 20px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
+        .btn { background: #4f46e5; color: white; padding: 8px 14px; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; text-decoration: none; display: inline-block; font-size: 0.85rem; }
+        .btn:hover { opacity: 0.9; }
+        table { width: 100%…
+[13:58, 13/10/2026] Marco Pavan: <!DOCTYPE html>
 <html lang="it">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Magazzino - Home</title>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     <style>
         body { font-family: sans-serif; max-width: 1000px; margin: 0 auto; padding: 20px; background: #f8fafc; color: #1e293b; }
         .card { background: white; padding: 20px; border-radius: 12px; border: 1px solid #e2e8f0; margin-bottom: 20px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
@@ -16,7 +27,6 @@
         th, td { padding: 12px 15px; text-align: left; border-bottom: 1px solid #e2e8f0; font-size: 0.9rem; }
         th { background: #f1f5f9; color: #475569; font-weight: bold; }
         tr:hover { background: #f8fafc; }
-        #scanner-container { display: none; margin-top: 15px; text-align: center; }
     </style>
 </head>
 <body>
@@ -85,21 +95,21 @@
         </form>
     </div>
 
-    <!-- LISTA ARTICOLI CON RICERCA VELOCE E FOTOCAMERA QR -->
+    <!-- LISTA ARTICOLI CON RICERCA E FOTOCAMERA QR INTEGRATA -->
     <div class="card">
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; flex-wrap: wrap; gap: 10px;">
-            <h3 style="margin: 0;">📋 Articoli in Magazzino</h3>
-            <div style="display: flex; gap: 8px; width: 350px;">
-                <input type="text" id="filtroTabella" placeholder="🔍 Cerca per QR, Nome o SAP..." onkeyup="filtraArticoli()" style="margin: 0; padding: 8px 12px;">
-                <button type="button" onclick="toggleScanner()" class="btn" style="background: #0284c7; margin: 0; padding: 8px 12px;" title="Scansiona QR per ricerca">📷</button>
-            </div>
+        <h3>📋 Articoli in Magazzino</h3>
+        
+        <!-- Barra di ricerca + Pulsante Scanner -->
+        <div style="display: flex; gap: 10px; margin-bottom: 15px;">
+            <input type="text" id="filtroTabella" placeholder="🔍 Cerca per QR, Nome o SAP..." onkeyup="filtraArticoli()" style="margin: 0;">
+            <button type="button" onclick="toggleScanner()" class="btn" style="background: #0284c7; margin: 0; white-space: nowrap;">📷 Scanner QR</button>
         </div>
 
-        <!-- Scanner a scomparsa per la ricerca rapida -->
-        <div id="scanner-container" class="card" style="background: #f8fafc; border: 1px dashed #cbd5e1;">
-            <p style="font-weight: bold; margin-bottom: 8px;">Inquadra il QR Code per cercare:</p>
-            <div id="reader" style="width: 100%; max-width: 300px; margin: 0 auto;"></div>
-            <button type="button" onclick="toggleScanner()" class="btn" style="background: #64748b; margin-top: 10px; padding: 6px 12px; font-size: 0.8rem;">Chiudi Fotocamera</button>
+        <!-- Riquadro Fotocamera (Nascosto di default, appare quando premi "Scanner QR") -->
+        <div id="scanner-container" style="display: none; background: #f8fafc; padding: 15px; border-radius: 8px; border: 1px dashed #cbd5e1; margin-bottom: 15px; text-align: center;">
+            <p style="font-weight: bold; margin-top: 0; margin-bottom: 10px;">Inquadra il QR Code per cercare l'articolo:</p>
+            <div id="reader" style="width: 100%; max-width: 320px; margin: 0 auto;"></div>
+            <button type="button" onclick="toggleScanner()" class="btn" style="background: #64748b; margin-top: 10px; padding: 6px 12px; font-size: 0.85rem;">Chiudi Fotocamera</button>
         </div>
 
         <div style="overflow-x: auto;">
@@ -170,7 +180,7 @@
                 }
                 html5QrCode.start(
                     { facingMode: "environment" },
-                    { fps: 10, qrbox: { width: 200, height: 200 } },
+                    { fps: 10, qrbox: { width: 220, height: 220 } },
                     function(decodedText) {
                         document.getElementById("filtroTabella").value = decodedText;
                         filtraArticoli();
