@@ -352,7 +352,6 @@ def stampa_tutti_qr():
     conn.close()
     return render_template("stampa_tutti_qr.html", prodotti=prodotti)
 
-# ROTTA PER STAMPARE IL SINGOLO QR CODE DALLA PAGINA GESTISCI
 @app.route("/stampa_singolo_qr/<qr_code>")
 def stampa_singolo_qr(qr_code):
     conn = get_db_connection()
@@ -531,18 +530,19 @@ def aggiorna_prodotto(qr_code):
     nome = request.form.get("nome")
     sap = request.form.get("sap", "")
     posizione = request.form.get("posizione", "")
+    flag_sezione = 1 if request.form.get("magazzino_pesante") else 0
     try:
         conn = get_db_connection()
         cur = conn.cursor()
         cur.execute("""
             UPDATE prodotti 
-            SET nome = %s, sap = %s, posizione = %s
+            SET nome = %s, sap = %s, posizione = %s, magazzino_pesante = %s
             WHERE qr_code = %s;
-        """, (nome, sap, posizione, qr_code))
+        """, (nome, sap, posizione, flag_sezione, qr_code))
         conn.commit()
         cur.close()
         conn.close()
-        flash("Articolo e posizione aggiornati con successo!", "success")
+        flash("Articolo e dati magazzino aggiornati con successo!", "success")
     except Exception as e:
         flash(f"Errore durante l'aggiornamento: {e}", "error")
     return redirect(url_for("gestisci_prodotto", qr_code=qr_code))
