@@ -31,7 +31,8 @@
     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
         <h1>⚙️ Gestione Articolo</h1>
         <div>
-            <a href="{{ url_for('stampa_tutti_qr') }}" class="btn" style="background: #0284c7;">🖨️ Stampa QR</a>
+            <!-- PULSANTE PER STAMPARE ESCLUSIVAMENTE QUESTO SINGOLO QR CODE -->
+            <a href="{{ url_for('stampa_singolo_qr', qr_code=prodotto.qr_code) }}" class="btn" style="background: #0284c7;" target="_blank">🖨️ Stampa Solo Questo QR</a>
             <a href="{{ url_for('index') }}" class="btn" style="background: #64748b;">← Torna alla Home</a>
         </div>
     </div>
