@@ -567,7 +567,7 @@ def manda_manutenzione(qr_code):
     data_spedizione = request.form.get("data_spedizione", "")
     data_riconsegna = request.form.get("data_riconsegna", "")
     vettore = request.form.get("vettore", "")
-    ordine_amministrativo = 1 if request.form.get("ordine_amministrativo") else 0
+    ordine_amministrativo = True if request.form.get("ordine_amministrativo") else False
     note_manutenzione = request.form.get("note_manutenzione", "")
 
     try:
@@ -577,7 +577,7 @@ def manda_manutenzione(qr_code):
         cur.execute("SELECT * FROM prodotti WHERE qr_code = %s;", (qr_code,))
         prod = cur.fetchone()
         
-        # Utilizziamo True (booleano) per adattarci alla colonna booleana di PostgreSQL
+        # Gestione booleana corretta per PostgreSQL
         cur.execute("""
             UPDATE prodotti 
             SET quantita = GREATEST(0, quantita - %s),
@@ -593,10 +593,12 @@ def manda_manutenzione(qr_code):
         """, (quantita_manutenzione, cliente_manutenzione, quantita_manutenzione, data_spedizione, data_riconsegna, vettore, ordine_amministrativo, note_manutenzione, qr_code))
         
         if prod:
+            # Per lo storico memorizziamo come intero (1 o 0) per compatibilità
+            ord_adm_int = 1 if ordine_amministrativo else 0
             cur.execute("""
                 INSERT INTO storico_manutenzioni (nome_prodotto, qr_code, sap, cliente, quantita, data_spedizione, data_riconsegna, vettore, ordine_amministrativo, note)
                 VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s);
-            """, (prod['nome'], qr_code, prod['sap'], cliente_manutenzione, quantita_manutenzione, data_spedizione, data_riconsegna, vettore, ordine_amministrativo, note_manutenzione))
+            """, (prod['nome'], qr_code, prod['sap'], cliente_manutenzione, quantita_manutenzione, data_spedizione, data_riconsegna, vettore, ord_adm_int, note_manutenzione))
 
         conn.commit()
         cur.close()
@@ -611,7 +613,6 @@ def ripristina_magazzino(qr_code):
     try:
         conn = get_db_connection()
         cur = conn.cursor()
-        # Utilizziamo FALSE (booleano) per ripristinare correttamente l'articolo
         cur.execute("""
             UPDATE prodotti 
             SET quantita = quantita + quantita_manutenzione,
@@ -621,7 +622,7 @@ def ripristina_magazzino(qr_code):
                 data_spedizione = NULL,
                 data_riconsegna = NULL,
                 vettore = NULL,
-                ordine_amministrativo = 0,
+                ordine_amministrativo = FALSE,
                 note_manutenzione = NULL
             WHERE qr_code = %s;
         """, (qr_code,))
