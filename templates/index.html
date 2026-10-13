@@ -16,7 +16,7 @@
         th, td { padding: 12px 15px; text-align: left; border-bottom: 1px solid #e2e8f0; font-size: 0.9rem; }
         th { background: #f1f5f9; color: #475569; font-weight: bold; }
         tr:hover { background: #f8fafc; }
-        .search-box { display: flex; gap: 10px; margin-bottom: 20px; align-items: center; }
+        #scanner-container { display: none; margin-top: 15px; text-align: center; }
     </style>
 </head>
 <body>
@@ -31,6 +31,9 @@
             <a href="{{ url_for('stampa_tutti_qr') }}" class="btn" style="background: #0284c7;">🖨️ Stampa QR</a>
             <a href="{{ url_for('clienti') }}" class="btn" style="background: #475569;">👥 Clienti</a>
             <a href="{{ url_for('upload') }}" class="btn" style="background: #0d9488;">📁 Importa CSV</a>
+            {% if session.get('is_admin') %}
+            <a href="{{ url_for('admin_utenti') }}" class="btn" style="background: #7c3aed;">🛡️ Admin Utenti</a>
+            {% endif %}
             <a href="{{ url_for('logout') }}" class="btn" style="background: #ef4444;">Esci</a>
         </div>
     </div>
@@ -82,13 +85,21 @@
         </form>
     </div>
 
-    <!-- LISTA ARTICOLI CON RICERCA VELOCE -->
+    <!-- LISTA ARTICOLI CON RICERCA VELOCE E FOTOCAMERA QR -->
     <div class="card">
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; flex-wrap: wrap;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; flex-wrap: wrap; gap: 10px;">
             <h3 style="margin: 0;">📋 Articoli in Magazzino</h3>
-            <div style="width: 300px; margin: 0;">
+            <div style="display: flex; gap: 8px; width: 350px;">
                 <input type="text" id="filtroTabella" placeholder="🔍 Cerca per QR, Nome o SAP..." onkeyup="filtraArticoli()" style="margin: 0; padding: 8px 12px;">
+                <button type="button" onclick="toggleScanner()" class="btn" style="background: #0284c7; margin: 0; padding: 8px 12px;" title="Scansiona QR per ricerca">📷</button>
             </div>
+        </div>
+
+        <!-- Scanner a scomparsa per la ricerca rapida -->
+        <div id="scanner-container" class="card" style="background: #f8fafc; border: 1px dashed #cbd5e1;">
+            <p style="font-weight: bold; margin-bottom: 8px;">Inquadra il QR Code per cercare:</p>
+            <div id="reader" style="width: 100%; max-width: 300px; margin: 0 auto;"></div>
+            <button type="button" onclick="toggleScanner()" class="btn" style="background: #64748b; margin-top: 10px; padding: 6px 12px; font-size: 0.8rem;">Chiudi Fotocamera</button>
         </div>
 
         <div style="overflow-x: auto;">
@@ -125,6 +136,7 @@
         </div>
     </div>
 
+    <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
     <script>
         function filtraArticoli() {
             let input = document.getElementById("filtroTabella");
@@ -140,6 +152,34 @@
                 } else {
                     riga.style.display = "none";
                 }
+            }
+        }
+
+        let html5QrCode = null;
+        function toggleScanner() {
+            let container = document.getElementById("scanner-container");
+            if (container.style.display === "block") {
+                container.style.display = "none";
+                if (html5QrCode) {
+                    html5QrCode.stop().catch(err => {});
+                }
+            } else {
+                container.style.display = "block";
+                if (!html5QrCode) {
+                    html5QrCode = new Html5Qrcode("reader");
+                }
+                html5QrCode.start(
+                    { facingMode: "environment" },
+                    { fps: 10, qrbox: { width: 200, height: 200 } },
+                    function(decodedText) {
+                        document.getElementById("filtroTabella").value = decodedText;
+                        filtraArticoli();
+                        container.style.display = "none";
+                        html5QrCode.stop().catch(err => {});
+                    }
+                ).catch(err => {
+                    console.error("Errore avvio fotocamera", err);
+                });
             }
         }
     </script>
