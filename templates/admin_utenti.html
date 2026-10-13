@@ -58,19 +58,19 @@
                         <td>
                             <!-- Permesso Manutenzione -->
                             <form action="{{ url_for('toggle_permesso', user_id=u.id, tipo='manutenzione') }}" method="POST" style="margin-bottom: 4px;">
-                                <button type="submit" class="btn" style="background: {% if u.puo_vedere_manutenzione %}#10b981{% else %}#94a3b8{% else %}{% endif %}; font-size: 0.75rem; padding: 4px 8px; width: 160px; text-align: left;">
+                                <button type="submit" class="btn" style="background: {% if u.puo_vedere_manutenzione %}#10b981{% else %}#94a3b8{% endif %}; font-size: 0.75rem; padding: 4px 8px; width: 160px; text-align: left;">
                                     {% if u.puo_vedere_manutenzione %}✅ Vede Manutenzioni{% else %}❌ Manutenzioni Nascoste{% endif %}
                                 </button>
                             </form>
                             <!-- Permesso Eliminazione -->
                             <form action="{{ url_for('toggle_permesso', user_id=u.id, tipo='eliminazione') }}" method="POST" style="margin-bottom: 4px;">
-                                <button type="submit" class="btn" style="background: {% if u.puo_eliminare %}#10b981{% else %}#94a3b8{% else %}{% endif %}; font-size: 0.75rem; padding: 4px 8px; width: 160px; text-align: left;">
+                                <button type="submit" class="btn" style="background: {% if u.puo_eliminare %}#10b981{% else %}#94a3b8{% endif %}; font-size: 0.75rem; padding: 4px 8px; width: 160px; text-align: left;">
                                     {% if u.puo_eliminare %}✅ Può Eliminare Articoli{% else %}❌ No Eliminazione Articoli{% endif %}
                                 </button>
                             </form>
                             <!-- Permesso Eliminazione Storico -->
                             <form action="{{ url_for('toggle_permesso', user_id=u.id, tipo='eliminazione_storico') }}" method="POST">
-                                <button type="submit" class="btn" style="background: {% if u.puo_eliminare_storico %}#10b981{% else %}#94a3b8{% else %}{% endif %}; font-size: 0.75rem; padding: 4px 8px; width: 160px; text-align: left;">
+                                <button type="submit" class="btn" style="background: {% if u.puo_eliminare_storico %}#10b981{% else %}#94a3b8{% endif %}; font-size: 0.75rem; padding: 4px 8px; width: 160px; text-align: left;">
                                     {% if u.puo_eliminare_storico %}✅ Può Eliminare Storico{% else %}❌ No Eliminazione Storico{% endif %}
                                 </button>
                             </form>
