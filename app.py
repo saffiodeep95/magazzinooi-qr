@@ -6,7 +6,7 @@ from psycopg2.extras import RealDictCursor
 from flask import Flask, render_template, request, redirect, url_for, flash, session
 from werkzeug.security import generate_password_hash, check_password_hash
 
-app = Flask(_name_)
+app = Flask(__name__)
 app.secret_key = os.environ.get("SECRET_KEY", "chiave-segreta-magazzino")
 
 DATABASE_URL = os.environ.get("DATABASE_URL")
@@ -653,5 +653,5 @@ def elimina_prodotto():
 
     return redirect(url_for("index"))
 
-if _name_ == "_main_":
+if __name__ == "_main_":
     app.run(debug=True)
