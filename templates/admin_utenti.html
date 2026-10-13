@@ -3,14 +3,17 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Amministrazione Utenti</title>
+    <title>Amministrazione Utenti e Permessi</title>
     <style>
-        body { font-family: sans-serif; max-width: 900px; margin: 0 auto; padding: 20px; background: #f8fafc; color: #1e293b; }
+        body { font-family: sans-serif; max-width: 1000px; margin: 0 auto; padding: 20px; background: #f8fafc; color: #1e293b; }
         .card { background: white; padding: 20px; border-radius: 12px; border: 1px solid #e2e8f0; margin-bottom: 20px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
         .btn { background: #4f46e5; color: white; padding: 8px 14px; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; text-decoration: none; display: inline-block; font-size: 0.85rem; }
+        .btn:hover { opacity: 0.9; }
         table { width: 100%; border-collapse: collapse; margin-top: 10px; background: white; border-radius: 8px; overflow: hidden; border: 1px solid #e2e8f0; }
-        th, td { padding: 12px 15px; text-align: left; border-bottom: 1px solid #e2e8f0; font-size: 0.9rem; }
+        th, td { padding: 12px 15px; text-align: left; border-bottom: 1px solid #e2e8f0; font-size: 0.9rem; vertical-align: middle; }
         th { background: #f1f5f9; color: #475569; font-weight: bold; }
+        input, select { width: 100%; padding: 8px; margin-top: 4px; margin-bottom: 10px; border: 1px solid #cbd5e1; border-radius: 6px; box-sizing: border-box; }
+        label { font-weight: bold; font-size: 0.85rem; color: #475569; display: block; }
     </style>
 </head>
 <body>
@@ -29,40 +32,69 @@
     {% endwith %}
 
     <div class="card">
-        <h3>👥 Elenco Utenti Registrati</h3>
-        <table>
-            <thead>
-                <tr>
-                    <th>Username</th>
-                    <th>Ruolo</th>
-                    <th>Azioni sui Permessi</th>
-                    <th>Elimina</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for u in utenti %}
-                <tr>
-                    <td><strong>{{ u.username }}</strong></td>
-                    <td>
-                        {% if u.is_admin %}
-                            <span style="color: #7c3aed; font-weight: bold;">Amministratore</span>
-                        {% else %}
-                            <span style="color: #475569;">Operatore</span>
-                        {% endif %}
-                    </td>
-                    <td>
-                        {% if u.username != 'admin' %}
-                        <form action="{{ url_for('elimina_utente', user_id=u.id) }}" method="POST" onsubmit="return confirm('Vuoi davvero eliminare questo utente?');" style="display:inline;">
-                            <button type="submit" class="btn" style="background: #ef4444; padding: 4px 8px;">Elimina</button>
-                        </form>
-                        {% else %}
-                        <span style="color: #94a3b8; font-size: 0.8rem;">Protetto</span>
-                        {% endif %}
-                    </td>
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
+        <h3>👥 Gestione Permessi Utenti</h3>
+        <div style="overflow-x: auto;">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Username</th>
+                        <th>Ruolo</th>
+                        <th>Permessi / Autorizzazioni</th>
+                        <th>Cambia Password</th>
+                        <th>Azioni</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for u in utenti %}
+                    <tr>
+                        <td><strong>{{ u.username }}</strong></td>
+                        <td>
+                            {% if u.is_admin %}
+                                <span style="color: #7c3aed; font-weight: bold;">Amministratore</span>
+                            {% else %}
+                                <span style="color: #475569;">Operatore</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <!-- Permesso Manutenzione -->
+                            <form action="{{ url_for('toggle_permesso', user_id=u.id, tipo='manutenzione') }}" method="POST" style="margin-bottom: 4px;">
+                                <button type="submit" class="btn" style="background: {% if u.puo_vedere_manutenzione %}#10b981{% else %}#94a3b8{% else %}{% endif %}; font-size: 0.75rem; padding: 4px 8px; width: 160px; text-align: left;">
+                                    {% if u.puo_vedere_manutenzione %}✅ Vede Manutenzioni{% else %}❌ Manutenzioni Nascoste{% endif %}
+                                </button>
+                            </form>
+                            <!-- Permesso Eliminazione -->
+                            <form action="{{ url_for('toggle_permesso', user_id=u.id, tipo='eliminazione') }}" method="POST" style="margin-bottom: 4px;">
+                                <button type="submit" class="btn" style="background: {% if u.puo_eliminare %}#10b981{% else %}#94a3b8{% else %}{% endif %}; font-size: 0.75rem; padding: 4px 8px; width: 160px; text-align: left;">
+                                    {% if u.puo_eliminare %}✅ Può Eliminare Articoli{% else %}❌ No Eliminazione Articoli{% endif %}
+                                </button>
+                            </form>
+                            <!-- Permesso Eliminazione Storico -->
+                            <form action="{{ url_for('toggle_permesso', user_id=u.id, tipo='eliminazione_storico') }}" method="POST">
+                                <button type="submit" class="btn" style="background: {% if u.puo_eliminare_storico %}#10b981{% else %}#94a3b8{% else %}{% endif %}; font-size: 0.75rem; padding: 4px 8px; width: 160px; text-align: left;">
+                                    {% if u.puo_eliminare_storico %}✅ Può Eliminare Storico{% else %}❌ No Eliminazione Storico{% endif %}
+                                </button>
+                            </form>
+                        </td>
+                        <td>
+                            <form action="{{ url_for('reset_password', user_id=u.id) }}" method="POST" style="display: flex; gap: 5px; align-items: center;">
+                                <input type="password" name="nuova_password" placeholder="Nuova pwd" required style="margin: 0; font-size: 0.8rem; padding: 5px;">
+                                <button type="submit" class="btn" style="background: #2563eb; padding: 5px 8px; font-size: 0.75rem;">Aggiorna</button>
+                            </form>
+                        </td>
+                        <td>
+                            {% if u.username != 'admin' %}
+                            <form action="{{ url_for('elimina_utente', user_id=u.id) }}" method="POST" onsubmit="return confirm('Vuoi davvero eliminare questo utente?');">
+                                <button type="submit" class="btn" style="background: #ef4444; padding: 6px 10px;">Elimina</button>
+                            </form>
+                            {% else %}
+                            <span style="color: #94a3b8; font-size: 0.8rem;">Protetto</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
     </div>
 
 </body>
