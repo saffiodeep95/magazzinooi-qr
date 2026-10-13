@@ -1,4 +1,3 @@
-
 import os
 import csv
 import io
@@ -352,6 +351,20 @@ def stampa_tutti_qr():
     cur.close()
     conn.close()
     return render_template("stampa_tutti_qr.html", prodotti=prodotti)
+
+# ROTTA PER STAMPARE IL SINGOLO QR CODE DALLA PAGINA GESTISCI
+@app.route("/stampa_singolo_qr/<qr_code>")
+def stampa_singolo_qr(qr_code):
+    conn = get_db_connection()
+    cur = conn.cursor()
+    cur.execute("SELECT * FROM prodotti WHERE qr_code = %s;", (qr_code,))
+    prodotto = cur.fetchone()
+    cur.close()
+    conn.close()
+    if not prodotto:
+        flash("Prodotto non trovato.", "error")
+        return redirect(url_for("index"))
+    return render_template("stampa_singolo_qr.html", prodotto=prodotto)
 
 @app.route("/magazzino_pesante")
 def magazzino_pesante():
