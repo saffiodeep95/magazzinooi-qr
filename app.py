@@ -33,13 +33,13 @@ def init_db():
                 quantita INT DEFAULT 0,
                 posizione VARCHAR(255),
                 magazzino_pesante INT DEFAULT 0,
-                in_manutenzione INT DEFAULT 0,
+                in_manutenzione BOOLEAN DEFAULT FALSE,
                 cliente_manutenzione VARCHAR(255),
                 quantita_manutenzione INT DEFAULT 0,
                 data_spedizione VARCHAR(255),
                 data_riconsegna VARCHAR(255),
                 vettore VARCHAR(255),
-                ordine_amministrativo INT DEFAULT 0,
+                ordine_amministrativo BOOLEAN DEFAULT FALSE,
                 note_manutenzione TEXT
             );
         """)
@@ -87,15 +87,15 @@ def init_db():
             );
         """)
         
-        # Aggiunta sicura delle colonne
+        # Aggiunta sicura delle colonne se mancanti
         cur.execute("ALTER TABLE prodotti ADD COLUMN IF NOT EXISTS magazzino_pesante INT DEFAULT 0;")
-        cur.execute("ALTER TABLE prodotti ADD COLUMN IF NOT EXISTS in_manutenzione INT DEFAULT 0;")
+        cur.execute("ALTER TABLE prodotti ADD COLUMN IF NOT EXISTS in_manutenzione BOOLEAN DEFAULT FALSE;")
         cur.execute("ALTER TABLE prodotti ADD COLUMN IF NOT EXISTS cliente_manutenzione VARCHAR(255);")
         cur.execute("ALTER TABLE prodotti ADD COLUMN IF NOT EXISTS quantita_manutenzione INT DEFAULT 0;")
         cur.execute("ALTER TABLE prodotti ADD COLUMN IF NOT EXISTS data_spedizione VARCHAR(255);")
         cur.execute("ALTER TABLE prodotti ADD COLUMN IF NOT EXISTS data_riconsegna VARCHAR(255);")
         cur.execute("ALTER TABLE prodotti ADD COLUMN IF NOT EXISTS vettore VARCHAR(255);")
-        cur.execute("ALTER TABLE prodotti ADD COLUMN IF NOT EXISTS ordine_amministrativo INT DEFAULT 0;")
+        cur.execute("ALTER TABLE prodotti ADD COLUMN IF NOT EXISTS ordine_amministrativo BOOLEAN DEFAULT FALSE;")
         cur.execute("ALTER TABLE prodotti ADD COLUMN IF NOT EXISTS note_manutenzione TEXT;")
 
         # Admin predefinito
@@ -593,7 +593,6 @@ def manda_manutenzione(qr_code):
         """, (quantita_manutenzione, cliente_manutenzione, quantita_manutenzione, data_spedizione, data_riconsegna, vettore, ordine_amministrativo, note_manutenzione, qr_code))
         
         if prod:
-            # Per lo storico memorizziamo come intero (1 o 0) per compatibilità
             ord_adm_int = 1 if ordine_amministrativo else 0
             cur.execute("""
                 INSERT INTO storico_manutenzioni (nome_prodotto, qr_code, sap, cliente, quantita, data_spedizione, data_riconsegna, vettore, ordine_amministrativo, note)
