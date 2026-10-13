@@ -22,7 +22,7 @@ def init_db():
         conn = get_db_connection()
         cur = conn.cursor()
         
-        # Tabella Prodotti
+        # Tabella Prodotti con tipi booleani sicuri
         cur.execute("""
             CREATE TABLE IF NOT EXISTS prodotti (
                 id SERIAL PRIMARY KEY,
@@ -69,7 +69,7 @@ def init_db():
             );
         """)
 
-        # Tabella Storico Manutenzioni
+        # Tabella Storico Manutenzioni con ordine_amministrativo BOOLEAN
         cur.execute("""
             CREATE TABLE IF NOT EXISTS storico_manutenzioni (
                 id SERIAL PRIMARY KEY,
@@ -82,7 +82,7 @@ def init_db():
                 data_spedizione VARCHAR(255),
                 data_riconsegna VARCHAR(255),
                 vettore VARCHAR(255),
-                ordine_amministrativo INT DEFAULT 0,
+                ordine_amministrativo BOOLEAN DEFAULT FALSE,
                 note TEXT
             );
         """)
@@ -97,6 +97,8 @@ def init_db():
         cur.execute("ALTER TABLE prodotti ADD COLUMN IF NOT EXISTS vettore VARCHAR(255);")
         cur.execute("ALTER TABLE prodotti ADD COLUMN IF NOT EXISTS ordine_amministrativo BOOLEAN DEFAULT FALSE;")
         cur.execute("ALTER TABLE prodotti ADD COLUMN IF NOT EXISTS note_manutenzione TEXT;")
+
+        cur.execute("ALTER TABLE storico_manutenzioni ADD COLUMN IF NOT EXISTS ordine_amministrativo BOOLEAN DEFAULT FALSE;")
 
         # Admin predefinito
         cur.execute("SELECT * FROM utenti WHERE username = 'admin';")
@@ -564,11 +566,19 @@ def aggiungi_prodotto():
 def manda_manutenzione(qr_code):
     cliente_manutenzione = request.form.get("cliente_manutenzione")
     quantita_manutenzione = int(request.form.get("quantita_manutenzione", 1))
-    data_spedizione = request.form.get("data_spedizione", "")
-    data_riconsegna = request.form.get("data_riconsegna", "")
-    vettore = request.form.get("vettore", "")
+    
+    # Gestione sicura delle date vuote per evitare errori di sintassi su PostgreSQL
+    data_spedizione = request.form.get("data_spedizione", "").strip()
+    if not data_spedizione:
+        data_spedizione = None
+        
+    data_riconsegna = request.form.get("data_riconsegna", "").strip()
+    if not data_riconsegna:
+        data_riconsegna = None
+
+    vettore = request.form.get("vettore", "").strip()
     ordine_amministrativo = True if request.form.get("ordine_amministrativo") else False
-    note_manutenzione = request.form.get("note_manutenzione", "")
+    note_manutenzione = request.form.get("note_manutenzione", "").strip()
 
     try:
         conn = get_db_connection()
@@ -577,7 +587,6 @@ def manda_manutenzione(qr_code):
         cur.execute("SELECT * FROM prodotti WHERE qr_code = %s;", (qr_code,))
         prod = cur.fetchone()
         
-        # Gestione booleana corretta per PostgreSQL
         cur.execute("""
             UPDATE prodotti 
             SET quantita = GREATEST(0, quantita - %s),
@@ -593,11 +602,10 @@ def manda_manutenzione(qr_code):
         """, (quantita_manutenzione, cliente_manutenzione, quantita_manutenzione, data_spedizione, data_riconsegna, vettore, ordine_amministrativo, note_manutenzione, qr_code))
         
         if prod:
-            ord_adm_int = 1 if ordine_amministrativo else 0
             cur.execute("""
                 INSERT INTO storico_manutenzioni (nome_prodotto, qr_code, sap, cliente, quantita, data_spedizione, data_riconsegna, vettore, ordine_amministrativo, note)
                 VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s);
-            """, (prod['nome'], qr_code, prod['sap'], cliente_manutenzione, quantita_manutenzione, data_spedizione, data_riconsegna, vettore, ord_adm_int, note_manutenzione))
+            """, (prod['nome'], qr_code, prod['sap'], cliente_manutenzione, quantita_manutenzione, data_spedizione, data_riconsegna, vettore, ordine_amministrativo, note_manutenzione))
 
         conn.commit()
         cur.close()
