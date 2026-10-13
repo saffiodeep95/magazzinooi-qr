@@ -1,9 +1,15 @@
+# ========================================================================
+# Magazzino Web Application
+# Copyright (c) 2026 Marco Pavan. All Rights Reserved.
+# Designed & Developed by Marco Pavan
+# ========================================================================
+
 import os
 import csv
 import io
 import psycopg2
 from psycopg2.extras import RealDictCursor
-from flask import Flask, render_template, request, redirect, url_for, flash, session
+from flask import Flask, render_template, request, redirect, url_for, flash, session, send_file
 from werkzeug.security import generate_password_hash, check_password_hash
 
 app = Flask(__name__)
@@ -80,6 +86,25 @@ def init_db():
                 vettore VARCHAR(255),
                 ordine_amministrativo BOOLEAN DEFAULT FALSE,
                 note TEXT
+            );
+        """)
+
+        cur.execute("""
+            CREATE TABLE IF NOT EXISTS cartelle (
+                id SERIAL PRIMARY KEY,
+                nome VARCHAR(255) NOT NULL,
+                parent_id INT REFERENCES cartelle(id) ON DELETE CASCADE
+            );
+        """)
+
+        cur.execute("""
+            CREATE TABLE IF NOT EXISTS documenti (
+                id SERIAL PRIMARY KEY,
+                cartella_id INT REFERENCES cartelle(id) ON DELETE CASCADE,
+                nome_file VARCHAR(255) NOT NULL,
+                tipo_file VARCHAR(255),
+                dati_file BYTEA NOT NULL,
+                caricato_il TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             );
         """)
         
@@ -287,16 +312,6 @@ def elimina_cliente(cliente_id):
     flash("Cliente eliminato con successo.", "success")
     return redirect(url_for("clienti"))
 
-@app.route("/lista_clienti")
-def lista_clienti():
-    conn = get_db_connection()
-    cur = conn.cursor()
-    cur.execute("SELECT * FROM clienti ORDER BY nome_azienda ASC;")
-    lista_clienti = cur.fetchall()
-    cur.close()
-    conn.close()
-    return render_template("lista_clienti.html", clienti=lista_clienti)
-
 @app.route("/upload", methods=["GET", "POST"])
 def upload():
     if request.method == "POST":
@@ -337,10 +352,6 @@ def upload():
             flash("Si prega di caricare un file CSV valido.", "error")
         return redirect(url_for("upload"))
     return render_template("upload.html")
-
-@app.route("/pagina_upload", methods=["GET", "POST"])
-def pagina_upload():
-    return upload()
 
 @app.route("/stampa_tutti_qr")
 def stampa_tutti_qr():
@@ -407,10 +418,6 @@ def manutenzioni():
         
     return render_template("manutenzioni.html", prodotti=prodotti)
 
-@app.route("/lista_manutenzioni")
-def lista_manutenzioni():
-    return redirect(url_for("manutenzioni"))
-
 @app.route("/storico_manutenzioni")
 def storico_manutenzioni():
     storico = []
@@ -455,14 +462,6 @@ def stampa_bolla(qr_code):
         flash("Prodotto non trovato.", "error")
         return redirect(url_for("index"))
     return render_template("bolla.html", prodotto=prodotto, cliente=cliente)
-
-@app.route("/bolla")
-def bolla():
-    return render_template("bolla.html")
-
-@app.route("/registra_pagina", methods=["GET", "POST"])
-def registra_pagina():
-    return render_template("registra.html")
 
 @app.route("/carico", methods=["GET", "POST"])
 def carico():
@@ -687,6 +686,133 @@ def elimina_prodotto():
         flash(f"Errore durante l'eliminazione: {e}", "error")
 
     return redirect(url_for("index"))
+
+# --- GESTIONE DOCUMENTALE (CARTELLE E FILE) ---
+@app.route("/documenti", defaults={"cartella_id": None}, methods=["GET", "POST"])
+@app.route("/documenti/<int:cartella_id>", methods=["GET", "POST"])
+def documenti(cartella_id):
+    conn = get_db_connection()
+    cur = conn.cursor()
+
+    cartella_corrente = None
+    percorso_breadcrumb = []
+
+    if cartella_id:
+        cur.execute("SELECT * FROM cartelle WHERE id = %s;", (cartella_id,))
+        cartella_corrente = cur.fetchone()
+        
+        curr = cartella_corrente
+        while curr:
+            percorso_breadcrumb.insert(0, curr)
+            if curr['parent_id']:
+                cur.execute("SELECT * FROM cartelle WHERE id = %s;", (curr['parent_id'],))
+                curr = cur.fetchone()
+            else:
+                curr = None
+
+    if request.method == "POST":
+        azione = request.form.get("azione")
+        
+        if azione == "crea_cartella":
+            nome_cartella = request.form.get("nome_cartella")
+            if nome_cartella:
+                cur.execute("INSERT INTO cartelle (nome, parent_id) VALUES (%s, %s);", (nome_cartella, cartella_id))
+                conn.commit()
+                flash("Cartella creata con successo!", "success")
+                
+        elif azione == "carica_file":
+            file_caricato = request.files.get("file_caricato")
+            if file_caricato and file_caricato.filename:
+                nome_file = file_caricato.filename
+                tipo_file = file_caricato.mimetype
+                dati_file = file_caricato.read()
+                
+                cur.execute("""
+                    INSERT INTO documenti (cartella_id, nome_file, tipo_file, dati_file)
+                    VALUES (%s, %s, %s, %s);
+                """, (cartella_id, nome_file, tipo_file, dati_file))
+                conn.commit()
+                flash("File caricato con successo!", "success")
+                
+        cur.close()
+        conn.close()
+        return redirect(url_for("documenti", cartella_id=cartella_id) if cartella_id else url_for("documenti"))
+
+    if cartella_id:
+        cur.execute("SELECT * FROM cartelle WHERE parent_id = %s ORDER BY nome ASC;", (cartella_id,))
+    else:
+        cur.execute("SELECT * FROM cartelle WHERE parent_id IS NULL ORDER BY nome ASC;")
+    sottocartelle = cur.fetchall()
+
+    if cartella_id:
+        cur.execute("SELECT id, nome_file, tipo_file, caricato_il FROM documenti WHERE cartella_id = %s ORDER BY nome_file ASC;", (cartella_id,))
+    else:
+        cur.execute("SELECT id, nome_file, tipo_file, caricato_il FROM documenti WHERE cartella_id IS NULL ORDER BY nome_file ASC;")
+    lista_file = cur.fetchall()
+
+    cur.close()
+    conn.close()
+
+    return render_template("documenti.html", 
+                           cartella_corrente=cartella_corrente, 
+                           sottocartelle=sottocartelle, 
+                           lista_file=lista_file, 
+                           percorso_breadcrumb=percorso_breadcrumb)
+
+@app.route("/scarica_file/<int:file_id>")
+def scarica_file(file_id):
+    conn = get_db_connection()
+    cur = conn.cursor()
+    cur.execute("SELECT nome_file, tipo_file, dati_file FROM documenti WHERE id = %s;", (file_id,))
+    file_data = cur.fetchone()
+    cur.close()
+    conn.close()
+
+    if file_data:
+        return send_file(
+            io.BytesIO(file_data['dati_file']),
+            mimetype=file_data['tipo_file'],
+            as_attachment=True,
+            download_name=file_data['nome_file']
+        )
+    flash("File non trovato.", "error")
+    return redirect(url_for("documenti"))
+
+@app.route("/elimina_cartella/<int:cartella_id>", methods=["POST"])
+def elimina_cartella(cartella_id):
+    conn = get_db_connection()
+    cur = conn.cursor()
+    cur.execute("SELECT parent_id FROM cartelle WHERE id = %s;", (cartella_id,))
+    res = cur.fetchone()
+    parent_id = res['parent_id'] if res else None
+
+    cur.execute("DELETE FROM cartelle WHERE id = %s;", (cartella_id,))
+    conn.commit()
+    cur.close()
+    conn.close()
+    flash("Cartella eliminata.", "success")
+    
+    if parent_id:
+        return redirect(url_for("documenti", cartella_id=parent_id))
+    return redirect(url_for("documenti"))
+
+@app.route("/elimina_file/<int:file_id>", methods=["POST"])
+def elimina_file(file_id):
+    conn = get_db_connection()
+    cur = conn.cursor()
+    cur.execute("SELECT cartella_id FROM documenti WHERE id = %s;", (file_id,))
+    res = cur.fetchone()
+    cartella_id = res['cartella_id'] if res else None
+
+    cur.execute("DELETE FROM documenti WHERE id = %s;", (file_id,))
+    conn.commit()
+    cur.close()
+    conn.close()
+    flash("File eliminato.", "success")
+    
+    if cartella_id:
+        return redirect(url_for("documenti", cartella_id=cartella_id))
+    return redirect(url_for("documenti"))
 
 if __name__ == "_main_":
     app.run(debug=True)
