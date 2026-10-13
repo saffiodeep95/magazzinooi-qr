@@ -40,7 +40,6 @@
                         <th>Username</th>
                         <th>Ruolo</th>
                         <th>Permessi / Autorizzazioni</th>
-                        <th>Cambia Password</th>
                         <th>Azioni</th>
                     </tr>
                 </thead>
@@ -56,29 +55,25 @@
                             {% endif %}
                         </td>
                         <td>
-                            <!-- Permesso Manutenzione -->
                             <form action="{{ url_for('toggle_permesso', user_id=u.id, tipo='manutenzione') }}" method="POST" style="margin-bottom: 4px;">
-                                <button type="submit" class="btn" style="background: {% if u.puo_vedere_manutenzione %}#10b981{% else %}#94a3b8{% endif %}; font-size: 0.75rem; padding: 4px 8px; width: 160px; text-align: left;">
+                                <button type="submit" class="btn" style="background: {% if u.puo_vedere_manutenzione %}#10b981{% else %}#94a3b8{% endif %}; font-size: 0.75rem; padding: 4px 8px; width: 175px; text-align: left;">
                                     {% if u.puo_vedere_manutenzione %}✅ Vede Manutenzioni{% else %}❌ Manutenzioni Nascoste{% endif %}
                                 </button>
                             </form>
-                            <!-- Permesso Eliminazione -->
                             <form action="{{ url_for('toggle_permesso', user_id=u.id, tipo='eliminazione') }}" method="POST" style="margin-bottom: 4px;">
-                                <button type="submit" class="btn" style="background: {% if u.puo_eliminare %}#10b981{% else %}#94a3b8{% endif %}; font-size: 0.75rem; padding: 4px 8px; width: 160px; text-align: left;">
+                                <button type="submit" class="btn" style="background: {% if u.puo_eliminare %}#10b981{% else %}#94a3b8{% endif %}; font-size: 0.75rem; padding: 4px 8px; width: 175px; text-align: left;">
                                     {% if u.puo_eliminare %}✅ Può Eliminare Articoli{% else %}❌ No Eliminazione Articoli{% endif %}
                                 </button>
                             </form>
-                            <!-- Permesso Eliminazione Storico -->
-                            <form action="{{ url_for('toggle_permesso', user_id=u.id, tipo='eliminazione_storico') }}" method="POST">
-                                <button type="submit" class="btn" style="background: {% if u.puo_eliminare_storico %}#10b981{% else %}#94a3b8{% endif %}; font-size: 0.75rem; padding: 4px 8px; width: 160px; text-align: left;">
+                            <form action="{{ url_for('toggle_permesso', user_id=u.id, tipo='eliminazione_storico') }}" method="POST" style="margin-bottom: 4px;">
+                                <button type="submit" class="btn" style="background: {% if u.puo_eliminare_storico %}#10b981{% else %}#94a3b8{% endif %}; font-size: 0.75rem; padding: 4px 8px; width: 175px; text-align: left;">
                                     {% if u.puo_eliminare_storico %}✅ Può Eliminare Storico{% else %}❌ No Eliminazione Storico{% endif %}
                                 </button>
                             </form>
-                        </td>
-                        <td>
-                            <form action="{{ url_for('reset_password', user_id=u.id) }}" method="POST" style="display: flex; gap: 5px; align-items: center;">
-                                <input type="password" name="nuova_password" placeholder="Nuova pwd" required style="margin: 0; font-size: 0.8rem; padding: 5px;">
-                                <button type="submit" class="btn" style="background: #2563eb; padding: 5px 8px; font-size: 0.75rem;">Aggiorna</button>
+                            <form action="{{ url_for('toggle_permesso', user_id=u.id, tipo='documenti') }}" method="POST">
+                                <button type="submit" class="btn" style="background: {% if u.puo_gestire_documenti %}#10b981{% else %}#94a3b8{% endif %}; font-size: 0.75rem; padding: 4px 8px; width: 175px; text-align: left;">
+                                    {% if u.puo_gestire_documenti %}✅ Accede ai Documenti{% else %}❌ Documenti Nascosti{% endif %}
+                                </button>
                             </form>
                         </td>
                         <td>
