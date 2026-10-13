@@ -1,5 +1,5 @@
-[09:48, 13/10/2026] Marco Pavan: display: inline-…
-[09:52, 13/10/2026] Marco Pavan: import os
+
+import os
 import csv
 import io
 import psycopg2
