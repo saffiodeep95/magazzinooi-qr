@@ -6,25 +6,32 @@
     <title>Magazzino - Home</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     <style>
-        body { font-family: sans-serif; max-width: 1200px; margin: 0 auto; padding: 20px; background: #f8fafc; color: #1e293b; }
+        body { font-family: sans-serif; max-width: 1000px; margin: 0 auto; padding: 20px; background: #f8fafc; color: #1e293b; }
         .card { background: white; padding: 20px; border-radius: 12px; border: 1px solid #e2e8f0; margin-bottom: 20px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
         .btn { background: #4f46e5; color: white; padding: 10px 16px; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; text-decoration: none; display: inline-block; margin: 4px; }
         .btn:hover { opacity: 0.9; }
-        table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 0.9rem; }
-        th, td { padding: 12px; border-bottom: 1px solid #e2e8f0; text-align: left; vertical-align: middle; }
-        th { background: #f1f5f9; }
-        .menu-grid { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 20px; }
-        input { width: 100%; padding: 10px; border: 1px solid #cbd5e1; border-radius: 6px; box-sizing: border-box; }
-        .qrcode-container canvas, .qrcode-container img { display: block; border-radius: 4px; }
+        input, select { width: 100%; padding: 10px; margin-top: 5px; margin-bottom: 15px; border: 1px solid #cbd5e1; border-radius: 6px; box-sizing: border-box; }
+        label { font-weight: bold; font-size: 0.9rem; color: #475569; }
+        table { width: 100%; border-collapse: collapse; margin-top: 10px; background: white; border-radius: 8px; overflow: hidden; border: 1px solid #e2e8f0; }
+        th, td { padding: 12px 15px; text-align: left; border-bottom: 1px solid #e2e8f0; font-size: 0.9rem; }
+        th { background: #f1f5f9; color: #475569; font-weight: bold; }
+        tr:hover { background: #f8fafc; }
+        .search-box { display: flex; gap: 10px; margin-bottom: 20px; align-items: center; }
     </style>
 </head>
 <body>
 
     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; flex-wrap: wrap; gap: 10px;">
-        <h1>📦 Gestione Magazzino OMG</h1>
-        <div style="display: flex; align-items: center; gap: 15px;">
-            <span>Utente: <strong>{{ session.username }}</strong></span>
-            <a href="{{ url_for('logout') }}" class="btn" style="background: #ef4444; padding: 6px 12px;">Esci</a>
+        <h1>📦 Gestione Magazzino</h1>
+        <div>
+            <a href="{{ url_for('carico') }}" class="btn" style="background: #10b981;">➕ Carico</a>
+            <a href="{{ url_for('scarico') }}" class="btn" style="background: #f97316;">➖ Scarico</a>
+            <a href="{{ url_for('magazzino_pesante') }}" class="btn" style="background: #6366f1;">🏗️ Magazzino Pesante</a>
+            <a href="{{ url_for('manutenzioni') }}" class="btn" style="background: #d97706;">🔧 Manutenzioni</a>
+            <a href="{{ url_for('stampa_tutti_qr') }}" class="btn" style="background: #0284c7;">🖨️ Stampa QR</a>
+            <a href="{{ url_for('clienti') }}" class="btn" style="background: #475569;">👥 Clienti</a>
+            <a href="{{ url_for('upload') }}" class="btn" style="background: #0d9488;">📁 Importa CSV</a>
+            <a href="{{ url_for('logout') }}" class="btn" style="background: #ef4444;">Esci</a>
         </div>
     </div>
 
@@ -36,110 +43,105 @@
       {% endif %}
     {% endwith %}
 
-    <div class="menu-grid">
-        <a href="{{ url_for('carico') }}" class="btn" style="background: #10b981;">➕ Carico (Fotocamera)</a>
-        <a href="{{ url_for('scarico') }}" class="btn" style="background: #f97316;">➖ Scarico (Fotocamera)</a>
-        <a href="{{ url_for('magazzino_pesante') }}" class="btn" style="background: #2563eb;">⚖️ Magazzino Pesante</a>
-        <a href="{{ url_for('clienti') }}" class="btn" style="background: #0284c7;">📖 Rubrica Clienti</a>
-        <a href="{{ url_for('pagina_upload') }}" class="btn" style="background: #0ea5e9;">📁 Upload CSV</a>
-        <a href="{{ url_for('stampa_tutti_qr') }}" class="btn" style="background: #8b5cf6;">🖨️ Stampa Tutti i QR</a>
-        <a href="{{ url_for('lista_manutenzioni') }}" class="btn" style="background: #d97706;">🔧 Manutenzioni</a>
-        {% if session.get('is_admin') %}
-        <a href="{{ url_for('admin_utenti') }}" class="btn" style="background: #7c3aed;">👑 Utenti</a>
-        {% endif %}
-    </div>
-
-    <!-- MODULO AGGIUNGI ARTICOLO -->
+    <!-- AGGIUNGI NUOVO ARTICOLO -->
     <div class="card">
-        <h3>➕ Aggiungi Nuovo Articolo in Magazzino Principale</h3>
-        <form action="{{ url_for('aggiungi_prodotto') }}" method="POST" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 10px; margin-top: 15px;">
-            <input type="text" name="qr_code" placeholder="Codice univoco QR..." required>
-            <input type="text" name="nome" placeholder="Nome articolo..." required>
-            <input type="text" name="sap" placeholder="Codice SAP...">
-            <input type="number" name="quantita" placeholder="Quantità iniziale..." value="0" min="0">
-            <input type="text" name="posizione" placeholder="Posizione (es. Scaffale A)...">
-            
-            <div style="grid-column: 1 / -1; display: flex; align-items: center; gap: 10px; background: #f1f5f9; padding: 10px; border-radius: 6px;">
-                <input type="checkbox" name="magazzino_pesante" value="1" style="width: auto; transform: scale(1.2);">
-                <label style="margin: 0; cursor: pointer; font-weight: bold;">Destina direttamente al Magazzino Pesante</label>
+        <h3>➕ Aggiungi Nuovo Articolo</h3>
+        <form action="{{ url_for('aggiungi_prodotto') }}" method="POST">
+            <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 15px;">
+                <div>
+                    <label>QR Code / Codice a Barre:</label>
+                    <input type="text" name="qr_code" placeholder="Scansiona o scrivi..." required>
+                </div>
+                <div>
+                    <label>Nome Articolo:</label>
+                    <input type="text" name="nome" placeholder="Nome articolo..." required>
+                </div>
+                <div>
+                    <label>Codice SAP:</label>
+                    <input type="text" name="sap" placeholder="Codice SAP...">
+                </div>
             </div>
 
-            <button type="submit" class="btn" style="background: #4f46e5; grid-column: 1 / -1;">Salva Articolo</button>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+                <div>
+                    <label>Quantità Iniziale:</label>
+                    <input type="number" name="quantita" value="0" min="0" required>
+                </div>
+                <div>
+                    <label>Posizione Magazzino:</label>
+                    <input type="text" name="posizione" placeholder="Es. Scaffale A, Corsia 2...">
+                </div>
+            </div>
+
+            <div style="display: flex; align-items: center; gap: 10px; background: #f1f5f9; padding: 12px; border-radius: 6px; margin-bottom: 15px;">
+                <input type="checkbox" name="magazzino_pesante" value="1" style="width: auto; transform: scale(1.3);">
+                <label style="margin: 0; cursor: pointer; font-weight: bold; color: #1e293b;">🏗️ Inserisci direttamente in Magazzino Pesante</label>
+            </div>
+
+            <button type="submit" class="btn" style="background: #2563eb; width: 100%;">Salva Articolo</button>
         </form>
     </div>
 
-    <!-- TABELLA ARTICOLI -->
+    <!-- LISTA ARTICOLI CON RICERCA VELOCE -->
     <div class="card">
-        <h3>📋 Elenco Articoli in Magazzino Principale</h3>
-        {% if prodotti %}
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; flex-wrap: wrap;">
+            <h3 style="margin: 0;">📋 Articoli in Magazzino</h3>
+            <div style="width: 300px; margin: 0;">
+                <input type="text" id="filtroTabella" placeholder="🔍 Cerca per QR, Nome o SAP..." onkeyup="filtraArticoli()" style="margin: 0; padding: 8px 12px;">
+            </div>
+        </div>
+
         <div style="overflow-x: auto;">
-            <table>
+            <table id="tabellaArticoli">
                 <thead>
                     <tr>
+                        <th>QR Code</th>
                         <th>Nome Articolo</th>
-                        <th>QR Code (Immagine)</th>
                         <th>SAP</th>
-                        <th>Quantità Disp.</th>
-                        <th>In Manutenzione</th>
+                        <th>Quantità</th>
                         <th>Posizione</th>
-                        <th>Azione</th>
+                        <th>Azioni</th>
                     </tr>
                 </thead>
                 <tbody>
                     {% for p in prodotti %}
-                    {% set totale_reale = p.quantita + (p.quantita_manutenzione if p.in_manutenzione else 0) %}
-                    <tr style="{% if totale_reale < 2 and totale_reale > 0 %}background: #fef2f2;{% endif %}">
-                        <td>
-                            <strong>{{ p.nome }}</strong>
-                            {% if totale_reale < 2 and totale_reale > 0 %}
-                                <br><span style="color: #dc2626; font-size: 0.75rem; font-weight: bold;">⚠️ Sotto soglia (Da Riordinare)</span>
-                            {% endif %}
-                        </td>
-                        <td>
-                            <div class="qrcode-container" id="qr-{{ loop.index }}" data-code="{{ p.qr_code }}"></div>
-                            <small style="color: #64748b; font-family: monospace;">{{ p.qr_code }}</small>
-                        </td>
+                    <tr>
+                        <td style="font-family: monospace; font-weight: bold;">{{ p.qr_code }}</td>
+                        <td><strong>{{ p.nome }}</strong></td>
                         <td>{{ p.sap if p.sap else '-' }}</td>
-                        <td><span style="color: {% if p.quantita < 2 %}#dc2626{% else %}#10b981{% endif %}; font-weight: bold; font-size: 1.1rem;">{{ p.quantita }}</span> pz</td>
+                        <td><span style="color: #10b981; font-weight: bold; font-size: 1.1rem;">{{ p.quantita }} pz</span></td>
+                        <td><span style="color: #2563eb; font-weight: bold;">{{ p.posizione if p.posizione else '-' }}</span></td>
                         <td>
-                            {% if p.in_manutenzione %}
-                                <span style="color: #d97706; font-weight: bold;">{{ p.quantita_manutenzione }} pz</span><br>
-                                <small style="color: #64748b;">({{ p.cliente_manutenzione }})</small>
-                            {% else %}
-                                <span style="color: #64748b;">0 pz</span>
-                            {% endif %}
+                            <a href="{{ url_for('gestisci_prodotto', qr_code=p.qr_code) }}" class="btn" style="padding: 6px 12px; font-size: 0.8rem; background: #4f46e5;">⚙️ Gestisci</a>
                         </td>
-                        <td>{{ p.posizione if p.posizione else '-' }}</td>
-                        <td>
-                            <a href="{{ url_for('gestisci_prodotto', qr_code=p.qr_code) }}" class="btn" style="padding: 6px 12px; font-size: 0.85rem; background: #4f46e5;">Gestisci</a>
-                        </td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="6" style="text-align: center; color: #64748b; padding: 20px;">Nessun articolo presente in magazzino.</td>
                     </tr>
                     {% endfor %}
                 </tbody>
             </table>
         </div>
-        {% else %}
-            <p style="color: #64748b;">Nessun articolo presente nel magazzino principale.</p>
-        {% endif %}
     </div>
 
     <script>
-        document.addEventListener("DOMContentLoaded", function() {
-            document.querySelectorAll(".qrcode-container").forEach(function(el) {
-                let code = el.getAttribute("data-code");
-                if(code) {
-                    new QRCode(el, {
-                        text: code,
-                        width: 80,
-                        height: 80,
-                        colorDark: "#000000",
-                        colorLight: "#ffffff",
-                        correctLevel: QRCode.CorrectLevel.H
-                    });
-                }
-            });
-        });
-    </script>
+        function filtraArticoli() {
+            let input = document.getElementById("filtroTabella");
+            let filtro = input.value.toLowerCase();
+            let tabella = document.getElementById("tabellaArticoli");
+            let righe = tabella.getElementsByTagName("tr");
 
+            for (let i = 1; i < righe.length; i++) {
+                let riga = righe[i];
+                let testoRiga = riga.textContent || riga.innerText;
+                if (testoRiga.toLowerCase().indexOf(filtro) > -1) {
+                    riga.style.display = "";
+                } else {
+                    riga.style.display = "none";
+                }
+            }
+        }
+    </script>
 </body>
 </html>
