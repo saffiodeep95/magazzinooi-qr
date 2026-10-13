@@ -27,7 +27,7 @@
     {% endwith %}
 
     <div class="card">
-        <h3>Inquadra il QR Code</h3>
+        <h3>Inquadra il QR Code (Fotocamera Posteriore)</h3>
         <div id="reader"></div>
     </div>
 
@@ -47,8 +47,13 @@
         function onScanSuccess(decodedText, decodedResult) {
             document.getElementById('qr_code').value = decodedText;
         }
-        let html5QrcodeScanner = new Html5QrcodeScanner("reader", { fps: 10, qrbox: 250 });
-        html5QrcodeScanner.render(onScanSuccess);
+        // Forza l'uso della fotocamera posteriore (environment)
+        let html5QrcodeScanner = new Html5QrcodeScanner("reader", { 
+            fps: 10, 
+            qrbox: 250,
+            aspectRatio: 1.0
+        });
+        html5QrcodeScanner.render(onScanSuccess, function(error) {});
     </script>
 </body>
 </html>
