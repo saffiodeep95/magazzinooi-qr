@@ -6,7 +6,7 @@ from psycopg2.extras import RealDictCursor
 from flask import Flask, render_template, request, redirect, url_for, flash, session
 from werkzeug.security import generate_password_hash, check_password_hash
 
-app = Flask(__name__)
+app = Flask(_name_)
 app.secret_key = os.environ.get("SECRET_KEY", "chiave-segreta-magazzino")
 
 DATABASE_URL = os.environ.get("DATABASE_URL")
@@ -130,7 +130,6 @@ def index():
         cur.close()
         conn.close()
         
-        # Filtro sicuro in Python (esclude magazzino pesante e articoli in manutenzione se necessario, o mostra magazzino principale)
         for p in tutti:
             val_pesante = p.get('magazzino_pesante')
             is_pesante = (val_pesante == 1 or val_pesante == '1' or val_pesante is True or val_pesante == 1.0)
@@ -369,7 +368,6 @@ def magazzino_pesante():
         cur.close()
         conn.close()
         
-        # Filtro sicuro al 100% in Python
         for p in tutti:
             val = p.get('magazzino_pesante')
             if val == 1 or val == '1' or val is True or val == 1.0:
@@ -391,7 +389,6 @@ def manutenzioni():
         cur.close()
         conn.close()
         
-        # Filtro sicuro in Python per le manutenzioni (evita l'errore boolean = integer)
         for p in tutti:
             val = p.get('in_manutenzione')
             if val == 1 or val == '1' or val is True or val == 1.0:
@@ -580,10 +577,11 @@ def manda_manutenzione(qr_code):
         cur.execute("SELECT * FROM prodotti WHERE qr_code = %s;", (qr_code,))
         prod = cur.fetchone()
         
+        # Utilizziamo True (booleano) per adattarci alla colonna booleana di PostgreSQL
         cur.execute("""
             UPDATE prodotti 
             SET quantita = GREATEST(0, quantita - %s),
-                in_manutenzione = 1,
+                in_manutenzione = TRUE,
                 cliente_manutenzione = %s,
                 quantita_manutenzione = %s,
                 data_spedizione = %s,
@@ -613,10 +611,11 @@ def ripristina_magazzino(qr_code):
     try:
         conn = get_db_connection()
         cur = conn.cursor()
+        # Utilizziamo FALSE (booleano) per ripristinare correttamente l'articolo
         cur.execute("""
             UPDATE prodotti 
             SET quantita = quantita + quantita_manutenzione,
-                in_manutenzione = 0,
+                in_manutenzione = FALSE,
                 cliente_manutenzione = NULL,
                 quantita_manutenzione = 0,
                 data_spedizione = NULL,
@@ -654,5 +653,5 @@ def elimina_prodotto():
 
     return redirect(url_for("index"))
 
-if __name__ == "_main_":
+if _name_ == "_main_":
     app.run(debug=True)
