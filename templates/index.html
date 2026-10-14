@@ -35,6 +35,7 @@
     <div class="menu-grid">
         <a href="{{ url_for('carico') }}" class="btn" style="background: #10b981;">➕ Carico</a>
         <a href="{{ url_for('scarico') }}" class="btn" style="background: #f97316;">➖ Scarico</a>
+        <a href="{{ url_for('scanner_globale') }}" class="btn" style="background: #0284c7;">📷 Scanner QR</a>
         <a href="{{ url_for('magazzino_pesante') }}" class="btn" style="background: #6366f1;">🏗️ Pesante</a>
         <a href="{{ url_for('manutenzioni') }}" class="btn" style="background: #d97706;">🔧 Manutenzioni</a>
         <a href="{{ url_for('stampa_tutti_qr') }}" class="btn" style="background: #0284c7;">🖨️ Stampa QR</a>
@@ -80,6 +81,9 @@
                 </div>
             </div>
 
+            <label>Peso (es. 150 kg):</label>
+            <input type="text" name="peso" placeholder="Peso in kg...">
+
             <div style="display: flex; align-items: center; gap: 8px; background: #f1f5f9; padding: 10px; border-radius: 6px; margin-bottom: 12px;">
                 <input type="checkbox" name="magazzino_pesante" value="1" style="width: auto; transform: scale(1.2); margin: 0;">
                 <label style="margin: 0; cursor: pointer; font-weight: bold; color: #1e293b; font-size: 0.85rem;">🏗️ Inserisci in Magazzino Pesante</label>
@@ -89,23 +93,12 @@
         </form>
     </div>
 
-    <!-- LISTA ARTICOLI CON RICERCA E SCANNER QR -->
+    <!-- LISTA ARTICOLI MAGAZZINO STANDARD -->
     <div class="card">
         <h3 style="margin-top: 0; font-size: 1.1rem; margin-bottom: 12px;">📋 Articoli in Magazzino</h3>
         
-        <div style="display: flex; gap: 8px; margin-bottom: 10px;">
-            <input type="text" id="filtroTabella" placeholder="🔍 Cerca per QR, Nome o SAP..." onkeyup="filtraArticoli()" style="margin: 0;">
-            <button type="button" onclick="toggleScanner()" class="btn" style="background: #0284c7; margin: 0; white-space: nowrap; padding: 8px 12px;">📷 Scanner</button>
-        </div>
-
-        <div id="scanner-container" style="display: none; background: #f8fafc; padding: 12px; border-radius: 8px; border: 1px dashed #cbd5e1; margin-bottom: 12px; text-align: center;">
-            <p style="font-weight: bold; margin-top: 0; margin-bottom: 8px; font-size: 0.85rem;">Inquadra il QR Code:</p>
-            <div id="reader" style="width: 100%; max-width: 280px; margin: 0 auto;"></div>
-            <button type="button" onclick="toggleScanner()" class="btn" style="background: #64748b; margin-top: 8px; padding: 5px 10px; font-size: 0.8rem;">Chiudi</button>
-        </div>
-
         <div style="overflow-x: auto;">
-            <table id="tabellaArticoli">
+            <table>
                 <thead>
                     <tr>
                         <th>QR Code</th>
@@ -144,52 +137,5 @@
         <p style="margin: 3px 0 0 0; opacity: 0.75;">Sviluppato da Marco Pavan</p>
     </footer>
 
-    <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
-    <script>
-        function filtraArticoli() {
-            let input = document.getElementById("filtroTabella");
-            let filtro = input.value.toLowerCase();
-            let tabella = document.getElementById("tabellaArticoli");
-            let righe = tabella.getElementsByTagName("tr");
-
-            for (let i = 1; i < righe.length; i++) {
-                let riga = righe[i];
-                let testoRiga = riga.textContent || riga.innerText;
-                if (testoRiga.toLowerCase().indexOf(filtro) > -1) {
-                    riga.style.display = "";
-                } else {
-                    riga.style.display = "none";
-                }
-            }
-        }
-
-        let html5QrCode = null;
-        function toggleScanner() {
-            let container = document.getElementById("scanner-container");
-            if (container.style.display === "block") {
-                container.style.display = "none";
-                if (html5QrCode) {
-                    html5QrCode.stop().catch(err => {});
-                }
-            } else {
-                container.style.display = "block";
-                if (!html5QrCode) {
-                    html5QrCode = new Html5Qrcode("reader");
-                }
-                html5QrCode.start(
-                    { facingMode: "environment" },
-                    { fps: 10, qrbox: { width: 200, height: 200 } },
-                    function(decodedText) {
-                        document.getElementById("filtroTabella").value = decodedText;
-                        filtraArticoli();
-                        container.style.display = "none";
-                        html5QrCode.stop().catch(err => {});
-                    }
-                ).catch(err => {
-                    console.error("Errore avvio fotocamera", err);
-                });
-            }
-        }
-    </script>
 </body>
 </html>
