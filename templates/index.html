@@ -11,7 +11,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Magazzino - Home</title>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     <style>
         body { font-family: sans-serif; max-width: 800px; margin: 0 auto; padding: 15px; background: #f8fafc; color: #1e293b; box-sizing: border-box; }
         .card { background: white; padding: 15px; border-radius: 12px; border: 1px solid #e2e8f0; margin-bottom: 15px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
@@ -93,12 +92,14 @@
         </form>
     </div>
 
-    <!-- LISTA ARTICOLI MAGAZZINO STANDARD -->
+    <!-- LISTA ARTICOLI MAGAZZINO STANDARD (SOLO RICERCA TESTUALE) -->
     <div class="card">
         <h3 style="margin-top: 0; font-size: 1.1rem; margin-bottom: 12px;">📋 Articoli in Magazzino</h3>
         
+        <input type="text" id="filtroTabella" placeholder="🔍 Cerca per QR, Nome o SAP..." onkeyup="filtraArticoli()">
+
         <div style="overflow-x: auto;">
-            <table>
+            <table id="tabellaArticoli">
                 <thead>
                     <tr>
                         <th>QR Code</th>
@@ -137,5 +138,23 @@
         <p style="margin: 3px 0 0 0; opacity: 0.75;">Sviluppato da Marco Pavan</p>
     </footer>
 
+    <script>
+        function filtraArticoli() {
+            let input = document.getElementById("filtroTabella");
+            let filtro = input.value.toLowerCase();
+            let tabella = document.getElementById("tabellaArticoli");
+            let righe = tabella.getElementsByTagName("tr");
+
+            for (let i = 1; i < righe.length; i++) {
+                let riga = righe[i];
+                let testoRiga = riga.textContent || riga.innerText;
+                if (testoRiga.toLowerCase().indexOf(filtro) > -1) {
+                    riga.style.display = "";
+                } else {
+                    riga.style.display = "none";
+                }
+            }
+        }
+    </script>
 </body>
 </html>
