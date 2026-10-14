@@ -966,5 +966,5 @@ def elimina_file(file_id):
         return redirect(url_for("documenti", cartella_id=cartella_id))
     return redirect(url_for("documenti"))
 
-if _name_ == "__main__":
+if __name__ == "_main_":
     app.run(debug=True)
