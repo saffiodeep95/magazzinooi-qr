@@ -275,7 +275,6 @@ def visualizza_log():
     try:
         conn = get_db_connection()
         cur = conn.cursor()
-        # Eliminazione automatica log più vecchi di 30 giorni
         cur.execute("DELETE FROM log_attivita WHERE data_ora < NOW() - INTERVAL '30 days';")
         conn.commit()
         cur.execute("SELECT * FROM log_attivita ORDER BY data_ora DESC LIMIT 100;")
@@ -294,13 +293,13 @@ def toggle_permesso(user_id, tipo):
         conn = get_db_connection()
         cur = conn.cursor()
         if tipo == 'manutenzione':
-            cur.execute("UPDATE utenti SET puo_vedere_manutenzione = NOT puo_vedere_manutenzione WHERE id = %s;", (user_id,))
+            cur.execute("UPDATE utenti SET puo_vedere_manutenzione = 1 - puo_vedere_manutenzione WHERE id = %s;", (user_id,))
         elif tipo == 'eliminazione':
-            cur.execute("UPDATE utenti SET puo_eliminare = NOT puo_eliminare WHERE id = %s;", (user_id,))
+            cur.execute("UPDATE utenti SET puo_eliminare = 1 - puo_eliminare WHERE id = %s;", (user_id,))
         elif tipo == 'eliminazione_storico':
-            cur.execute("UPDATE utenti SET puo_eliminare_storico = NOT puo_eliminare_storico WHERE id = %s;", (user_id,))
+            cur.execute("UPDATE utenti SET puo_eliminare_storico = 1 - puo_eliminare_storico WHERE id = %s;", (user_id,))
         elif tipo == 'documenti':
-            cur.execute("UPDATE utenti SET puo_gestire_documenti = NOT puo_gestire_documenti WHERE id = %s;", (user_id,))
+            cur.execute("UPDATE utenti SET puo_gestire_documenti = 1 - puo_gestire_documenti WHERE id = %s;", (user_id,))
         conn.commit()
         cur.close()
         conn.close()
