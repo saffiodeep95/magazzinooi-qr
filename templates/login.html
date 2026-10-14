@@ -3,36 +3,57 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Login - Magazzino</title>
+    <title>Magazzino OMG - Login</title>
+    
+    <link rel="manifest" href="{{ url_for('static', filename='manifest.json') }}">
+    <link rel="icon" type="image/png" href="{{ url_for('static', filename='icon.png') }}">
+    <link rel="apple-touch-icon" href="{{ url_for('static', filename='icon.png') }}">
+    <meta name="theme-color" content="#4f46e5">
+
     <style>
-        body { font-family: sans-serif; display: flex; justify-content: center; align-items: center; height: 100vh; background: #f8fafc; margin: 0; }
-        .card { background: white; padding: 30px; border-radius: 12px; border: 1px solid #e2e8f0; width: 100%; max-width: 350px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); }
-        input { width: 100%; padding: 10px; margin: 10px 0; border: 1px solid #cbd5e1; border-radius: 6px; box-sizing: border-box; }
-        .btn { background: #4f46e5; color: white; width: 100%; padding: 10px; border: none; border-radius: 6px; font-weight: bold; cursor: pointer; margin-top: 10px; }
+        body { font-family: sans-serif; max-width: 400px; margin: 0 auto; padding: 40px 15px; background: #f8fafc; color: #1e293b; box-sizing: border-box; display: flex; flex-direction: column; min-height: 100vh; justify-content: center; align-items: center; }
+        .card { background: white; padding: 30px; border-radius: 12px; border: 1px solid #e2e8f0; width: 100%; box-shadow: 0 4px 6px -1px rgba(0, 0,0, 0.05); box-sizing: border-box; text-align: center; }
+        .btn { background: #4f46e5; color: white; padding: 12px; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; width: 100%; font-size: 1rem; margin-top: 10px; }
         .btn:hover { opacity: 0.9; }
-        .flash { background: #fee2e2; color: #991b1b; padding: 10px; border-radius: 6px; margin-bottom: 10px; font-size: 0.85rem; text-align: center; }
+        input { width: 100%; padding: 12px; margin-top: 6px; margin-bottom: 16px; border: 1px solid #cbd5e1; border-radius: 8px; box-sizing: border-box; font-size: 0.95rem; }
+        label { font-weight: bold; font-size: 0.85rem; color: #475569; display: block; text-align: left; }
+        footer { text-align: center; margin-top: 30px; color: #64748b; font-size: 0.8rem; width: 100%; }
     </style>
 </head>
 <body>
+
     <div class="card">
-        <h2 style="text-align: center; margin-top: 0;">🔐 Accesso Magazzino</h2>
-        
+        <h2 style="margin-top: 0; color: #1e293b; margin-bottom: 20px;">🔐 Accesso Magazzino OMG</h2>
+
         {% with messages = get_flashed_messages(with_categories=true) %}
           {% if messages %}
-            {% for cat, message in messages %}
-              <div class="flash">{{ message }}</div>
+            {% for category, message in messages %}
+              <div style="background: {% if category == 'error' %}#fee2e2; color: #991b1b; border: 1px solid #fca5a5;{% else %}#dcfce7; color: #166534; border: 1px solid #bbf7d0;{% endif %} padding: 10px; border-radius: 8px; margin-bottom: 15px; font-size: 0.85rem;">
+                {{ message }}
+              </div>
             {% endfor %}
           {% endif %}
         {% endwith %}
 
-        <form method="POST">
-            <input type="text" name="username" placeholder="Username" required autocomplete="username">
-            <input type="password" name="password" placeholder="Password" required autocomplete="current-password">
+        <form action="{{ url_for('login') }}" method="POST">
+            <label>Username:</label>
+            <input type="text" name="username" placeholder="Il tuo username" required autocomplete="username">
+
+            <label>Password:</label>
+            <input type="password" name="password" placeholder="La tua password" required autocomplete="current-password">
+
             <button type="submit" class="btn">Accedi</button>
         </form>
-        <p style="text-align: center; margin-top: 15px; font-size: 0.9rem;">
+
+        <p style="margin-top: 20px; font-size: 0.85rem; color: #64748b;">
             Non hai un account? <a href="{{ url_for('registra') }}" style="color: #4f46e5; text-decoration: none; font-weight: bold;">Registrati</a>
         </p>
     </div>
+
+    <footer>
+        <p style="margin: 0;">© 2026 <strong>Marco Pavan</strong> — Tutti i diritti riservati.</p>
+        <p style="margin: 3px 0 0 0; opacity: 0.75;">Sviluppato da Marco Pavan</p>
+    </footer>
+
 </body>
 </html>
