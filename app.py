@@ -134,7 +134,6 @@ def init_db():
             );
         """)
         
-        # AGGIUNTA SICURA DI TUTTE LE COLONNE NECESSARIE SE MANCANTI
         cur.execute("ALTER TABLE prodotti ADD COLUMN IF NOT EXISTS magazzino_pesante INT DEFAULT 0;")
         cur.execute("ALTER TABLE prodotti ADD COLUMN IF NOT EXISTS peso VARCHAR(255);")
         cur.execute("ALTER TABLE prodotti ADD COLUMN IF NOT EXISTS in_manutenzione BOOLEAN DEFAULT FALSE;")
@@ -276,6 +275,7 @@ def visualizza_log():
     try:
         conn = get_db_connection()
         cur = conn.cursor()
+        # Eliminazione automatica log più vecchi di 30 giorni
         cur.execute("DELETE FROM log_attivita WHERE data_ora < NOW() - INTERVAL '30 days';")
         conn.commit()
         cur.execute("SELECT * FROM log_attivita ORDER BY data_ora DESC LIMIT 100;")
@@ -601,7 +601,6 @@ def scarico():
                 flash(f"Errore durante lo scarico: {e}", "error")
     return render_template("scarico.html")
 
-# --- SCANNER GLOBALE SICURO ---
 @app.route("/scanner_globale", methods=["GET", "POST"])
 def scanner_globale():
     if request.method == "POST":
@@ -818,7 +817,6 @@ def elimina_prodotto():
 
     return redirect(url_for("index"))
 
-# --- GESTIONE DOCUMENTALE CON PERMESSI ---
 @app.route("/documenti", defaults={"cartella_id": None}, methods=["GET", "POST"])
 @app.route("/documenti/<int:cartella_id>", methods=["GET", "POST"])
 def documenti(cartella_id):
