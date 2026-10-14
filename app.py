@@ -507,23 +507,29 @@ def scarico():
                 flash(f"Errore durante lo scarico: {e}", "error")
     return render_template("scarico.html")
 
-# --- SCANNER GLOBALE (CERCA IN TUTTI I MAGAZZINI) ---
+# --- SCANNER GLOBALE SICURO ---
 @app.route("/scanner_globale", methods=["GET", "POST"])
 def scanner_globale():
     if request.method == "POST":
         qr_code = request.form.get("qr_code", "").strip()
         if qr_code:
-            conn = get_db_connection()
-            cur = conn.cursor()
-            cur.execute("SELECT * FROM prodotti WHERE qr_code = %s;", (qr_code,))
-            prodotto = cur.fetchone()
-            cur.close()
-            conn.close()
-            
-            if prodotto:
-                return redirect(url_for("gestisci_prodotto", qr_code=qr_code))
-            else:
-                flash(f"Nessun articolo trovato con QR Code: {qr_code}", "error")
+            try:
+                conn = get_db_connection()
+                cur = conn.cursor()
+                cur.execute("SELECT * FROM prodotti WHERE qr_code = %s;", (qr_code,))
+                prodotto = cur.fetchone()
+                cur.close()
+                conn.close()
+                
+                if prodotto:
+                    return redirect(url_for("gestisci_prodotto", qr_code=qr_code))
+                else:
+                    flash(f"Nessun articolo trovato con QR Code: {qr_code}", "error")
+            except Exception as e:
+                print(f"Errore scanner: {e}")
+                flash("Errore di comunicazione con il database. Riprova.", "error")
+        else:
+            flash("Inserisci o scansiona un codice QR valido.", "error")
     return render_template("scanner_globale.html")
 
 @app.route("/gestisci/<qr_code>")
