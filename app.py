@@ -134,6 +134,7 @@ def init_db():
             );
         """)
         
+        # AGGIUNTA SICURA DI TUTTE LE COLONNE NECESSARIE SE MANCANTI
         cur.execute("ALTER TABLE prodotti ADD COLUMN IF NOT EXISTS magazzino_pesante INT DEFAULT 0;")
         cur.execute("ALTER TABLE prodotti ADD COLUMN IF NOT EXISTS peso VARCHAR(255);")
         cur.execute("ALTER TABLE prodotti ADD COLUMN IF NOT EXISTS in_manutenzione BOOLEAN DEFAULT FALSE;")
@@ -145,7 +146,13 @@ def init_db():
         cur.execute("ALTER TABLE prodotti ADD COLUMN IF NOT EXISTS ordine_amministrativo BOOLEAN DEFAULT FALSE;")
         cur.execute("ALTER TABLE prodotti ADD COLUMN IF NOT EXISTS note_manutenzione TEXT;")
         cur.execute("ALTER TABLE prodotti ADD COLUMN IF NOT EXISTS soglia_minima INT DEFAULT 3;")
+        
         cur.execute("ALTER TABLE storico_manutenzioni ADD COLUMN IF NOT EXISTS ordine_amministrativo BOOLEAN DEFAULT FALSE;")
+        
+        cur.execute("ALTER TABLE utenti ADD COLUMN IF NOT EXISTS is_admin INT DEFAULT 0;")
+        cur.execute("ALTER TABLE utenti ADD COLUMN IF NOT EXISTS puo_vedere_manutenzione INT DEFAULT 1;")
+        cur.execute("ALTER TABLE utenti ADD COLUMN IF NOT EXISTS puo_eliminare INT DEFAULT 0;")
+        cur.execute("ALTER TABLE utenti ADD COLUMN IF NOT EXISTS puo_eliminare_storico INT DEFAULT 0;")
         cur.execute("ALTER TABLE utenti ADD COLUMN IF NOT EXISTS puo_gestire_documenti INT DEFAULT 1;")
 
         cur.execute("SELECT * FROM utenti WHERE username = 'admin';")
@@ -204,9 +211,9 @@ def login():
             if user and check_password_hash(user['password'], password):
                 session['username'] = user['username']
                 session['is_admin'] = user['is_admin']
-                session['puo_vedere_manutenzione'] = user['puo_vedere_manutenzione']
-                session['puo_eliminare'] = user['puo_eliminare']
-                session['puo_eliminare_storico'] = user['puo_eliminare_storico']
+                session['puo_vedere_manutenzione'] = user.get('puo_vedere_manutenzione', 1)
+                session['puo_eliminare'] = user.get('puo_eliminare', 0)
+                session['puo_eliminare_storico'] = user.get('puo_eliminare_storico', 0)
                 session['puo_gestire_documenti'] = user.get('puo_gestire_documenti', 1)
                 registra_log("Accesso effettuato al sistema")
                 return redirect(url_for('index'))
@@ -232,7 +239,7 @@ def registra():
                 conn = get_db_connection()
                 cur = conn.cursor()
                 hashed_pw = generate_password_hash(password)
-                cur.execute("INSERT INTO utenti (username, password) VALUES (%s, %s);", (username, hashed_pw))
+                cur.execute("INSERT INTO utenti (username, password, is_admin, puo_vedere_manutenzione, puo_eliminare, puo_eliminare_storico, puo_gestire_documenti) VALUES (%s, %s, 0, 1, 0, 0, 1);", (username, hashed_pw))
                 conn.commit()
                 cur.close()
                 conn.close()
@@ -269,11 +276,8 @@ def visualizza_log():
     try:
         conn = get_db_connection()
         cur = conn.cursor()
-        
-        # Elimina automaticamente i log più vecchi di 30 giorni
         cur.execute("DELETE FROM log_attivita WHERE data_ora < NOW() - INTERVAL '30 days';")
         conn.commit()
-        
         cur.execute("SELECT * FROM log_attivita ORDER BY data_ora DESC LIMIT 100;")
         logs = cur.fetchall()
         cur.close()
@@ -286,20 +290,24 @@ def visualizza_log():
 def toggle_permesso(user_id, tipo):
     if not session.get('is_admin'):
         return redirect(url_for('index'))
-    conn = get_db_connection()
-    cur = conn.cursor()
-    if tipo == 'manutenzione':
-        cur.execute("UPDATE utenti SET puo_vedere_manutenzione = NOT puo_vedere_manutenzione WHERE id = %s;", (user_id,))
-    elif tipo == 'eliminazione':
-        cur.execute("UPDATE utenti SET puo_eliminare = NOT puo_eliminare WHERE id = %s;", (user_id,))
-    elif tipo == 'eliminazione_storico':
-        cur.execute("UPDATE utenti SET puo_eliminare_storico = NOT puo_eliminare_storico WHERE id = %s;", (user_id,))
-    elif tipo == 'documenti':
-        cur.execute("UPDATE utenti SET puo_gestire_documenti = NOT puo_gestire_documenti WHERE id = %s;", (user_id,))
-    conn.commit()
-    cur.close()
-    conn.close()
-    registra_log(f"Modificati permessi utente ID {user_id} ({tipo})")
+    try:
+        conn = get_db_connection()
+        cur = conn.cursor()
+        if tipo == 'manutenzione':
+            cur.execute("UPDATE utenti SET puo_vedere_manutenzione = NOT puo_vedere_manutenzione WHERE id = %s;", (user_id,))
+        elif tipo == 'eliminazione':
+            cur.execute("UPDATE utenti SET puo_eliminare = NOT puo_eliminare WHERE id = %s;", (user_id,))
+        elif tipo == 'eliminazione_storico':
+            cur.execute("UPDATE utenti SET puo_eliminare_storico = NOT puo_eliminare_storico WHERE id = %s;", (user_id,))
+        elif tipo == 'documenti':
+            cur.execute("UPDATE utenti SET puo_gestire_documenti = NOT puo_gestire_documenti WHERE id = %s;", (user_id,))
+        conn.commit()
+        cur.close()
+        conn.close()
+        registra_log(f"Modificati permessi utente ID {user_id} ({tipo})")
+    except Exception as e:
+        print(f"Errore toggle_permesso: {e}")
+        flash(f"Errore nell'aggiornamento dei permessi: {e}", "error")
     return redirect(url_for('admin_utenti'))
 
 @app.route("/reset_password/<int:user_id>", methods=["POST"])
@@ -308,28 +316,35 @@ def reset_password(user_id):
         return redirect(url_for('index'))
     nuova_password = request.form.get("nuova_password")
     if nuova_password:
-        conn = get_db_connection()
-        cur = conn.cursor()
-        hashed_pw = generate_password_hash(nuova_password)
-        cur.execute("UPDATE utenti SET password = %s WHERE id = %s;", (hashed_pw, user_id))
-        conn.commit()
-        cur.close()
-        conn.close()
-        registra_log(f"Reset password per utente ID {user_id}")
-        flash("Password aggiornata con successo!", "success")
+        try:
+            conn = get_db_connection()
+            cur = conn.cursor()
+            hashed_pw = generate_password_hash(nuova_password)
+            cur.execute("UPDATE utenti SET password = %s WHERE id = %s;", (hashed_pw, user_id))
+            conn.commit()
+            cur.close()
+            conn.close()
+            registra_log(f"Reset password per utente ID {user_id}")
+            flash("Password aggiornata con successo!", "success")
+        except Exception as e:
+            flash(f"Errore reset password: {e}", "error")
     return redirect(url_for('admin_utenti'))
 
 @app.route("/elimina_utente/<int:user_id>", methods=["POST"])
 def elimina_utente(user_id):
     if not session.get('is_admin'):
         return redirect(url_for('index'))
-    conn = get_db_connection()
-    cur = conn.cursor()
-    cur.execute("DELETE FROM utenti WHERE id = %s AND username != 'admin';", (user_id,))
-    conn.commit()
-    cur.close()
-    conn.close()
-    registra_log(f"Eliminato utente ID {user_id}")
+    try:
+        conn = get_db_connection()
+        cur = conn.cursor()
+        cur.execute("DELETE FROM utenti WHERE id = %s AND username != 'admin';", (user_id,))
+        conn.commit()
+        cur.close()
+        conn.close()
+        registra_log(f"Eliminato utente ID {user_id}")
+        flash("Utente eliminato con successo.", "success")
+    except Exception as e:
+        flash(f"Errore eliminazione utente: {e}", "error")
     return redirect(url_for('admin_utenti'))
 
 @app.route("/clienti", methods=["GET", "POST"])
@@ -951,5 +966,5 @@ def elimina_file(file_id):
         return redirect(url_for("documenti", cartella_id=cartella_id))
     return redirect(url_for("documenti"))
 
-if __name__ == "_main_":
+if _name_ == "__main__":
     app.run(debug=True)
