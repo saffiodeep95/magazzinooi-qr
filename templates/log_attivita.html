@@ -1,0 +1,82 @@
+<!--
+========================================================================
+  Magazzino Web Application
+  Copyright (c) 2026 Marco Pavan. All Rights Reserved.
+  Designed & Developed by Marco Pavan
+========================================================================
+-->
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Log Attività di Sistema</title>
+    <style>
+        body { font-family: sans-serif; max-width: 900px; margin: 0 auto; padding: 15px; background: #f8fafc; color: #1e293b; box-sizing: border-box; }
+        .card { background: white; padding: 20px; border-radius: 12px; border: 1px solid #e2e8f0; margin-bottom: 20px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
+        .btn { background: #4f46e5; color: white; padding: 8px 14px; border: none; border-radius: 6px; font-weight: bold; cursor: pointer; text-decoration: none; display: inline-block; font-size: 0.9rem; }
+        .btn:hover { opacity: 0.9; }
+        table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 0.9rem; }
+        th, td { padding: 10px 12px; text-align: left; border-bottom: 1px solid #e2e8f0; }
+        th { background: #f1f5f9; color: #475569; font-weight: 600; }
+        tr:hover { background: #f8fafc; }
+        .badge { background: #e0e7ff; color: #3730a3; padding: 3px 8px; border-radius: 12px; font-size: 0.8rem; font-weight: bold; }
+        footer { text-align: center; margin-top: 30px; padding: 15px 0; color: #64748b; font-size: 0.8rem; border-top: 1px solid #e2e8f0; }
+    </style>
+</head>
+<body>
+
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+        <h1 style="font-size: 1.5rem; margin: 0;">📋 Log Attività di Sistema</h1>
+        <div>
+            <a href="{{ url_for('admin_utenti') }}" class="btn" style="background: #0284c7;">Gestione Utenti</a>
+            <a href="{{ url_for('index') }}" class="btn" style="background: #64748b;">← Home</a>
+        </div>
+    </div>
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+        {% for category, message in messages %}
+          <div style="background: {% if category == 'error' %}#fee2e2; color: #991b1b; border: 1px solid #fca5a5;{% else %}#dcfce7; color: #166534; border: 1px solid #bbf7d0;{% endif %} padding: 12px; border-radius: 8px; margin-bottom: 15px; font-size: 0.9rem;">
+            {{ message }}
+          </div>
+        {% endfor %}
+      {% endif %}
+    {% endwith %}
+
+    <div class="card">
+        <h3 style="margin-top: 0; font-size: 1.1rem; color: #334155;">Ultime 100 azioni registrate nel magazzino</h3>
+        
+        {% if logs %}
+            <div style="overflow-x: auto;">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Data e Ora</th>
+                            <th>Utente</th>
+                            <th>Descrizione Attività</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for log in logs %}
+                        <tr>
+                            <td style="white-space: nowrap; color: #64748b; font-size: 0.85rem;">{{ log.data_ora }}</td>
+                            <td><span class="badge">{{ log.username }}</span></td>
+                            <td>{{ log.descrizione }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        {% else %}
+            <p style="color: #64748b; text-align: center; padding: 20px 0;">Nessuna attività registrata di recente.</p>
+        {% endif %}
+    </div>
+
+    <footer>
+        <p style="margin: 0;">© 2026 <strong>Marco Pavan</strong> — Tutti i diritti riservati.</p>
+        <p style="margin: 3px 0 0 0; opacity: 0.75;">Sviluppato da Marco Pavan</p>
+    </footer>
+
+</body>
+</html>
