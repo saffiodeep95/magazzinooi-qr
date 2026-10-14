@@ -21,7 +21,6 @@ def get_db_connection():
     return psycopg2.connect(DATABASE_URL, cursor_factory=RealDictCursor)
 
 def registra_log(descrizione):
-    """Funzione di servizio per registrare le attività degli utenti"""
     try:
         username = session.get('username', 'Sistema')
         conn = get_db_connection()
@@ -270,6 +269,11 @@ def visualizza_log():
     try:
         conn = get_db_connection()
         cur = conn.cursor()
+        
+        # Elimina automaticamente i log più vecchi di 30 giorni
+        cur.execute("DELETE FROM log_attivita WHERE data_ora < NOW() - INTERVAL '30 days';")
+        conn.commit()
+        
         cur.execute("SELECT * FROM log_attivita ORDER BY data_ora DESC LIMIT 100;")
         logs = cur.fetchall()
         cur.close()
@@ -564,7 +568,6 @@ def scarico():
                 cur.execute("UPDATE prodotti SET quantita = %s WHERE qr_code = %s;", (nuova_quantita, qr_code))
                 conn.commit()
                 
-                # Gestione avvisi intelligenti (scorta a 1 o esaurito a 0)
                 if qta_iniziale > 0 and nuova_quantita == 0:
                     registra_log(f"🚨 ESAURITO: Il prodotto '{prodotto['nome']}' (QR: {qr_code}) è esaurito (0 pezzi)!")
                     flash(f"🚨 ATTENZIONE! Il prodotto '{prodotto['nome']}' è completamente ESAURITO (0 pezzi)!", "error")
