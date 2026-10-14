@@ -19,8 +19,12 @@
         table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 0.9rem; }
         th, td { padding: 10px 12px; text-align: left; border-bottom: 1px solid #e2e8f0; vertical-align: middle; }
         th { background: #f1f5f9; color: #475569; font-weight: 600; }
+        input, select { width: 100%; padding: 10px; margin-top: 5px; margin-bottom: 12px; border: 1px solid #cbd5e1; border-radius: 6px; box-sizing: border-box; font-size: 0.9rem; }
+        label { font-weight: bold; font-size: 0.85rem; color: #475569; display: block; }
         footer { text-align: center; margin-top: 30px; padding: 15px 0; color: #64748b; font-size: 0.8rem; border-top: 1px solid #e2e8f0; }
         .nav-menu { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 15px; }
+        .checkbox-container { display: flex; align-items: center; gap: 8px; margin-top: 10px; margin-bottom: 12px; cursor: pointer; font-weight: bold; font-size: 0.85rem; color: #334155; }
+        .checkbox-container input { width: auto; margin: 0; }
     </style>
 </head>
 <body>
@@ -64,12 +68,57 @@
       {% endif %}
     {% endwith %}
 
+    <!-- CARD INSERIMENTO NUOVO PRODOTTO -->
     <div class="card">
-        <h3 style="margin-top: 0; font-size: 1.1rem; color: #334155;">Elenco Articoli in Magazzino</h3>
+        <h3 style="margin-top: 0; font-size: 1.1rem; color: #334155;">➕ Aggiungi o Aggiorna Articolo</h3>
+        <form action="{{ url_for('aggiungi_prodotto') }}" method="POST">
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 10px;">
+                <div>
+                    <label>Codice QR:</label>
+                    <input type="text" name="qr_code" placeholder="Es. QR12345" required>
+                </div>
+                <div>
+                    <label>Nome Articolo:</label>
+                    <input type="text" name="nome" placeholder="Nome prodotto" required>
+                </div>
+                <div>
+                    <label>Codice SAP:</label>
+                    <input type="text" name="sap" placeholder="Codice SAP">
+                </div>
+                <div>
+                    <label>Quantità:</label>
+                    <input type="number" name="quantita" value="1" min="0" required>
+                </div>
+                <div>
+                    <label>Posizione:</label>
+                    <input type="text" name="posizione" placeholder="Es. Scaffale A1">
+                </div>
+                <div>
+                    <label>Peso (kg / t):</label>
+                    <input type="text" name="peso" placeholder="Es. 25 kg">
+                </div>
+            </div>
+
+            <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; margin-top: 5px;">
+                <label class="checkbox-container">
+                    <input type="checkbox" name="magazzino_pesante" value="1">
+                    ⚖️ Invia a Magazzino Pesante
+                </label>
+                <button type="submit" class="btn" style="background: #10b981; padding: 10px 20px;">Salva Articolo</button>
+            </div>
+        </form>
+    </div>
+
+    <!-- CARD ELENCO E RICERCA PRODOTTI -->
+    <div class="card">
+        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; margin-bottom: 10px;">
+            <h3 style="margin: 0; font-size: 1.1rem; color: #334155;">Elenco Articoli in Magazzino</h3>
+            <input type="text" id="filtroTabella" placeholder="🔍 Cerca articolo o QR..." onkeyup="FiltraTabella()" style="width: 250px; margin: 0; padding: 6px 10px;">
+        </div>
         
         {% if prodotti %}
             <div style="overflow-x: auto;">
-                <table>
+                <table id="tabellaProdotti">
                     <thead>
                         <tr>
                             <th>Nome Articolo</th>
@@ -82,7 +131,6 @@
                     </thead>
                     <tbody>
                         {% for p in prodotti %}
-                        <!-- RIGA COLORATA AUTOMATICAMENTE IN BASE ALLA QUANTITÀ -->
                         <tr style="{% if p.quantita == 0 %}background-color: #fee2e2; color: #991b1b; font-weight: bold;{% elif p.quantita == 1 %}background-color: #fef3c7; color: #92400e; font-weight: bold;{% endif %}">
                             <td>{{ p.nome }}</td>
                             <td style="font-family: monospace; font-size: 0.85rem;">{{ p.qr_code }}</td>
@@ -107,5 +155,30 @@
         <p style="margin: 3px 0 0 0; opacity: 0.75;">Sviluppato da Marco Pavan</p>
     </footer>
 
+    <!-- Script JavaScript per la ricerca istantanea nella tabella -->
+    <script>
+        function FiltraTabella() {
+            let input = document.getElementById("filtroTabella");
+            let filter = input.value.toUpperCase();
+            let table = document.getElementById("tabellaProdotti");
+            if (!table) return;
+            let tr = table.getElementsByTagName("tr");
+            for (let i = 1; i < tr.length; i++) {
+                let tdName = tr[i].getElementsByTagName("td")[0];
+                let tdQr = tr[i].getElementsByTagName("td")[1];
+                let tdSap = tr[i].getElementsByTagName("td")[2];
+                if (tdName || tdQr || tdSap) {
+                    let txtName = tdName ? tdName.textContent || tdName.innerText : "";
+                    let txtQr = tdQr ? tdQr.textContent || tdQr.innerText : "";
+                    let txtSap = tdSap ? tdSap.textContent || tdSap.innerText : "";
+                    if (txtName.toUpperCase().indexOf(filter) > -1 || txtQr.toUpperCase().indexOf(filter) > -1 || txtSap.toUpperCase().indexOf(filter) > -1) {
+                        tr[i].style.display = "";
+                    } else {
+                        tr[i].style.display = "none";
+                    }
+                }
+            }
+        }
+    </script>
 </body>
 </html>
