@@ -1,18 +1,10 @@
-<!--
-========================================================================
-  Magazzino Web Application
-  Copyright (c) 2026 Marco Pavan. All Rights Reserved.
-  Designed & Developed by Marco Pavan
-========================================================================
--->
 <!DOCTYPE html>
 <html lang="it">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Magazzino Standard</title>
+    <title>Magazzino OMG</title>
     
-    <!-- Meta tag per PWA e Icona Personalizzata -->
     <link rel="manifest" href="{{ url_for('static', filename='manifest.json') }}">
     <link rel="icon" type="image/png" href="{{ url_for('static', filename='icon.png') }}">
     <link rel="apple-touch-icon" href="{{ url_for('static', filename='icon.png') }}">
@@ -37,7 +29,7 @@
 <body>
 
     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; flex-wrap: wrap; gap: 10px;">
-        <h1 style="font-size: 1.5rem; margin: 0;">📦 Magazzino Standard</h1>
+        <h1 style="font-size: 1.5rem; margin: 0;">📦 Magazzino OMG</h1>
         <div style="font-size: 0.9rem; color: #475569;">
             Utente: <strong>{{ session.username }}</strong> 
             {% if session.is_admin %}(Admin){% endif %} | 
@@ -162,7 +154,6 @@
         <p style="margin: 3px 0 0 0; opacity: 0.75;">Sviluppato da Marco Pavan</p>
     </footer>
 
-    <!-- Script JavaScript per la ricerca istantanea nella tabella -->
     <script>
         function FiltraTabella() {
             let input = document.getElementById("filtroTabella");
