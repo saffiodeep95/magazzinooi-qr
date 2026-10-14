@@ -20,6 +20,22 @@ DATABASE_URL = os.environ.get("DATABASE_URL")
 def get_db_connection():
     return psycopg2.connect(DATABASE_URL, cursor_factory=RealDictCursor)
 
+def registra_log(descrizione):
+    """Funzione di servizio per registrare le attività degli utenti"""
+    try:
+        username = session.get('username', 'Sistema')
+        conn = get_db_connection()
+        cur = conn.cursor()
+        cur.execute(
+            "INSERT INTO log_attivita (username, descrizione) VALUES (%s, %s);",
+            (username, descrizione)
+        )
+        conn.commit()
+        cur.close()
+        conn.close()
+    except Exception as e:
+        print(f"Errore registrazione log: {e}")
+
 def init_db():
     if not DATABASE_URL:
         print("DATABASE_URL non impostata!")
@@ -45,7 +61,8 @@ def init_db():
                 data_riconsegna VARCHAR(255),
                 vettore VARCHAR(255),
                 ordine_amministrativo BOOLEAN DEFAULT FALSE,
-                note_manutenzione TEXT
+                note_manutenzione TEXT,
+                soglia_minima INT DEFAULT 3
             );
         """)
         
@@ -91,6 +108,15 @@ def init_db():
         """)
 
         cur.execute("""
+            CREATE TABLE IF NOT EXISTS log_attivita (
+                id SERIAL PRIMARY KEY,
+                data_ora TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                username VARCHAR(255),
+                descrizione TEXT
+            );
+        """)
+
+        cur.execute("""
             CREATE TABLE IF NOT EXISTS cartelle (
                 id SERIAL PRIMARY KEY,
                 nome VARCHAR(255) NOT NULL,
@@ -119,6 +145,7 @@ def init_db():
         cur.execute("ALTER TABLE prodotti ADD COLUMN IF NOT EXISTS vettore VARCHAR(255);")
         cur.execute("ALTER TABLE prodotti ADD COLUMN IF NOT EXISTS ordine_amministrativo BOOLEAN DEFAULT FALSE;")
         cur.execute("ALTER TABLE prodotti ADD COLUMN IF NOT EXISTS note_manutenzione TEXT;")
+        cur.execute("ALTER TABLE prodotti ADD COLUMN IF NOT EXISTS soglia_minima INT DEFAULT 3;")
         cur.execute("ALTER TABLE storico_manutenzioni ADD COLUMN IF NOT EXISTS ordine_amministrativo BOOLEAN DEFAULT FALSE;")
         cur.execute("ALTER TABLE utenti ADD COLUMN IF NOT EXISTS puo_gestire_documenti INT DEFAULT 1;")
 
@@ -182,6 +209,7 @@ def login():
                 session['puo_eliminare'] = user['puo_eliminare']
                 session['puo_eliminare_storico'] = user['puo_eliminare_storico']
                 session['puo_gestire_documenti'] = user.get('puo_gestire_documenti', 1)
+                registra_log("Accesso effettuato al sistema")
                 return redirect(url_for('index'))
             else:
                 flash("Credenziali non valide!", "error")
@@ -191,6 +219,7 @@ def login():
 
 @app.route("/logout")
 def logout():
+    registra_log("Disconnessione dal sistema")
     session.clear()
     return redirect(url_for('login'))
 
@@ -208,6 +237,7 @@ def registra():
                 conn.commit()
                 cur.close()
                 conn.close()
+                registra_log(f"Registrato nuovo utente: {username}")
                 flash("Registrazione completata! Ora puoi effettuare il login.", "success")
                 return redirect(url_for('login'))
             except Exception as e:
@@ -231,6 +261,23 @@ def admin_utenti():
         print(f"Errore admin: {e}")
     return render_template("admin_utenti.html", utenti=utenti)
 
+@app.route("/log_attivita")
+def visualizza_log():
+    if not session.get('is_admin'):
+        flash("Accesso negato.", "error")
+        return redirect(url_for('index'))
+    logs = []
+    try:
+        conn = get_db_connection()
+        cur = conn.cursor()
+        cur.execute("SELECT * FROM log_attivita ORDER BY data_ora DESC LIMIT 100;")
+        logs = cur.fetchall()
+        cur.close()
+        conn.close()
+    except Exception as e:
+        print(f"Errore log: {e}")
+    return render_template("log_attivita.html", logs=logs)
+
 @app.route("/toggle_permesso/<int:user_id>/<tipo>", methods=["POST"])
 def toggle_permesso(user_id, tipo):
     if not session.get('is_admin'):
@@ -248,6 +295,7 @@ def toggle_permesso(user_id, tipo):
     conn.commit()
     cur.close()
     conn.close()
+    registra_log(f"Modificati permessi utente ID {user_id} ({tipo})")
     return redirect(url_for('admin_utenti'))
 
 @app.route("/reset_password/<int:user_id>", methods=["POST"])
@@ -263,6 +311,7 @@ def reset_password(user_id):
         conn.commit()
         cur.close()
         conn.close()
+        registra_log(f"Reset password per utente ID {user_id}")
         flash("Password aggiornata con successo!", "success")
     return redirect(url_for('admin_utenti'))
 
@@ -276,6 +325,7 @@ def elimina_utente(user_id):
     conn.commit()
     cur.close()
     conn.close()
+    registra_log(f"Eliminato utente ID {user_id}")
     return redirect(url_for('admin_utenti'))
 
 @app.route("/clienti", methods=["GET", "POST"])
@@ -294,6 +344,7 @@ def clienti():
                 (nome_azienda, indirizzo, p_iva, telefono, email)
             )
             conn.commit()
+            registra_log(f"Aggiunto cliente: {nome_azienda}")
             flash("Cliente aggiunto con successo!", "success")
         return redirect(url_for("clienti"))
     
@@ -303,10 +354,6 @@ def clienti():
     conn.close()
     return render_template("clienti.html", clienti=lista_clienti)
 
-@app.route("/aggiungi_cliente", methods=["POST"])
-def aggiungi_cliente():
-    return clienti()
-
 @app.route("/elimina_cliente/<int:cliente_id>", methods=["POST"])
 def elimina_cliente(cliente_id):
     conn = get_db_connection()
@@ -315,6 +362,7 @@ def elimina_cliente(cliente_id):
     conn.commit()
     cur.close()
     conn.close()
+    registra_log(f"Eliminato cliente ID {cliente_id}")
     flash("Cliente eliminato con successo.", "success")
     return redirect(url_for("clienti"))
 
@@ -351,6 +399,7 @@ def upload():
                 conn.commit()
                 cur.close()
                 conn.close()
+                registra_log(f"Importati {count} articoli tramite file CSV")
                 flash(f"Importati/Aggiornati con successo {count} articoli dal file CSV!", "success")
             except Exception as e:
                 flash(f"Errore durante l'elaborazione del CSV: {e}", "error")
@@ -449,6 +498,7 @@ def elimina_storico_manutenzione(storico_id):
     conn.commit()
     cur.close()
     conn.close()
+    registra_log(f"Eliminato record storico manutenzione ID {storico_id}")
     flash("Record eliminato dallo storico.", "success")
     return redirect(url_for('storico_manutenzioni'))
 
@@ -482,6 +532,7 @@ def carico():
                 conn.commit()
                 cur.close()
                 conn.close()
+                registra_log(f"Carico di +{quantita} pz su prodotto QR: {qr_code}")
                 flash(f"Carico di {quantita} pz effettuato con successo!", "success")
                 return redirect(url_for("gestisci_prodotto", qr_code=qr_code))
             except Exception as e:
@@ -492,16 +543,41 @@ def carico():
 def scarico():
     if request.method == "POST":
         qr_code = request.form.get("qr_code")
-        quantita = int(request.form.get("quantita", 1))
+        quantita_da_scaricare = int(request.form.get("quantita", 1))
         if qr_code:
             try:
                 conn = get_db_connection()
                 cur = conn.cursor()
-                cur.execute("UPDATE prodotti SET quantita = GREATEST(0, quantita - %s) WHERE qr_code = %s;", (quantita, qr_code))
+                
+                cur.execute("SELECT * FROM prodotti WHERE qr_code = %s;", (qr_code,))
+                prodotto = cur.fetchone()
+                
+                if not prodotto:
+                    flash("Prodotto non trovato.", "error")
+                    cur.close()
+                    conn.close()
+                    return redirect(url_for("scarico"))
+                
+                qta_iniziale = prodotto['quantita']
+                nuova_quantita = max(0, qta_iniziale - quantita_da_scaricare)
+                
+                cur.execute("UPDATE prodotti SET quantita = %s WHERE qr_code = %s;", (nuova_quantita, qr_code))
                 conn.commit()
+                
+                # Gestione avvisi intelligenti (scorta a 1 o esaurito a 0)
+                if qta_iniziale > 0 and nuova_quantita == 0:
+                    registra_log(f"🚨 ESAURITO: Il prodotto '{prodotto['nome']}' (QR: {qr_code}) è esaurito (0 pezzi)!")
+                    flash(f"🚨 ATTENZIONE! Il prodotto '{prodotto['nome']}' è completamente ESAURITO (0 pezzi)!", "error")
+                elif qta_iniziale > 1 and nuova_quantita == 1:
+                    registra_log(f"⚠️ SCORTA BASSA: Il prodotto '{prodotto['nome']}' (QR: {qr_code}) è sceso a 1 pezzo.")
+                    flash(f"⚠️ Attenzione! Il prodotto '{prodotto['nome']}' è sceso a 1 solo pezzo rimasto!", "error")
+                else:
+                    flash(f"Scarico di {quantita_da_scaricare} pz effettuato con successo!", "success")
+                
+                registra_log(f"Scarico di -{quantita_da_scaricare} pz su prodotto QR: {qr_code} (Precedente: {qta_iniziale}, Nuova: {nuova_quantita})")
+                
                 cur.close()
                 conn.close()
-                flash(f"Scarico di {quantita} pz effettuato con successo!", "success")
                 return redirect(url_for("gestisci_prodotto", qr_code=qr_code))
             except Exception as e:
                 flash(f"Errore durante lo scarico: {e}", "error")
@@ -573,6 +649,7 @@ def aggiorna_prodotto(qr_code):
         conn.commit()
         cur.close()
         conn.close()
+        registra_log(f"Aggiornato articolo: {nome} (QR: {qr_code})")
         flash("Articolo e dati magazzino aggiornati con successo!", "success")
     except Exception as e:
         flash(f"Errore durante l'aggiornamento: {e}", "error")
@@ -613,6 +690,7 @@ def aggiungi_prodotto():
         conn.commit()
         cur.close()
         conn.close()
+        registra_log(f"Aggiunto/Aggiornato prodotto: {nome} (QR: {qr_code})")
         flash("Prodotto salvato con successo!", "success")
     except Exception as e:
         flash(f"Errore nell'inserimento: {e}", "error")
@@ -668,6 +746,7 @@ def manda_manutenzione(qr_code):
         conn.commit()
         cur.close()
         conn.close()
+        registra_log(f"Inviato in manutenzione: {prod['nome'] if prod else qr_code}")
         flash("Articolo inviato in manutenzione e registrato nello storico con successo!", "success")
     except Exception as e:
         flash(f"Errore: {e}", "error")
@@ -694,6 +773,7 @@ def ripristina_magazzino(qr_code):
         conn.commit()
         cur.close()
         conn.close()
+        registra_log(f"Rientrato in magazzino da manutenzione QR: {qr_code}")
         flash("Articolo rientrato in magazzino con successo!", "success")
     except Exception as e:
         flash(f"Errore: {e}", "error")
@@ -713,6 +793,7 @@ def elimina_prodotto():
         conn.commit()
         cur.close()
         conn.close()
+        registra_log(f"Eliminato prodotto QR: {qr_code}")
         flash("Articolo eliminato dal magazzino con successo!", "success")
     except Exception as e:
         flash(f"Errore durante l'eliminazione: {e}", "error")
@@ -754,6 +835,7 @@ def documenti(cartella_id):
             if nome_cartella:
                 cur.execute("INSERT INTO cartelle (nome, parent_id) VALUES (%s, %s);", (nome_cartella, cartella_id))
                 conn.commit()
+                registra_log(f"Creata cartella documenti: {nome_cartella}")
                 flash("Cartella creata con successo!", "success")
                 
         elif azione == "carica_file":
@@ -768,6 +850,7 @@ def documenti(cartella_id):
                     VALUES (%s, %s, %s, %s);
                 """, (cartella_id, nome_file, tipo_file, dati_file))
                 conn.commit()
+                registra_log(f"Caricato file: {nome_file}")
                 flash("File caricato con successo!", "success")
                 
         cur.close()
@@ -809,6 +892,7 @@ def scarica_file(file_id):
     conn.close()
 
     if file_data:
+        registra_log(f"Scaricato file: {file_data['nome_file']}")
         return send_file(
             io.BytesIO(file_data['dati_file']),
             mimetype=file_data['tipo_file'],
@@ -834,6 +918,7 @@ def elimina_cartella(cartella_id):
     conn.commit()
     cur.close()
     conn.close()
+    registra_log(f"Eliminata cartella documenti ID {cartella_id}")
     flash("Cartella eliminata con successo.", "success")
     
     if parent_id:
@@ -856,6 +941,7 @@ def elimina_file(file_id):
     conn.commit()
     cur.close()
     conn.close()
+    registra_log(f"Eliminato file ID {file_id}")
     flash("File eliminato con successo.", "success")
     
     if cartella_id:
