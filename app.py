@@ -110,6 +110,7 @@ def init_db():
         """)
         
         cur.execute("ALTER TABLE prodotti ADD COLUMN IF NOT EXISTS magazzino_pesante INT DEFAULT 0;")
+        cur.execute("ALTER TABLE prodotti ADD COLUMN IF NOT EXISTS peso VARCHAR(255);")
         cur.execute("ALTER TABLE prodotti ADD COLUMN IF NOT EXISTS in_manutenzione BOOLEAN DEFAULT FALSE;")
         cur.execute("ALTER TABLE prodotti ADD COLUMN IF NOT EXISTS cliente_manutenzione VARCHAR(255);")
         cur.execute("ALTER TABLE prodotti ADD COLUMN IF NOT EXISTS quantita_manutenzione INT DEFAULT 0;")
@@ -506,6 +507,25 @@ def scarico():
                 flash(f"Errore durante lo scarico: {e}", "error")
     return render_template("scarico.html")
 
+# --- SCANNER GLOBALE (CERCA IN TUTTI I MAGAZZINI) ---
+@app.route("/scanner_globale", methods=["GET", "POST"])
+def scanner_globale():
+    if request.method == "POST":
+        qr_code = request.form.get("qr_code", "").strip()
+        if qr_code:
+            conn = get_db_connection()
+            cur = conn.cursor()
+            cur.execute("SELECT * FROM prodotti WHERE qr_code = %s;", (qr_code,))
+            prodotto = cur.fetchone()
+            cur.close()
+            conn.close()
+            
+            if prodotto:
+                return redirect(url_for("gestisci_prodotto", qr_code=qr_code))
+            else:
+                flash(f"Nessun articolo trovato con QR Code: {qr_code}", "error")
+    return render_template("scanner_globale.html")
+
 @app.route("/gestisci/<qr_code>")
 def gestisci_prodotto(qr_code):
     conn = get_db_connection()
@@ -534,15 +554,16 @@ def aggiorna_prodotto(qr_code):
     nome = request.form.get("nome")
     sap = request.form.get("sap", "")
     posizione = request.form.get("posizione", "")
+    peso = request.form.get("peso", "")
     flag_sezione = 1 if request.form.get("magazzino_pesante") else 0
     try:
         conn = get_db_connection()
         cur = conn.cursor()
         cur.execute("""
             UPDATE prodotti 
-            SET nome = %s, sap = %s, posizione = %s, magazzino_pesante = %s
+            SET nome = %s, sap = %s, posizione = %s, peso = %s, magazzino_pesante = %s
             WHERE qr_code = %s;
-        """, (nome, sap, posizione, flag_sezione, qr_code))
+        """, (nome, sap, posizione, peso, flag_sezione, qr_code))
         conn.commit()
         cur.close()
         conn.close()
@@ -835,5 +856,5 @@ def elimina_file(file_id):
         return redirect(url_for("documenti", cartella_id=cartella_id))
     return redirect(url_for("documenti"))
 
-if __name__ == "_main_":
+if _name_ == "__main__":
     app.run(debug=True)
