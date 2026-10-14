@@ -1,0 +1,86 @@
+<!--
+========================================================================
+  Magazzino Web Application
+  Copyright (c) 2026 Marco Pavan. All Rights Reserved.
+  Designed & Developed by Marco Pavan
+========================================================================
+-->
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Scanner Globale QR</title>
+    <style>
+        body { font-family: sans-serif; max-width: 600px; margin: 0 auto; padding: 15px; background: #f8fafc; color: #1e293b; box-sizing: border-box; text-align: center; }
+        .card { background: white; padding: 20px; border-radius: 12px; border: 1px solid #e2e8f0; margin-bottom: 15px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
+        .btn { background: #4f46e5; color: white; padding: 10px 16px; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; text-decoration: none; display: inline-block; margin: 4px; font-size: 1rem; }
+        .btn:hover { opacity: 0.9; }
+        input { width: 100%; padding: 12px; margin-top: 5px; margin-bottom: 15px; border: 1px solid #cbd5e1; border-radius: 6px; box-sizing: border-box; font-size: 1.1rem; font-family: monospace; text-align: center; }
+        label { font-weight: bold; font-size: 0.9rem; color: #475569; display: block; margin-bottom: 5px; }
+        footer { text-align: center; margin-top: 30px; padding: 15px 0; color: #64748b; font-size: 0.8rem; border-top: 1px solid #e2e8f0; }
+    </style>
+</head>
+<body>
+
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+        <h1 style="font-size: 1.5rem; margin: 0;">📷 Scanner Globale QR</h1>
+        <a href="{{ url_for('index') }}" class="btn" style="background: #64748b; padding: 8px 12px; font-size: 0.85rem;">← Home</a>
+    </div>
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+        {% for category, message in messages %}
+          <div style="background: {% if category == 'error' %}#fee2e2; color: #991b1b; border: 1px solid #fca5a5;{% else %}#dcfce7; color: #166534; border: 1px solid #bbf7d0;{% endif %} padding: 12px; border-radius: 8px; margin-bottom: 15px; font-size: 0.9rem;">
+            {{ message }}
+          </div>
+        {% endfor %}
+      {% endif %}
+    {% endwith %}
+
+    <div class="card">
+        <h3 style="margin-top: 0; font-size: 1.1rem; margin-bottom: 10px;">Inquadra il QR Code di qualsiasi articolo</h3>
+        <p style="color: #64748b; font-size: 0.85rem; margin-top: 0;">Lo scanner cercherà automaticamente tra il Magazzino Standard e il Magazzino Pesante.</p>
+        <div id="reader" style="width: 100%; max-width: 300px; margin: 0 auto;"></div>
+    </div>
+
+    <div class="card">
+        <form action="{{ url_for('scanner_globale') }}" method="POST" id="scanForm">
+            <label>Codice QR Rilevato o Inserito:</label>
+            <input type="text" id="qr_code" name="qr_code" placeholder="Scansiona o scrivi..." required>
+            <button type="submit" class="btn" style="background: #2563eb; width: 100%; padding: 12px;">Cerca Articolo</button>
+        </form>
+    </div>
+
+    <footer>
+        <p style="margin: 0;">© 2026 <strong>Marco Pavan</strong> — Tutti i diritti riservati.</p>
+        <p style="margin: 3px 0 0 0; opacity: 0.75;">Sviluppato da Marco Pavan</p>
+    </footer>
+
+    <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
+    <script>
+        document.addEventListener("DOMContentLoaded", function() {
+            function onScanSuccess(decodedText, decodedResult) {
+                document.getElementById('qr_code').value = decodedText;
+                html5QrCode.stop().then(() => {
+                    document.getElementById('scanForm').submit();
+                }).catch(err => {
+                    document.getElementById('scanForm').submit();
+                });
+            }
+
+            let html5QrCode = new Html5Qrcode("reader");
+            html5QrCode.start(
+                { facingMode: "environment" }, 
+                {
+                    fps: 10,
+                    qrbox: { width: 230, height: 230 }
+                },
+                onScanSuccess
+            ).catch(err => {
+                console.error("Impossibile avviare la fotocamera", err);
+            });
+        });
+    </script>
+</body>
+</html>
