@@ -3,21 +3,6 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Magazzino OMG</title>
-    
-    <link rel="manifest" href="{{ url_for('static', filename='manifest.json') }}">
-    <link rel="icon" type="image/png" href="{{ url_for('static', filename='icon.png') }}">
-    <link rel="apple-touch-icon" href="{{ url_for('static', filename='icon.png') }}">
-    <meta name="theme-color" content="#4f46e5">
-
-    <style>
-        body { font-family: sans-serif; max-width: 1000px; margin: 0 auto; padding: 15px; background: #f8fafc; color: #1e293b; box-sizing: border-box; }
-        .card { background: white; padding: 20px; border-radius: 12px; border: 1px solid #e2e8f0; margin-bottom: 2…
-[17:48, 16/10/2026] Marco Pavan: <!DOCTYPE html>
-<html lang="it">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Magazzino OMG - Fornitori</title>
     
     <link rel="manifest" href="{{ url_for('static', filename='manifest.json') }}">
@@ -28,7 +13,7 @@
     <style>
         body { font-family: sans-serif; max-width: 900px; margin: 0 auto; padding: 15px; background: #f8fafc; color: #1e293b; box-sizing: border-box; }
         .card { background: white; padding: 20px; border-radius: 12px; border: 1px solid #e2e8f0; margin-bottom: 20px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
-        .btn { background: #0284c7; color: white; padding: 8px 14px; border: none; border-radius: 6px; font-weight: bold; cursor: pointer; text-decoration: none; display: inline-block; font-size: 0.85rem; margin: 2px; }
+        .btn { background: #0284c7; color: white !important; padding: 8px 14px; border: none; border-radius: 6px; font-weight: bold; cursor: pointer; text-decoration: none; display: inline-block; font-size: 0.85rem; margin: 2px; }
         .btn:hover { opacity: 0.9; }
         table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 0.9rem; }
         th, td { padding: 10px 12px; text-align: left; border-bottom: 1px solid #e2e8f0; vertical-align: middle; }
@@ -36,13 +21,14 @@
         input { width: 100%; padding: 10px; margin-top: 5px; margin-bottom: 12px; border: 1px solid #cbd5e1; border-radius: 6px; box-sizing: border-box; font-size: 0.9rem; }
         label { font-weight: bold; font-size: 0.85rem; color: #475569; display: block; }
         footer { text-align: center; margin-top: 30px; padding: 15px 0; color: #64748b; font-size: 0.8rem; border-top: 1px solid #e2e8f0; }
+        .edit-box { display: none; background: #f1f5f9; padding: 15px; border-radius: 8px; margin-top: 10px; }
     </style>
 </head>
 <body>
 
     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
         <h1 style="font-size: 1.5rem; margin: 0;">🏢 Gestione Fornitori</h1>
-        <a href="{{ url_for('index') }}" class="btn" style="background: #64748b;">← Home</a>
+        <a href="{{ url_for('index') }}" class="btn" style="background: #475569; color: #ffffff !important;">← Home</a>
     </div>
 
     {% with messages = get_flashed_messages(with_categories=true) %}
@@ -55,6 +41,7 @@
       {% endif %}
     {% endwith %}
 
+    <!-- ADD FORNITORE -->
     <div class="card">
         <h3 style="margin-top: 0; font-size: 1.1rem; color: #334155;">➕ Aggiungi Nuovo Fornitore</h3>
         <form action="{{ url_for('fornitori') }}" method="POST" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 10px; align-items: end;">
@@ -84,6 +71,7 @@
         </form>
     </div>
 
+    <!-- LISTA FORNITORI -->
     <div class="card">
         <h3 style="margin-top: 0; font-size: 1.1rem; color: #334155;">Elenco Fornitori Registrati</h3>
         {% if fornitori %}
@@ -101,14 +89,46 @@
                     <tbody>
                         {% for f in fornitori %}
                         <tr>
-                            <td><strong>{{ f.nome_azienda }}</strong></td>
+                            <td><strong>{{ f.nome_azienda }}</strong><br><small style="color: #64748b;">{{ f.indirizzo or '' }}</small></td>
                             <td>{{ f.p_iva or '-' }}</td>
                             <td>{{ f.telefono or '-' }}</td>
                             <td>{{ f.email or '-' }}</td>
                             <td style="white-space: nowrap;">
-                                <a href="{{ url_for('dettaglio_fornitore', fornitore_id=f.id) }}" class="btn" style="background: #8b5cf6; padding: 6px 12px; font-size: 0.8rem;">🔧 Contatti Tecnici</a>
+                                <a href="{{ url_for('dettaglio_fornitore', fornitore_id=f.id) }}" class="btn" style="background: #8b5cf6;">🔧 Contatti Tecnici</a>
+                                <button type="button" onclick="toggleEdit('edit-{{ f.id }}')" class="btn" style="background: #f59e0b;">✏️ Modifica</button>
                                 <form action="{{ url_for('elimina_fornitore', fornitore_id=f.id) }}" method="POST" style="display: inline;" onsubmit="return confirm('Eliminare questo fornitore e tutti i suoi contatti tecnici?');">
-                                    <button type="submit" class="btn" style="background: #ef4444; padding: 6px 10px; font-size: 0.8rem;">Elimina</button>
+                                    <button type="submit" class="btn" style="background: #ef4444;">🗑️ Elimina</button>
+                                </form>
+                            </td>
+                        </tr>
+                        <!-- MODULO DI MODIFICA NASCOSTO -->
+                        <tr id="edit-{{ f.id }}" class="edit-box">
+                            <td colspan="5">
+                                <form action="{{ url_for('modifica_fornitore', fornitore_id=f.id) }}" method="POST" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 10px; align-items: end;">
+                                    <div>
+                                        <label>Nome Azienda:</label>
+                                        <input type="text" name="nome_azienda" value="{{ f.nome_azienda }}" required>
+                                    </div>
+                                    <div>
+                                        <label>Indirizzo:</label>
+                                        <input type="text" name="indirizzo" value="{{ f.indirizzo or '' }}">
+                                    </div>
+                                    <div>
+                                        <label>P. IVA:</label>
+                                        <input type="text" name="p_iva" value="{{ f.p_iva or '' }}">
+                                    </div>
+                                    <div>
+                                        <label>Telefono:</label>
+                                        <input type="text" name="telefono" value="{{ f.telefono or '' }}">
+                                    </div>
+                                    <div>
+                                        <label>Email:</label>
+                                        <input type="email" name="email" value="{{ f.email or '' }}">
+                                    </div>
+                                    <div>
+                                        <button type="submit" class="btn" style="background: #10b981; padding: 8px 12px;">💾 Salva</button>
+                                        <button type="button" onclick="toggleEdit('edit-{{ f.id }}')" class="btn" style="background: #64748b; padding: 8px 12px;">Annulla</button>
+                                    </div>
                                 </form>
                             </td>
                         </tr>
@@ -126,5 +146,15 @@
         <p style="margin: 3px 0 0 0; opacity: 0.75;">Sviluppato da Marco Pavan</p>
     </footer>
 
+    <script>
+        function toggleEdit(id) {
+            let el = document.getElementById(id);
+            if (el.style.display === "table-row") {
+                el.style.display = "none";
+            } else {
+                el.style.display = "table-row";
+            }
+        }
+    </script>
 </body>
 </html>
