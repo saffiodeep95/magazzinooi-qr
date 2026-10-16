@@ -12,7 +12,7 @@ from psycopg2.extras import RealDictCursor
 from flask import Flask, render_template, request, redirect, url_for, flash, session, send_file
 from werkzeug.security import generate_password_hash, check_password_hash
 
-app = Flask(__name__)
+app = Flask(_name_)
 app.secret_key = os.environ.get("SECRET_KEY", "chiave-segreta-magazzino")
 
 DATABASE_URL = os.environ.get("DATABASE_URL")
@@ -75,6 +75,26 @@ def init_db():
                 email VARCHAR(255)
             );
         """)
+
+        # MIGRAZIONE AUTOMATICA DEI VECCHI DATI CLIENTI SE PRESENTI
+        try:
+            cur.execute("SELECT table_name FROM information_schema.tables WHERE table_schema='public' AND table_name='clienti';")
+            if cur.fetchone():
+                cur.execute("""
+                    INSERT INTO fornitori (nome_azienda, indirizzo, p_iva, telefono, email)
+                    SELECT 
+                        COALESCE(NULLIF(nome_cliente, ''), NULLIF(nome, ''), 'Fornitore Importato'),
+                        indirizzo, p_iva, telefono, email 
+                    FROM clienti
+                    WHERE NOT EXISTS (
+                        SELECT 1 FROM fornitori WHERE fornitori.nome_azienda = COALESCE(NULLIF(clienti.nome_cliente, ''), NULLIF(clienti.nome, ''), 'Fornitore Importato')
+                    );
+                """)
+                cur.execute("ALTER TABLE clienti RENAME TO vecchi_clienti_backup;")
+                conn.commit()
+                print("✅ Migrazione automatica dei vecchi clienti nei fornitori completata con successo!")
+        except Exception as mig_err:
+            print(f"Nota migrazione automatica: {mig_err}")
 
         cur.execute("""
             CREATE TABLE IF NOT EXISTS contatti_tecnici (
@@ -1065,5 +1085,5 @@ def elimina_file(file_id):
         return redirect(url_for("documenti", cartella_id=cartella_id))
     return redirect(url_for("documenti"))
 
-if __name__ == "_main_":
+if _name_ == "_main_":
     app.run(debug=True)
