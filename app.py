@@ -1,5 +1,5 @@
 # ========================================================================
-# Magazzino Web Application
+# Magazzino OMG Application
 # Copyright (c) 2026 Marco Pavan. All Rights Reserved.
 # Designed & Developed by Marco Pavan
 # ========================================================================
@@ -66,13 +66,23 @@ def init_db():
         """)
         
         cur.execute("""
-            CREATE TABLE IF NOT EXISTS clienti (
+            CREATE TABLE IF NOT EXISTS fornitori (
                 id SERIAL PRIMARY KEY,
                 nome_azienda VARCHAR(255) NOT NULL,
                 indirizzo VARCHAR(255),
                 p_iva VARCHAR(255),
                 telefono VARCHAR(255),
                 email VARCHAR(255)
+            );
+        """)
+
+        cur.execute("""
+            CREATE TABLE IF NOT EXISTS contatti_tecnici (
+                id SERIAL PRIMARY KEY,
+                fornitore_id INT REFERENCES fornitori(id) ON DELETE CASCADE,
+                nome VARCHAR(255) NOT NULL,
+                telefono VARCHAR(255) NOT NULL,
+                mansione VARCHAR(255)
             );
         """)
 
@@ -145,8 +155,6 @@ def init_db():
         cur.execute("ALTER TABLE prodotti ADD COLUMN IF NOT EXISTS ordine_amministrativo BOOLEAN DEFAULT FALSE;")
         cur.execute("ALTER TABLE prodotti ADD COLUMN IF NOT EXISTS note_manutenzione TEXT;")
         cur.execute("ALTER TABLE prodotti ADD COLUMN IF NOT EXISTS soglia_minima INT DEFAULT 3;")
-        
-        cur.execute("ALTER TABLE storico_manutenzioni ADD COLUMN IF NOT EXISTS ordine_amministrativo BOOLEAN DEFAULT FALSE;")
         
         cur.execute("ALTER TABLE utenti ADD COLUMN IF NOT EXISTS is_admin INT DEFAULT 0;")
         cur.execute("ALTER TABLE utenti ADD COLUMN IF NOT EXISTS puo_vedere_manutenzione INT DEFAULT 1;")
@@ -346,8 +354,9 @@ def elimina_utente(user_id):
         flash(f"Errore eliminazione utente: {e}", "error")
     return redirect(url_for('admin_utenti'))
 
-@app.route("/clienti", methods=["GET", "POST"])
-def clienti():
+# --- GESTIONE FORNITORI E CONTATTI TECNICI ---
+@app.route("/fornitori", methods=["GET", "POST"])
+def fornitori():
     conn = get_db_connection()
     cur = conn.cursor()
     if request.method == "POST":
@@ -358,31 +367,128 @@ def clienti():
         email = request.form.get("email", "")
         if nome_azienda:
             cur.execute(
-                "INSERT INTO clienti (nome_azienda, indirizzo, p_iva, telefono, email) VALUES (%s, %s, %s, %s, %s);",
+                "INSERT INTO fornitori (nome_azienda, indirizzo, p_iva, telefono, email) VALUES (%s, %s, %s, %s, %s);",
                 (nome_azienda, indirizzo, p_iva, telefono, email)
             )
             conn.commit()
-            registra_log(f"Aggiunto cliente: {nome_azienda}")
-            flash("Cliente aggiunto con successo!", "success")
-        return redirect(url_for("clienti"))
+            registra_log(f"Aggiunto fornitore: {nome_azienda}")
+            flash("Fornitore aggiunto con successo!", "success")
+        return redirect(url_for("fornitori"))
     
-    cur.execute("SELECT * FROM clienti ORDER BY nome_azienda ASC;")
-    lista_clienti = cur.fetchall()
+    cur.execute("SELECT * FROM fornitori ORDER BY nome_azienda ASC;")
+    lista_fornitori = cur.fetchall()
     cur.close()
     conn.close()
-    return render_template("clienti.html", clienti=lista_clienti)
+    return render_template("fornitori.html", fornitori=lista_fornitori)
 
-@app.route("/elimina_cliente/<int:cliente_id>", methods=["POST"])
-def elimina_cliente(cliente_id):
+@app.route("/modifica_fornitore/<int:fornitore_id>", methods=["POST"])
+def modifica_fornitore(fornitore_id):
+    nome_azienda = request.form.get("nome_azienda")
+    indirizzo = request.form.get("indirizzo", "")
+    p_iva = request.form.get("p_iva", "")
+    telefono = request.form.get("telefono", "")
+    email = request.form.get("email", "")
+    
+    try:
+        conn = get_db_connection()
+        cur = conn.cursor()
+        cur.execute("""
+            UPDATE fornitori 
+            SET nome_azienda = %s, indirizzo = %s, p_iva = %s, telefono = %s, email = %s
+            WHERE id = %s;
+        """, (nome_azienda, indirizzo, p_iva, telefono, email, fornitore_id))
+        conn.commit()
+        cur.close()
+        conn.close()
+        registra_log(f"Modificati dati fornitore ID {fornitore_id}: {nome_azienda}")
+        flash("Dati fornitore aggiornati con successo!", "success")
+    except Exception as e:
+        flash(f"Errore modifica fornitore: {e}", "error")
+        
+    return redirect(url_for("fornitori"))
+
+@app.route("/fornitore/<int:fornitore_id>", methods=["GET", "POST"])
+def dettaglio_fornitore(fornitore_id):
     conn = get_db_connection()
     cur = conn.cursor()
-    cur.execute("DELETE FROM clienti WHERE id = %s;", (cliente_id,))
+    
+    if request.method == "POST":
+        nome_tecnico = request.form.get("nome")
+        telefono_tecnico = request.form.get("telefono")
+        mansione = request.form.get("mansione", "")
+        if nome_tecnico and telefono_tecnico:
+            cur.execute(
+                "INSERT INTO contatti_tecnici (fornitore_id, nome, telefono, mansione) VALUES (%s, %s, %s, %s);",
+                (fornitore_id, nome_tecnico, telefono_tecnico, mansione)
+            )
+            conn.commit()
+            registra_log(f"Aggiunto contatto tecnico {nome_tecnico} per fornitore ID {fornitore_id}")
+            flash("Contatto tecnico aggiunto con successo!", "success")
+        return redirect(url_for("dettaglio_fornitore", fornitore_id=fornitore_id))
+
+    cur.execute("SELECT * FROM fornitori WHERE id = %s;", (fornitore_id,))
+    fornitore = cur.fetchone()
+    
+    if not fornitore:
+        flash("Fornitore non trovato.", "error")
+        cur.close()
+        conn.close()
+        return redirect(url_for("fornitori"))
+
+    cur.execute("SELECT * FROM contatti_tecnici WHERE fornitore_id = %s ORDER BY nome ASC;", (fornitore_id,))
+    contatti = cur.fetchall()
+    
+    cur.close()
+    conn.close()
+    return render_template("dettaglio_fornitore.html", fornitore=fornitore, contatti=contatti)
+
+@app.route("/modifica_contatto_tecnico/<int:contatto_id>/<int:fornitore_id>", methods=["POST"])
+def modifica_contatto_tecnico(contatto_id, fornitore_id):
+    nome = request.form.get("nome")
+    telefono = request.form.get("telefono")
+    mansione = request.form.get("mansione", "")
+    
+    try:
+        conn = get_db_connection()
+        cur = conn.cursor()
+        cur.execute("""
+            UPDATE contatti_tecnici 
+            SET nome = %s, telefono = %s, mansione = %s
+            WHERE id = %s;
+        """, (nome, telefono, mansione, contatto_id))
+        conn.commit()
+        cur.close()
+        conn.close()
+        registra_log(f"Modificato contatto tecnico ID {contatto_id}: {nome}")
+        flash("Contatto tecnico aggiornato con successo!", "success")
+    except Exception as e:
+        flash(f"Errore modifica contatto: {e}", "error")
+        
+    return redirect(url_for("dettaglio_fornitore", fornitore_id=fornitore_id))
+
+@app.route("/elimina_contatto_tecnico/<int:contatto_id>/<int:fornitore_id>", methods=["POST"])
+def elimina_contatto_tecnico(contatto_id, fornitore_id):
+    conn = get_db_connection()
+    cur = conn.cursor()
+    cur.execute("DELETE FROM contatti_tecnici WHERE id = %s;", (contatto_id,))
     conn.commit()
     cur.close()
     conn.close()
-    registra_log(f"Eliminato cliente ID {cliente_id}")
-    flash("Cliente eliminato con successo.", "success")
-    return redirect(url_for("clienti"))
+    registra_log(f"Eliminato contatto tecnico ID {contatto_id}")
+    flash("Contatto tecnico eliminato.", "success")
+    return redirect(url_for("dettaglio_fornitore", fornitore_id=fornitore_id))
+
+@app.route("/elimina_fornitore/<int:fornitore_id>", methods=["POST"])
+def elimina_fornitore(fornitore_id):
+    conn = get_db_connection()
+    cur = conn.cursor()
+    cur.execute("DELETE FROM fornitori WHERE id = %s;", (fornitore_id,))
+    conn.commit()
+    cur.close()
+    conn.close()
+    registra_log(f"Eliminato fornitore ID {fornitore_id}")
+    flash("Fornitore eliminato con successo.", "success")
+    return redirect(url_for("fornitori"))
 
 @app.route("/upload", methods=["GET", "POST"])
 def upload():
@@ -526,16 +632,12 @@ def stampa_bolla(qr_code):
     cur = conn.cursor()
     cur.execute("SELECT * FROM prodotti WHERE qr_code = %s;", (qr_code,))
     prodotto = cur.fetchone()
-    cliente = None
-    if prodotto and prodotto.get('cliente_manutenzione'):
-        cur.execute("SELECT * FROM clienti WHERE nome_azienda = %s;", (prodotto['cliente_manutenzione'],))
-        cliente = cur.fetchone()
     cur.close()
     conn.close()
     if not prodotto:
         flash("Prodotto non trovato.", "error")
         return redirect(url_for("index"))
-    return render_template("bolla.html", prodotto=prodotto, cliente=cliente)
+    return render_template("bolla.html", prodotto=prodotto)
 
 @app.route("/carico", methods=["GET", "POST"])
 def carico():
@@ -631,10 +733,10 @@ def gestisci_prodotto(qr_code):
     cur.execute("SELECT * FROM prodotti WHERE qr_code = %s;", (qr_code,))
     prodotto = cur.fetchone()
     
-    lista_clienti = []
+    lista_fornitori = []
     try:
-        cur.execute("SELECT * FROM clienti ORDER BY nome_azienda ASC;")
-        lista_clienti = cur.fetchall()
+        cur.execute("SELECT * FROM fornitori ORDER BY nome_azienda ASC;")
+        lista_fornitori = cur.fetchall()
     except Exception:
         pass
 
@@ -645,7 +747,7 @@ def gestisci_prodotto(qr_code):
         flash("Prodotto non trovato nel sistema!", "error")
         return redirect(url_for("index"))
 
-    return render_template("gestisci.html", prodotto=prodotto, clienti=lista_clienti)
+    return render_template("gestisci.html", prodotto=prodotto, fornitori=lista_fornitori)
 
 @app.route("/aggiorna/<qr_code>", methods=["POST"])
 def aggiorna_prodotto(qr_code):
