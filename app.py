@@ -18,42 +18,6 @@ app.secret_key = os.environ.get("SECRET_KEY", "chiave-segreta-magazzino")
 DATABASE_URL = os.environ.get("DATABASE_URL")
 
 def get_db_connection():
-    return psycopg2.connect(DATABASE_URL, cursor_factory=RealDictCur…
-[17:57, 16/10/2026] Marco Pavan: <!DOCTYPE html>
-<html lang="it">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Magazzino OMG</title>
-    
-    <link rel="manifest" href="{{ url_for('static', filename='manifest.json') }}">
-    <link rel="icon" type="image/png" href="{{ url_for('static', filename='icon.png') }}">
-    <link rel="apple-touch-icon" href="{{ url_for('static', filename='icon.png') }}">
-    <meta name="theme-color" content="#4f46e5">
-
-    <style>
-        body { font-family: sans-serif; max-width: 1000px; margin: 0 auto; padding: 15px; background: #f8fafc; color: #1e293b; box-sizing: border-box; }
-        .card { background: white; padding: 20px; border-radius: 12px; border: 1px solid #e2e8f0; margin-bottom: 2…
-[18:39, 16/10/2026] Marco Pavan: # ========================================================================
-# Magazzino OMG Application
-# Copyright (c) 2026 Marco Pavan. All Rights Reserved.
-# Designed & Developed by Marco Pavan
-# ========================================================================
-
-import os
-import csv
-import io
-import psycopg2
-from psycopg2.extras import RealDictCursor
-from flask import Flask, render_template, request, redirect, url_for, flash, session, send_file
-from werkzeug.security import generate_password_hash, check_password_hash
-
-app = Flask(_name_)
-app.secret_key = os.environ.get("SECRET_KEY", "chiave-segreta-magazzino")
-
-DATABASE_URL = os.environ.get("DATABASE_URL")
-
-def get_db_connection():
     return psycopg2.connect(DATABASE_URL, cursor_factory=RealDictCursor)
 
 def registra_log(descrizione):
