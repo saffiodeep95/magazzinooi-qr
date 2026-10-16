@@ -18,6 +18,42 @@ app.secret_key = os.environ.get("SECRET_KEY", "chiave-segreta-magazzino")
 DATABASE_URL = os.environ.get("DATABASE_URL")
 
 def get_db_connection():
+    return psycopg2.connect(DATABASE_URL, cursor_factory=RealDictCur…
+[17:57, 16/10/2026] Marco Pavan: <!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Magazzino OMG</title>
+    
+    <link rel="manifest" href="{{ url_for('static', filename='manifest.json') }}">
+    <link rel="icon" type="image/png" href="{{ url_for('static', filename='icon.png') }}">
+    <link rel="apple-touch-icon" href="{{ url_for('static', filename='icon.png') }}">
+    <meta name="theme-color" content="#4f46e5">
+
+    <style>
+        body { font-family: sans-serif; max-width: 1000px; margin: 0 auto; padding: 15px; background: #f8fafc; color: #1e293b; box-sizing: border-box; }
+        .card { background: white; padding: 20px; border-radius: 12px; border: 1px solid #e2e8f0; margin-bottom: 2…
+[18:39, 16/10/2026] Marco Pavan: # ========================================================================
+# Magazzino OMG Application
+# Copyright (c) 2026 Marco Pavan. All Rights Reserved.
+# Designed & Developed by Marco Pavan
+# ========================================================================
+
+import os
+import csv
+import io
+import psycopg2
+from psycopg2.extras import RealDictCursor
+from flask import Flask, render_template, request, redirect, url_for, flash, session, send_file
+from werkzeug.security import generate_password_hash, check_password_hash
+
+app = Flask(_name_)
+app.secret_key = os.environ.get("SECRET_KEY", "chiave-segreta-magazzino")
+
+DATABASE_URL = os.environ.get("DATABASE_URL")
+
+def get_db_connection():
     return psycopg2.connect(DATABASE_URL, cursor_factory=RealDictCursor)
 
 def registra_log(descrizione):
@@ -75,26 +111,6 @@ def init_db():
                 email VARCHAR(255)
             );
         """)
-
-        # MIGRAZIONE AUTOMATICA DEI VECCHI DATI CLIENTI SE PRESENTI
-        try:
-            cur.execute("SELECT table_name FROM information_schema.tables WHERE table_schema='public' AND table_name='clienti';")
-            if cur.fetchone():
-                cur.execute("""
-                    INSERT INTO fornitori (nome_azienda, indirizzo, p_iva, telefono, email)
-                    SELECT 
-                        COALESCE(NULLIF(nome_cliente, ''), NULLIF(nome, ''), 'Fornitore Importato'),
-                        indirizzo, p_iva, telefono, email 
-                    FROM clienti
-                    WHERE NOT EXISTS (
-                        SELECT 1 FROM fornitori WHERE fornitori.nome_azienda = COALESCE(NULLIF(clienti.nome_cliente, ''), NULLIF(clienti.nome, ''), 'Fornitore Importato')
-                    );
-                """)
-                cur.execute("ALTER TABLE clienti RENAME TO vecchi_clienti_backup;")
-                conn.commit()
-                print("✅ Migrazione automatica dei vecchi clienti nei fornitori completata con successo!")
-        except Exception as mig_err:
-            print(f"Nota migrazione automatica: {mig_err}")
 
         cur.execute("""
             CREATE TABLE IF NOT EXISTS contatti_tecnici (
@@ -429,38 +445,45 @@ def modifica_fornitore(fornitore_id):
 
 @app.route("/fornitore/<int:fornitore_id>", methods=["GET", "POST"])
 def dettaglio_fornitore(fornitore_id):
-    conn = get_db_connection()
-    cur = conn.cursor()
-    
-    if request.method == "POST":
-        nome_tecnico = request.form.get("nome")
-        telefono_tecnico = request.form.get("telefono")
-        mansione = request.form.get("mansione", "")
-        if nome_tecnico and telefono_tecnico:
-            cur.execute(
-                "INSERT INTO contatti_tecnici (fornitore_id, nome, telefono, mansione) VALUES (%s, %s, %s, %s);",
-                (fornitore_id, nome_tecnico, telefono_tecnico, mansione)
-            )
-            conn.commit()
-            registra_log(f"Aggiunto contatto tecnico {nome_tecnico} per fornitore ID {fornitore_id}")
-            flash("Contatto tecnico aggiunto con successo!", "success")
-        return redirect(url_for("dettaglio_fornitore", fornitore_id=fornitore_id))
+    try:
+        conn = get_db_connection()
+        cur = conn.cursor()
+        
+        if request.method == "POST":
+            nome_tecnico = request.form.get("nome")
+            telefono_tecnico = request.form.get("telefono")
+            mansione = request.form.get("mansione", "")
+            if nome_tecnico and telefono_tecnico:
+                cur.execute(
+                    "INSERT INTO contatti_tecnici (fornitore_id, nome, telefono, mansione) VALUES (%s, %s, %s, %s);",
+                    (fornitore_id, nome_tecnico, telefono_tecnico, mansione)
+                )
+                conn.commit()
+                registra_log(f"Aggiunto contatto tecnico {nome_tecnico} per fornitore ID {fornitore_id}")
+                flash("Contatto tecnico aggiunto con successo!", "success")
+            cur.close()
+            conn.close()
+            return redirect(url_for("dettaglio_fornitore", fornitore_id=fornitore_id))
 
-    cur.execute("SELECT * FROM fornitori WHERE id = %s;", (fornitore_id,))
-    fornitore = cur.fetchone()
-    
-    if not fornitore:
-        flash("Fornitore non trovato.", "error")
+        cur.execute("SELECT * FROM fornitori WHERE id = %s;", (fornitore_id,))
+        fornitore = cur.fetchone()
+        
+        if not fornitore:
+            flash("Fornitore non trovato.", "error")
+            cur.close()
+            conn.close()
+            return redirect(url_for("fornitori"))
+
+        cur.execute("SELECT * FROM contatti_tecnici WHERE fornitore_id = %s ORDER BY nome ASC;", (fornitore_id,))
+        contatti = cur.fetchall()
+        
         cur.close()
         conn.close()
+        return render_template("dettaglio_fornitore.html", fornitore=fornitore, contatti=contatti)
+    except Exception as e:
+        print(f"Errore dettaglio_fornitore: {e}")
+        flash(f"Errore interno del server: {e}", "error")
         return redirect(url_for("fornitori"))
-
-    cur.execute("SELECT * FROM contatti_tecnici WHERE fornitore_id = %s ORDER BY nome ASC;", (fornitore_id,))
-    contatti = cur.fetchall()
-    
-    cur.close()
-    conn.close()
-    return render_template("dettaglio_fornitore.html", fornitore=fornitore, contatti=contatti)
 
 @app.route("/modifica_contatto_tecnico/<int:contatto_id>/<int:fornitore_id>", methods=["POST"])
 def modifica_contatto_tecnico(contatto_id, fornitore_id):
