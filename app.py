@@ -7,6 +7,7 @@
 import os
 import csv
 import io
+import re
 import pandas as pd
 import psycopg2
 from psycopg2.extras import RealDictCursor
@@ -359,7 +360,7 @@ def elimina_utente(user_id):
         flash(f"Errore eliminazione utente: {e}", "error")
     return redirect(url_for('admin_utenti'))
 
-# --- GESTIONE FORNITORI E CONTATTI TECNICI (CON PULIZIA DUPLICATI) ---
+# --- GESTIONE FORNITORI E CONTATTI TECNICI ---
 @app.route("/fornitori", methods=["GET", "POST"])
 def fornitori():
     conn = get_db_connection()
@@ -512,89 +513,113 @@ def elimina_fornitore(fornitore_id):
     flash("Fornitore eliminato con successo.", "success")
     return redirect(url_for("fornitori"))
 
-@app.route("/importa_due_file", methods=["POST"])
-def importa_due_file():
-    file_fornitori = request.files.get("file_fornitori")
-    file_tecnici = request.files.get("file_tecnici")
+@app.route("/importa_intelligente", methods=["POST"])
+def importa_intelligente():
+    file_caricato = request.files.get("file_caricato")
+    
+    if not file_caricato or file_caricato.filename == '':
+        flash("Nessun file selezionato.", "error")
+        return redirect(url_for("fornitori"))
+        
+    filename = file_caricato.filename.lower()
     
     try:
+        if filename.endswith(('.xlsx', '.xls')):
+            df = pd.read_excel(file_caricato)
+        elif filename.endswith(('.csv', '.txt')):
+            try:
+                stream = io.TextIOWrapper(file_caricato.stream, encoding="utf-8-sig")
+                df = pd.read_csv(stream)
+            except UnicodeDecodeError:
+                file_caricato.stream.seek(0)
+                stream = io.TextIOWrapper(file_caricato.stream, encoding="latin-1")
+                df = pd.read_csv(stream)
+        else:
+            flash("Formato file non supportato. Carica un file Excel (.xlsx), CSV o Testo (.txt).", "error")
+            return redirect(url_for("fornitori"))
+            
         conn = get_db_connection()
         cur = conn.cursor()
         
-        # Pulizia preventiva per evitare doppi inserimenti
-        cur.execute("DELETE FROM contatti_tecnici;")
-        cur.execute("DELETE FROM fornitori;")
-        conn.commit()
-        
         count_fornitori = 0
         count_tecnici = 0
+        current_fornitore_id = None
+        current_fornitore_nome = None
         
-        # 1. IMPORTAZIONE FORNITORI / AZIENDE
-        if file_fornitori and file_fornitori.filename != '':
-            if file_fornitori.filename.endswith('.csv'):
-                stream = io.TextIOWrapper(file_fornitori.stream, encoding="utf-8-sig")
-                df_f = pd.read_csv(stream)
-            else:
-                df_f = pd.read_excel(file_fornitori)
+        for _, row in df.iterrows():
+            valori = [str(val).strip() for val in row.values if pd.notna(val) and str(val).strip() != 'nan']
+            if not valori:
+                continue
                 
-            for _, row in df_f.iterrows():
-                nome_azienda = str(row.iloc[1]).strip() if len(row) > 1 and pd.notna(row.iloc[1]) else ''
-                settore = str(row.iloc[2]).strip() if len(row) > 2 and pd.notna(row.iloc[2]) else ''
-                indirizzo = str(row.iloc[3]).strip() if len(row) > 3 and pd.notna(row.iloc[3]) else ''
-                telefono = str(row.iloc[4]).strip() if len(row) > 4 and pd.notna(row.iloc[4]) else ''
-                email = str(row.iloc[5]).strip() if len(row) > 5 and pd.notna(row.iloc[5]) else ''
-                
-                if nome_azienda and nome_azienda.lower() != 'nan':
-                    cur.execute("""
-                        INSERT INTO fornitori (nome_azienda, settore_note, indirizzo, telefono, email)
-                        VALUES (%s, %s, %s, %s, %s)
-                        ON CONFLICT (nome_azienda) DO NOTHING;
-                    """, (nome_azienda, settore, indirizzo, telefono, email))
-                    count_fornitori += 1
+            col1_raw = valori[0] if len(valori) > 0 else ''
+            has_double_space = bool(re.search(r'\s{2,}', col1_raw))
+            words = col1_raw.split()
+            first_word = words[0] if words else ''
+            
+            is_company = False
+            if has_double_space:
+                is_company = True
+            elif first_word.isupper() and len(first_word) > 1 and not any(c.islower() for c in first_word):
+                is_company = True
+            elif current_fornitore_id is None:
+                is_company = True
 
-        # 2. IMPORTAZIONE CONTATTI TECNICI
-        if file_tecnici and file_tecnici.filename != '':
-            if file_tecnici.filename.endswith('.csv'):
-                stream = io.TextIOWrapper(file_tecnici.stream, encoding="utf-8-sig")
-                df_t = pd.read_csv(stream)
+            if is_company:
+                if has_double_space:
+                    parts = re.split(r'\s{2,}', col1_raw, maxsplit=1)
+                    nome_azienda = parts[0].strip()
+                    settore = parts[1].strip() if len(parts) > 1 else (valori[1] if len(valori) > 1 else '')
+                else:
+                    nome_azienda = col1_raw
+                    settore = valori[1] if len(valori) > 1 else ''
+                    
+                indirizzo = valori[2] if len(valori) > 2 else ''
+                telefono = next((v for v in valori if re.search(r'\d{3}', v) and not '@' in v), '')
+                email = next((v for v in valori if '@' in v), '')
+                
+                current_fornitore_nome = nome_azienda
+                
+                cur.execute("""
+                    INSERT INTO fornitori (nome_azienda, settore_note, indirizzo, telefono, email)
+                    VALUES (%s, %s, %s, %s, %s)
+                    ON CONFLICT (nome_azienda) DO UPDATE SET
+                        settore_note = COALESCE(NULLIF(EXCLUDED.settore_note, ''), fornitori.settore_note);
+                """, (nome_azienda, settore, indirizzo, telefono, email))
+                
+                cur.execute("SELECT id FROM fornitori WHERE LOWER(nome_azienda) = LOWER(%s);", (nome_azienda,))
+                res = cur.fetchone()
+                current_fornitore_id = res['id'] if res else None
+                count_fornitori += 1
             else:
-                df_t = pd.read_excel(file_tecnici)
-                
-            for _, row in df_t.iterrows():
-                fornitore_nome = str(row.iloc[1]).strip() if len(row) > 1 and pd.notna(row.iloc[1]) else ''
-                nome_tecnico = str(row.iloc[2]).strip() if len(row) > 2 and pd.notna(row.iloc[2]) else ''
-                telefono = str(row.iloc[3]).strip() if len(row) > 3 and pd.notna(row.iloc[3]) else ''
-                mansione = str(row.iloc[4]).strip() if len(row) > 4 and pd.notna(row.iloc[4]) else ''
-                email = str(row.iloc[5]).strip() if len(row) > 5 and pd.notna(row.iloc[5]) else ''
-                
-                if nome_tecnico and fornitore_nome and nome_tecnico.lower() != 'nan':
-                    cur.execute("SELECT id FROM fornitori WHERE LOWER(nome_azienda) = LOWER(%s);", (fornitore_nome,))
-                    f_res = cur.fetchone()
-                    if f_res:
-                        fornitore_id = f_res['id']
-                        # Evita duplicati dello stesso tecnico per la stessa azienda
+                if current_fornitore_id:
+                    nome_tecnico = col1_raw
+                    telefono = next((v for v in valori if re.search(r'\d{3}', v) and not '@' in v), '')
+                    email = next((v for v in valori if '@' in v), '')
+                    mansione = valori[1] if len(valori) > 1 and valori[1] != telefono and valori[1] != email else ''
+                    
+                    cur.execute("""
+                        SELECT id FROM contatti_tecnici 
+                        WHERE fornitore_id = %s AND LOWER(nome) = LOWER(%s);
+                    """, (current_fornitore_id, nome_tecnico))
+                    
+                    if not cur.fetchone():
                         cur.execute("""
-                            SELECT id FROM contatti_tecnici 
-                            WHERE fornitore_id = %s AND LOWER(nome) = LOWER(%s);
-                        """, (fornitore_id, nome_tecnico))
-                        if not cur.fetchone():
-                            cur.execute("""
-                                INSERT INTO contatti_tecnici (fornitore_id, nome, telefono, mansione, email)
-                                VALUES (%s, %s, %s, %s, %s);
-                            """, (fornitore_id, nome_tecnico, telefono, mansione, email))
-                            count_tecnici += 1
+                            INSERT INTO contatti_tecnici (fornitore_id, nome, telefono, mansione, email)
+                            VALUES (%s, %s, %s, %s, %s);
+                        """, (current_fornitore_id, nome_tecnico, telefono, mansione, email))
+                        count_tecnici += 1
 
         conn.commit()
         cur.close()
         conn.close()
-        registra_log(f"Importazione pulita: {count_fornitori} fornitori e {count_tecnici} tecnici.")
-        flash(f"Importazione completata con successo! Aggiunti {count_fornitori} fornitori e {count_tecnici} tecnici.", "success")
+        registra_log(f"Importazione intelligente: {count_fornitori} fornitori e {count_tecnici} tecnici.")
+        flash(f"Analisi completata! Importati automaticamente {count_fornitori} fornitori e {count_tecnici} contatti tecnici.", "success")
     except Exception as e:
-        flash(f"Errore durante l'importazione dei file: {e}", "error")
+        flash(f"Errore durante l'analisi intelligente del file: {e}", "error")
         
     return redirect(url_for("fornitori"))
 
-# --- ALTRE ROTTE DEL MAGAZZINO (PRODOTTI, UPLOAD, ECC.) ---
+# --- ALTRE ROTTE ---
 @app.route("/upload", methods=["GET", "POST"])
 def upload():
     if request.method == "POST":
@@ -773,7 +798,6 @@ def scarico():
             try:
                 conn = get_db_connection()
                 cur = conn.cursor()
-                
                 cur.execute("SELECT * FROM prodotti WHERE qr_code = %s;", (qr_code,))
                 prodotto = cur.fetchone()
                 
@@ -798,8 +822,7 @@ def scarico():
                 else:
                     flash(f"Scarico di {quantita_da_scaricare} pz effettuato con successo!", "success")
                 
-                registra_log(f"Scarico di -{quantita_da_scaricare} pz su prodotto QR: {qr_code} (Precedente: {qta_iniziale}, Nuova: {nuova_quantita})")
-                
+                registra_log(f"Scarico di -{quantita_da_scaricare} pz su prodotto QR: {qr_code}")
                 cur.close()
                 conn.close()
                 return redirect(url_for("gestisci_prodotto", qr_code=qr_code))
@@ -827,8 +850,6 @@ def scanner_globale():
             except Exception as e:
                 print(f"Errore scanner: {e}")
                 flash("Errore di comunicazione con il database. Riprova.", "error")
-        else:
-            flash("Inserisci o scansiona un codice QR valido.", "error")
     return render_template("scanner_globale.html")
 
 @app.route("/gestisci/<qr_code>")
@@ -926,15 +947,8 @@ def aggiungi_prodotto():
 def manda_manutenzione(qr_code):
     cliente_manutenzione = request.form.get("cliente_manutenzione")
     quantita_manutenzione = int(request.form.get("quantita_manutenzione", 1))
-    
-    data_spedizione = request.form.get("data_spedizione", "").strip()
-    if not data_spedizione:
-        data_spedizione = None
-        
-    data_riconsegna = request.form.get("data_riconsegna", "").strip()
-    if not data_riconsegna:
-        data_riconsegna = None
-
+    data_spedizione = request.form.get("data_spedizione", "").strip() or None
+    data_riconsegna = request.form.get("data_riconsegna", "").strip() or None
     vettore = request.form.get("vettore", "").strip()
     ordine_amministrativo = True if request.form.get("ordine_amministrativo") else False
     note_manutenzione = request.form.get("note_manutenzione", "").strip()
@@ -942,7 +956,6 @@ def manda_manutenzione(qr_code):
     try:
         conn = get_db_connection()
         cur = conn.cursor()
-        
         cur.execute("SELECT * FROM prodotti WHERE qr_code = %s;", (qr_code,))
         prod = cur.fetchone()
         
@@ -1032,14 +1045,12 @@ def documenti(cartella_id):
 
     conn = get_db_connection()
     cur = conn.cursor()
-
     cartella_corrente = None
     percorso_breadcrumb = []
 
     if cartella_id:
         cur.execute("SELECT * FROM cartelle WHERE id = %s;", (cartella_id,))
         cartella_corrente = cur.fetchone()
-        
         curr = cartella_corrente
         while curr:
             percorso_breadcrumb.insert(0, curr)
@@ -1051,7 +1062,6 @@ def documenti(cartella_id):
 
     if request.method == "POST":
         azione = request.form.get("azione")
-        
         if azione == "crea_cartella":
             nome_cartella = request.form.get("nome_cartella")
             if nome_cartella:
@@ -1059,14 +1069,12 @@ def documenti(cartella_id):
                 conn.commit()
                 registra_log(f"Creata cartella documenti: {nome_cartella}")
                 flash("Cartella creata con successo!", "success")
-                
         elif azione == "carica_file":
             file_caricato = request.files.get("file_caricato")
             if file_caricato and file_caricato.filename:
                 nome_file = file_caricato.filename
                 tipo_file = file_caricato.mimetype
                 dati_file = file_caricato.read()
-                
                 cur.execute("""
                     INSERT INTO documenti (cartella_id, nome_file, tipo_file, dati_file)
                     VALUES (%s, %s, %s, %s);
@@ -1094,33 +1102,22 @@ def documenti(cartella_id):
     cur.close()
     conn.close()
 
-    return render_template("documenti.html", 
-                           cartella_corrente=cartella_corrente, 
-                           sottocartelle=sottocartelle, 
-                           lista_file=lista_file, 
-                           percorso_breadcrumb=percorso_breadcrumb)
+    return render_template("documenti.html", cartella_corrente=cartella_corrente, sottocartelle=sottocartelle, lista_file=lista_file, percorso_breadcrumb=percorso_breadcrumb)
 
 @app.route("/scarica_file/<int:file_id>")
 def scarica_file(file_id):
     if not (session.get('is_admin') or session.get('puo_gestire_documenti')):
         flash("Accesso negato.", "error")
         return redirect(url_for('index'))
-
     conn = get_db_connection()
     cur = conn.cursor()
     cur.execute("SELECT nome_file, tipo_file, dati_file FROM documenti WHERE id = %s;", (file_id,))
     file_data = cur.fetchone()
     cur.close()
     conn.close()
-
     if file_data:
         registra_log(f"Scaricato file: {file_data['nome_file']}")
-        return send_file(
-            io.BytesIO(file_data['dati_file']),
-            mimetype=file_data['tipo_file'],
-            as_attachment=True,
-            download_name=file_data['nome_file']
-        )
+        return send_file(io.BytesIO(file_data['dati_file']), mimetype=file_data['tipo_file'], as_attachment=True, download_name=file_data['nome_file'])
     flash("File non trovato.", "error")
     return redirect(url_for("documenti"))
 
@@ -1129,20 +1126,17 @@ def elimina_cartella(cartella_id):
     if not session.get('is_admin'):
         flash("Solo l'amministratore può eliminare le cartelle.", "error")
         return redirect(url_for('documenti'))
-
     conn = get_db_connection()
     cur = conn.cursor()
     cur.execute("SELECT parent_id FROM cartelle WHERE id = %s;", (cartella_id,))
     res = cur.fetchone()
     parent_id = res['parent_id'] if res else None
-
     cur.execute("DELETE FROM cartelle WHERE id = %s;", (cartella_id,))
     conn.commit()
     cur.close()
     conn.close()
     registra_log(f"Eliminata cartella documenti ID {cartella_id}")
     flash("Cartella eliminata con successo.", "success")
-    
     if parent_id:
         return redirect(url_for("documenti", cartella_id=parent_id))
     return redirect(url_for("documenti"))
@@ -1152,20 +1146,17 @@ def elimina_file(file_id):
     if not session.get('is_admin'):
         flash("Solo l'amministratore può eliminare i documenti.", "error")
         return redirect(url_for('documenti'))
-
     conn = get_db_connection()
     cur = conn.cursor()
     cur.execute("SELECT cartella_id FROM documenti WHERE id = %s;", (file_id,))
     res = cur.fetchone()
     cartella_id = res['cartella_id'] if res else None
-
     cur.execute("DELETE FROM documenti WHERE id = %s;", (file_id,))
     conn.commit()
     cur.close()
     conn.close()
     registra_log(f"Eliminato file ID {file_id}")
     flash("File eliminato con successo.", "success")
-    
     if cartella_id:
         return redirect(url_for("documenti", cartella_id=cartella_id))
     return redirect(url_for("documenti"))
