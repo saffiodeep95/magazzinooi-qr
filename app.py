@@ -1,8 +1,3 @@
-
-marco pavan <marco.pavan1995@gmail.com>
-22:58 (0 minuti fa)
-a me
-
 # ========================================================================
 # Magazzino OMG Application
 # Copyright (c) 2026 Marco Pavan. All Rights Reserved.
