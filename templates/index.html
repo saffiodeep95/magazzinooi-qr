@@ -47,8 +47,7 @@
             </a>
 
             {% if session.get('is_admin') %}
-                <a href="{{ url_for('admin_utenti') }}" class="btn" style="background: #334155;">⚙️ Utenti</a>
-                <a href="{{ url_for('visualizza_log') }}" class="btn" style="background: #475569;">📊 Log</a>
+                <a href="{{ url_for('admin_utenti') }}" class="btn" style="background: #334155;">⚙️ Utenti & Log</a>
             {% endif %}
             <a href="{{ url_for('logout') }}" class="btn" style="background: #94a3b8;">🚪 Esci</a>
         </div>
