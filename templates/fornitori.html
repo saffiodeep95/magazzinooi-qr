@@ -41,22 +41,13 @@
       {% endif %}
     {% endwith %}
 
-    <!-- CARD IMPORTAZIONE DUE FILE SEPARATI (PULIZIA DUPLICATI) -->
-    <div class="card" style="background: #f8fafc; border: 2px dashed #2563eb;">
-        <h3 style="margin-top: 0; font-size: 1.1rem; color: #1e40af;">📂 Importa i due file (Aziende e Tecnici senza duplicati)</h3>
-        <p style="font-size: 0.85rem; color: #64748b; margin-top: 0;">Carica i tuoi file separati in formato .xlsx o .csv. L'app pulirà e collegherà automaticamente tutto senza doppioni.</p>
-        <form action="{{ url_for('importa_due_file') }}" method="POST" enctype="multipart/form-data" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 15px; align-items: end;">
-            <div>
-                <label style="font-size: 0.85rem; color: #475569;">1. File Aziende / Fornitori (.xlsx / .csv):</label>
-                <input type="file" name="file_fornitori" accept=".xlsx, .xls, .csv" required style="margin-bottom: 0;">
-            </div>
-            <div>
-                <label style="font-size: 0.85rem; color: #475569;">2. File Contatti Tecnici (.xlsx / .csv):</label>
-                <input type="file" name="file_tecnici" accept=".xlsx, .xls, .csv" required style="margin-bottom: 0;">
-            </div>
-            <div style="grid-column: 1 / -1;">
-                <button type="submit" class="btn" style="background: #2563eb; width: 100%; padding: 10px;">Carica e Sincronizza Rubrica</button>
-            </div>
+    <!-- CARD IMPORTAZIONE INTELLIGENTE UNICA -->
+    <div class="card" style="background: #f8fafc; border: 2px dashed #7c3aed;">
+        <h3 style="margin-top: 0; font-size: 1.1rem; color: #6d28d9;">🪄 Importazione Intelligente Universale</h3>
+        <p style="font-size: 0.85rem; color: #64748b; margin-top: 0;">Carica qualsiasi file (Excel, CSV o Testo). Il programma analizzerà le colonne e farà tutto da solo, inserendo aziende e tecnici ed eliminando i doppioni!</p>
+        <form action="{{ url_for('importa_intelligente') }}" method="POST" enctype="multipart/form-data" style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
+            <input type="file" name="file_caricato" accept=".xlsx, .xls, .csv, .txt" required style="flex: 1; margin: 0;">
+            <button type="submit" class="btn" style="background: #7c3aed; padding: 10px 20px;">Avvia Analisi e Importazione</button>
         </form>
     </div>
 
