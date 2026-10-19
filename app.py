@@ -8,6 +8,7 @@ import os
 import csv
 import io
 import re
+from datetime import datetime, timedelta
 import pandas as pd
 import psycopg2
 from psycopg2.extras import RealDictCursor
@@ -97,6 +98,7 @@ def init_db():
                 descrizione TEXT,
                 data_scadenza VARCHAR(255),
                 priorita VARCHAR(50) DEFAULT 'Media',
+                ricorrenza VARCHAR(50) DEFAULT 'Nessuna',
                 completato BOOLEAN DEFAULT FALSE,
                 creato_il TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             );
@@ -162,24 +164,8 @@ def init_db():
         
         cur.execute("ALTER TABLE fornitori ADD COLUMN IF NOT EXISTS settore_note VARCHAR(255);")
         cur.execute("ALTER TABLE contatti_tecnici ADD COLUMN IF NOT EXISTS email VARCHAR(255);")
-        cur.execute("ALTER TABLE prodotti ADD COLUMN IF NOT EXISTS magazzino_pesante INT DEFAULT 0;")
-        cur.execute("ALTER TABLE prodotti ADD COLUMN IF NOT EXISTS peso VARCHAR(255);")
-        cur.execute("ALTER TABLE prodotti ADD COLUMN IF NOT EXISTS in_manutenzione BOOLEAN DEFAULT FALSE;")
-        cur.execute("ALTER TABLE prodotti ADD COLUMN IF NOT EXISTS cliente_manutenzione VARCHAR(255);")
-        cur.execute("ALTER TABLE prodotti ADD COLUMN IF NOT EXISTS quantita_manutenzione INT DEFAULT 0;")
-        cur.execute("ALTER TABLE prodotti ADD COLUMN IF NOT EXISTS data_spedizione VARCHAR(255);")
-        cur.execute("ALTER TABLE prodotti ADD COLUMN IF NOT EXISTS data_riconsegna VARCHAR(255);")
-        cur.execute("ALTER TABLE prodotti ADD COLUMN IF NOT EXISTS vettore VARCHAR(255);")
-        cur.execute("ALTER TABLE prodotti ADD COLUMN IF NOT EXISTS ordine_amministrativo BOOLEAN DEFAULT FALSE;")
-        cur.execute("ALTER TABLE prodotti ADD COLUMN IF NOT EXISTS note_manutenzione TEXT;")
-        cur.execute("ALTER TABLE prodotti ADD COLUMN IF NOT EXISTS soglia_minima INT DEFAULT 3;")
+        cur.execute("ALTER TABLE promemoria ADD COLUMN IF NOT EXISTS ricorrenza VARCHAR(50) DEFAULT 'Nessuna';")
         
-        cur.execute("ALTER TABLE utenti ADD COLUMN IF NOT EXISTS is_admin INT DEFAULT 0;")
-        cur.execute("ALTER TABLE utenti ADD COLUMN IF NOT EXISTS puo_vedere_manutenzione INT DEFAULT 1;")
-        cur.execute("ALTER TABLE utenti ADD COLUMN IF NOT EXISTS puo_eliminare INT DEFAULT 0;")
-        cur.execute("ALTER TABLE utenti ADD COLUMN IF NOT EXISTS puo_eliminare_storico INT DEFAULT 0;")
-        cur.execute("ALTER TABLE utenti ADD COLUMN IF NOT EXISTS puo_gestire_documenti INT DEFAULT 1;")
-
         cur.execute("SELECT * FROM utenti WHERE username = 'admin';")
         if not cur.fetchone():
             hashed_pw = generate_password_hash("admin")
@@ -383,15 +369,18 @@ def promemoria():
         descrizione = request.form.get("descrizione", "")
         data_scadenza = request.form.get("data_scadenza", "")
         priorita = request.form.get("priorita", "Media")
+        ricorrenza = request.form.get("ricorrenza", "Nessuna")
+        
         if titolo:
             cur.execute("""
-                INSERT INTO promemoria (titolo, descrizione, data_scadenza, priorita)
-                VALUES (%s, %s, %s, %s);
-            """, (titolo, descrizione, data_scadenza, priorita))
+                INSERT INTO promemoria (titolo, descrizione, data_scadenza, priorita, ricorrenza)
+                VALUES (%s, %s, %s, %s, %s);
+            """, (titolo, descrizione, data_scadenza, priorita, ricorrenza))
             conn.commit()
-            registra_log(f"Creato promemoria: {titolo}")
+            registra_log(f"Creato promemoria: {titolo} (Ricorrenza: {ricorrenza})")
             flash("Promemoria aggiunto con successo!", "success")
         return redirect(url_for("promemoria"))
+        
     cur.execute("SELECT * FROM promemoria ORDER BY completato ASC, data_scadenza ASC;")
     lista_promemoria = cur.fetchall()
     cur.close()
@@ -402,8 +391,50 @@ def promemoria():
 def completa_promemoria(promemoria_id):
     conn = get_db_connection()
     cur = conn.cursor()
-    cur.execute("UPDATE promemoria SET completato = NOT completato WHERE id = %s;", (promemoria_id,))
-    conn.commit()
+    cur.execute("SELECT * FROM promemoria WHERE id = %s;", (promemoria_id,))
+    p = cur.fetchone()
+    
+    if p:
+        ricorrenza = p.get('ricorrenza', 'Nessuna')
+        data_attuale_str = p.get('data_scadenza')
+        
+        # Se c'è una ricorrenza e una data valida, calcola la scadenza successiva
+        if ricorrenza and ricorrenza != 'Nessuna' and data_attuale_str:
+            try:
+                dt_scadenza = datetime.strptime(data_attuale_str, '%Y-%m-%d')
+                
+                if ricorrenza == 'Giorno':
+                    nuova_dt = dt_scadenza + timedelta(days=1)
+                elif ricorrenza == 'Settimana':
+                    nuova_dt = dt_scadenza + timedelta(weeks=1)
+                elif ricorrenza == 'Mese':
+                    anno = dt_scadenza.year + (dt_scadenza.month // 12)
+                    mese = (dt_scadenza.month % 12) + 1
+                    giorno = min(dt_scadenza.day, 28)
+                    nuova_dt = dt_scadenza.replace(year=anno, month=mese, day=giorno)
+                elif ricorrenza == 'Anno':
+                    nuova_dt = dt_scadenza.replace(year=dt_scadenza.year + 1)
+                else:
+                    nuova_dt = dt_scadenza
+                
+                nuova_data_str = nuova_dt.strftime('%Y-%m-%d')
+                
+                cur.execute("""
+                    UPDATE promemoria 
+                    SET data_scadenza = %s, completato = FALSE 
+                    WHERE id = %s;
+                """, (nuova_data_str, promemoria_id))
+                
+                registra_log(f"Avanzata scadenza promemoria '{p['titolo']}' al {nuova_data_str} ({ricorrenza})")
+                flash(f"Promemoria completato! Prossima scadenza impostata al {nuova_data_str}.", "success")
+                
+            except Exception as e:
+                cur.execute("UPDATE promemoria SET completato = NOT completato WHERE id = %s;", (promemoria_id,))
+        else:
+            cur.execute("UPDATE promemoria SET completato = NOT completato WHERE id = %s;", (promemoria_id,))
+            
+        conn.commit()
+    
     cur.close()
     conn.close()
     return redirect(url_for("promemoria"))
@@ -417,6 +448,7 @@ def elimina_promemoria(promemoria_id):
     cur.close()
     conn.close()
     registra_log(f"Eliminato promemoria ID {promemoria_id}")
+    flash("Promemoria eliminato.", "success")
     return redirect(url_for("promemoria"))
 
 # --- GESTIONE FORNITORI E CONTATTI TECNICI ---
