@@ -1591,7 +1591,7 @@ if __name__ == "__main__":
     app.run(debug=True)
 
 
-Il lun 19 ott 2026, 22:32 marco pavan <marco.pavan1995@gmail.com> ha scritto:
+
 # ========================================================================
 # Magazzino OMG Application
 # Copyright (c) 2026 Marco Pavan. All Rights Reserved.
