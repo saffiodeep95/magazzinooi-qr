@@ -1,3 +1,8 @@
+
+marco pavan <marco.pavan1995@gmail.com>
+22:58 (0 minuti fa)
+a me
+
 # ========================================================================
 # Magazzino OMG Application
 # Copyright (c) 2026 Marco Pavan. All Rights Reserved.
@@ -114,7 +119,7 @@ def init_db():
                 priorita VARCHAR(50) DEFAULT 'Media',
                 stato VARCHAR(50) DEFAULT 'Aperta',
                 tipo_guasto VARCHAR(50) DEFAULT 'Meccanico',
-                assegnato_a VARCHAR(255),
+                assegnato_a TEXT,
                 creato_da VARCHAR(255),
                 inizio_lavoro TIMESTAMP,
                 fine_lavoro TIMESTAMP,
@@ -197,7 +202,6 @@ def init_db():
             );
         """)
         
-        # Migrazione automatica colonne esistenti
         colonne_migrazione = [
             ("fornitori", "settore_note", "VARCHAR(255)"),
             ("contatti_tecnici", "email", "VARCHAR(255)"),
@@ -415,9 +419,9 @@ def richieste_manutenzione():
         priorita = request.form.get("priorita", "Media")
         tipo_guasto = request.form.get("tipo_guasto", "Meccanico")
         
-        # Se l'utente può assegnare sceglie dal form, altrimenti si assegna a se stesso o resta vuoto
         if puo_assegnare_global:
-            assegnato_a = request.form.get("assegnato_a", "")
+            tecnici_selezionati = request.form.getlist("assegnato_a[]")
+            assegnato_a = ", ".join(tecnici_selezionati) if tecnici_selezionati else ""
         else:
             assegnato_a = username_corrente
         
@@ -475,7 +479,6 @@ def cambia_stato_intervento(intervento_id):
     username_corrente = session.get('username')
     nuovo_stato = request.form.get("stato")
     note_lavoro = request.form.get("note_lavoro", "")
-    nuovo_assegnatario = request.form.get("nuovo_assegnatario", "").strip()
     
     conn = get_db_connection()
     cur = conn.cursor()
@@ -558,9 +561,10 @@ def cambia_stato_intervento(intervento_id):
             
         elif nuovo_stato == 'Riassegna':
             if session.get('is_admin') or session.get('puo_assegnare_manutenzioni', 1):
-                if nuovo_assegnatario:
-                    cur.execute("UPDATE richieste_manutenzione SET assegnato_a = %s WHERE id = %s;", (nuovo_assegnatario, intervento_id))
-                    flash(f"Intervento riassegnato a {nuovo_assegnatario}.", "success")
+                tecnici_nuovi = request.form.getlist("nuovi_assegnatari[]")
+                nuova_lista = ", ".join(tecnici_nuovi) if tecnici_nuovi else ""
+                cur.execute("UPDATE richieste_manutenzione SET assegnato_a = %s WHERE id = %s;", (nuova_lista, intervento_id))
+                flash("Squadra / Tecnici aggiornati per l'intervento.", "success")
 
         conn.commit()
         registra_log(f"Aggiornato intervento ID {intervento_id} (Stato: {nuovo_stato})")
@@ -590,7 +594,7 @@ def scarica_allegato_intervento(intervento_id):
 def stampa_intervento(intervento_id):
     conn = get_db_connection()
     cur = conn.cursor()
-    cur.execute("SELECT * FROM richieste_manutenzione WHERE id = %s;", (intervento_id,))
+    cur.execute("SELECT id, titolo, impianto_macchina, descrizione, priorita, stato, tipo_guasto, assegnato_a, creato_da, inizio_lavoro, fine_lavoro, tempo_lavorato_minuti, note_lavoro, creato_il FROM richieste_manutenzione WHERE id = %s;", (intervento_id,))
     intervento = cur.fetchone()
     cur.execute("SELECT * FROM intervento_ricambi WHERE intervento_id = %s;", (intervento_id,))
     ricambi = cur.fetchall()
@@ -1589,5 +1593,3 @@ def elimina_prodotto():
 
 if __name__ == "__main__":
     app.run(debug=True)
-
-
