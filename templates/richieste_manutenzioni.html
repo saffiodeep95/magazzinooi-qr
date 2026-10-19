@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Magazzino OMG - Richieste Intervento Officina</title>
+    
+    <link rel="manifest" href="{{ url_for('static', filename='manifest.json') }}">
+    <link rel="icon" type="image/png" href="{{ url_for('static', filename='icon.png') }}">
+    <link rel="apple-touch-icon" href="{{ url_for('static', filename='icon.png') }}">
+    <meta name="theme-color" content="#4f46e5">
+
+    <style>
+        body { font-family: sans-serif; max-width: 1050px; margin: 0 auto; padding: 15px; background: #f8fafc; color: #1e293b; box-sizing: border-box; }
+        .card { background: white; padding: 20px; border-radius: 12px; border: 1px solid #e2e8f0; margin-bottom: 20px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
+        .btn { background: #0284c7; color: #ffffff !important; padding: 8px 14px; border: none; border-radius: 6px; font-weight: bold; cursor: pointer; text-decoration: none; display: inline-block; font-size: 0.85rem; margin: 2px; }
+        .btn:hover { opacity: 0.9; }
+        table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 0.85rem; }
+        th, td { padding: 10px 10px; text-align: left; border-bottom: 1px solid #e2e8f0; vertical-align: middle; }
+        th { background: #f1f5f9; color: #475569; font-weight: 600; }
+        input, select, textarea { width: 100%; padding: 8px; margin-top: 4px; margin-bottom: 10px; border: 1px solid #cbd5e1; border-radius: 6px; box-sizing: border-box; font-size: 0.85rem; }
+        label { font-weight: bold; font-size: 0.8rem; color: #475569; display: block; }
+        footer { text-align: center; margin-top: 30px; padding: 15px 0; color: #64748b; font-size: 0.8rem; border-top: 1px solid #e2e8f0; }
+        .badge-stato { padding: 4px 8px; border-radius: 6px; font-weight: bold; font-size: 0.75rem; display: inline-block; }
+    </style>
+</head>
+<body>
+
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; flex-wrap: wrap; gap: 10px;">
+        <h1 style="font-size: 1.5rem; margin: 0;">🛠️ Richieste Intervento Officina</h1>
+        <div style="display: flex; gap: 5px;">
+            <a href="{{ url_for('esporta_interventi') }}" class="btn" style="background: #059669;">📊 Esporta Report CSV</a>
+            <a href="{{ url_for('index') }}" class="btn" style="background: #475569;">← Home</a>
+        </div>
+    </div>
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+        {% for category, message in messages %}
+          <div style="background: {% if category == 'error' %}#fee2e2; color: #991b1b; border: 1px solid #fca5a5;{% else %}#dcfce7; color: #166534; border: 1px solid #bbf7d0;{% endif %} padding: 12px; border-radius: 8px; margin-bottom: 15px; font-size: 0.9rem;">
+            {{ message }}
+          </div>
+        {% endfor %}
+      {% endif %}
+    {% endwith %}
+
+    <!-- FORM CREAZIONE RICHIESTA -->
+    <div class="card">
+        <h3 style="margin-top: 0; font-size: 1.1rem; color: #334155;">➕ Apri Nuova Scheda Intervento</h3>
+        <form action="{{ url_for('richieste_manutenzione') }}" method="POST" enctype="multipart/form-data">
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 10px;">
+                <div>
+                    <label>Titolo Intervento / Guasto:</label>
+                    <input type="text" name="titolo" placeholder="Es. Perdita olio idraulico..." required>
+                </div>
+                <div>
+                    <label>Macchinario / Impianto / Reparto:</label>
+                    <input type="text" name="impianto_macchina" placeholder="Es. Linea 1 - Prensa N3">
+                </div>
+                <div>
+                    <label>Tipo Guasto:</label>
+                    <select name="tipo_guasto">
+                        <option value="Meccanico">⚙️ Meccanico</option>
+                        <option value="Elettrico">⚡ Elettrico / Elettronico</option>
+                        <option value="Oleodinamico">💧 Oleodinamico</option>
+                        <option value="Pneumatico">💨 Pneumatico</option>
+                        <option value="Software">💻 Software / PLC</option>
+                        <option value="Preventiva">🧹 Preventiva / Programmata</option>
+                    </select>
+                </div>
+                <div>
+                    <label>Priorità:</label>
+                    <select name="priorita">
+                        <option value="Bassa">🟢 Bassa</option>
+                        <option value="Media" selected>🟡 Media</option>
+                        <option value="Alta / Fermo Macchina">🔴 Urgente / Fermo Macchina</option>
+                    </select>
+                </div>
+                <div>
+                    <label>Assegna a Tecnico (Opzionale):</label>
+                    <select name="assegnato_a">
+                        <option value="">-- Libera (Prendibile da chiunque) --</option>
+                        {% for u in lista_utenti %}
+                            <option value="{{ u.username }}">{{ u.username }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div>
+                    <label>Allega Foto / Immagine (Opzionale):</label>
+                    <input type="file" name="allegato_foto" accept="image/*" style="padding: 4px; font-size: 0.75rem;">
+                </div>
+            </div>
+            <div>
+                <label>Descrizione Dettagliata del Problema:</label>
+                <textarea name="descrizione" rows="2" placeholder="Descrivi il guasto o i sintomi notati..."></textarea>
+            </div>
+            <button type="submit" class="btn" style="background: #10b981; padding: 10px 20px;">Apri Richiesta Intervento</button>
+        </form>
+    </div>
+
+    <!-- TABELLA INTERVENTI -->
+    <div class="card">
+        <h3 style="margin-top: 0; font-size: 1.1rem; color: #334155;">📋 Schede Intervento Aperte e Storico</h3>
+        {% if richieste %}
+            <div style="overflow-x: auto;">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Stato / Tipo</th>
+                            <th>Macchina & Guasto</th>
+                            <th>Tecnico</th>
+                            <th>Tempi Lavoro</th>
+                            <th>Ricambi Usati</th>
+                            <th>Gestione & Azioni</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for r in richieste %}
+                        <tr style="{% if r.stato == 'Completata' %}opacity: 0.65; background: #f8fafc;{% endif %}">
+                            <td>
+                                {% if r.stato == 'Aperta' %}
+                                    <span class="badge-stato" style="background: #fee2e2; color: #991b1b;">🔴 Aperta</span>
+                                {% elif r.stato == 'In Lavoro' %}
+                                    <span class="badge-stato" style="background: #fef3c7; color: #92400e;">🟡 In Lavoro</span>
+                                {% elif r.stato == 'In Pausa' %}
+                                    <span class="badge-stato" style="background: #e2e8f0; color: #475569;">⏸️ In Pausa</span>
+                                {% elif r.stato == 'Attesa Ricambio' %}
+                                    <span class="badge-stato" style="background: #ffedd5; color: #c2410c;">🟠 Attesa Ricambio</span>
+                                {% else %}
+                                    <span class="badge-stato" style="background: #dcfce7; color: #166534;">🟢 Completata</span>
+                                {% endif %}
+                                <div style="margin-top: 4px; font-size: 0.75rem; font-weight: bold; color: #0284c7;">{{ r.tipo_guasto }}</div>
+                            </td>
+                            <td>
+                                <strong>{{ r.impianto_macchina or 'Generico' }}</strong> — {{ r.titolo }}
+                                {% if r.descrizione %}<br><small style="color: #64748b;">{{ r.descrizione }}</small>{% endif %}
+                                {% if r.note_lavoro %}<br><small style="color: #0284c7; font-weight: bold;">Note: {{ r.note_lavoro }}</small>{% endif %}
+                                {% if r.allegato_nome %}
+                                    <br><a href="{{ url_for('scarica_allegato_intervento', intervento_id=r.id) }}" style="font-size: 0.75rem; color: #0284c7;">📎 Vedi allegato foto</a>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <strong>👤 {{ r.assegnato_a or 'Non Assegnato' }}</strong>
+                            </td>
+                            <td style="white-space: nowrap; font-size: 0.75rem; color: #475569;">
+                                ⏱️ Inizio: {{ r.inizio_lavoro.strftime('%d/%m %H:%M') if r.inizio_lavoro else '-' }}<br>
+                                ⏳ Lavorato: <strong>{{ r.tempo_lavorato_minuti or 0 }} min</strong><br>
+                                🏁 Fine: {{ r.fine_lavoro.strftime('%d/%m %H:%M') if r.fine_lavoro else '-' }}
+                            </td>
+                            <td>
+                                {% set ricambi = ricambi_per_intervento.get(r.id, []) %}
+                                {% if ricambi %}
+                                    <ul style="margin: 0; padding-left: 15px; font-size: 0.75rem;">
+                                        {% for ric in ricambi %}
+                                            <li>{{ ric.nome_ricambio }} (x{{ ric.quantita }})</li>
+                                        {% endfor %}
+                                    </ul>
+                                {% else %}
+                                    <span style="font-size: 0.75rem; color: #94a3b8;">Nessun ricambio</span>
+                                {% endif %}
+                            </td>
+                            <td style="min-width: 220px;">
+                                {% if r.stato == 'Aperta' %}
+                                    <form action="{{ url_for('cambia_stato_intervento', intervento_id=r.id) }}" method="POST">
+                                        <input type="hidden" name="stato" value="In Lavoro">
+                                        <button type="submit" class="btn" style="background: #f59e0b; padding: 5px 8px; font-size: 0.75rem; width: 100%;">✋ Prendi in Carico</button>
+                                    </form>
+                                {% elif r.stato == 'In Lavoro' %}
+                                    <div style="display: flex; gap: 4px; flex-direction: column;">
+                                        <form action="{{ url_for('cambia_stato_intervento', intervento_id=r.id) }}" method="POST">
+                                            <input type="hidden" name="stato" value="In Pausa">
+                                            <button type="submit" class="btn" style="background: #64748b; padding: 4px 6px; font-size: 0.7rem; width: 100%;">⏸️ Metti in Pausa</button>
+                                        </form>
+                                        <form action="{{ url_for('cambia_stato_intervento', intervento_id=r.id) }}" method="POST">
+                                            <input type="hidden" name="stato" value="Attesa Ricambio">
+                                            <input type="text" name="note_lavoro" placeholder="Pezzo mancante..." style="margin: 0 0 2px 0; padding: 2px 4px; font-size: 0.7rem;">
+                                            <button type="submit" class="btn" style="background: #ea580c; padding: 4px 6px; font-size: 0.7rem; width: 100%;">🟠 Attesa Ricambio</button>
+                                        </form>
+                                    </div>
+                                {% elif r.stato == 'In Pausa' or r.stato == 'Attesa Ricambio' %}
+                                    <form action="{{ url_for('cambia_stato_intervento', intervento_id=r.id) }}" method="POST" style="margin-bottom: 4px;">
+                                        <input type="hidden" name="stato" value="In Lavoro">
+                                        <button type="submit" class="btn" style="background: #10b981; padding: 4px 6px; font-size: 0.7rem; width: 100%;">▶️ Riprendi Lavoro</button>
+                                    </form>
+                                {% endif %}
+
+                                {% if r.stato != 'Completata' %}
+                                    <!-- FORM CHIUSURA CON CARRELLO RICAMBI -->
+                                    <div style="background: #f1f5f9; padding: 8px; border-radius: 6px; margin-top: 6px;">
+                                        <form action="{{ url_for('cambia_stato_intervento', intervento_id=r.id) }}" method="POST">
+                                            <input type="hidden" name="stato" value="Completata">
+                                            <label style="font-size: 0.7rem; margin-bottom: 2px;">Utilizza Ricambio da Magazzino:</label>
+                                            <select name="ricambio_qr[]" style="margin: 0 0 2px 0; padding: 2px; font-size: 0.7rem;">
+                                                <option value="">-- Seleziona Ricambio --</option>
+                                                {% for p in lista_prodotti %}
+                                                    <option value="{{ p.qr_code }}">{{ p.nome }} (Dis: {{ p.quantita }})</option>
+                                                {% endfor %}
+                                            </select>
+                                            <input type="number" name="ricambio_qta[]" value="1" min="1" placeholder="Qta" style="margin: 0 0 2px 0; padding: 2px 4px; font-size: 0.7rem;">
+                                            <input type="text" name="note_lavoro" placeholder="Note fine lavoro..." style="margin: 0 0 4px 0; padding: 2px 4px; font-size: 0.7rem;">
+                                            <button type="submit" class="btn" style="background: #10b981; padding: 4px 6px; font-size: 0.7rem; width: 100%;">🟢 Chiudi e Scarica</button>
+                                        </form>
+                                    </div>
+
+                                    <!-- CESSIONE / RIASSEGNAZIONE RAPIDA -->
+                                    <div style="margin-top: 6px;">
+                                        <form action="{{ url_for('cambia_stato_intervento', intervento_id=r.id) }}" method="POST" style="display: flex; gap: 2px;">
+                                            <input type="hidden" name="stato" value="Riassegna">
+                                            <select name="nuovo_assegnatario" style="margin: 0; padding: 2px; font-size: 0.7rem;">
+                                                {% for u in lista_utenti %}
+                                                    <option value="{{ u.username }}" {% if u.username == r.assegnato_a %}selected{% endif %}>{{ u.username }}</option>
+                                                {% endfor %}
+                                            </select>
+                                            <button type="submit" class="btn" style="background: #0284c7; padding: 2px 5px; font-size: 0.7rem;">↪️</button>
+                                        </form>
+                                    </div>
+                                {% else %}
+                                    <a href="{{ url_for('stampa_intervento', intervento_id=r.id) }}" target="_blank" class="btn" style="background: #0284c7; padding: 4px 8px; font-size: 0.75rem; width: 100%; text-align: center; box-sizing: border-box;">🖨️ Rapportino PDF</a>
+                                {% endif %}
+
+                                {% if session.get('is_admin') %}
+                                    <form action="{{ url_for('elimina_intervento', intervento_id=r.id) }}" method="POST" onsubmit="return confirm('Eliminare questo intervento?');" style="margin-top: 6px;">
+                                        <button type="submit" class="btn" style="background: #ef4444; padding: 2px 5px; font-size: 0.7rem; width: 100%;">🗑️ Elimina</button>
+                                    </form>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        {% else %}
+            <p style="color: #64748b; text-align: center; padding: 20px 0;">Nessuna scheda d'intervento aperta.</p>
+        {% endif %}
+    </div>
+
+    <footer>
+        <p style="margin: 0;">© 2026 <strong>Marco Pavan</strong> — Tutti i diritti riservati.</p>
+    </footer>
+</body>
+</html>
