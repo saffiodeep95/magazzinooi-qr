@@ -69,6 +69,7 @@ def init_db():
             CREATE TABLE IF NOT EXISTS fornitori (
                 id SERIAL PRIMARY KEY,
                 nome_azienda VARCHAR(255) NOT NULL,
+                settore_note VARCHAR(255),
                 indirizzo VARCHAR(255),
                 p_iva VARCHAR(255),
                 telefono VARCHAR(255),
@@ -82,7 +83,8 @@ def init_db():
                 fornitore_id INT REFERENCES fornitori(id) ON DELETE CASCADE,
                 nome VARCHAR(255) NOT NULL,
                 telefono VARCHAR(255) NOT NULL,
-                mansione VARCHAR(255)
+                mansione VARCHAR(255),
+                email VARCHAR(255)
             );
         """)
 
@@ -144,6 +146,8 @@ def init_db():
             );
         """)
         
+        cur.execute("ALTER TABLE fornitori ADD COLUMN IF NOT EXISTS settore_note VARCHAR(255);")
+        cur.execute("ALTER TABLE contatti_tecnici ADD COLUMN IF NOT EXISTS email VARCHAR(255);")
         cur.execute("ALTER TABLE prodotti ADD COLUMN IF NOT EXISTS magazzino_pesante INT DEFAULT 0;")
         cur.execute("ALTER TABLE prodotti ADD COLUMN IF NOT EXISTS peso VARCHAR(255);")
         cur.execute("ALTER TABLE prodotti ADD COLUMN IF NOT EXISTS in_manutenzione BOOLEAN DEFAULT FALSE;")
@@ -361,14 +365,15 @@ def fornitori():
     cur = conn.cursor()
     if request.method == "POST":
         nome_azienda = request.form.get("nome_azienda")
+        settore_note = request.form.get("settore_note", "")
         indirizzo = request.form.get("indirizzo", "")
         p_iva = request.form.get("p_iva", "")
         telefono = request.form.get("telefono", "")
         email = request.form.get("email", "")
         if nome_azienda:
             cur.execute(
-                "INSERT INTO fornitori (nome_azienda, indirizzo, p_iva, telefono, email) VALUES (%s, %s, %s, %s, %s);",
-                (nome_azienda, indirizzo, p_iva, telefono, email)
+                "INSERT INTO fornitori (nome_azienda, settore_note, indirizzo, p_iva, telefono, email) VALUES (%s, %s, %s, %s, %s, %s);",
+                (nome_azienda, settore_note, indirizzo, p_iva, telefono, email)
             )
             conn.commit()
             registra_log(f"Aggiunto fornitore: {nome_azienda}")
@@ -384,6 +389,7 @@ def fornitori():
 @app.route("/modifica_fornitore/<int:fornitore_id>", methods=["POST"])
 def modifica_fornitore(fornitore_id):
     nome_azienda = request.form.get("nome_azienda")
+    settore_note = request.form.get("settore_note", "")
     indirizzo = request.form.get("indirizzo", "")
     p_iva = request.form.get("p_iva", "")
     telefono = request.form.get("telefono", "")
@@ -394,9 +400,9 @@ def modifica_fornitore(fornitore_id):
         cur = conn.cursor()
         cur.execute("""
             UPDATE fornitori 
-            SET nome_azienda = %s, indirizzo = %s, p_iva = %s, telefono = %s, email = %s
+            SET nome_azienda = %s, settore_note = %s, indirizzo = %s, p_iva = %s, telefono = %s, email = %s
             WHERE id = %s;
-        """, (nome_azienda, indirizzo, p_iva, telefono, email, fornitore_id))
+        """, (nome_azienda, settore_note, indirizzo, p_iva, telefono, email, fornitore_id))
         conn.commit()
         cur.close()
         conn.close()
@@ -417,10 +423,11 @@ def dettaglio_fornitore(fornitore_id):
             nome_tecnico = request.form.get("nome")
             telefono_tecnico = request.form.get("telefono")
             mansione = request.form.get("mansione", "")
+            email_tecnico = request.form.get("email", "")
             if nome_tecnico and telefono_tecnico:
                 cur.execute(
-                    "INSERT INTO contatti_tecnici (fornitore_id, nome, telefono, mansione) VALUES (%s, %s, %s, %s);",
-                    (fornitore_id, nome_tecnico, telefono_tecnico, mansione)
+                    "INSERT INTO contatti_tecnici (fornitore_id, nome, telefono, mansione, email) VALUES (%s, %s, %s, %s, %s);",
+                    (fornitore_id, nome_tecnico, telefono_tecnico, mansione, email_tecnico)
                 )
                 conn.commit()
                 registra_log(f"Aggiunto contatto tecnico {nome_tecnico} per fornitore ID {fornitore_id}")
@@ -454,15 +461,16 @@ def modifica_contatto_tecnico(contatto_id, fornitore_id):
     nome = request.form.get("nome")
     telefono = request.form.get("telefono")
     mansione = request.form.get("mansione", "")
+    email = request.form.get("email", "")
     
     try:
         conn = get_db_connection()
         cur = conn.cursor()
         cur.execute("""
             UPDATE contatti_tecnici 
-            SET nome = %s, telefono = %s, mansione = %s
+            SET nome = %s, telefono = %s, mansione = %s, email = %s
             WHERE id = %s;
-        """, (nome, telefono, mansione, contatto_id))
+        """, (nome, telefono, mansione, email, contatto_id))
         conn.commit()
         cur.close()
         conn.close()
@@ -495,6 +503,78 @@ def elimina_fornitore(fornitore_id):
     conn.close()
     registra_log(f"Eliminato fornitore ID {fornitore_id}")
     flash("Fornitore eliminato con successo.", "success")
+    return redirect(url_for("fornitori"))
+
+@app.route("/importa_fornitori_csv", methods=["POST"])
+def importa_fornitori_csv():
+    file_csv = request.files.get("file_fornitori_csv")
+    if file_csv and file_csv.filename.endswith('.csv'):
+        try:
+            stream = io.TextIOWrapper(file_csv.stream, encoding="utf-8-sig")
+            reader = csv.DictReader(stream)
+            conn = get_db_connection()
+            cur = conn.cursor()
+            count = 0
+            for row in reader:
+                nome_azienda = row.get("nome_azienda", "").strip()
+                settore_note = row.get("settore_note", "").strip()
+                indirizzo = row.get("indirizzo_citta", "").strip()
+                telefono = row.get("telefono", "").strip()
+                email = row.get("email", "").strip()
+                
+                if nome_azienda:
+                    cur.execute("""
+                        INSERT INTO fornitori (nome_azienda, settore_note, indirizzo, telefono, email)
+                        VALUES (%s, %s, %s, %s, %s);
+                    """, (nome_azienda, settore_note, indirizzo, telefono, email))
+                    count += 1
+            conn.commit()
+            cur.close()
+            conn.close()
+            registra_log(f"Importati {count} fornitori tramite CSV")
+            flash(f"Importati con successo {count} fornitori!", "success")
+        except Exception as e:
+            flash(f"Errore importazione fornitori: {e}", "error")
+    else:
+        flash("Carica un file CSV valido per i fornitori.", "error")
+    return redirect(url_for("fornitori"))
+
+@app.route("/importa_tecnici_csv", methods=["POST"])
+def importa_tecnici_csv():
+    file_csv = request.files.get("file_tecnici_csv")
+    if file_csv and file_csv.filename.endswith('.csv'):
+        try:
+            stream = io.TextIOWrapper(file_csv.stream, encoding="utf-8-sig")
+            reader = csv.DictReader(stream)
+            conn = get_db_connection()
+            cur = conn.cursor()
+            count = 0
+            for row in reader:
+                fornitore_nome = row.get("fornitore_nome", "").strip()
+                nome_contatto = row.get("nome_contatto", "").strip()
+                telefono = row.get("telefono", "").strip()
+                mansione = row.get("mansione_note", "").strip()
+                email = row.get("email", "").strip()
+                
+                if nome_contatto and fornitore_nome:
+                    cur.execute("SELECT id FROM fornitori WHERE LOWER(nome_azienda) = LOWER(%s);", (fornitore_nome,))
+                    f_res = cur.fetchone()
+                    if f_res:
+                        fornitore_id = f_res['id']
+                        cur.execute("""
+                            INSERT INTO contatti_tecnici (fornitore_id, nome, telefono, mansione, email)
+                            VALUES (%s, %s, %s, %s, %s);
+                        """, (fornitore_id, nome_contatto, telefono, mansione, email))
+                        count += 1
+            conn.commit()
+            cur.close()
+            conn.close()
+            registra_log(f"Importati {count} contatti tecnici tramite CSV")
+            flash(f"Importati con successo {count} contatti tecnici!", "success")
+        except Exception as e:
+            flash(f"Errore importazione tecnici: {e}", "error")
+    else:
+        flash("Carica un file CSV valido per i tecnici.", "error")
     return redirect(url_for("fornitori"))
 
 @app.route("/upload", methods=["GET", "POST"])
