@@ -69,7 +69,7 @@ def init_db():
         cur.execute("""
             CREATE TABLE IF NOT EXISTS fornitori (
                 id SERIAL PRIMARY KEY,
-                nome_azienda VARCHAR(255) NOT NULL,
+                nome_azienda VARCHAR(255) UNIQUE NOT NULL,
                 settore_note VARCHAR(255),
                 indirizzo VARCHAR(255),
                 p_iva VARCHAR(255),
@@ -359,7 +359,7 @@ def elimina_utente(user_id):
         flash(f"Errore eliminazione utente: {e}", "error")
     return redirect(url_for('admin_utenti'))
 
-# --- GESTIONE FORNITORI E CONTATTI TECNICI ---
+# --- GESTIONE FORNITORI E CONTATTI TECNICI (CON PULIZIA DUPLICATI) ---
 @app.route("/fornitori", methods=["GET", "POST"])
 def fornitori():
     conn = get_db_connection()
@@ -372,13 +372,19 @@ def fornitori():
         telefono = request.form.get("telefono", "")
         email = request.form.get("email", "")
         if nome_azienda:
-            cur.execute(
-                "INSERT INTO fornitori (nome_azienda, settore_note, indirizzo, p_iva, telefono, email) VALUES (%s, %s, %s, %s, %s, %s);",
-                (nome_azienda, settore_note, indirizzo, p_iva, telefono, email)
-            )
+            cur.execute("""
+                INSERT INTO fornitori (nome_azienda, settore_note, indirizzo, p_iva, telefono, email) 
+                VALUES (%s, %s, %s, %s, %s, %s)
+                ON CONFLICT (nome_azienda) DO UPDATE SET
+                    settore_note = EXCLUDED.settore_note,
+                    indirizzo = EXCLUDED.indirizzo,
+                    p_iva = EXCLUDED.p_iva,
+                    telefono = EXCLUDED.telefono,
+                    email = EXCLUDED.email;
+            """, (nome_azienda, settore_note, indirizzo, p_iva, telefono, email))
             conn.commit()
-            registra_log(f"Aggiunto fornitore: {nome_azienda}")
-            flash("Fornitore aggiunto con successo!", "success")
+            registra_log(f"Aggiunto/Aggiornato fornitore: {nome_azienda}")
+            flash("Fornitore salvato con successo!", "success")
         return redirect(url_for("fornitori"))
     
     cur.execute("SELECT * FROM fornitori ORDER BY nome_azienda ASC;")
@@ -426,10 +432,10 @@ def dettaglio_fornitore(fornitore_id):
             mansione = request.form.get("mansione", "")
             email_tecnico = request.form.get("email", "")
             if nome_tecnico and telefono_tecnico:
-                cur.execute(
-                    "INSERT INTO contatti_tecnici (fornitore_id, nome, telefono, mansione, email) VALUES (%s, %s, %s, %s, %s);",
-                    (fornitore_id, nome_tecnico, telefono_tecnico, mansione, email_tecnico)
-                )
+                cur.execute("""
+                    INSERT INTO contatti_tecnici (fornitore_id, nome, telefono, mansione, email) 
+                    VALUES (%s, %s, %s, %s, %s);
+                """, (fornitore_id, nome_tecnico, telefono_tecnico, mansione, email_tecnico))
                 conn.commit()
                 registra_log(f"Aggiunto contatto tecnico {nome_tecnico} per fornitore ID {fornitore_id}")
                 flash("Contatto tecnico aggiunto con successo!", "success")
@@ -506,83 +512,89 @@ def elimina_fornitore(fornitore_id):
     flash("Fornitore eliminato con successo.", "success")
     return redirect(url_for("fornitori"))
 
-@app.route("/importa_rubrica_excel", methods=["POST"])
-def importa_rubrica_excel():
-    file_excel = request.files.get("file_excel")
-    if file_excel and (file_excel.filename.endswith('.xlsx') or file_excel.filename.endswith('.xls')):
-        try:
-            df = pd.read_excel(file_excel)
-            conn = get_db_connection()
-            cur = conn.cursor()
-            
-            count_fornitori = 0
-            count_tecnici = 0
-            current_fornitore_id = None
-            current_fornitore_nome = None
-            
-            import re
-            for idx, row in df.iterrows():
-                col1_raw = str(row.iloc[1]) if len(row) > 1 and pd.notna(row.iloc[1]) else ''
-                col1 = col1_raw.strip()
-                tel = str(row.iloc[2]).strip() if len(row) > 2 and pd.notna(row.iloc[2]) else ''
-                indirizzo_info = str(row.iloc[3]).strip() if len(row) > 3 and pd.notna(row.iloc[3]) else ''
-                email = str(row.iloc[4]).strip() if len(row) > 4 and pd.notna(row.iloc[4]) else ''
-                extra = str(row.iloc[5]).strip() if len(row) > 5 and pd.notna(row.iloc[5]) else ''
+@app.route("/importa_due_file", methods=["POST"])
+def importa_due_file():
+    file_fornitori = request.files.get("file_fornitori")
+    file_tecnici = request.files.get("file_tecnici")
+    
+    try:
+        conn = get_db_connection()
+        cur = conn.cursor()
+        
+        # Pulizia preventiva per evitare doppi inserimenti
+        cur.execute("DELETE FROM contatti_tecnici;")
+        cur.execute("DELETE FROM fornitori;")
+        conn.commit()
+        
+        count_fornitori = 0
+        count_tecnici = 0
+        
+        # 1. IMPORTAZIONE FORNITORI / AZIENDE
+        if file_fornitori and file_fornitori.filename != '':
+            if file_fornitori.filename.endswith('.csv'):
+                stream = io.TextIOWrapper(file_fornitori.stream, encoding="utf-8-sig")
+                df_f = pd.read_csv(stream)
+            else:
+                df_f = pd.read_excel(file_fornitori)
                 
-                if not col1 and not tel and not email and not indirizzo_info and not extra:
-                    continue
+            for _, row in df_f.iterrows():
+                nome_azienda = str(row.iloc[1]).strip() if len(row) > 1 and pd.notna(row.iloc[1]) else ''
+                settore = str(row.iloc[2]).strip() if len(row) > 2 and pd.notna(row.iloc[2]) else ''
+                indirizzo = str(row.iloc[3]).strip() if len(row) > 3 and pd.notna(row.iloc[3]) else ''
+                telefono = str(row.iloc[4]).strip() if len(row) > 4 and pd.notna(row.iloc[4]) else ''
+                email = str(row.iloc[5]).strip() if len(row) > 5 and pd.notna(row.iloc[5]) else ''
                 
-                has_double_space = bool(re.search(r'\s{2,}', col1_raw))
-                words = col1.split()
-                first_word = words[0] if words else ''
-                is_person_name = col1.islower() or (len(words) >= 2 and words[0][0].isupper() and words[0][1:].islower() and words[1][0].isupper() and words[1][1:].islower())
-                
-                is_company = False
-                if has_double_space:
-                    is_company = True
-                elif first_word.isupper() and len(first_word) > 1 and not is_person_name:
-                    is_company = True
-                elif not current_fornitore_nome:
-                    is_company = True
-
-                if is_company:
-                    if has_double_space:
-                        parts = re.split(r'\s{2,}', col1_raw.strip(), maxsplit=1)
-                        nome_azienda = parts[0].strip()
-                        settore = parts[1].strip() if len(parts) > 1 else ''
-                    else:
-                        nome_azienda = col1
-                        settore = ''
-                        
-                    current_fornitore_nome = nome_azienda
-                    
+                if nome_azienda and nome_azienda.lower() != 'nan':
                     cur.execute("""
                         INSERT INTO fornitori (nome_azienda, settore_note, indirizzo, telefono, email)
                         VALUES (%s, %s, %s, %s, %s)
-                        RETURNING id;
-                    """, (nome_azienda, settore, indirizzo_info, tel, email))
-                    res_id = cur.fetchone()
-                    current_fornitore_id = res_id['id'] if res_id else None
+                        ON CONFLICT (nome_azienda) DO NOTHING;
+                    """, (nome_azienda, settore, indirizzo, telefono, email))
                     count_fornitori += 1
-                else:
-                    if current_fornitore_id:
-                        cur.execute("""
-                            INSERT INTO contatti_tecnici (fornitore_id, nome, telefono, mansione, email)
-                            VALUES (%s, %s, %s, %s, %s);
-                        """, (current_fornitore_id, col1, tel, indirizzo_info, email))
-                        count_tecnici += 1
 
-            conn.commit()
-            cur.close()
-            conn.close()
-            registra_log(f"Importati {count_fornitori} fornitori e {count_tecnici} tecnici da Excel")
-            flash(f"Importazione completata! Aggiunti {count_fornitori} fornitori e {count_tecnici} tecnici.", "success")
-        except Exception as e:
-            flash(f"Errore durante l'importazione Excel: {e}", "error")
-    else:
-        flash("Carica un file Excel valido (.xlsx).", "error")
+        # 2. IMPORTAZIONE CONTATTI TECNICI
+        if file_tecnici and file_tecnici.filename != '':
+            if file_tecnici.filename.endswith('.csv'):
+                stream = io.TextIOWrapper(file_tecnici.stream, encoding="utf-8-sig")
+                df_t = pd.read_csv(stream)
+            else:
+                df_t = pd.read_excel(file_tecnici)
+                
+            for _, row in df_t.iterrows():
+                fornitore_nome = str(row.iloc[1]).strip() if len(row) > 1 and pd.notna(row.iloc[1]) else ''
+                nome_tecnico = str(row.iloc[2]).strip() if len(row) > 2 and pd.notna(row.iloc[2]) else ''
+                telefono = str(row.iloc[3]).strip() if len(row) > 3 and pd.notna(row.iloc[3]) else ''
+                mansione = str(row.iloc[4]).strip() if len(row) > 4 and pd.notna(row.iloc[4]) else ''
+                email = str(row.iloc[5]).strip() if len(row) > 5 and pd.notna(row.iloc[5]) else ''
+                
+                if nome_tecnico and fornitore_nome and nome_tecnico.lower() != 'nan':
+                    cur.execute("SELECT id FROM fornitori WHERE LOWER(nome_azienda) = LOWER(%s);", (fornitore_nome,))
+                    f_res = cur.fetchone()
+                    if f_res:
+                        fornitore_id = f_res['id']
+                        # Evita duplicati dello stesso tecnico per la stessa azienda
+                        cur.execute("""
+                            SELECT id FROM contatti_tecnici 
+                            WHERE fornitore_id = %s AND LOWER(nome) = LOWER(%s);
+                        """, (fornitore_id, nome_tecnico))
+                        if not cur.fetchone():
+                            cur.execute("""
+                                INSERT INTO contatti_tecnici (fornitore_id, nome, telefono, mansione, email)
+                                VALUES (%s, %s, %s, %s, %s);
+                            """, (fornitore_id, nome_tecnico, telefono, mansione, email))
+                            count_tecnici += 1
+
+        conn.commit()
+        cur.close()
+        conn.close()
+        registra_log(f"Importazione pulita: {count_fornitori} fornitori e {count_tecnici} tecnici.")
+        flash(f"Importazione completata con successo! Aggiunti {count_fornitori} fornitori e {count_tecnici} tecnici.", "success")
+    except Exception as e:
+        flash(f"Errore durante l'importazione dei file: {e}", "error")
+        
     return redirect(url_for("fornitori"))
 
+# --- ALTRE ROTTE DEL MAGAZZINO (PRODOTTI, UPLOAD, ECC.) ---
 @app.route("/upload", methods=["GET", "POST"])
 def upload():
     if request.method == "POST":
