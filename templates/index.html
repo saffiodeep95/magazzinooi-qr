@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Magazzino OMG - Home</title>
+    <title>Magazzino OMG - Home Dashboard</title>
     
     <link rel="manifest" href="{{ url_for('static', filename='manifest.json') }}">
     <link rel="icon" type="image/png" href="{{ url_for('static', filename='icon.png') }}">
@@ -11,7 +11,7 @@
     <meta name="theme-color" content="#4f46e5">
 
     <style>
-        body { font-family: sans-serif; max-width: 950px; margin: 0 auto; padding: 15px; background: #f8fafc; color: #1e293b; box-sizing: border-box; }
+        body { font-family: sans-serif; max-width: 980px; margin: 0 auto; padding: 15px; background: #f8fafc; color: #1e293b; box-sizing: border-box; }
         .card { background: white; padding: 20px; border-radius: 12px; border: 1px solid #e2e8f0; margin-bottom: 20px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
         .btn { background: #0284c7; color: #ffffff !important; padding: 8px 14px; border: none; border-radius: 6px; font-weight: bold; cursor: pointer; text-decoration: none; display: inline-block; font-size: 0.85rem; margin: 2px; }
         .btn:hover { opacity: 0.9; }
@@ -20,6 +20,8 @@
         th { background: #f1f5f9; color: #475569; font-weight: 600; }
         input, select { width: 100%; padding: 10px; margin-top: 5px; margin-bottom: 12px; border: 1px solid #cbd5e1; border-radius: 6px; box-sizing: border-box; font-size: 0.9rem; }
         label { font-weight: bold; font-size: 0.85rem; color: #475569; display: block; }
+        .dashboard-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px; margin-bottom: 20px; }
+        .dash-card { background: white; padding: 15px; border-radius: 10px; border: 1px solid #e2e8f0; text-align: center; }
         footer { text-align: center; margin-top: 30px; padding: 15px 0; color: #64748b; font-size: 0.8rem; border-top: 1px solid #e2e8f0; }
     </style>
 </head>
@@ -33,12 +35,17 @@
             <a href="{{ url_for('scarico') }}" class="btn" style="background: #ef4444;">➖ Scarico</a>
             <a href="{{ url_for('scanner_globale') }}" class="btn" style="background: #8b5cf6;">📷 Scanner</a>
             <a href="{{ url_for('magazzino_pesante') }}" class="btn" style="background: #0284c7;">🏋️ Mag. Pesante</a>
-            <a href="{{ url_for('manutenzioni') }}" class="btn" style="background: #f59e0b;">🔧 Manutenzioni</a>
+            <a href="{{ url_for('manutenzioni') }}" class="btn" style="background: #f59e0b;">🔧 Man. Magazzino</a>
+            <a href="{{ url_for('richieste_manutenzione') }}" class="btn" style="background: #dc2626; position: relative;">
+                🛠️ Interventi Officina
+                {% if (interventi_aperti_count + interventi_in_lavoro_count) > 0 %}
+                    <span style="background: #ef4444; color: white; border-radius: 50%; padding: 2px 6px; font-size: 0.7rem; position: absolute; top: -5px; right: -5px;">{{ interventi_aperti_count + interventi_in_lavoro_count }}</span>
+                {% endif %}
+            </a>
             <a href="{{ url_for('storico_manutenzioni') }}" class="btn" style="background: #64748b;">📜 Storico</a>
             <a href="{{ url_for('fornitori') }}" class="btn" style="background: #0369a1;">🏢 Fornitori</a>
             <a href="{{ url_for('documenti') }}" class="btn" style="background: #0e7490;">📁 Documenti</a>
             
-            <!-- PULSANTE PROMEMORIA CON BADGE DI NOTIFICA -->
             <a href="{{ url_for('promemoria') }}" class="btn" style="background: #d97706; position: relative;">
                 ⏰ Promemoria
                 {% if promemoria_urgenti > 0 %}
@@ -63,6 +70,61 @@
       {% endif %}
     {% endwith %}
 
+    <!-- WIDGET DASHBOARD STATO OFFICINA -->
+    <div class="dashboard-grid">
+        <div class="dash-card" style="border-left: 5px solid #ef4444;">
+            <span style="font-size: 0.8rem; color: #64748b; font-weight: bold;">INTERVENTI APERTI</span>
+            <div style="font-size: 1.8rem; font-weight: bold; color: #ef4444;">{{ interventi_aperti_count }}</div>
+        </div>
+        <div class="dash-card" style="border-left: 5px solid #f59e0b;">
+            <span style="font-size: 0.8rem; color: #64748b; font-weight: bold;">IN LAVORAZIONE</span>
+            <div style="font-size: 1.8rem; font-weight: bold; color: #f59e0b;">{{ interventi_in_lavoro_count }}</div>
+        </div>
+        <div class="dash-card" style="border-left: 5px solid #ea580c;">
+            <span style="font-size: 0.8rem; color: #64748b; font-weight: bold;">ATTESA RICAMBIO</span>
+            <div style="font-size: 1.8rem; font-weight: bold; color: #ea580c;">{{ interventi_attesa_count }}</div>
+        </div>
+        <div class="dash-card" style="border-left: 5px solid #10b981;">
+            <span style="font-size: 0.8rem; color: #64748b; font-weight: bold;">PROMEMORIA ATTIVI</span>
+            <div style="font-size: 1.8rem; font-weight: bold; color: #10b981;">{{ promemoria_urgenti }}</div>
+        </div>
+    </div>
+
+    <!-- AVVISO SCORTE MINIME / SOTTO SOGLIA -->
+    {% if prodotti_sotto_soglia %}
+    <div class="card" style="border-left: 5px solid #ef4444; background: #fff5f5;">
+        <h3 style="margin-top: 0; font-size: 1rem; color: #991b1b;">⚠️ Attenzione: Articoli Sotto Soglia Minima ({{ prodotti_sotto_soglia|length }})</h3>
+        <div style="overflow-x: auto;">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Articolo</th>
+                        <th>QR Code</th>
+                        <th>Q.tà Attuale</th>
+                        <th>Soglia Minima</th>
+                        <th>Posizione</th>
+                        <th>Azione</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for p in prodotti_sotto_soglia %}
+                    <tr>
+                        <td><strong>{{ p.nome }}</strong></td>
+                        <td><code>{{ p.qr_code }}</code></td>
+                        <td><span style="color: #ef4444; font-weight: bold;">{{ p.quantita }}</span></td>
+                        <td>{{ p.soglia_minima or 3 }}</td>
+                        <td>{{ p.posizione or '-' }}</td>
+                        <td>
+                            <a href="{{ url_for('gestisci_prodotto', qr_code=p.qr_code) }}" class="btn" style="background: #10b981; padding: 4px 8px; font-size: 0.75rem;">+ Ricarica</a>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+    {% endif %}
+
     <!-- CARD AGGIUNTA PRODOTTO -->
     <div class="card">
         <h3 style="margin-top: 0; font-size: 1.1rem; color: #334155;">➕ Aggiungi o Aggiorna Articolo</h3>
@@ -84,6 +146,10 @@
                 <input type="number" name="quantita" value="1" min="0">
             </div>
             <div>
+                <label>Soglia Minima Allarme:</label>
+                <input type="number" name="soglia_minima" value="3" min="1">
+            </div>
+            <div>
                 <label>Posizione / Scaffale:</label>
                 <input type="text" name="posizione" placeholder="Es. Reparto A1">
             </div>
@@ -99,14 +165,15 @@
         </form>
     </div>
 
-    <!-- ELENCO PRODOTTI CON RICERCA ISTANTANEA -->
+    <!-- ELENCO PRODOTTI CON RICERCA ISTANTANEA ED ESPORTAZIONE -->
     <div class="card">
         <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; margin-bottom: 10px;">
             <h3 style="margin: 0; font-size: 1.1rem; color: #334155;">Elenco Articoli in Magazzino</h3>
-            <div style="display: flex; gap: 10px; align-items: center;">
-                <input type="text" id="filtroProdotti" placeholder="🔍 Cerca articolo, SAP o posizione..." onkeyup="FiltraProdotti()" style="width: 280px; margin: 0; padding: 6px 10px;">
-                <a href="{{ url_for('upload') }}" class="btn" style="background: #4f46e5; padding: 7px 12px; font-size: 0.8rem;">📥 Importa CSV</a>
-                <a href="{{ url_for('stampa_tutti_qr') }}" class="btn" style="background: #0284c7; padding: 7px 12px; font-size: 0.8rem;" target="_blank">🖨️ Stampa QR</a>
+            <div style="display: flex; gap: 5px; align-items: center; flex-wrap: wrap;">
+                <input type="text" id="filtroProdotti" placeholder="🔍 Cerca articolo..." onkeyup="FiltraProdotti()" style="width: 200px; margin: 0; padding: 6px 10px;">
+                <a href="{{ url_for('esporta_inventario') }}" class="btn" style="background: #059669; padding: 7px 10px; font-size: 0.8rem;">📊 Esporta CSV</a>
+                <a href="{{ url_for('upload') }}" class="btn" style="background: #4f46e5; padding: 7px 10px; font-size: 0.8rem;">📥 Importa CSV</a>
+                <a href="{{ url_for('stampa_tutti_qr') }}" class="btn" style="background: #0284c7; padding: 7px 10px; font-size: 0.8rem;" target="_blank">🖨️ Stampa QR</a>
             </div>
         </div>
 
