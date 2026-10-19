@@ -99,6 +99,7 @@ def init_db():
                 data_scadenza VARCHAR(255),
                 priorita VARCHAR(50) DEFAULT 'Media',
                 ricorrenza VARCHAR(50) DEFAULT 'Nessuna',
+                assegnato_a VARCHAR(255),
                 completato BOOLEAN DEFAULT FALSE,
                 creato_il TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             );
@@ -113,7 +114,8 @@ def init_db():
                 puo_vedere_manutenzione INT DEFAULT 1,
                 puo_eliminare INT DEFAULT 0,
                 puo_eliminare_storico INT DEFAULT 0,
-                puo_gestire_documenti INT DEFAULT 1
+                puo_gestire_documenti INT DEFAULT 1,
+                puo_assegnare_promemoria INT DEFAULT 0
             );
         """)
 
@@ -165,11 +167,13 @@ def init_db():
         cur.execute("ALTER TABLE fornitori ADD COLUMN IF NOT EXISTS settore_note VARCHAR(255);")
         cur.execute("ALTER TABLE contatti_tecnici ADD COLUMN IF NOT EXISTS email VARCHAR(255);")
         cur.execute("ALTER TABLE promemoria ADD COLUMN IF NOT EXISTS ricorrenza VARCHAR(50) DEFAULT 'Nessuna';")
+        cur.execute("ALTER TABLE promemoria ADD COLUMN IF NOT EXISTS assegnato_a VARCHAR(255);")
+        cur.execute("ALTER TABLE utenti ADD COLUMN IF NOT EXISTS puo_assegnare_promemoria INT DEFAULT 0;")
         
         cur.execute("SELECT * FROM utenti WHERE username = 'admin';")
         if not cur.fetchone():
             hashed_pw = generate_password_hash("admin")
-            cur.execute("INSERT INTO utenti (username, password, is_admin, puo_vedere_manutenzione, puo_eliminare, puo_eliminare_storico, puo_gestire_documenti) VALUES (%s, %s, 1, 1, 1, 1, 1);", ('admin', hashed_pw))
+            cur.execute("INSERT INTO utenti (username, password, is_admin, puo_vedere_manutenzione, puo_eliminare, puo_eliminare_storico, puo_gestire_documenti, puo_assegnare_promemoria) VALUES (%s, %s, 1, 1, 1, 1, 1, 1);", ('admin', hashed_pw))
 
         conn.commit()
         cur.close()
@@ -190,6 +194,10 @@ def require_login():
 def index():
     prodotti = []
     promemoria_urgenti = 0
+    username = session.get('username')
+    is_admin = session.get('is_admin')
+    puo_assegnare = session.get('puo_assegnare_promemoria')
+    
     try:
         conn = get_db_connection()
         cur = conn.cursor()
@@ -197,7 +205,12 @@ def index():
         cur.execute("SELECT * FROM prodotti ORDER BY nome ASC;")
         tutti = cur.fetchall()
         
-        cur.execute("SELECT COUNT(*) as count FROM promemoria WHERE completato = FALSE;")
+        # Conta promemoria non completati visibili all'utente loggato
+        if is_admin or puo_assegnare:
+            cur.execute("SELECT COUNT(*) as count FROM promemoria WHERE completato = FALSE;")
+        else:
+            cur.execute("SELECT COUNT(*) as count FROM promemoria WHERE completato = FALSE AND (assegnato_a = %s OR assegnato_a IS NULL OR assegnato_a = '');", (username,))
+        
         res_p = cur.fetchone()
         if res_p:
             promemoria_urgenti = res_p['count']
@@ -235,6 +248,7 @@ def login():
                 session['puo_eliminare'] = user.get('puo_eliminare', 0)
                 session['puo_eliminare_storico'] = user.get('puo_eliminare_storico', 0)
                 session['puo_gestire_documenti'] = user.get('puo_gestire_documenti', 1)
+                session['puo_assegnare_promemoria'] = user.get('puo_assegnare_promemoria', 0)
                 registra_log("Accesso effettuato al sistema")
                 return redirect(url_for('index'))
             else:
@@ -259,7 +273,7 @@ def registra():
                 conn = get_db_connection()
                 cur = conn.cursor()
                 hashed_pw = generate_password_hash(password)
-                cur.execute("INSERT INTO utenti (username, password, is_admin, puo_vedere_manutenzione, puo_eliminare, puo_eliminare_storico, puo_gestire_documenti) VALUES (%s, %s, 0, 1, 0, 0, 1);", (username, hashed_pw))
+                cur.execute("INSERT INTO utenti (username, password, is_admin, puo_vedere_manutenzione, puo_eliminare, puo_eliminare_storico, puo_gestire_documenti, puo_assegnare_promemoria) VALUES (%s, %s, 0, 1, 0, 0, 1, 0);", (username, hashed_pw))
                 conn.commit()
                 cur.close()
                 conn.close()
@@ -310,6 +324,8 @@ def toggle_permesso(user_id, tipo):
             cur.execute("UPDATE utenti SET puo_eliminare_storico = 1 - puo_eliminare_storico WHERE id = %s;", (user_id,))
         elif tipo == 'documenti':
             cur.execute("UPDATE utenti SET puo_gestire_documenti = 1 - puo_gestire_documenti WHERE id = %s;", (user_id,))
+        elif tipo == 'assegnare_promemoria':
+            cur.execute("UPDATE utenti SET puo_assegnare_promemoria = 1 - puo_assegnare_promemoria WHERE id = %s;", (user_id,))
         conn.commit()
         cur.close()
         conn.close()
@@ -359,11 +375,16 @@ def elimina_utente(user_id):
 def visualizza_log():
     return redirect(url_for('admin_utenti'))
 
-# --- GESTIONE PROMEMORIA ---
+# --- GESTIONE PROMEMORIA CON ASSEGNAZIONE ED ACCESS PERMISSION ---
 @app.route("/promemoria", methods=["GET", "POST"])
 def promemoria():
+    username_corrente = session.get('username')
+    is_admin = session.get('is_admin')
+    puo_assegnare = session.get('puo_assegnare_promemoria')
+
     conn = get_db_connection()
     cur = conn.cursor()
+    
     if request.method == "POST":
         titolo = request.form.get("titolo")
         descrizione = request.form.get("descrizione", "")
@@ -371,21 +392,46 @@ def promemoria():
         priorita = request.form.get("priorita", "Media")
         ricorrenza = request.form.get("ricorrenza", "Nessuna")
         
+        # Se l'utente può assegnare, usa il valore del form, altrimenti assegna a se stesso
+        if is_admin or puo_assegnare:
+            assegnato_a = request.form.get("assegnato_a")
+            if not assegnato_a:
+                assegnato_a = username_corrente
+        else:
+            assegnato_a = username_corrente
+        
         if titolo:
             cur.execute("""
-                INSERT INTO promemoria (titolo, descrizione, data_scadenza, priorita, ricorrenza)
-                VALUES (%s, %s, %s, %s, %s);
-            """, (titolo, descrizione, data_scadenza, priorita, ricorrenza))
+                INSERT INTO promemoria (titolo, descrizione, data_scadenza, priorita, ricorrenza, assegnato_a)
+                VALUES (%s, %s, %s, %s, %s, %s);
+            """, (titolo, descrizione, data_scadenza, priorita, ricorrenza, assegnato_a))
             conn.commit()
-            registra_log(f"Creato promemoria: {titolo} (Ricorrenza: {ricorrenza})")
+            registra_log(f"Creato promemoria: {titolo} per utente {assegnato_a}")
             flash("Promemoria aggiunto con successo!", "success")
         return redirect(url_for("promemoria"))
         
-    cur.execute("SELECT * FROM promemoria ORDER BY completato ASC, data_scadenza ASC;")
+    # Recupera lista utenti per il menu a tendina se chi visita ha i permessi
+    lista_utenti = []
+    if is_admin or puo_assegnare:
+        cur.execute("SELECT username FROM utenti ORDER BY username ASC;")
+        lista_utenti = cur.fetchall()
+        cur.execute("SELECT * FROM promemoria ORDER BY completato ASC, data_scadenza ASC;")
+    else:
+        # L'utente normale vede solo le sue attività o quelle senza assegnazione
+        cur.execute("""
+            SELECT * FROM promemoria 
+            WHERE assegnato_a = %s OR assegnato_a IS NULL OR assegnato_a = '' 
+            ORDER BY completato ASC, data_scadenza ASC;
+        """, (username_corrente,))
+
     lista_promemoria = cur.fetchall()
     cur.close()
     conn.close()
-    return render_template("promemoria.html", promemoria=lista_promemoria)
+    
+    return render_template("promemoria.html", 
+                           promemoria=lista_promemoria, 
+                           lista_utenti=lista_utenti, 
+                           puo_assegnare=(is_admin or puo_assegnare))
 
 @app.route("/completa_promemoria/<int:promemoria_id>", methods=["POST"])
 def completa_promemoria(promemoria_id):
@@ -398,7 +444,6 @@ def completa_promemoria(promemoria_id):
         ricorrenza = p.get('ricorrenza', 'Nessuna')
         data_attuale_str = p.get('data_scadenza')
         
-        # Se c'è una ricorrenza e una data valida, calcola la scadenza successiva
         if ricorrenza and ricorrenza != 'Nessuna' and data_attuale_str:
             try:
                 dt_scadenza = datetime.strptime(data_attuale_str, '%Y-%m-%d')
