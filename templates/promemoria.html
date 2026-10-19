@@ -22,6 +22,7 @@
         label { font-weight: bold; font-size: 0.85rem; color: #475569; display: block; }
         footer { text-align: center; margin-top: 30px; padding: 15px 0; color: #64748b; font-size: 0.8rem; border-top: 1px solid #e2e8f0; }
         .badge-ricorrenza { background: #e0f2fe; color: #0369a1; padding: 3px 8px; border-radius: 12px; font-size: 0.75rem; font-weight: bold; display: inline-block; }
+        .badge-utente { background: #f1f5f9; color: #334155; padding: 3px 8px; border-radius: 6px; font-size: 0.8rem; font-weight: bold; }
     </style>
 </head>
 <body>
@@ -72,6 +73,17 @@
                         <option value="Anno">📆 Ogni Anno</option>
                     </select>
                 </div>
+
+                {% if puo_assegnare %}
+                <div>
+                    <label>👤 Assegna a Utente:</label>
+                    <select name="assegnato_a">
+                        {% for u in lista_utenti %}
+                            <option value="{{ u.username }}" {% if u.username == session.get('username') %}selected{% endif %}>{{ u.username }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                {% endif %}
             </div>
             <div>
                 <label>Note / Descrizione dettagliata:</label>
@@ -91,6 +103,7 @@
                         <tr>
                             <th>Stato</th>
                             <th>Titolo & Note</th>
+                            <th>Assegnato A</th>
                             <th>Scadenza</th>
                             <th>Priorità</th>
                             <th>Ricorrenza</th>
@@ -112,6 +125,9 @@
                                 {% if p.descrizione %}
                                     <br><small style="color: #64748b;">{{ p.descrizione }}</small>
                                 {% endif %}
+                            </td>
+                            <td>
+                                <span class="badge-utente">👤 {{ p.assegnato_a or 'Tutti' }}</span>
                             </td>
                             <td>{{ p.data_scadenza or 'Nessuna' }}</td>
                             <td>
@@ -141,7 +157,7 @@
                 </table>
             </div>
         {% else %}
-            <p style="color: #64748b; text-align: center; padding: 20px 0;">Nessun promemoria presente.</p>
+            <p style="color: #64748b; text-align: center; padding: 20px 0;">Nessun promemoria presente per il tuo utente.</p>
         {% endif %}
     </div>
 
