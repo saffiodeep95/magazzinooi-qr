@@ -2,157 +2,147 @@
 <html lang="it">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Magazzino OMG - Gestione Utenti e Log</title>
-    
-    <link rel="manifest" href="{{ url_for('static', filename='manifest.json') }}">
-    <link rel="icon" type="image/png" href="{{ url_for('static', filename='icon.png') }}">
-    <link rel="apple-touch-icon" href="{{ url_for('static', filename='icon.png') }}">
-    <meta name="theme-color" content="#4f46e5">
-
+    <title>Magazzino OMG - Gestione Utenti & Log</title>
     <style>
-        body { font-family: sans-serif; max-width: 980px; margin: 0 auto; padding: 15px; background: #f8fafc; color: #1e293b; box-sizing: border-box; }
+        body { font-family: sans-serif; max-width: 1200px; margin: 0 auto; padding: 15px; background: #f8fafc; color: #1e293b; }
         .card { background: white; padding: 20px; border-radius: 12px; border: 1px solid #e2e8f0; margin-bottom: 20px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
-        .btn { background: #0284c7; color: #ffffff !important; padding: 8px 14px; border: none; border-radius: 6px; font-weight: bold; cursor: pointer; text-decoration: none; display: inline-block; font-size: 0.85rem; margin: 2px; }
-        .btn:hover { opacity: 0.9; }
+        .btn { background: #0284c7; color: white; padding: 6px 12px; border: none; border-radius: 6px; font-weight: bold; cursor: pointer; text-decoration: none; display: inline-block; font-size: 0.8rem; }
         table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 0.85rem; }
-        th, td { padding: 10px 10px; text-align: left; border-bottom: 1px solid #e2e8f0; vertical-align: middle; }
-        th { background: #f1f5f9; color: #475569; font-weight: 600; }
-        input { width: 100%; padding: 6px; margin-top: 2px; margin-bottom: 6px; border: 1px solid #cbd5e1; border-radius: 6px; box-sizing: border-box; font-size: 0.85rem; }
-        footer { text-align: center; margin-top: 30px; padding: 15px 0; color: #64748b; font-size: 0.8rem; border-top: 1px solid #e2e8f0; }
+        th, td { padding: 8px; text-align: left; border-bottom: 1px solid #e2e8f0; }
+        th { background: #f1f5f9; color: #475569; }
+        input, select { padding: 6px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 0.8rem; }
     </style>
 </head>
 <body>
-
     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
-        <h1 style="font-size: 1.5rem; margin: 0;">⚙️ Gestione Utenti e Permessi</h1>
+        <h1>⚙️ Gestione Utenti & Permessi</h1>
         <a href="{{ url_for('index') }}" class="btn" style="background: #475569;">← Home</a>
     </div>
 
     {% with messages = get_flashed_messages(with_categories=true) %}
       {% if messages %}
         {% for category, message in messages %}
-          <div style="background: {% if category == 'error' %}#fee2e2; color: #991b1b; border: 1px solid #fca5a5;{% else %}#dcfce7; color: #166534; border: 1px solid #bbf7d0;{% endif %} padding: 12px; border-radius: 8px; margin-bottom: 15px; font-size: 0.9rem;">
+          <div style="background: {% if category == 'error' %}#fee2e2; color: #991b1b;{% else %}#dcfce7; color: #166534;{% endif %} padding: 10px; border-radius: 6px; margin-bottom: 15px;">
             {{ message }}
           </div>
         {% endfor %}
       {% endif %}
     {% endwith %}
 
-    <!-- CARD UTENTI -->
     <div class="card">
-        <h3 style="margin-top: 0; font-size: 1.1rem; color: #334155;">👥 Utenti Registrati e Permessi</h3>
-        {% if utenti %}
-            <div style="overflow-x: auto;">
-                <table>
-                    <thead>
-                        <tr>
-                            <th>Username</th>
-                            <th>Manutenzione</th>
-                            <th>Elimina Art.</th>
-                            <th>Elimina Storico</th>
-                            <th>Documenti</th>
-                            <th>Assegna Promemoria</th>
-                            <th>Reset Password</th>
-                            <th>Azioni</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for u in utenti %}
-                        <tr>
-                            <td>
-                                <strong>{{ u.username }}</strong>
-                                {% if u.is_admin %}<br><small style="color: #2563eb; font-weight: bold;">[Admin]</small>{% endif %}
-                            </td>
-                            <td>
-                                <form action="{{ url_for('toggle_permesso', user_id=u.id, tipo='manutenzione') }}" method="POST">
-                                    <button type="submit" class="btn" style="background: {% if u.puo_vedere_manutenzione %}#10b981{% else %}#94a3b8{% endif %}; font-size: 0.75rem;">
-                                        {% if u.puo_vedere_manutenzione %}SÌ{% else %}NO{% endif %}
-                                    </button>
+        <h3>👥 Elenco Utenti Registrati e Permessi Granulari</h3>
+        <div style="overflow-x: auto;">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Username</th>
+                        <th>Admin</th>
+                        <th>Vedi Manut.</th>
+                        <th>Apri Interv.</th>
+                        <th>Assegna Interv.</th>
+                        <th>Elimina Mag.</th>
+                        <th>Elimina Storico</th>
+                        <th>Documenti</th>
+                        <th>Assegna Prom.</th>
+                        <th>Azioni Password / Elimina</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for u in utenti %}
+                    <tr>
+                        <td><strong>{{ u.username }}</strong></td>
+                        <td>{{ 'Si' if u.is_admin else 'No' }}</td>
+                        <td>
+                            <form action="{{ url_for('toggle_permesso', user_id=u.id, tipo='manutenzione') }}" method="POST">
+                                <button type="submit" class="btn" style="background: {% if u.puo_vedere_manutenzione %}#10b981{% else %}#ef4444{% endif %}; font-size: 0.75rem;">
+                                    {{ 'Si' if u.puo_vedere_manutenzione else 'No' }}
+                                </button>
+                            </form>
+                        </td>
+                        <td>
+                            <form action="{{ url_for('toggle_permesso', user_id=u.id, tipo='aprire_manutenzioni') }}" method="POST">
+                                <button type="submit" class="btn" style="background: {% if u.puo_aprire_manutenzioni %}#10b981{% else %}#ef4444{% endif %}; font-size: 0.75rem;">
+                                    {{ 'Si' if u.puo_aprire_manutenzioni else 'No' }}
+                                </button>
+                            </form>
+                        </td>
+                        <td>
+                            <form action="{{ url_for('toggle_permesso', user_id=u.id, tipo='assegnare_manutenzioni') }}" method="POST">
+                                <button type="submit" class="btn" style="background: {% if u.puo_assegnare_manutenzioni %}#10b981{% else %}#ef4444{% endif %}; font-size: 0.75rem;">
+                                    {{ 'Si' if u.puo_assegnare_manutenzioni else 'No' }}
+                                </button>
+                            </form>
+                        </td>
+                        <td>
+                            <form action="{{ url_for('toggle_permesso', user_id=u.id, tipo='eliminazione') }}" method="POST">
+                                <button type="submit" class="btn" style="background: {% if u.puo_eliminare %}#10b981{% else %}#ef4444{% endif %}; font-size: 0.75rem;">
+                                    {{ 'Si' if u.puo_eliminare else 'No' }}
+                                </button>
+                            </form>
+                        </td>
+                        <td>
+                            <form action="{{ url_for('toggle_permesso', user_id=u.id, tipo='eliminazione_storico') }}" method="POST">
+                                <button type="submit" class="btn" style="background: {% if u.puo_eliminare_storico %}#10b981{% else %}#ef4444{% endif %}; font-size: 0.75rem;">
+                                    {{ 'Si' if u.puo_eliminare_storico else 'No' }}
+                                </button>
+                            </form>
+                        </td>
+                        <td>
+                            <form action="{{ url_for('toggle_permesso', user_id=u.id, tipo='documenti') }}" method="POST">
+                                <button type="submit" class="btn" style="background: {% if u.puo_gestire_documenti %}#10b981{% else %}#ef4444{% endif %}; font-size: 0.75rem;">
+                                    {{ 'Si' if u.puo_gestire_documenti else 'No' }}
+                                </button>
+                            </form>
+                        </td>
+                        <td>
+                            <form action="{{ url_for('toggle_permesso', user_id=u.id, tipo='assegnare_promemoria') }}" method="POST">
+                                <button type="submit" class="btn" style="background: {% if u.puo_assegnare_promemoria %}#10b981{% else %}#ef4444{% endif %}; font-size: 0.75rem;">
+                                    {{ 'Si' if u.puo_assegnare_promemoria else 'No' }}
+                                </button>
+                            </form>
+                        </td>
+                        <td>
+                            <div style="display: flex; gap: 5px; align-items: center;">
+                                <form action="{{ url_for('reset_password', user_id=u.id) }}" method="POST" style="display: flex; gap: 3px;">
+                                    <input type="password" name="nuova_password" placeholder="Nuova psw" style="width: 80px;" required>
+                                    <button type="submit" class="btn" style="background: #f59e0b;">Reset</button>
                                 </form>
-                            </td>
-                            <td>
-                                <form action="{{ url_for('toggle_permesso', user_id=u.id, tipo='eliminazione') }}" method="POST">
-                                    <button type="submit" class="btn" style="background: {% if u.puo_eliminare %}#10b981{% else %}#94a3b8{% endif %}; font-size: 0.75rem;">
-                                        {% if u.puo_eliminare %}SÌ{% else %}NO{% endif %}
-                                    </button>
-                                </form>
-                            </td>
-                            <td>
-                                <form action="{{ url_for('toggle_permesso', user_id=u.id, tipo='eliminazione_storico') }}" method="POST">
-                                    <button type="submit" class="btn" style="background: {% if u.puo_eliminare_storico %}#10b981{% else %}#94a3b8{% endif %}; font-size: 0.75rem;">
-                                        {% if u.puo_eliminare_storico %}SÌ{% else %}NO{% endif %}
-                                    </button>
-                                </form>
-                            </td>
-                            <td>
-                                <form action="{{ url_for('toggle_permesso', user_id=u.id, tipo='documenti') }}" method="POST">
-                                    <button type="submit" class="btn" style="background: {% if u.puo_gestire_documenti %}#10b981{% else %}#94a3b8{% endif %}; font-size: 0.75rem;">
-                                        {% if u.puo_gestire_documenti %}SÌ{% else %}NO{% endif %}
-                                    </button>
-                                </form>
-                            </td>
-                            <td>
-                                <form action="{{ url_for('toggle_permesso', user_id=u.id, tipo='assegnare_promemoria') }}" method="POST">
-                                    <button type="submit" class="btn" style="background: {% if u.puo_assegnare_promemoria %}#10b981{% else %}#94a3b8{% endif %}; font-size: 0.75rem;">
-                                        {% if u.puo_assegnare_promemoria %}SÌ{% else %}NO{% endif %}
-                                    </button>
-                                </form>
-                            </td>
-                            <td>
-                                <form action="{{ url_for('reset_password', user_id=u.id) }}" method="POST" style="display: flex; gap: 4px;">
-                                    <input type="password" name="nuova_password" placeholder="Nuova PW" required style="margin: 0; width: 85px;">
-                                    <button type="submit" class="btn" style="background: #f59e0b; padding: 4px 6px; font-size: 0.75rem;">Salva</button>
-                                </form>
-                            </td>
-                            <td>
                                 {% if u.username != 'admin' %}
-                                <form action="{{ url_for('elimina_utente', user_id=u.id) }}" method="POST" onsubmit="return confirm('Eliminare l\'utente {{ u.username }}?');">
-                                    <button type="submit" class="btn" style="background: #ef4444; padding: 4px 6px; font-size: 0.75rem;">Elimina</button>
+                                <form action="{{ url_for('elimina_utente', user_id=u.id) }}" method="POST" onsubmit="return confirm('Eliminare utente?');">
+                                    <button type="submit" class="btn" style="background: #ef4444;">Elimina</button>
                                 </form>
-                                {% else %}
-                                -
                                 {% endif %}
-                            </td>
-                        </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
-            </div>
-        {% endif %}
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
     </div>
 
-    <!-- CARD LOG DI SISTEMA -->
     <div class="card">
-        <h3 style="margin-top: 0; font-size: 1.1rem; color: #334155;">📊 Registro Attività (Ultime 100 Operazioni)</h3>
-        {% if logs %}
-            <div style="overflow-x: auto; max-height: 400px; overflow-y: auto;">
-                <table>
-                    <thead>
-                        <tr>
-                            <th>Data e Ora</th>
-                            <th>Utente</th>
-                            <th>Descrizione Operazione</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for l in logs %}
-                        <tr>
-                            <td style="white-space: nowrap; font-size: 0.8rem; color: #64748b;">{{ l.data_ora.strftime('%d/%m/%Y %H:%M:%S') if l.data_ora else '-' }}</td>
-                            <td><strong>{{ l.username or 'Sistema' }}</strong></td>
-                            <td>{{ l.descrizione }}</td>
-                        </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
-            </div>
-        {% else %}
-            <p style="color: #64748b; text-align: center; padding: 20px 0;">Nessun log registrato negli ultimi 30 giorni.</p>
-        {% endif %}
+        <h3>📜 Log Attività Recenti</h3>
+        <div style="max-height: 250px; overflow-y: auto;">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Data / Ora</th>
+                        <th>Utente</th>
+                        <th>Descrizione Attività</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for l in logs %}
+                    <tr>
+                        <td>{{ l.data_ora.strftime('%d/%m/%Y %H:%M:%S') if l.data_ora else '-' }}</td>
+                        <td><strong>{{ l.username }}</strong></td>
+                        <td>{{ l.descrizione }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
     </div>
-
-    <footer>
-        <p style="margin: 0;">© 2026 <strong>Marco Pavan</strong> — Tutti i diritti riservati.</p>
-    </footer>
 </body>
 </html>
