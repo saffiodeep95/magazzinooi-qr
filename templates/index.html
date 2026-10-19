@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Magazzino OMG</title>
+    <title>Magazzino OMG - Home</title>
     
     <link rel="manifest" href="{{ url_for('static', filename='manifest.json') }}">
     <link rel="icon" type="image/png" href="{{ url_for('static', filename='icon.png') }}">
@@ -11,9 +11,9 @@
     <meta name="theme-color" content="#4f46e5">
 
     <style>
-        body { font-family: sans-serif; max-width: 1000px; margin: 0 auto; padding: 15px; background: #f8fafc; color: #1e293b; box-sizing: border-box; }
+        body { font-family: sans-serif; max-width: 950px; margin: 0 auto; padding: 15px; background: #f8fafc; color: #1e293b; box-sizing: border-box; }
         .card { background: white; padding: 20px; border-radius: 12px; border: 1px solid #e2e8f0; margin-bottom: 20px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
-        .btn { background: #4f46e5; color: white; padding: 8px 14px; border: none; border-radius: 6px; font-weight: bold; cursor: pointer; text-decoration: none; display: inline-block; font-size: 0.85rem; margin: 2px; }
+        .btn { background: #0284c7; color: #ffffff !important; padding: 8px 14px; border: none; border-radius: 6px; font-weight: bold; cursor: pointer; text-decoration: none; display: inline-block; font-size: 0.85rem; margin: 2px; }
         .btn:hover { opacity: 0.9; }
         table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 0.9rem; }
         th, td { padding: 10px 12px; text-align: left; border-bottom: 1px solid #e2e8f0; vertical-align: middle; }
@@ -21,40 +21,37 @@
         input, select { width: 100%; padding: 10px; margin-top: 5px; margin-bottom: 12px; border: 1px solid #cbd5e1; border-radius: 6px; box-sizing: border-box; font-size: 0.9rem; }
         label { font-weight: bold; font-size: 0.85rem; color: #475569; display: block; }
         footer { text-align: center; margin-top: 30px; padding: 15px 0; color: #64748b; font-size: 0.8rem; border-top: 1px solid #e2e8f0; }
-        .nav-menu { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 15px; }
-        .checkbox-container { display: flex; align-items: center; gap: 8px; margin-top: 10px; margin-bottom: 12px; cursor: pointer; font-weight: bold; font-size: 0.85rem; color: #334155; }
-        .checkbox-container input { width: auto; margin: 0; }
     </style>
 </head>
 <body>
 
+    <!-- INTESTAZIONE E MENU RAPIDO -->
     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; flex-wrap: wrap; gap: 10px;">
         <h1 style="font-size: 1.5rem; margin: 0;">📦 Magazzino OMG</h1>
-        <div style="font-size: 0.9rem; color: #475569;">
-            Utente: <strong>{{ session.username }}</strong> 
-            {% if session.is_admin %}(Admin){% endif %} | 
-            <a href="{{ url_for('logout') }}" style="color: #ef4444; text-decoration: none; font-weight: bold;">Esci</a>
-        </div>
-    </div>
+        <div style="display: flex; gap: 5px; flex-wrap: wrap;">
+            <a href="{{ url_for('carico') }}" class="btn" style="background: #10b981;">➕ Carico</a>
+            <a href="{{ url_for('scarico') }}" class="btn" style="background: #ef4444;">➖ Scarico</a>
+            <a href="{{ url_for('scanner_globale') }}" class="btn" style="background: #8b5cf6;">📷 Scanner</a>
+            <a href="{{ url_for('magazzino_pesante') }}" class="btn" style="background: #0284c7;">🏋️ Mag. Pesante</a>
+            <a href="{{ url_for('manutenzioni') }}" class="btn" style="background: #f59e0b;">🔧 Manutenzioni</a>
+            <a href="{{ url_for('storico_manutenzioni') }}" class="btn" style="background: #64748b;">📜 Storico</a>
+            <a href="{{ url_for('fornitori') }}" class="btn" style="background: #0369a1;">🏢 Fornitori</a>
+            <a href="{{ url_for('documenti') }}" class="btn" style="background: #0e7490;">📁 Documenti</a>
+            
+            <!-- PULSANTE PROMEMORIA CON BADGE DI NOTIFICA -->
+            <a href="{{ url_for('promemoria') }}" class="btn" style="background: #d97706; position: relative;">
+                ⏰ Promemoria
+                {% if promemoria_urgenti > 0 %}
+                    <span style="background: #ef4444; color: white; border-radius: 50%; padding: 2px 6px; font-size: 0.7rem; position: absolute; top: -5px; right: -5px;">{{ promemoria_urgenti }}</span>
+                {% endif %}
+            </a>
 
-    <!-- Menu di Navigazione Rapida -->
-    <div class="nav-menu">
-        <a href="{{ url_for('scanner_globale') }}" class="btn" style="background: #2563eb;">📷 Scanner QR</a>
-        <a href="{{ url_for('carico') }}" class="btn" style="background: #10b981;">➕ Carico</a>
-        <a href="{{ url_for('scarico') }}" class="btn" style="background: #f59e0b;">➖ Scarico</a>
-        <a href="{{ url_for('magazzino_pesante') }}" class="btn" style="background: #475569;">⚖️ Magazzino Pesante</a>
-        {% if session.get('puo_vedere_manutenzione') or session.is_admin %}
-            <a href="{{ url_for('manutenzioni') }}" class="btn" style="background: #8b5cf6;">🔧 Manutenzioni</a>
-        {% endif %}
-        <a href="{{ url_for('fornitori') }}" class="btn" style="background: #0284c7;">🏢 Fornitori</a>
-        {% if session.get('puo_gestire_documenti') or session.is_admin %}
-            <a href="{{ url_for('documenti') }}" class="btn" style="background: #d97706;">📁 Documenti</a>
-        {% endif %}
-        <a href="{{ url_for('upload') }}" class="btn" style="background: #64748b;">📥 Importa CSV</a>
-        <a href="{{ url_for('stampa_tutti_qr') }}" class="btn" style="background: #334155;">🖨️ Stampa QR</a>
-        {% if session.is_admin %}
-            <a href="{{ url_for('admin_utenti') }}" class="btn" style="background: #0ea5e9;">⚙️ Admin & Log</a>
-        {% endif %}
+            {% if session.get('is_admin') %}
+                <a href="{{ url_for('admin_utenti') }}" class="btn" style="background: #334155;">⚙️ Utenti</a>
+                <a href="{{ url_for('visualizza_log') }}" class="btn" style="background: #475569;">📊 Log</a>
+            {% endif %}
+            <a href="{{ url_for('logout') }}" class="btn" style="background: #94a3b8;">🚪 Esci</a>
+        </div>
     </div>
 
     {% with messages = get_flashed_messages(with_categories=true) %}
@@ -67,77 +64,80 @@
       {% endif %}
     {% endwith %}
 
-    <!-- CARD INSERIMENTO NUOVO PRODOTTO -->
+    <!-- CARD AGGIUNTA PRODOTTO -->
     <div class="card">
         <h3 style="margin-top: 0; font-size: 1.1rem; color: #334155;">➕ Aggiungi o Aggiorna Articolo</h3>
-        <form action="{{ url_for('aggiungi_prodotto') }}" method="POST">
-            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 10px;">
-                <div>
-                    <label>Codice QR:</label>
-                    <input type="text" name="qr_code" placeholder="Es. QR12345" required>
-                </div>
-                <div>
-                    <label>Nome Articolo:</label>
-                    <input type="text" name="nome" placeholder="Nome prodotto" required>
-                </div>
-                <div>
-                    <label>Codice SAP:</label>
-                    <input type="text" name="sap" placeholder="Codice SAP">
-                </div>
-                <div>
-                    <label>Quantità:</label>
-                    <input type="number" name="quantita" value="1" min="0" required>
-                </div>
-                <div>
-                    <label>Posizione:</label>
-                    <input type="text" name="posizione" placeholder="Es. Scaffale A1">
-                </div>
-                <div>
-                    <label>Peso (kg / t):</label>
-                    <input type="text" name="peso" placeholder="Es. 25 kg">
-                </div>
+        <form action="{{ url_for('aggiungi_prodotto') }}" method="POST" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 10px; align-items: end;">
+            <div>
+                <label>QR Code / Codice:</label>
+                <input type="text" name="qr_code" placeholder="Scansiona o scrivi..." required>
             </div>
-
-            <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; margin-top: 5px;">
-                <label class="checkbox-container">
-                    <input type="checkbox" name="magazzino_pesante" value="1">
-                    ⚖️ Invia a Magazzino Pesante
+            <div>
+                <label>Nome Articolo:</label>
+                <input type="text" name="nome" placeholder="Nome componente" required>
+            </div>
+            <div>
+                <label>Codice SAP:</label>
+                <input type="text" name="sap" placeholder="Codice SAP">
+            </div>
+            <div>
+                <label>Quantità Iniziale:</label>
+                <input type="number" name="quantita" value="1" min="0">
+            </div>
+            <div>
+                <label>Posizione / Scaffale:</label>
+                <input type="text" name="posizione" placeholder="Es. Reparto A1">
+            </div>
+            <div style="display: flex; align-items: center; height: 40px; margin-bottom: 12px;">
+                <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; margin: 0;">
+                    <input type="checkbox" name="magazzino_pesante" value="1" style="width: 18px; height: 18px; margin: 0;">
+                    Magazzino Pesante
                 </label>
-                <button type="submit" class="btn" style="background: #10b981; padding: 10px 20px;">Salva Articolo</button>
+            </div>
+            <div>
+                <button type="submit" class="btn" style="background: #10b981; width: 100%; padding: 10px;">Salva Articolo</button>
             </div>
         </form>
     </div>
 
-    <!-- CARD ELENCO E RICERCA PRODOTTI -->
+    <!-- ELENCO PRODOTTI CON RICERCA ISTANTANEA -->
     <div class="card">
         <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; margin-bottom: 10px;">
             <h3 style="margin: 0; font-size: 1.1rem; color: #334155;">Elenco Articoli in Magazzino</h3>
-            <input type="text" id="filtroTabella" placeholder="🔍 Cerca articolo o QR..." onkeyup="FiltraTabella()" style="width: 250px; margin: 0; padding: 6px 10px;">
+            <div style="display: flex; gap: 10px; align-items: center;">
+                <input type="text" id="filtroProdotti" placeholder="🔍 Cerca articolo, SAP o posizione..." onkeyup="FiltraProdotti()" style="width: 280px; margin: 0; padding: 6px 10px;">
+                <a href="{{ url_for('upload') }}" class="btn" style="background: #4f46e5; padding: 7px 12px; font-size: 0.8rem;">📥 Importa CSV</a>
+                <a href="{{ url_for('stampa_tutti_qr') }}" class="btn" style="background: #0284c7; padding: 7px 12px; font-size: 0.8rem;" target="_blank">🖨️ Stampa QR</a>
+            </div>
         </div>
-        
+
         {% if prodotti %}
             <div style="overflow-x: auto;">
                 <table id="tabellaProdotti">
                     <thead>
                         <tr>
+                            <th>QR Code</th>
                             <th>Nome Articolo</th>
-                            <th>Codice QR</th>
-                            <th>Codice SAP</th>
-                            <th>Quantità</th>
+                            <th>SAP</th>
+                            <th>Q.tà</th>
                             <th>Posizione</th>
                             <th>Azioni</th>
                         </tr>
                     </thead>
                     <tbody>
                         {% for p in prodotti %}
-                        <tr style="{% if p.quantita == 0 %}background-color: #fee2e2; color: #991b1b; font-weight: bold;{% elif p.quantita == 1 %}background-color: #fef3c7; color: #92400e; font-weight: bold;{% endif %}">
-                            <td>{{ p.nome }}</td>
-                            <td style="font-family: monospace; font-size: 0.85rem;">{{ p.qr_code }}</td>
+                        <tr>
+                            <td><code>{{ p.qr_code }}</code></td>
+                            <td><strong>{{ p.nome }}</strong></td>
                             <td>{{ p.sap or '-' }}</td>
-                            <td><strong>{{ p.quantita }}</strong></td>
+                            <td>
+                                <span style="font-weight: bold; color: {% if p.quantita <= (p.soglia_minima or 3) %}#ef4444{% else %}#10b981{% endif %};">
+                                    {{ p.quantita }}
+                                </span>
+                            </td>
                             <td>{{ p.posizione or '-' }}</td>
                             <td>
-                                <a href="{{ url_for('gestisci_prodotto', qr_code=p.qr_code) }}" class="btn" style="padding: 5px 10px; font-size: 0.8rem;">Gestisci</a>
+                                <a href="{{ url_for('gestisci_prodotto', qr_code=p.qr_code) }}" class="btn" style="background: #0284c7; padding: 6px 10px; font-size: 0.8rem;">Gestisci</a>
                             </td>
                         </tr>
                         {% endfor %}
@@ -145,7 +145,7 @@
                 </table>
             </div>
         {% else %}
-            <p style="color: #64748b; text-align: center; padding: 20px 0;">Nessun articolo presente nel magazzino standard.</p>
+            <p style="color: #64748b; text-align: center; padding: 20px 0;">Nessun articolo presente nel magazzino principale.</p>
         {% endif %}
     </div>
 
@@ -155,25 +155,19 @@
     </footer>
 
     <script>
-        function FiltraTabella() {
-            let input = document.getElementById("filtroTabella");
+        function FiltraProdotti() {
+            let input = document.getElementById("filtroProdotti");
             let filter = input.value.toUpperCase();
             let table = document.getElementById("tabellaProdotti");
             if (!table) return;
             let tr = table.getElementsByTagName("tr");
+            
             for (let i = 1; i < tr.length; i++) {
-                let tdName = tr[i].getElementsByTagName("td")[0];
-                let tdQr = tr[i].getElementsByTagName("td")[1];
-                let tdSap = tr[i].getElementsByTagName("td")[2];
-                if (tdName || tdQr || tdSap) {
-                    let txtName = tdName ? tdName.textContent || tdName.innerText : "";
-                    let txtQr = tdQr ? tdQr.textContent || tdQr.innerText : "";
-                    let txtSap = tdSap ? tdSap.textContent || tdSap.innerText : "";
-                    if (txtName.toUpperCase().indexOf(filter) > -1 || txtQr.toUpperCase().indexOf(filter) > -1 || txtSap.toUpperCase().indexOf(filter) > -1) {
-                        tr[i].style.display = "";
-                    } else {
-                        tr[i].style.display = "none";
-                    }
+                let rowText = tr[i].textContent || tr[i].innerText;
+                if (rowText.toUpperCase().indexOf(filter) > -1) {
+                    tr[i].style.display = "";
+                } else {
+                    tr[i].style.display = "none";
                 }
             }
         }
