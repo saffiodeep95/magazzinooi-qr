@@ -41,21 +41,14 @@
       {% endif %}
     {% endwith %}
 
-    <!-- CARD IMPORTAZIONE CSV -->
-    <div class="card" style="background: #f8fafc; border: 2px dashed #cbd5e1;">
-        <h3 style="margin-top: 0; font-size: 1.1rem; color: #334155;">📥 Importa Rubrica da File CSV</h3>
-        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 15px;">
-            <form action="{{ url_for('importa_fornitori_csv') }}" method="POST" enctype="multipart/form-data">
-                <label style="font-size: 0.8rem; color: #475569;">1. Carica prima Fornitori (fornitori_import.csv):</label>
-                <input type="file" name="file_fornitori_csv" accept=".csv" required style="margin-bottom: 8px;">
-                <button type="submit" class="btn" style="background: #2563eb; width: 100%;">Importa Fornitori (CSV)</button>
-            </form>
-            <form action="{{ url_for('importa_tecnici_csv') }}" method="POST" enctype="multipart/form-data">
-                <label style="font-size: 0.8rem; color: #475569;">2. Carica poi Tecnici (contatti_tecnici_import.csv):</label>
-                <input type="file" name="file_tecnici_csv" accept=".csv" required style="margin-bottom: 8px;">
-                <button type="submit" class="btn" style="background: #8b5cf6; width: 100%;">Importa Tecnici (CSV)</button>
-            </form>
-        </div>
+    <!-- CARD IMPORTAZIONE EXCEL DIRETTA -->
+    <div class="card" style="background: #f8fafc; border: 2px dashed #0284c7;">
+        <h3 style="margin-top: 0; font-size: 1.1rem; color: #0369a1;">📊 Carica direttamente il file Excel ("Rubrica telefonica.xlsx")</h3>
+        <form action="{{ url_for('importa_rubrica_excel') }}" method="POST" enctype="multipart/form-data">
+            <label style="font-size: 0.85rem; color: #475569; margin-bottom: 5px;">Seleziona il file .xlsx originale:</label>
+            <input type="file" name="file_excel" accept=".xlsx, .xls" required style="margin-bottom: 10px;">
+            <button type="submit" class="btn" style="background: #0284c7; width: 100%; padding: 10px;">Carica e Organizza Rubrica Automatica</button>
+        </form>
     </div>
 
     <!-- CARD AGGIUNTA MANUALE -->
