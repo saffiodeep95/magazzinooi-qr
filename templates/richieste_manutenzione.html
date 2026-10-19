@@ -44,7 +44,8 @@
       {% endif %}
     {% endwith %}
 
-    <!-- FORM CREAZIONE RICHIESTA -->
+    <!-- FORM CREAZIONE RICHIESTA (Mostrato solo se abilitato) -->
+    {% if puo_aprire %}
     <div class="card">
         <h3 style="margin-top: 0; font-size: 1.1rem; color: #334155;">➕ Apri Nuova Scheda Intervento</h3>
         <form action="{{ url_for('richieste_manutenzione') }}" method="POST" enctype="multipart/form-data">
@@ -76,6 +77,7 @@
                         <option value="Alta / Fermo Macchina">🔴 Urgente / Fermo Macchina</option>
                     </select>
                 </div>
+                {% if puo_assegnare_manut %}
                 <div>
                     <label>Assegna a Tecnico (Opzionale):</label>
                     <select name="assegnato_a">
@@ -85,6 +87,7 @@
                         {% endfor %}
                     </select>
                 </div>
+                {% endif %}
                 <div>
                     <label>Allega Foto / Immagine (Opzionale):</label>
                     <input type="file" name="allegato_foto" accept="image/*" style="padding: 4px; font-size: 0.75rem;">
@@ -97,6 +100,7 @@
             <button type="submit" class="btn" style="background: #10b981; padding: 10px 20px;">Apri Richiesta Intervento</button>
         </form>
     </div>
+    {% endif %}
 
     <!-- TABELLA INTERVENTI -->
     <div class="card">
@@ -202,7 +206,8 @@
                                         </form>
                                     </div>
 
-                                    <!-- CESSIONE / RIASSEGNAZIONE RAPIDA -->
+                                    <!-- CESSIONE / RIASSEGNAZIONE RAPIDA (Mostrata solo se abilitata) -->
+                                    {% if puo_assegnare_manut %}
                                     <div style="margin-top: 6px;">
                                         <form action="{{ url_for('cambia_stato_intervento', intervento_id=r.id) }}" method="POST" style="display: flex; gap: 2px;">
                                             <input type="hidden" name="stato" value="Riassegna">
@@ -214,6 +219,7 @@
                                             <button type="submit" class="btn" style="background: #0284c7; padding: 2px 5px; font-size: 0.7rem;">↪️</button>
                                         </form>
                                     </div>
+                                    {% endif %}
                                 {% else %}
                                     <a href="{{ url_for('stampa_intervento', intervento_id=r.id) }}" target="_blank" class="btn" style="background: #0284c7; padding: 4px 8px; font-size: 0.75rem; width: 100%; text-align: center; box-sizing: border-box;">🖨️ Rapportino PDF</a>
                                 {% endif %}
