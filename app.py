@@ -91,6 +91,18 @@ def init_db():
         """)
 
         cur.execute("""
+            CREATE TABLE IF NOT EXISTS promemoria (
+                id SERIAL PRIMARY KEY,
+                titolo VARCHAR(255) NOT NULL,
+                descrizione TEXT,
+                data_scadenza VARCHAR(255),
+                priorita VARCHAR(50) DEFAULT 'Media',
+                completato BOOLEAN DEFAULT FALSE,
+                creato_il TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            );
+        """)
+
+        cur.execute("""
             CREATE TABLE IF NOT EXISTS utenti (
                 id SERIAL PRIMARY KEY,
                 username VARCHAR(255) UNIQUE NOT NULL,
@@ -150,24 +162,7 @@ def init_db():
         
         cur.execute("ALTER TABLE fornitori ADD COLUMN IF NOT EXISTS settore_note VARCHAR(255);")
         cur.execute("ALTER TABLE contatti_tecnici ADD COLUMN IF NOT EXISTS email VARCHAR(255);")
-        cur.execute("ALTER TABLE prodotti ADD COLUMN IF NOT EXISTS magazzino_pesante INT DEFAULT 0;")
-        cur.execute("ALTER TABLE prodotti ADD COLUMN IF NOT EXISTS peso VARCHAR(255);")
-        cur.execute("ALTER TABLE prodotti ADD COLUMN IF NOT EXISTS in_manutenzione BOOLEAN DEFAULT FALSE;")
-        cur.execute("ALTER TABLE prodotti ADD COLUMN IF NOT EXISTS cliente_manutenzione VARCHAR(255);")
-        cur.execute("ALTER TABLE prodotti ADD COLUMN IF NOT EXISTS quantita_manutenzione INT DEFAULT 0;")
-        cur.execute("ALTER TABLE prodotti ADD COLUMN IF NOT EXISTS data_spedizione VARCHAR(255);")
-        cur.execute("ALTER TABLE prodotti ADD COLUMN IF NOT EXISTS data_riconsegna VARCHAR(255);")
-        cur.execute("ALTER TABLE prodotti ADD COLUMN IF NOT EXISTS vettore VARCHAR(255);")
-        cur.execute("ALTER TABLE prodotti ADD COLUMN IF NOT EXISTS ordine_amministrativo BOOLEAN DEFAULT FALSE;")
-        cur.execute("ALTER TABLE prodotti ADD COLUMN IF NOT EXISTS note_manutenzione TEXT;")
-        cur.execute("ALTER TABLE prodotti ADD COLUMN IF NOT EXISTS soglia_minima INT DEFAULT 3;")
         
-        cur.execute("ALTER TABLE utenti ADD COLUMN IF NOT EXISTS is_admin INT DEFAULT 0;")
-        cur.execute("ALTER TABLE utenti ADD COLUMN IF NOT EXISTS puo_vedere_manutenzione INT DEFAULT 1;")
-        cur.execute("ALTER TABLE utenti ADD COLUMN IF NOT EXISTS puo_eliminare INT DEFAULT 0;")
-        cur.execute("ALTER TABLE utenti ADD COLUMN IF NOT EXISTS puo_eliminare_storico INT DEFAULT 0;")
-        cur.execute("ALTER TABLE utenti ADD COLUMN IF NOT EXISTS puo_gestire_documenti INT DEFAULT 1;")
-
         cur.execute("SELECT * FROM utenti WHERE username = 'admin';")
         if not cur.fetchone():
             hashed_pw = generate_password_hash("admin")
@@ -191,11 +186,20 @@ def require_login():
 @app.route("/")
 def index():
     prodotti = []
+    promemoria_urgenti = 0
     try:
         conn = get_db_connection()
         cur = conn.cursor()
+        
         cur.execute("SELECT * FROM prodotti ORDER BY nome ASC;")
         tutti = cur.fetchall()
+        
+        # Conta promemoria non completati
+        cur.execute("SELECT COUNT(*) as count FROM promemoria WHERE completato = FALSE;")
+        res_p = cur.fetchone()
+        if res_p:
+            promemoria_urgenti = res_p['count']
+            
         cur.close()
         conn.close()
         
@@ -206,7 +210,8 @@ def index():
                 prodotti.append(p)
     except Exception as e:
         print(f"Errore index: {e}")
-    return render_template("index.html", prodotti=prodotti)
+        
+    return render_template("index.html", prodotti=prodotti, promemoria_urgenti=promemoria_urgenti)
 
 @app.route("/login", methods=["GET", "POST"])
 def login():
@@ -299,66 +304,56 @@ def visualizza_log():
         print(f"Errore log: {e}")
     return render_template("log_attivita.html", logs=logs)
 
-@app.route("/toggle_permesso/<int:user_id>/<tipo>", methods=["POST"])
-def toggle_permesso(user_id, tipo):
-    if not session.get('is_admin'):
-        return redirect(url_for('index'))
-    try:
-        conn = get_db_connection()
-        cur = conn.cursor()
-        if tipo == 'manutenzione':
-            cur.execute("UPDATE utenti SET puo_vedere_manutenzione = 1 - puo_vedere_manutenzione WHERE id = %s;", (user_id,))
-        elif tipo == 'eliminazione':
-            cur.execute("UPDATE utenti SET puo_eliminare = 1 - puo_eliminare WHERE id = %s;", (user_id,))
-        elif tipo == 'eliminazione_storico':
-            cur.execute("UPDATE utenti SET puo_eliminare_storico = 1 - puo_eliminare_storico WHERE id = %s;", (user_id,))
-        elif tipo == 'documenti':
-            cur.execute("UPDATE utenti SET puo_gestire_documenti = 1 - puo_gestire_documenti WHERE id = %s;", (user_id,))
-        conn.commit()
-        cur.close()
-        conn.close()
-        registra_log(f"Modificati permessi utente ID {user_id} ({tipo})")
-    except Exception as e:
-        print(f"Errore toggle_permesso: {e}")
-        flash(f"Errore nell'aggiornamento dei permessi: {e}", "error")
-    return redirect(url_for('admin_utenti'))
-
-@app.route("/reset_password/<int:user_id>", methods=["POST"])
-def reset_password(user_id):
-    if not session.get('is_admin'):
-        return redirect(url_for('index'))
-    nuova_password = request.form.get("nuova_password")
-    if nuova_password:
-        try:
-            conn = get_db_connection()
-            cur = conn.cursor()
-            hashed_pw = generate_password_hash(nuova_password)
-            cur.execute("UPDATE utenti SET password = %s WHERE id = %s;", (hashed_pw, user_id))
+# --- GESTIONE PROMEMORIA ---
+@app.route("/promemoria", methods=["GET", "POST"])
+def promemoria():
+    conn = get_db_connection()
+    cur = conn.cursor()
+    
+    if request.method == "POST":
+        titolo = request.form.get("titolo")
+        descrizione = request.form.get("descrizione", "")
+        data_scadenza = request.form.get("data_scadenza", "")
+        priorita = request.form.get("priorita", "Media")
+        
+        if titolo:
+            cur.execute("""
+                INSERT INTO promemoria (titolo, descrizione, data_scadenza, priorita)
+                VALUES (%s, %s, %s, %s);
+            """, (titolo, descrizione, data_scadenza, priorita))
             conn.commit()
-            cur.close()
-            conn.close()
-            registra_log(f"Reset password per utente ID {user_id}")
-            flash("Password aggiornata con successo!", "success")
-        except Exception as e:
-            flash(f"Errore reset password: {e}", "error")
-    return redirect(url_for('admin_utenti'))
+            registra_log(f"Creato promemoria: {titolo}")
+            flash("Promemoria aggiunto con successo!", "success")
+        return redirect(url_for("promemoria"))
+        
+    cur.execute("SELECT * FROM promemoria ORDER BY completato ASC, data_scadenza ASC;")
+    lista_promemoria = cur.fetchall()
+    cur.close()
+    conn.close()
+    return render_template("promemoria.html", promemoria=lista_promemoria)
 
-@app.route("/elimina_utente/<int:user_id>", methods=["POST"])
-def elimina_utente(user_id):
-    if not session.get('is_admin'):
-        return redirect(url_for('index'))
-    try:
-        conn = get_db_connection()
-        cur = conn.cursor()
-        cur.execute("DELETE FROM utenti WHERE id = %s AND username != 'admin';", (user_id,))
-        conn.commit()
-        cur.close()
-        conn.close()
-        registra_log(f"Eliminato utente ID {user_id}")
-        flash("Utente eliminato con successo.", "success")
-    except Exception as e:
-        flash(f"Errore eliminazione utente: {e}", "error")
-    return redirect(url_for('admin_utenti'))
+@app.route("/completa_promemoria/<int:promemoria_id>", methods=["POST"])
+def completa_promemoria(promemoria_id):
+    conn = get_db_connection()
+    cur = conn.cursor()
+    cur.execute("UPDATE promemoria SET completato = NOT completato WHERE id = %s;", (promemoria_id,))
+    conn.commit()
+    cur.close()
+    conn.close()
+    flash("Stato promemoria aggiornato.", "success")
+    return redirect(url_for("promemoria"))
+
+@app.route("/elimina_promemoria/<int:promemoria_id>", methods=["POST"])
+def elimina_promemoria(promemoria_id):
+    conn = get_db_connection()
+    cur = conn.cursor()
+    cur.execute("DELETE FROM promemoria WHERE id = %s;", (promemoria_id,))
+    conn.commit()
+    cur.close()
+    conn.close()
+    registra_log(f"Eliminato promemoria ID {promemoria_id}")
+    flash("Promemoria eliminato.", "success")
+    return redirect(url_for("promemoria"))
 
 # --- GESTIONE FORNITORI E CONTATTI TECNICI ---
 @app.route("/fornitori", methods=["GET", "POST"])
@@ -394,135 +389,14 @@ def fornitori():
     conn.close()
     return render_template("fornitori.html", fornitori=lista_fornitori)
 
-@app.route("/modifica_fornitore/<int:fornitore_id>", methods=["POST"])
-def modifica_fornitore(fornitore_id):
-    nome_azienda = request.form.get("nome_azienda")
-    settore_note = request.form.get("settore_note", "")
-    indirizzo = request.form.get("indirizzo", "")
-    p_iva = request.form.get("p_iva", "")
-    telefono = request.form.get("telefono", "")
-    email = request.form.get("email", "")
-    
-    try:
-        conn = get_db_connection()
-        cur = conn.cursor()
-        cur.execute("""
-            UPDATE fornitori 
-            SET nome_azienda = %s, settore_note = %s, indirizzo = %s, p_iva = %s, telefono = %s, email = %s
-            WHERE id = %s;
-        """, (nome_azienda, settore_note, indirizzo, p_iva, telefono, email, fornitore_id))
-        conn.commit()
-        cur.close()
-        conn.close()
-        registra_log(f"Modificati dati fornitore ID {fornitore_id}: {nome_azienda}")
-        flash("Dati fornitore aggiornati con successo!", "success")
-    except Exception as e:
-        flash(f"Errore modifica fornitore: {e}", "error")
-        
-    return redirect(url_for("fornitori"))
-
-@app.route("/fornitore/<int:fornitore_id>", methods=["GET", "POST"])
-def dettaglio_fornitore(fornitore_id):
-    try:
-        conn = get_db_connection()
-        cur = conn.cursor()
-        
-        if request.method == "POST":
-            nome_tecnico = request.form.get("nome")
-            telefono_tecnico = request.form.get("telefono")
-            mansione = request.form.get("mansione", "")
-            email_tecnico = request.form.get("email", "")
-            if nome_tecnico and telefono_tecnico:
-                cur.execute("""
-                    INSERT INTO contatti_tecnici (fornitore_id, nome, telefono, mansione, email) 
-                    VALUES (%s, %s, %s, %s, %s);
-                """, (fornitore_id, nome_tecnico, telefono_tecnico, mansione, email_tecnico))
-                conn.commit()
-                registra_log(f"Aggiunto contatto tecnico {nome_tecnico} per fornitore ID {fornitore_id}")
-                flash("Contatto tecnico aggiunto con successo!", "success")
-            cur.close()
-            conn.close()
-            return redirect(url_for("dettaglio_fornitore", fornitore_id=fornitore_id))
-
-        cur.execute("SELECT * FROM fornitori WHERE id = %s;", (fornitore_id,))
-        fornitore = cur.fetchone()
-        
-        if not fornitore:
-            flash("Fornitore non trovato.", "error")
-            cur.close()
-            conn.close()
-            return redirect(url_for("fornitori"))
-
-        cur.execute("SELECT * FROM contatti_tecnici WHERE fornitore_id = %s ORDER BY nome ASC;", (fornitore_id,))
-        contatti = cur.fetchall()
-        
-        cur.close()
-        conn.close()
-        return render_template("dettaglio_fornitore.html", fornitore=fornitore, contatti=contatti)
-    except Exception as e:
-        print(f"Errore dettaglio_fornitore: {e}")
-        flash(f"Errore interno del server: {e}", "error")
-        return redirect(url_for("fornitori"))
-
-@app.route("/modifica_contatto_tecnico/<int:contatto_id>/<int:fornitore_id>", methods=["POST"])
-def modifica_contatto_tecnico(contatto_id, fornitore_id):
-    nome = request.form.get("nome")
-    telefono = request.form.get("telefono")
-    mansione = request.form.get("mansione", "")
-    email = request.form.get("email", "")
-    
-    try:
-        conn = get_db_connection()
-        cur = conn.cursor()
-        cur.execute("""
-            UPDATE contatti_tecnici 
-            SET nome = %s, telefono = %s, mansione = %s, email = %s
-            WHERE id = %s;
-        """, (nome, telefono, mansione, email, contatto_id))
-        conn.commit()
-        cur.close()
-        conn.close()
-        registra_log(f"Modificato contatto tecnico ID {contatto_id}: {nome}")
-        flash("Contatto tecnico aggiornato con successo!", "success")
-    except Exception as e:
-        flash(f"Errore modifica contatto: {e}", "error")
-        
-    return redirect(url_for("dettaglio_fornitore", fornitore_id=fornitore_id))
-
-@app.route("/elimina_contatto_tecnico/<int:contatto_id>/<int:fornitore_id>", methods=["POST"])
-def elimina_contatto_tecnico(contatto_id, fornitore_id):
-    conn = get_db_connection()
-    cur = conn.cursor()
-    cur.execute("DELETE FROM contatti_tecnici WHERE id = %s;", (contatto_id,))
-    conn.commit()
-    cur.close()
-    conn.close()
-    registra_log(f"Eliminato contatto tecnico ID {contatto_id}")
-    flash("Contatto tecnico eliminato.", "success")
-    return redirect(url_for("dettaglio_fornitore", fornitore_id=fornitore_id))
-
-@app.route("/elimina_fornitore/<int:fornitore_id>", methods=["POST"])
-def elimina_fornitore(fornitore_id):
-    conn = get_db_connection()
-    cur = conn.cursor()
-    cur.execute("DELETE FROM fornitori WHERE id = %s;", (fornitore_id,))
-    conn.commit()
-    cur.close()
-    conn.close()
-    registra_log(f"Eliminato fornitore ID {fornitore_id}")
-    flash("Fornitore eliminato con successo.", "success")
-    return redirect(url_for("fornitori"))
-
 @app.route("/importa_intelligente", methods=["POST"])
 def importa_intelligente():
     file_caricato = request.files.get("file_caricato")
-    
     if not file_caricato or file_caricato.filename == '':
         flash("Nessun file selezionato.", "error")
         return redirect(url_for("fornitori"))
         
     filename = file_caricato.filename.lower()
-    
     try:
         if filename.endswith(('.xlsx', '.xls')):
             df = pd.read_excel(file_caricato)
@@ -544,7 +418,6 @@ def importa_intelligente():
         count_fornitori = 0
         count_tecnici = 0
         current_fornitore_id = None
-        current_fornitore_nome = None
         
         for _, row in df.iterrows():
             valori = [str(val).strip() for val in row.values if pd.notna(val) and str(val).strip() != 'nan']
@@ -577,9 +450,6 @@ def importa_intelligente():
                 telefono = next((v for v in valori if re.search(r'\d{3}', v) and not '@' in v), '')
                 email = next((v for v in valori if '@' in v), '')
                 
-                current_fornitore_nome = nome_azienda
-                
-                # Controllo sicuro ed esente da errori di vincoli unici
                 cur.execute("SELECT id FROM fornitori WHERE LOWER(nome_azienda) = LOWER(%s);", (nome_azienda,))
                 f_res = cur.fetchone()
                 
@@ -631,7 +501,7 @@ def importa_intelligente():
         
     return redirect(url_for("fornitori"))
 
-# --- ALTRE ROTTE ---
+# --- ALTRE ROTTE ESSENZIALI ---
 @app.route("/upload", methods=["GET", "POST"])
 def upload():
     if request.method == "POST":
@@ -715,7 +585,6 @@ def magazzino_pesante():
     except Exception as e:
         print(f"Errore magazzino_pesante: {e}")
         prodotti = []
-        
     return render_template("magazzino_pesante.html", prodotti=prodotti)
 
 @app.route("/manutenzioni")
@@ -736,7 +605,6 @@ def manutenzioni():
     except Exception as e:
         print(f"Errore manutenzioni: {e}")
         prodotti = []
-        
     return render_template("manutenzioni.html", prodotti=prodotti)
 
 @app.route("/storico_manutenzioni")
@@ -821,19 +689,8 @@ def scarico():
                 
                 qta_iniziale = prodotto['quantita']
                 nuova_quantita = max(0, qta_iniziale - quantita_da_scaricare)
-                
                 cur.execute("UPDATE prodotti SET quantita = %s WHERE qr_code = %s;", (nuova_quantita, qr_code))
                 conn.commit()
-                
-                if qta_iniziale > 0 and nuova_quantita == 0:
-                    registra_log(f"🚨 ESAURITO: Il prodotto '{prodotto['nome']}' (QR: {qr_code}) è esaurito (0 pezzi)!")
-                    flash(f"🚨 ATTENZIONE! Il prodotto '{prodotto['nome']}' è completamente ESAURITO (0 pezzi)!", "error")
-                elif qta_iniziale > 1 and nuova_quantita == 1:
-                    registra_log(f"⚠️ SCORTA BASSA: Il prodotto '{prodotto['nome']}' (QR: {qr_code}) è sceso a 1 pezzo.")
-                    flash(f"⚠️ Attenzione! Il prodotto '{prodotto['nome']}' è sceso a 1 solo pezzo rimasto!", "error")
-                else:
-                    flash(f"Scarico di {quantita_da_scaricare} pz effettuato con successo!", "success")
-                
                 registra_log(f"Scarico di -{quantita_da_scaricare} pz su prodotto QR: {qr_code}")
                 cur.close()
                 conn.close()
@@ -854,14 +711,12 @@ def scanner_globale():
                 prodotto = cur.fetchone()
                 cur.close()
                 conn.close()
-                
                 if prodotto:
                     return redirect(url_for("gestisci_prodotto", qr_code=qr_code))
                 else:
                     flash(f"Nessun articolo trovato con QR Code: {qr_code}", "error")
             except Exception as e:
                 print(f"Errore scanner: {e}")
-                flash("Errore di comunicazione con il database. Riprova.", "error")
     return render_template("scanner_globale.html")
 
 @app.route("/gestisci/<qr_code>")
@@ -870,21 +725,17 @@ def gestisci_prodotto(qr_code):
     cur = conn.cursor()
     cur.execute("SELECT * FROM prodotti WHERE qr_code = %s;", (qr_code,))
     prodotto = cur.fetchone()
-    
     lista_fornitori = []
     try:
         cur.execute("SELECT * FROM fornitori ORDER BY nome_azienda ASC;")
         lista_fornitori = cur.fetchall()
     except Exception:
         pass
-
     cur.close()
     conn.close()
-
     if not prodotto:
         flash("Prodotto non trovato nel sistema!", "error")
         return redirect(url_for("index"))
-
     return render_template("gestisci.html", prodotto=prodotto, fornitori=lista_fornitori)
 
 @app.route("/aggiorna/<qr_code>", methods=["POST"])
@@ -905,10 +756,9 @@ def aggiorna_prodotto(qr_code):
         conn.commit()
         cur.close()
         conn.close()
-        registra_log(f"Aggiornato articolo: {nome} (QR: {qr_code})")
-        flash("Articolo e dati magazzino aggiornati con successo!", "success")
+        flash("Articolo aggiornato con successo!", "success")
     except Exception as e:
-        flash(f"Errore durante l'aggiornamento: {e}", "error")
+        flash(f"Errore: {e}", "error")
     return redirect(url_for("gestisci_prodotto", qr_code=qr_code))
 
 @app.route("/aggiungi", methods=["POST"])
@@ -928,8 +778,7 @@ def aggiungi_prodotto():
     try:
         conn = get_db_connection()
         cur = conn.cursor()
-        cur.execute(
-            """
+        cur.execute("""
             INSERT INTO prodotti (qr_code, nome, sap, peso, quantita, posizione, magazzino_pesante)
             VALUES (%s, %s, %s, %s, %s, %s, %s)
             ON CONFLICT (qr_code)
@@ -940,16 +789,13 @@ def aggiungi_prodotto():
                 peso = EXCLUDED.peso,
                 posizione = EXCLUDED.posizione,
                 magazzino_pesante = EXCLUDED.magazzino_pesante;
-            """,
-            (qr_code, nome, sap, peso, quantita, posizione, flag_sezione)
-        )
+        """, (qr_code, nome, sap, peso, quantita, posizione, flag_sezione))
         conn.commit()
         cur.close()
         conn.close()
-        registra_log(f"Aggiunto/Aggiornato prodotto: {nome} (QR: {qr_code})")
         flash("Prodotto salvato con successo!", "success")
     except Exception as e:
-        flash(f"Errore nell'inserimento: {e}", "error")
+        flash(f"Errore: {e}", "error")
 
     if flag_sezione == 1:
         return redirect(url_for("magazzino_pesante"))
@@ -994,8 +840,7 @@ def manda_manutenzione(qr_code):
         conn.commit()
         cur.close()
         conn.close()
-        registra_log(f"Inviato in manutenzione: {prod['nome'] if prod else qr_code}")
-        flash("Articolo inviato in manutenzione e registrato nello storico con successo!", "success")
+        flash("Articolo inviato in manutenzione!", "success")
     except Exception as e:
         flash(f"Errore: {e}", "error")
     return redirect(url_for("gestisci_prodotto", qr_code=qr_code))
@@ -1021,8 +866,7 @@ def ripristina_magazzino(qr_code):
         conn.commit()
         cur.close()
         conn.close()
-        registra_log(f"Rientrato in magazzino da manutenzione QR: {qr_code}")
-        flash("Articolo rientrato in magazzino con successo!", "success")
+        flash("Articolo rientrato in magazzino!", "success")
     except Exception as e:
         flash(f"Errore: {e}", "error")
     return redirect(url_for("gestisci_prodotto", qr_code=qr_code))
@@ -1030,36 +874,29 @@ def ripristina_magazzino(qr_code):
 @app.route("/elimina", methods=["POST"])
 def elimina_prodotto():
     qr_code = request.form.get("qr_code")
-    if not qr_code:
-        flash("QR Code non valido per l'eliminazione!", "error")
-        return redirect(url_for("index"))
-
-    try:
-        conn = get_db_connection()
-        cur = conn.cursor()
-        cur.execute("DELETE FROM prodotti WHERE qr_code = %s;", (qr_code,))
-        conn.commit()
-        cur.close()
-        conn.close()
-        registra_log(f"Eliminato prodotto QR: {qr_code}")
-        flash("Articolo eliminato dal magazzino con successo!", "success")
-    except Exception as e:
-        flash(f"Errore durante l'eliminazione: {e}", "error")
-
+    if qr_code:
+        try:
+            conn = get_db_connection()
+            cur = conn.cursor()
+            cur.execute("DELETE FROM prodotti WHERE qr_code = %s;", (qr_code,))
+            conn.commit()
+            cur.close()
+            conn.close()
+            flash("Articolo eliminato.", "success")
+        except Exception as e:
+            flash(f"Errore: {e}", "error")
     return redirect(url_for("index"))
 
 @app.route("/documenti", defaults={"cartella_id": None}, methods=["GET", "POST"])
 @app.route("/documenti/<int:cartella_id>", methods=["GET", "POST"])
 def documenti(cartella_id):
     if not (session.get('is_admin') or session.get('puo_gestire_documenti')):
-        flash("Accesso ai documenti non autorizzato.", "error")
+        flash("Accesso negato.", "error")
         return redirect(url_for('index'))
-
     conn = get_db_connection()
     cur = conn.cursor()
     cartella_corrente = None
     percorso_breadcrumb = []
-
     if cartella_id:
         cur.execute("SELECT * FROM cartelle WHERE id = %s;", (cartella_id,))
         cartella_corrente = cur.fetchone()
@@ -1071,7 +908,6 @@ def documenti(cartella_id):
                 curr = cur.fetchone()
             else:
                 curr = None
-
     if request.method == "POST":
         azione = request.form.get("azione")
         if azione == "crea_cartella":
@@ -1079,22 +915,16 @@ def documenti(cartella_id):
             if nome_cartella:
                 cur.execute("INSERT INTO cartelle (nome, parent_id) VALUES (%s, %s);", (nome_cartella, cartella_id))
                 conn.commit()
-                registra_log(f"Creata cartella documenti: {nome_cartella}")
-                flash("Cartella creata con successo!", "success")
+                flash("Cartella creata!", "success")
         elif azione == "carica_file":
             file_caricato = request.files.get("file_caricato")
             if file_caricato and file_caricato.filename:
-                nome_file = file_caricato.filename
-                tipo_file = file_caricato.mimetype
-                dati_file = file_caricato.read()
                 cur.execute("""
                     INSERT INTO documenti (cartella_id, nome_file, tipo_file, dati_file)
                     VALUES (%s, %s, %s, %s);
-                """, (cartella_id, nome_file, tipo_file, dati_file))
+                """, (cartella_id, file_caricato.filename, file_caricato.mimetype, file_caricato.read()))
                 conn.commit()
-                registra_log(f"Caricato file: {nome_file}")
-                flash("File caricato con successo!", "success")
-                
+                flash("File caricato!", "success")
         cur.close()
         conn.close()
         return redirect(url_for("documenti", cartella_id=cartella_id) if cartella_id else url_for("documenti"))
@@ -1110,16 +940,13 @@ def documenti(cartella_id):
     else:
         cur.execute("SELECT id, nome_file, tipo_file, caricato_il FROM documenti WHERE cartella_id IS NULL ORDER BY nome_file ASC;")
     lista_file = cur.fetchall()
-
     cur.close()
     conn.close()
-
     return render_template("documenti.html", cartella_corrente=cartella_corrente, sottocartelle=sottocartelle, lista_file=lista_file, percorso_breadcrumb=percorso_breadcrumb)
 
 @app.route("/scarica_file/<int:file_id>")
 def scarica_file(file_id):
     if not (session.get('is_admin') or session.get('puo_gestire_documenti')):
-        flash("Accesso negato.", "error")
         return redirect(url_for('index'))
     conn = get_db_connection()
     cur = conn.cursor()
@@ -1128,35 +955,12 @@ def scarica_file(file_id):
     cur.close()
     conn.close()
     if file_data:
-        registra_log(f"Scaricato file: {file_data['nome_file']}")
         return send_file(io.BytesIO(file_data['dati_file']), mimetype=file_data['tipo_file'], as_attachment=True, download_name=file_data['nome_file'])
-    flash("File non trovato.", "error")
-    return redirect(url_for("documenti"))
-
-@app.route("/elimina_cartella/<int:cartella_id>", methods=["POST"])
-def elimina_cartella(cartella_id):
-    if not session.get('is_admin'):
-        flash("Solo l'amministratore può eliminare le cartelle.", "error")
-        return redirect(url_for('documenti'))
-    conn = get_db_connection()
-    cur = conn.cursor()
-    cur.execute("SELECT parent_id FROM cartelle WHERE id = %s;", (cartella_id,))
-    res = cur.fetchone()
-    parent_id = res['parent_id'] if res else None
-    cur.execute("DELETE FROM cartelle WHERE id = %s;", (cartella_id,))
-    conn.commit()
-    cur.close()
-    conn.close()
-    registra_log(f"Eliminata cartella documenti ID {cartella_id}")
-    flash("Cartella eliminata con successo.", "success")
-    if parent_id:
-        return redirect(url_for("documenti", cartella_id=parent_id))
     return redirect(url_for("documenti"))
 
 @app.route("/elimina_file/<int:file_id>", methods=["POST"])
 def elimina_file(file_id):
     if not session.get('is_admin'):
-        flash("Solo l'amministratore può eliminare i documenti.", "error")
         return redirect(url_for('documenti'))
     conn = get_db_connection()
     cur = conn.cursor()
@@ -1167,11 +971,8 @@ def elimina_file(file_id):
     conn.commit()
     cur.close()
     conn.close()
-    registra_log(f"Eliminato file ID {file_id}")
-    flash("File eliminato con successo.", "success")
-    if cartella_id:
-        return redirect(url_for("documenti", cartella_id=cartella_id))
-    return redirect(url_for("documenti"))
+    flash("File eliminato.", "success")
+    return redirect(url_for("documenti", cartella_id=cartella_id) if cartella_id else url_for("documenti"))
 
 if __name__ == "_main_":
     app.run(debug=True)
