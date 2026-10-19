@@ -579,17 +579,29 @@ def importa_intelligente():
                 
                 current_fornitore_nome = nome_azienda
                 
-                cur.execute("""
-                    INSERT INTO fornitori (nome_azienda, settore_note, indirizzo, telefono, email)
-                    VALUES (%s, %s, %s, %s, %s)
-                    ON CONFLICT (nome_azienda) DO UPDATE SET
-                        settore_note = COALESCE(NULLIF(EXCLUDED.settore_note, ''), fornitori.settore_note);
-                """, (nome_azienda, settore, indirizzo, telefono, email))
-                
+                # Controllo sicuro ed esente da errori di vincoli unici
                 cur.execute("SELECT id FROM fornitori WHERE LOWER(nome_azienda) = LOWER(%s);", (nome_azienda,))
-                res = cur.fetchone()
-                current_fornitore_id = res['id'] if res else None
-                count_fornitori += 1
+                f_res = cur.fetchone()
+                
+                if f_res:
+                    current_fornitore_id = f_res['id']
+                    cur.execute("""
+                        UPDATE fornitori 
+                        SET settore_note = COALESCE(NULLIF(%s, ''), settore_note),
+                            indirizzo = COALESCE(NULLIF(%s, ''), indirizzo),
+                            telefono = COALESCE(NULLIF(%s, ''), telefono),
+                            email = COALESCE(NULLIF(%s, ''), email)
+                        WHERE id = %s;
+                    """, (settore, indirizzo, telefono, email, current_fornitore_id))
+                else:
+                    cur.execute("""
+                        INSERT INTO fornitori (nome_azienda, settore_note, indirizzo, telefono, email)
+                        VALUES (%s, %s, %s, %s, %s)
+                        RETURNING id;
+                    """, (nome_azienda, settore, indirizzo, telefono, email))
+                    res = cur.fetchone()
+                    current_fornitore_id = res['id'] if res else None
+                    count_fornitori += 1
             else:
                 if current_fornitore_id:
                     nome_tecnico = col1_raw
