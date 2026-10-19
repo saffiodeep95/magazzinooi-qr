@@ -41,13 +41,22 @@
       {% endif %}
     {% endwith %}
 
-    <!-- CARD IMPORTAZIONE EXCEL DIRETTA -->
-    <div class="card" style="background: #f8fafc; border: 2px dashed #0284c7;">
-        <h3 style="margin-top: 0; font-size: 1.1rem; color: #0369a1;">📊 Carica direttamente il file Excel ("Rubrica telefonica.xlsx")</h3>
-        <form action="{{ url_for('importa_rubrica_excel') }}" method="POST" enctype="multipart/form-data">
-            <label style="font-size: 0.85rem; color: #475569; margin-bottom: 5px;">Seleziona il file .xlsx originale:</label>
-            <input type="file" name="file_excel" accept=".xlsx, .xls" required style="margin-bottom: 10px;">
-            <button type="submit" class="btn" style="background: #0284c7; width: 100%; padding: 10px;">Carica e Organizza Rubrica Automatica</button>
+    <!-- CARD IMPORTAZIONE DUE FILE SEPARATI (PULIZIA DUPLICATI) -->
+    <div class="card" style="background: #f8fafc; border: 2px dashed #2563eb;">
+        <h3 style="margin-top: 0; font-size: 1.1rem; color: #1e40af;">📂 Importa i due file (Aziende e Tecnici senza duplicati)</h3>
+        <p style="font-size: 0.85rem; color: #64748b; margin-top: 0;">Carica i tuoi file separati in formato .xlsx o .csv. L'app pulirà e collegherà automaticamente tutto senza doppioni.</p>
+        <form action="{{ url_for('importa_due_file') }}" method="POST" enctype="multipart/form-data" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 15px; align-items: end;">
+            <div>
+                <label style="font-size: 0.85rem; color: #475569;">1. File Aziende / Fornitori (.xlsx / .csv):</label>
+                <input type="file" name="file_fornitori" accept=".xlsx, .xls, .csv" required style="margin-bottom: 0;">
+            </div>
+            <div>
+                <label style="font-size: 0.85rem; color: #475569;">2. File Contatti Tecnici (.xlsx / .csv):</label>
+                <input type="file" name="file_tecnici" accept=".xlsx, .xls, .csv" required style="margin-bottom: 0;">
+            </div>
+            <div style="grid-column: 1 / -1;">
+                <button type="submit" class="btn" style="background: #2563eb; width: 100%; padding: 10px;">Carica e Sincronizza Rubrica</button>
+            </div>
         </form>
     </div>
 
@@ -187,7 +196,7 @@
             if (!table) return;
             let tr = table.getElementsByTagName("tr");
             
-            for (let i = 1; i < tr.length; i++) {
+            for (let i = 0; i < tr.length; i++) {
                 if (tr[i].classList.contains('edit-box')) continue;
                 let rowText = tr[i].textContent || tr[i].innerText;
                 if (rowText.toUpperCase().indexOf(filter) > -1) {
