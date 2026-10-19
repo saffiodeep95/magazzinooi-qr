@@ -44,7 +44,6 @@
       {% endif %}
     {% endwith %}
 
-    <!-- FORM CREAZIONE RICHIESTA (Mostrato solo se abilitato) -->
     {% if puo_aprire %}
     <div class="card">
         <h3 style="margin-top: 0; font-size: 1.1rem; color: #334155;">➕ Apri Nuova Scheda Intervento</h3>
@@ -79,9 +78,8 @@
                 </div>
                 {% if puo_assegnare_manut %}
                 <div>
-                    <label>Assegna a Tecnico (Opzionale):</label>
-                    <select name="assegnato_a">
-                        <option value="">-- Libera (Prendibile da chiunque) --</option>
+                    <label>Assegna a Squadra (Multiplo - Ctrl+Click):</label>
+                    <select name="assegnato_a[]" multiple style="height: 80px;">
                         {% for u in lista_utenti %}
                             <option value="{{ u.username }}">{{ u.username }}</option>
                         {% endfor %}
@@ -102,7 +100,6 @@
     </div>
     {% endif %}
 
-    <!-- TABELLA INTERVENTI -->
     <div class="card">
         <h3 style="margin-top: 0; font-size: 1.1rem; color: #334155;">📋 Schede Intervento Aperte e Storico</h3>
         {% if richieste %}
@@ -112,7 +109,7 @@
                         <tr>
                             <th>Stato / Tipo</th>
                             <th>Macchina & Guasto</th>
-                            <th>Tecnico</th>
+                            <th>Squadra / Tecnici</th>
                             <th>Tempi Lavoro</th>
                             <th>Ricambi Usati</th>
                             <th>Gestione & Azioni</th>
@@ -189,7 +186,6 @@
                                 {% endif %}
 
                                 {% if r.stato != 'Completata' %}
-                                    <!-- FORM CHIUSURA CON CARRELLO RICAMBI -->
                                     <div style="background: #f1f5f9; padding: 8px; border-radius: 6px; margin-top: 6px;">
                                         <form action="{{ url_for('cambia_stato_intervento', intervento_id=r.id) }}" method="POST">
                                             <input type="hidden" name="stato" value="Completata">
@@ -206,17 +202,17 @@
                                         </form>
                                     </div>
 
-                                    <!-- CESSIONE / RIASSEGNAZIONE RAPIDA (Mostrata solo se abilitata) -->
                                     {% if puo_assegnare_manut %}
                                     <div style="margin-top: 6px;">
-                                        <form action="{{ url_for('cambia_stato_intervento', intervento_id=r.id) }}" method="POST" style="display: flex; gap: 2px;">
+                                        <form action="{{ url_for('cambia_stato_intervento', intervento_id=r.id) }}" method="POST">
                                             <input type="hidden" name="stato" value="Riassegna">
-                                            <select name="nuovo_assegnatario" style="margin: 0; padding: 2px; font-size: 0.7rem;">
+                                            <label style="font-size: 0.7rem;">Aggiorna Squadra:</label>
+                                            <select name="nuovi_assegnatari[]" multiple style="height: 50px; font-size: 0.7rem; margin-bottom: 2px;">
                                                 {% for u in lista_utenti %}
-                                                    <option value="{{ u.username }}" {% if u.username == r.assegnato_a %}selected{% endif %}>{{ u.username }}</option>
+                                                    <option value="{{ u.username }}" {% if u.username in (r.assegnato_a or '').split(', ') %}selected{% endif %}>{{ u.username }}</option>
                                                 {% endfor %}
                                             </select>
-                                            <button type="submit" class="btn" style="background: #0284c7; padding: 2px 5px; font-size: 0.7rem;">↪️</button>
+                                            <button type="submit" class="btn" style="background: #0284c7; padding: 2px 5px; font-size: 0.7rem; width: 100%;">👥 Salva Squadra</button>
                                         </form>
                                     </div>
                                     {% endif %}
