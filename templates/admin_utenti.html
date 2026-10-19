@@ -11,14 +11,14 @@
     <meta name="theme-color" content="#4f46e5">
 
     <style>
-        body { font-family: sans-serif; max-width: 950px; margin: 0 auto; padding: 15px; background: #f8fafc; color: #1e293b; box-sizing: border-box; }
+        body { font-family: sans-serif; max-width: 980px; margin: 0 auto; padding: 15px; background: #f8fafc; color: #1e293b; box-sizing: border-box; }
         .card { background: white; padding: 20px; border-radius: 12px; border: 1px solid #e2e8f0; margin-bottom: 20px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
         .btn { background: #0284c7; color: #ffffff !important; padding: 8px 14px; border: none; border-radius: 6px; font-weight: bold; cursor: pointer; text-decoration: none; display: inline-block; font-size: 0.85rem; margin: 2px; }
         .btn:hover { opacity: 0.9; }
-        table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 0.9rem; }
-        th, td { padding: 10px 12px; text-align: left; border-bottom: 1px solid #e2e8f0; vertical-align: middle; }
+        table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 0.85rem; }
+        th, td { padding: 10px 10px; text-align: left; border-bottom: 1px solid #e2e8f0; vertical-align: middle; }
         th { background: #f1f5f9; color: #475569; font-weight: 600; }
-        input { width: 100%; padding: 8px; margin-top: 2px; margin-bottom: 8px; border: 1px solid #cbd5e1; border-radius: 6px; box-sizing: border-box; font-size: 0.85rem; }
+        input { width: 100%; padding: 6px; margin-top: 2px; margin-bottom: 6px; border: 1px solid #cbd5e1; border-radius: 6px; box-sizing: border-box; font-size: 0.85rem; }
         footer { text-align: center; margin-top: 30px; padding: 15px 0; color: #64748b; font-size: 0.8rem; border-top: 1px solid #e2e8f0; }
     </style>
 </head>
@@ -41,7 +41,7 @@
 
     <!-- CARD UTENTI -->
     <div class="card">
-        <h3 style="margin-top: 0; font-size: 1.1rem; color: #334155;">👥 Utenti Registrati nel Sistema</h3>
+        <h3 style="margin-top: 0; font-size: 1.1rem; color: #334155;">👥 Utenti Registrati e Permessi</h3>
         {% if utenti %}
             <div style="overflow-x: auto;">
                 <table>
@@ -49,9 +49,10 @@
                         <tr>
                             <th>Username</th>
                             <th>Manutenzione</th>
-                            <th>Elimina Articoli</th>
+                            <th>Elimina Art.</th>
                             <th>Elimina Storico</th>
-                            <th>Gestione Documenti</th>
+                            <th>Documenti</th>
+                            <th>Assegna Promemoria</th>
                             <th>Reset Password</th>
                             <th>Azioni</th>
                         </tr>
@@ -61,7 +62,7 @@
                         <tr>
                             <td>
                                 <strong>{{ u.username }}</strong>
-                                {% if u.is_admin %}<br><small style="color: #2563eb; font-weight: bold;">[Amministratore]</small>{% endif %}
+                                {% if u.is_admin %}<br><small style="color: #2563eb; font-weight: bold;">[Admin]</small>{% endif %}
                             </td>
                             <td>
                                 <form action="{{ url_for('toggle_permesso', user_id=u.id, tipo='manutenzione') }}" method="POST">
@@ -92,15 +93,22 @@
                                 </form>
                             </td>
                             <td>
-                                <form action="{{ url_for('reset_password', user_id=u.id) }}" method="POST" style="display: flex; gap: 5px;">
-                                    <input type="password" name="nuova_password" placeholder="Nuova PW" required style="margin: 0; width: 90px;">
-                                    <button type="submit" class="btn" style="background: #f59e0b; padding: 4px 8px; font-size: 0.75rem;">Salva</button>
+                                <form action="{{ url_for('toggle_permesso', user_id=u.id, tipo='assegnare_promemoria') }}" method="POST">
+                                    <button type="submit" class="btn" style="background: {% if u.puo_assegnare_promemoria %}#10b981{% else %}#94a3b8{% endif %}; font-size: 0.75rem;">
+                                        {% if u.puo_assegnare_promemoria %}SÌ{% else %}NO{% endif %}
+                                    </button>
+                                </form>
+                            </td>
+                            <td>
+                                <form action="{{ url_for('reset_password', user_id=u.id) }}" method="POST" style="display: flex; gap: 4px;">
+                                    <input type="password" name="nuova_password" placeholder="Nuova PW" required style="margin: 0; width: 85px;">
+                                    <button type="submit" class="btn" style="background: #f59e0b; padding: 4px 6px; font-size: 0.75rem;">Salva</button>
                                 </form>
                             </td>
                             <td>
                                 {% if u.username != 'admin' %}
                                 <form action="{{ url_for('elimina_utente', user_id=u.id) }}" method="POST" onsubmit="return confirm('Eliminare l\'utente {{ u.username }}?');">
-                                    <button type="submit" class="btn" style="background: #ef4444; padding: 4px 8px; font-size: 0.75rem;">Elimina</button>
+                                    <button type="submit" class="btn" style="background: #ef4444; padding: 4px 6px; font-size: 0.75rem;">Elimina</button>
                                 </form>
                                 {% else %}
                                 -
