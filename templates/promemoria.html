@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Magazzino OMG - Promemoria Attività</title>
+    <title>Magazzino OMG - Promemoria</title>
     
     <link rel="manifest" href="{{ url_for('static', filename='manifest.json') }}">
     <link rel="icon" type="image/png" href="{{ url_for('static', filename='icon.png') }}">
@@ -11,7 +11,7 @@
     <meta name="theme-color" content="#4f46e5">
 
     <style>
-        body { font-family: sans-serif; max-width: 900px; margin: 0 auto; padding: 15px; background: #f8fafc; color: #1e293b; box-sizing: border-box; }
+        body { font-family: sans-serif; max-width: 950px; margin: 0 auto; padding: 15px; background: #f8fafc; color: #1e293b; box-sizing: border-box; }
         .card { background: white; padding: 20px; border-radius: 12px; border: 1px solid #e2e8f0; margin-bottom: 20px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
         .btn { background: #0284c7; color: #ffffff !important; padding: 8px 14px; border: none; border-radius: 6px; font-weight: bold; cursor: pointer; text-decoration: none; display: inline-block; font-size: 0.85rem; margin: 2px; }
         .btn:hover { opacity: 0.9; }
@@ -21,7 +21,7 @@
         input, select, textarea { width: 100%; padding: 10px; margin-top: 5px; margin-bottom: 12px; border: 1px solid #cbd5e1; border-radius: 6px; box-sizing: border-box; font-size: 0.9rem; }
         label { font-weight: bold; font-size: 0.85rem; color: #475569; display: block; }
         footer { text-align: center; margin-top: 30px; padding: 15px 0; color: #64748b; font-size: 0.8rem; border-top: 1px solid #e2e8f0; }
-        .completato { text-decoration: line-through; color: #94a3b8; }
+        .badge-ricorrenza { background: #e0f2fe; color: #0369a1; padding: 3px 8px; border-radius: 12px; font-size: 0.75rem; font-weight: bold; display: inline-block; }
     </style>
 </head>
 <body>
@@ -41,72 +41,98 @@
       {% endif %}
     {% endwith %}
 
-    <!-- NUOVO PROMEMORIA -->
+    <!-- FORM CREAZIONE PROMEMORIA -->
     <div class="card">
-        <h3 style="margin-top: 0; font-size: 1.1rem; color: #334155;">➕ Aggiungi Nuova Attività / Promemoria</h3>
-        <form action="{{ url_for('promemoria') }}" method="POST" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 10px; align-items: end;">
-            <div>
-                <label>Titolo Attività:</label>
-                <input type="text" name="titolo" placeholder="Es. Verifica estintori" required>
+        <h3 style="margin-top: 0; font-size: 1.1rem; color: #334155;">➕ Nuova Attività / Promemoria</h3>
+        <form action="{{ url_for('promemoria') }}" method="POST">
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 10px;">
+                <div>
+                    <label>Titolo / Attività:</label>
+                    <input type="text" name="titolo" placeholder="Es. Controllo livello olio, Pulizia filtri..." required>
+                </div>
+                <div>
+                    <label>Data / Scadenza Iniziale:</label>
+                    <input type="date" name="data_scadenza">
+                </div>
+                <div>
+                    <label>Priorità:</label>
+                    <select name="priorita">
+                        <option value="Bassa">🟢 Bassa</option>
+                        <option value="Media" selected>🟡 Media</option>
+                        <option value="Alta">🔴 Alta / Urgente</option>
+                    </select>
+                </div>
+                <div>
+                    <label>Ricorrenza Attività:</label>
+                    <select name="ricorrenza">
+                        <option value="Nessuna" selected>📌 Nessuna (Singolo)</option>
+                        <option value="Giorno">🔄 Ogni Giorno</option>
+                        <option value="Settimana">📅 Ogni Settimana</option>
+                        <option value="Mese">🗓️ Ogni Mese</option>
+                        <option value="Anno">📆 Ogni Anno</option>
+                    </select>
+                </div>
             </div>
             <div>
-                <label>Data Scadenza:</label>
-                <input type="date" name="data_scadenza">
+                <label>Note / Descrizione dettagliata:</label>
+                <textarea name="descrizione" rows="2" placeholder="Note aggiuntive o istruzioni per l'attività..."></textarea>
             </div>
-            <div>
-                <label>Priorità:</label>
-                <select name="priorita">
-                    <option value="Bassa">Bassa</option>
-                    <option value="Media" selected>Media</option>
-                    <option value="Urgente">🔴 Urgente</option>
-                </select>
-            </div>
-            <div style="grid-column: 1 / -1;">
-                <label>Note / Dettagli:</label>
-                <textarea name="descrizione" rows="2" placeholder="Dettagli aggiuntivi sull'attività..."></textarea>
-            </div>
-            <div>
-                <button type="submit" class="btn" style="background: #10b981; width: 100%; padding: 10px;">Salva Promemoria</button>
-            </div>
+            <button type="submit" class="btn" style="background: #d97706; padding: 10px 20px;">Salva Promemoria</button>
         </form>
     </div>
 
-    <!-- LISTA PROMEMORIA -->
+    <!-- ELENCO PROMEMORIA -->
     <div class="card">
-        <h3 style="margin-top: 0; font-size: 1.1rem; color: #334155;">📋 Elenco Attività</h3>
+        <h3 style="margin-top: 0; font-size: 1.1rem; color: #334155;">📋 Elenco Attività e Promemoria</h3>
         {% if promemoria %}
             <div style="overflow-x: auto;">
                 <table>
                     <thead>
                         <tr>
                             <th>Stato</th>
-                            <th>Attività / Note</th>
+                            <th>Titolo & Note</th>
                             <th>Scadenza</th>
                             <th>Priorità</th>
+                            <th>Ricorrenza</th>
                             <th>Azioni</th>
                         </tr>
                     </thead>
                     <tbody>
                         {% for p in promemoria %}
-                        <tr>
-                            <td style="text-align: center;">
+                        <tr style="{% if p.completato %}opacity: 0.55; background: #f8fafc;{% endif %}">
+                            <td>
                                 <form action="{{ url_for('completa_promemoria', promemoria_id=p.id) }}" method="POST">
-                                    <input type="checkbox" onChange="this.form.submit()" {% if p.completato %}checked{% endif %} style="width: 20px; height: 20px; cursor: pointer;">
+                                    <button type="submit" class="btn" style="background: {% if p.completato %}#10b981{% else %}#cbd5e1; color: #334155 !important;{% endif %}; font-size: 0.75rem; padding: 4px 8px;">
+                                        {% if p.completato %}✓ Fatto{% else %}◯ Da fare{% endif %}
+                                    </button>
                                 </form>
                             </td>
                             <td>
-                                <strong class="{% if p.completato %}completato{% endif %}">{{ p.titolo }}</strong>
-                                {% if p.descrizione %}<br><small style="color: #64748b;" class="{% if p.completato %}completato{% endif %}">{{ p.descrizione }}</small>{% endif %}
+                                <strong style="{% if p.completato %}text-decoration: line-through;{% endif %}">{{ p.titolo }}</strong>
+                                {% if p.descrizione %}
+                                    <br><small style="color: #64748b;">{{ p.descrizione }}</small>
+                                {% endif %}
                             </td>
-                            <td class="{% if p.completato %}completato{% endif %}">{{ p.data_scadenza or '-' }}</td>
+                            <td>{{ p.data_scadenza or 'Nessuna' }}</td>
                             <td>
-                                <span style="padding: 4px 8px; border-radius: 4px; font-size: 0.75rem; font-weight: bold; background: {% if p.priorita == 'Urgente' %}#fee2e2; color: #991b1b;{% elif p.priorita == 'Media' %}#fef3c7; color: #92400e;{% else %}#f1f5f9; color: #475569;{% endif %}">
-                                    {{ p.priorita }}
-                                </span>
+                                {% if p.priorita == 'Alta' %}
+                                    <span style="color: #ef4444; font-weight: bold;">🔴 Alta</span>
+                                {% elif p.priorita == 'Bassa' %}
+                                    <span style="color: #10b981; font-weight: bold;">🟢 Bassa</span>
+                                {% else %}
+                                    <span style="color: #f59e0b; font-weight: bold;">🟡 Media</span>
+                                {% endif %}
                             </td>
-                            <td style="white-space: nowrap;">
-                                <form action="{{ url_for('elimina_promemoria', promemoria_id=p.id) }}" method="POST" style="display: inline;" onsubmit="return confirm('Eliminare questo promemoria?');">
-                                    <button type="submit" class="btn" style="background: #ef4444; padding: 6px 10px; font-size: 0.8rem;">🗑️ Elimina</button>
+                            <td>
+                                {% if p.ricorrenza and p.ricorrenza != 'Nessuna' %}
+                                    <span class="badge-ricorrenza">🔄 Ogni {{ p.ricorrenza }}</span>
+                                {% else %}
+                                    <span style="color: #94a3b8; font-size: 0.8rem;">Singolo</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <form action="{{ url_for('elimina_promemoria', promemoria_id=p.id) }}" method="POST" onsubmit="return confirm('Eliminare questo promemoria?');" style="display: inline;">
+                                    <button type="submit" class="btn" style="background: #ef4444; padding: 4px 8px; font-size: 0.75rem;">Elimina</button>
                                 </form>
                             </td>
                         </tr>
@@ -115,7 +141,7 @@
                 </table>
             </div>
         {% else %}
-            <p style="color: #64748b; text-align: center; padding: 20px 0;">Nessun promemoria attivo.</p>
+            <p style="color: #64748b; text-align: center; padding: 20px 0;">Nessun promemoria presente.</p>
         {% endif %}
     </div>
 
