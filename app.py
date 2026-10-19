@@ -7,6 +7,7 @@
 import os
 import csv
 import io
+import pandas as pd
 import psycopg2
 from psycopg2.extras import RealDictCursor
 from flask import Flask, render_template, request, redirect, url_for, flash, session, send_file
@@ -505,76 +506,81 @@ def elimina_fornitore(fornitore_id):
     flash("Fornitore eliminato con successo.", "success")
     return redirect(url_for("fornitori"))
 
-@app.route("/importa_fornitori_csv", methods=["POST"])
-def importa_fornitori_csv():
-    file_csv = request.files.get("file_fornitori_csv")
-    if file_csv and file_csv.filename.endswith('.csv'):
+@app.route("/importa_rubrica_excel", methods=["POST"])
+def importa_rubrica_excel():
+    file_excel = request.files.get("file_excel")
+    if file_excel and (file_excel.filename.endswith('.xlsx') or file_excel.filename.endswith('.xls')):
         try:
-            stream = io.TextIOWrapper(file_csv.stream, encoding="utf-8-sig")
-            reader = csv.DictReader(stream)
+            df = pd.read_excel(file_excel)
             conn = get_db_connection()
             cur = conn.cursor()
-            count = 0
-            for row in reader:
-                nome_azienda = row.get("nome_azienda", "").strip()
-                settore_note = row.get("settore_note", "").strip()
-                indirizzo = row.get("indirizzo_citta", "").strip()
-                telefono = row.get("telefono", "").strip()
-                email = row.get("email", "").strip()
+            
+            count_fornitori = 0
+            count_tecnici = 0
+            current_fornitore_id = None
+            current_fornitore_nome = None
+            
+            import re
+            for idx, row in df.iterrows():
+                col1_raw = str(row.iloc[1]) if len(row) > 1 and pd.notna(row.iloc[1]) else ''
+                col1 = col1_raw.strip()
+                tel = str(row.iloc[2]).strip() if len(row) > 2 and pd.notna(row.iloc[2]) else ''
+                indirizzo_info = str(row.iloc[3]).strip() if len(row) > 3 and pd.notna(row.iloc[3]) else ''
+                email = str(row.iloc[4]).strip() if len(row) > 4 and pd.notna(row.iloc[4]) else ''
+                extra = str(row.iloc[5]).strip() if len(row) > 5 and pd.notna(row.iloc[5]) else ''
                 
-                if nome_azienda:
+                if not col1 and not tel and not email and not indirizzo_info and not extra:
+                    continue
+                
+                has_double_space = bool(re.search(r'\s{2,}', col1_raw))
+                words = col1.split()
+                first_word = words[0] if words else ''
+                is_person_name = col1.islower() or (len(words) >= 2 and words[0][0].isupper() and words[0][1:].islower() and words[1][0].isupper() and words[1][1:].islower())
+                
+                is_company = False
+                if has_double_space:
+                    is_company = True
+                elif first_word.isupper() and len(first_word) > 1 and not is_person_name:
+                    is_company = True
+                elif not current_fornitore_nome:
+                    is_company = True
+
+                if is_company:
+                    if has_double_space:
+                        parts = re.split(r'\s{2,}', col1_raw.strip(), maxsplit=1)
+                        nome_azienda = parts[0].strip()
+                        settore = parts[1].strip() if len(parts) > 1 else ''
+                    else:
+                        nome_azienda = col1
+                        settore = ''
+                        
+                    current_fornitore_nome = nome_azienda
+                    
                     cur.execute("""
                         INSERT INTO fornitori (nome_azienda, settore_note, indirizzo, telefono, email)
-                        VALUES (%s, %s, %s, %s, %s);
-                    """, (nome_azienda, settore_note, indirizzo, telefono, email))
-                    count += 1
-            conn.commit()
-            cur.close()
-            conn.close()
-            registra_log(f"Importati {count} fornitori tramite CSV")
-            flash(f"Importati con successo {count} fornitori!", "success")
-        except Exception as e:
-            flash(f"Errore importazione fornitori: {e}", "error")
-    else:
-        flash("Carica un file CSV valido per i fornitori.", "error")
-    return redirect(url_for("fornitori"))
-
-@app.route("/importa_tecnici_csv", methods=["POST"])
-def importa_tecnici_csv():
-    file_csv = request.files.get("file_tecnici_csv")
-    if file_csv and file_csv.filename.endswith('.csv'):
-        try:
-            stream = io.TextIOWrapper(file_csv.stream, encoding="utf-8-sig")
-            reader = csv.DictReader(stream)
-            conn = get_db_connection()
-            cur = conn.cursor()
-            count = 0
-            for row in reader:
-                fornitore_nome = row.get("fornitore_nome", "").strip()
-                nome_contatto = row.get("nome_contatto", "").strip()
-                telefono = row.get("telefono", "").strip()
-                mansione = row.get("mansione_note", "").strip()
-                email = row.get("email", "").strip()
-                
-                if nome_contatto and fornitore_nome:
-                    cur.execute("SELECT id FROM fornitori WHERE LOWER(nome_azienda) = LOWER(%s);", (fornitore_nome,))
-                    f_res = cur.fetchone()
-                    if f_res:
-                        fornitore_id = f_res['id']
+                        VALUES (%s, %s, %s, %s, %s)
+                        RETURNING id;
+                    """, (nome_azienda, settore, indirizzo_info, tel, email))
+                    res_id = cur.fetchone()
+                    current_fornitore_id = res_id['id'] if res_id else None
+                    count_fornitori += 1
+                else:
+                    if current_fornitore_id:
                         cur.execute("""
                             INSERT INTO contatti_tecnici (fornitore_id, nome, telefono, mansione, email)
                             VALUES (%s, %s, %s, %s, %s);
-                        """, (fornitore_id, nome_contatto, telefono, mansione, email))
-                        count += 1
+                        """, (current_fornitore_id, col1, tel, indirizzo_info, email))
+                        count_tecnici += 1
+
             conn.commit()
             cur.close()
             conn.close()
-            registra_log(f"Importati {count} contatti tecnici tramite CSV")
-            flash(f"Importati con successo {count} contatti tecnici!", "success")
+            registra_log(f"Importati {count_fornitori} fornitori e {count_tecnici} tecnici da Excel")
+            flash(f"Importazione completata! Aggiunti {count_fornitori} fornitori e {count_tecnici} tecnici.", "success")
         except Exception as e:
-            flash(f"Errore importazione tecnici: {e}", "error")
+            flash(f"Errore durante l'importazione Excel: {e}", "error")
     else:
-        flash("Carica un file CSV valido per i tecnici.", "error")
+        flash("Carica un file Excel valido (.xlsx).", "error")
     return redirect(url_for("fornitori"))
 
 @app.route("/upload", methods=["GET", "POST"])
