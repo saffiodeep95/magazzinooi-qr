@@ -16,9 +16,15 @@
 </head>
 <body>
 
+    <!-- INTESTAZIONE PRINCIPALE -->
+    <div style="background: linear-gradient(135deg, #0284c7, #0369a1); color: white; padding: 20px; border-radius: 12px; margin-bottom: 20px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
+        <h1 style="margin: 0; font-size: 1.8rem;">🏢 Gestionale OMG</h1>
+        <p style="margin: 5px 0 0 0; opacity: 0.9; font-size: 0.95rem;">Application & Manutenzione Impianti - Registro Storico Esterne</p>
+    </div>
+
     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; flex-wrap: wrap; gap: 10px;">
         <div>
-            <h1 style="margin: 0; color: #10b981; font-size: 1.6rem;">📜 Registro Storico Manutenzioni Esterne</h1>
+            <h2 style="margin: 0; color: #10b981; font-size: 1.4rem;">📜 Registro Storico Manutenzioni Esterne</h2>
             <p style="margin: 2px 0 0 0; color: #64748b; font-size: 0.85rem;">Archivio completo di tutti i rientri e le riparazioni eseguite da terzisti</p>
         </div>
         <div>
@@ -49,15 +55,13 @@
                         <th>Quantità</th>
                         <th>Esito Riparazione</th>
                         <th>Note Intervento</th>
-                        {% if session.get('is_admin') or session.get('puo_eliminare', 0) %}
-                            <th style="text-align: center;">Azione</th>
-                        {% endif %}
+                        <th style="text-align: center;">Azione</th>
                     </tr>
                 </thead>
                 <tbody>
                     {% for s in storico %}
                     <tr>
-                        <td><strong>{{ s.data_riconsegna or (s.registrato_il.strftime('%d/%m/%Y') if s.registrato_il else '-') }}</strong></td>
+                        <td><strong>{{ s.data_riconsegna or '-' }}</strong></td>
                         <td><strong>{{ s.nome_prodotto or '-' }}</strong></td>
                         <td><code>{{ s.qr_code or '-' }}</code></td>
                         <td>{{ s.sap or '-' }}</td>
@@ -69,7 +73,6 @@
                             </span>
                         </td>
                         <td>{{ s.note or '-' }}</td>
-                        {% if session.get('is_admin') or session.get('puo_eliminare', 0) %}
                         <td style="text-align: center;">
                             {% if s.id %}
                             <form method="POST" action="{{ url_for('elimina_storico_manutenzione', id=s.id) }}" style="margin: 0;" onsubmit="return confirm('Sei sicuro di voler eliminare questa voce dallo storico?');">
@@ -79,7 +82,6 @@
                             -
                             {% endif %}
                         </td>
-                        {% endif %}
                     </tr>
                     {% else %}
                     <tr>
