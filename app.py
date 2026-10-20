@@ -273,10 +273,9 @@ def init_db():
             ("puo_assegnare_promemoria", "INT DEFAULT 0"),
             ("puo_vedere_report_ore", "INT DEFAULT 1")
         ]
-        
         for p_col, p_type in permessi_lista:
             cur.execute(f"ALTER TABLE utenti ADD COLUMN IF NOT EXISTS {p_col} {p_type};")
-        
+
         cur.execute("SELECT * FROM utenti WHERE username = 'admin';")
         if not cur.fetchone():
             hashed_pw = generate_password_hash("admin")
@@ -346,7 +345,6 @@ def index():
     try:
         conn = get_db_connection()
         cur = conn.cursor()
-        
         cur.execute("SELECT * FROM prodotti ORDER BY nome ASC;")
         tutti = cur.fetchall()
         
@@ -1025,3 +1023,4 @@ def ripristina_magazzino(qr_code):
 
 if __name__ == "__main__":
     app.run(debug=True)
+
