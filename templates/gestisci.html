@@ -3,27 +3,24 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Scheda Articolo: {{ prodotto.nome }} - Gestionale OMG</title>
+    <title>Gestione Articolo - {{ prodotto.nome }}</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </head>
 <body class="bg-light">
 
+    <!-- Navbar -->
     <nav class="navbar navbar-expand-lg navbar-dark bg-dark shadow-sm">
         <div class="container-fluid">
-            <a class="navbar-brand fw-bold" href="{{ url_for('index') }}">
-                <i class="fas fa-industry me-2"></i>Gestionale OMG
-            </a>
-            <div class="d-flex">
-                <a href="{{ url_for('index') }}" class="btn btn-outline-light btn-sm">
-                    <i class="fas fa-arrow-left me-1"></i>Dashboard
-                </a>
+            <a class="navbar-brand fw-bold" href="{{ url_for('index') }}"><i class="fa-solid fa-industry me-2"></i>Gestionale OMG</a>
+            <div class="ms-auto">
+                <a href="{{ url_for('index') }}" class="btn btn-outline-light btn-sm"><i class="fa-solid fa-arrow-left me-1"></i> Torna al Magazzino</a>
             </div>
         </div>
     </nav>
 
     <div class="container my-4">
-
+        <!-- Flash messages -->
         {% with messages = get_flashed_messages(with_categories=true) %}
             {% if messages %}
                 {% for category, message in messages %}
@@ -35,100 +32,94 @@
             {% endif %}
         {% endwith %}
 
-        <!-- Box Superiore Titolo & Stampa QR -->
-        <div class="card shadow-sm border-0 mb-4 bg-white">
-            <div class="card-body d-flex justify-content-between align-items-center flex-wrap gap-3">
-                <div>
-                    <h4 class="text-primary fw-bold mb-1"><i class="fas fa-box me-2"></i>Scheda Articolo: {{ prodotto.nome }}</h4>
-                    <p class="text-muted mb-0 small"><i class="fas fa-barcode me-1"></i>QR Code: <strong>{{ prodotto.qr_code }}</strong></p>
-                </div>
-                <div class="d-flex gap-2">
-                    <a href="{{ url_for('stampa_singolo_qr', qr_code=prodotto.qr_code) }}" class="btn btn-primary">
-                        <i class="fas fa-qrcode me-1"></i>Stampa QR Code con Matricola
-                    </a>
-                </div>
-            </div>
-        </div>
-
-        <!-- Box Tracciabilità Rapida -->
-        <div class="row g-4 mb-4">
-            <div class="col-12">
-                <div class="card shadow-sm border-0 bg-light">
+        <div class="row">
+            <!-- Colonna Informazioni e Modifica Articolo -->
+            <div class="col-md-6 mb-4">
+                <div class="card shadow-sm h-100">
+                    <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+                        <h5 class="mb-0"><i class="fa-solid fa-box me-2"></i>{{ prodotto.nome }}</h5>
+                        <span class="badge bg-light text-dark">QR: {{ prodotto.qr_code }}</span>
+                    </div>
                     <div class="card-body">
-                        <h5 class="fw-bold text-dark mb-3"><i class="fas fa-chart-line me-2"></i>Stato / Tracciabilità del Pezzo</h5>
-                        <div class="row g-3">
-                            <div class="col-md-4">
-                                <span class="text-muted d-block small">Matricola S/N:</span>
-                                <strong class="fs-5 text-primary">{{ prodotto.matricola or 'Non specificata' }}</strong>
+                        <form action="{{ url_for('aggiorna_prodotto', qr_code=prodotto.qr_code) }}" method="POST">
+                            <div class="mb-3">
+                                <label class="form-label">Nome Articolo</label>
+                                <input type="text" class="form-control" name="nome" value="{{ prodotto.nome }}" required>
                             </div>
-                            <div class="col-md-4">
-                                <span class="text-muted d-block small">Stato Attuale:</span>
-                                <span class="badge bg-success fs-6">{{ prodotto.stato_pezzo or 'Nuovo' }}</span>
+                            <div class="mb-3">
+                                <label class="form-label">Codice SAP</label>
+                                <input type="text" class="form-control" name="sap" value="{{ prodotto.sap or '' }}">
                             </div>
-                            <div class="col-md-4">
-                                <span class="text-muted d-block small">Interventi / Rientri Subiti:</span>
-                                <span class="badge bg-secondary fs-6"><i class="fas fa-tools me-1"></i>{{ prodotto.volte_riparato or 0 }}</span>
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label class="form-label">Posizione</label>
+                                    <input type="text" class="form-control" name="posizione" value="{{ prodotto.posizione or '' }}">
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label class="form-label">Peso</label>
+                                    <input type="text" class="form-control" name="peso" value="{{ prodotto.peso or '' }}">
+                                </div>
                             </div>
-                        </div>
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label class="form-label">Soglia Minima Avviso</label>
+                                    <input type="number" class="form-control" name="soglia_minima" value="{{ prodotto.soglia_minima or 3 }}" min="0">
+                                </div>
+                                <div class="col-md-6 mb-3 d-flex align-items-center">
+                                    <div class="form-check mt-4">
+                                        <input class="form-check-input" type="checkbox" name="magazzino_pesante" id="magazzino_pesante" {% if prodotto.magazzino_pesante in [1, '1', True, 1.0] %}checked{% endif %}>
+                                        <label class="form-check-label" for="magazzino_pesante">Magazzino Pesante</label>
+                                    </div>
+                                </div>
+                            </div>
+                            <button type="submit" class="btn btn-primary w-100"><i class="fa-solid fa-save me-1"></i> Salva Modifiche</button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Colonna Movimenti Rapidi e Stato Quantità -->
+            <div class="col-md-6 mb-4">
+                <div class="card shadow-sm mb-4">
+                    <div class="card-header bg-dark text-white">
+                        <h5 class="mb-0"><i class="fa-solid fa-arrows-up-down me-2"></i>Quantità e Movimenti Rapidi</h5>
+                    </div>
+                    <div class="card-body text-center">
+                        <h2 class="display-4 fw-bold text-{{ 'danger' if prodotto.quantita <= (prodotto.soglia_minima or 3) else 'success' }}">
+                            {{ prodotto.quantita }}
+                        </h2>
+                        <p class="text-muted">Pezzi attualmente disponibili in magazzino</p>
+
+                        <!-- Form Carico / Scarico Rapido -->
+                        <form action="{{ url_for('carica_scarica', qr_code=prodotto.qr_code, azione='carica') }}" method="POST" class="row g-2 justify-content-center align-items-center mt-3">
+                            <div class="col-auto">
+                                <input type="number" class="form-control" name="quantita_movimento" value="1" min="1" style="width: 90px;" required>
+                            </div>
+                            <div class="col-auto">
+                                <button type="submit" formaction="{{ url_for('carica_scarica', qr_code=prodotto.qr_code, azione='carica') }}" class="btn btn-success">
+                                    <i class="fa-solid fa-plus me-1"></i> Carica
+                                </button>
+                                <button type="submit" formaction="{{ url_for('carica_scarica', qr_code=prodotto.qr_code, azione='scarica') }}" class="btn btn-danger">
+                                    <i class="fa-solid fa-minus me-1"></i> Scarica
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+
+                <!-- Azioni di Stampa -->
+                <div class="card shadow-sm">
+                    <div class="card-body d-flex justify-content-around">
+                        <a href="{{ url_for('stampa_singolo_qr', qr_code=prodotto.qr_code) }}" target="_blank" class="btn btn-outline-dark">
+                            <i class="fa-solid fa-qrcode me-1"></i> Stampa QR
+                        </a>
+                        <a href="{{ url_for('stampa_bolla', qr_code=prodotto.qr_code) }}" target="_blank" class="btn btn-outline-secondary">
+                            <i class="fa-solid fa-file-lines me-1"></i> Stampa Bolla
+                        </a>
                     </div>
                 </div>
             </div>
         </div>
-
-        <!-- Form Dettagli e Modifica Articolo -->
-        <div class="card shadow-sm border-0">
-            <div class="card-header bg-dark text-white">
-                <h5 class="mb-0"><i class="fas fa-edit me-2"></i>Dettagli e Modifica Articolo</h5>
-            </div>
-            <div class="card-body">
-                <form action="{{ url_for('aggiorna_prodotto', qr_code=prodotto.qr_code) }}" method="POST">
-                    <div class="row g-3">
-                        <div class="col-md-6">
-                            <label class="form-label fw-bold">QR Code / Codice:</label>
-                            <input type="text" class="form-control bg-light" value="{{ prodotto.qr_code }}" disabled>
-                        </div>
-                        <div class="col-md-6">
-                            <label class="form-label fw-bold">Nome Articolo *:</label>
-                            <input type="text" class="form-control" name="nome" value="{{ prodotto.nome }}" required>
-                        </div>
-                        <div class="col-md-6">
-                            <label class="form-label fw-bold">Codice SAP:</label>
-                            <input type="text" class="form-control" name="sap" value="{{ prodotto.sap or '' }}">
-                        </div>
-                        
-                        <!-- CAMPO MATRICOLA MODIFICABILE -->
-                        <div class="col-md-6">
-                            <label class="form-label fw-bold text-primary">Matricola / Serial Number:</label>
-                            <input type="text" class="form-control border-primary" name="matricola" value="{{ prodotto.matricola or '' }}" placeholder="Es. SN-998234">
-                        </div>
-
-                        <div class="col-md-4">
-                            <label class="form-label fw-bold">Quantità Attuale:</label>
-                            <input type="text" class="form-control bg-light" value="{{ prodotto.quantita }}" disabled>
-                        </div>
-                        <div class="col-md-4">
-                            <label class="form-label fw-bold">Posizione Scaffale:</label>
-                            <input type="text" class="form-control" name="posizione" value="{{ prodotto.posizione or '' }}">
-                        </div>
-                        <div class="col-md-4">
-                            <label class="form-label fw-bold">Peso:</label>
-                            <input type="text" class="form-control" name="peso" value="{{ prodotto.peso or '' }}">
-                        </div>
-                        <div class="col-md-6">
-                            <label class="form-label fw-bold">Soglia Minima Scorta:</label>
-                            <input type="number" class="form-control" name="soglia_minima" value="{{ prodotto.soglia_minima or 3 }}">
-                        </div>
-                    </div>
-
-                    <div class="mt-4 text-end">
-                        <button type="submit" class="btn btn-success fw-bold">
-                            <i class="fas fa-save me-1"></i>Salva Modifiche Articolo
-                        </button>
-                    </div>
-                </form>
-            </div>
-        </div>
-
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
