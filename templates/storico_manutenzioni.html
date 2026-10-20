@@ -3,99 +3,71 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Bolla / Documento Manutenzione</title>
+    <title>Gestionale OMG - Storico Manutenzioni Esterne</title>
     <style>
-        body { font-family: sans-serif; max-width: 800px; margin: 0 auto; padding: 30px; background: white; color: #1e293b; }
-        .header { display: flex; justify-content: space-between; border-bottom: 2px solid #e2e8f0; padding-bottom: 20px; margin-bottom: 20px; }
-        .section { margin-bottom: 20px; }
-        table { width: 100%; border-collapse: collapse; margin-top: 15px; }
-        th, td { padding: 10px; border: 1px solid #cbd5e1; text-align: left; font-size: 0.9rem; }
-        th { background: #f1f5f9; }
-        .btn { background: #4f46e5; color:…
-[09:00, 10/10/2026] Marco Pavan: <!DOCTYPE html>
-<html lang="it">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Storico Manutenzioni</title>
-    <style>
-        body { font-family: sans-serif; max-width: 1200px; margin: 0 auto; padding: 20px; background: #f8fafc; color: #1e293b; }
-        .card { background: white; padding: 20px; border-radius: 12px; border: 1px solid #e2e8f0; margin-bottom: 20px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
-        .btn { background: #4f46e5; color: white; padding: 8px 14px; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; text-decoration: none; display: inline-block; margin: 3px; }
+        body { font-family: sans-serif; max-width: 1100px; margin: 0 auto; padding: 15px; background: #f8fafc; color: #1e293b; }
+        .card { background: white; padding: 20px; border-radius: 12px; border: 1px solid #e2e8f0; margin-bottom: 20px; box-shadow: 0 2px 4px rgba(0,0,0,0.04); }
+        .btn { background: #0284c7; color: white !important; padding: 8px 14px; border: none; border-radius: 6px; font-weight: bold; cursor: pointer; text-decoration: none; display: inline-block; font-size: 0.85rem; }
         .btn:hover { opacity: 0.9; }
         table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 0.85rem; }
-        th, td { padding: 10px; border-bottom: 1px solid #e2e8f0; text-align: left; }
-        th { background: #f1f5f9; }
+        th, td { padding: 10px; text-align: left; border-bottom: 1px solid #e2e8f0; }
+        th { background: #f1f5f9; color: #475569; }
     </style>
 </head>
 <body>
 
-    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
-        <h1>📜 Storico Completo Manutenzioni</h1>
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; flex-wrap: wrap; gap: 10px;">
         <div>
-            <a href="{{ url_for('manutenzioni') }}" class="btn" style="background: #d97706;">← Torna a Manutenzioni Attive</a>
-            <a href="{{ url_for('index') }}" class="btn" style="background: #64748b;">Torna alla Home</a>
+            <h1 style="margin: 0; color: #10b981; font-size: 1.6rem;">📜 Registro Storico Manutenzioni Esterne</h1>
+            <p style="margin: 2px 0 0 0; color: #64748b; font-size: 0.85rem;">Archivio completo di tutti i rientri e le riparazioni eseguite da terzisti</p>
+        </div>
+        <div>
+            <a href="{{ url_for('index') }}" class="btn" style="background: #475569;">← Dashboard</a>
         </div>
     </div>
 
-    {% with messages = get_flashed_messages() %}
-      {% if messages %}
-        {% for message in messages %}
-          <div style="background: #dcfce7; color: #166534; padding: 10px; border-radius: 8px; margin-bottom: 15px;">{{ message }}</div>
-        {% endfor %}
-      {% endif %}
-    {% endwith %}
-
     <div class="card">
-        <h3>Registro Storico Movimenti di Manutenzione</h3>
-        {% if storico %}
         <div style="overflow-x: auto;">
             <table>
                 <thead>
                     <tr>
-                        <th>Registrato il</th>
-                        <th>Articolo</th>
+                        <th>Data Rientro</th>
+                        <th>Nome Articolo</th>
                         <th>QR Code</th>
-                        <th>SAP</th>
-                        <th>Cliente</th>
-                        <th>Qta</th>
-                        <th>Spedizione</th>
-                        <th>Riconsegna</th>
-                        <th>Vettore</th>
-                        <th>Note</th>
-                        {% if session.get('is_admin') or session.get('puo_eliminare_storico') %}
-                        <th>Azione</th>
-                        {% endif %}
+                        <th>Codice SAP</th>
+                        <th>Fornitore / Terzista</th>
+                        <th>Quantità</th>
+                        <th>Esito Riparazione</th>
+                        <th>Note Intervento</th>
                     </tr>
                 </thead>
                 <tbody>
                     {% for s in storico %}
                     <tr>
-                        <td>{{ s.registrato_il.strftime('%d/%m/%Y %H:%M') if s.registrato_il else '-' }}</td>
+                        <td><strong>{{ s.data_riconsegna or (s.registrato_il.strftime('%d/%m/%Y') if s.registrato_il else '-') }}</strong></td>
                         <td><strong>{{ s.nome_prodotto }}</strong></td>
                         <td><code>{{ s.qr_code }}</code></td>
-                        <td>{{ s.sap if s.sap else '-' }}</td>
-                        <td>{{ s.cliente if s.cliente else '-' }}</td>
-                        <td>{{ s.quantita }} pz</td>
-                        <td>{{ s.data_spedizione if s.data_spedizione else '-' }}</td>
-                        <td>{{ s.data_riconsegna if s.data_riconsegna else '-' }}</td>
-                        <td>{{ s.vettore if s.vettore else '-' }}</td>
-                        <td>{{ s.note if s.note else '-' }}</td>
-                        {% if session.get('is_admin') or session.get('puo_eliminare_storico') %}
+                        <td>{{ s.sap or '-' }}</td>
+                        <td>{{ s.cliente or '-' }}</td>
+                        <td>{{ s.quantita or 1 }} pz</td>
                         <td>
-                            <form action="{{ url_for('elimina_storico_manutenzione', storico_id=s.id) }}" method="POST" onsubmit="return confirm('Eliminare questo record dallo storico?');">
-                                <button type="submit" class="btn" style="background: #ef4444; padding: 4px 8px; font-size: 0.75rem;">Elimina</button>
-                            </form>
+                            <span style="background: #dcfce7; color: #166534; padding: 4px 8px; border-radius: 12px; font-weight: bold; font-size: 0.8rem;">
+                                {{ s.esito or 'Riparato' }}
+                            </span>
                         </td>
-                        {% endif %}
+                        <td>{{ s.note or '-' }}</td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="8" style="text-align: center; color: #64748b; padding: 20px;">
+                            Nessun rientro o manutenzione registrata nello storico.
+                        </td>
                     </tr>
                     {% endfor %}
                 </tbody>
             </table>
         </div>
-        {% else %}
-            <p style="color: #64748b;">Nessun record presente nello storico.</p>
-        {% endif %}
     </div>
+
 </body>
 </html>
