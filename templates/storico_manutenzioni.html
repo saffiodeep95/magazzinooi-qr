@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Gestionale OMG - Storico Manutenzioni Esterne</title>
     <style>
-        body { font-family: sans-serif; max-width: 1100px; margin: 0 auto; padding: 15px; background: #f8fafc; color: #1e293b; }
+        body { font-family: sans-serif; max-width: 1150px; margin: 0 auto; padding: 15px; background: #f8fafc; color: #1e293b; }
         .card { background: white; padding: 20px; border-radius: 12px; border: 1px solid #e2e8f0; margin-bottom: 20px; box-shadow: 0 2px 4px rgba(0,0,0,0.04); }
         .btn { background: #0284c7; color: white !important; padding: 8px 14px; border: none; border-radius: 6px; font-weight: bold; cursor: pointer; text-decoration: none; display: inline-block; font-size: 0.85rem; }
         .btn:hover { opacity: 0.9; }
@@ -26,6 +26,16 @@
         </div>
     </div>
 
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+        {% for category, message in messages %}
+          <div style="background: {% if category == 'error' %}#fee2e2; color: #991b1b;{% else %}#dcfce7; color: #166534;{% endif %} padding: 10px; border-radius: 8px; margin-bottom: 15px;">
+            {{ message }}
+          </div>
+        {% endfor %}
+      {% endif %}
+    {% endwith %}
+
     <div class="card">
         <div style="overflow-x: auto;">
             <table>
@@ -39,6 +49,9 @@
                         <th>Quantità</th>
                         <th>Esito Riparazione</th>
                         <th>Note Intervento</th>
+                        {% if session.get('is_admin') or session.get('puo_eliminare', 0) %}
+                            <th style="text-align: center;">Azione</th>
+                        {% endif %}
                     </tr>
                 </thead>
                 <tbody>
@@ -56,10 +69,17 @@
                             </span>
                         </td>
                         <td>{{ s.note or '-' }}</td>
+                        {% if session.get('is_admin') or session.get('puo_eliminare', 0) %}
+                        <td style="text-align: center;">
+                            <form method="POST" action="{{ url_for('elimina_storico_manutenzione', id=s.id) }}" style="margin: 0;" onsubmit="return confirm('Sei sicuro di voler eliminare questa voce dallo storico?');">
+                                <button type="submit" class="btn" style="background: #ef4444; padding: 4px 8px; font-size: 0.75rem;">🗑️ Elimina</button>
+                            </form>
+                        </td>
+                        {% endif %}
                     </tr>
                     {% else %}
                     <tr>
-                        <td colspan="8" style="text-align: center; color: #64748b; padding: 20px;">
+                        <td colspan="9" style="text-align: center; color: #64748b; padding: 20px;">
                             Nessun rientro o manutenzione registrata nello storico.
                         </td>
                     </tr>
