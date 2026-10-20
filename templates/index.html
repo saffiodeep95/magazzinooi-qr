@@ -105,13 +105,13 @@
             <p class="mb-0">I seguenti articoli hanno una quantità pari o inferiore alla soglia minima impostata:</p>
             <ul class="mb-0 mt-2">
                 {% for item in prodotti_sotto_soglia %}
-                <li><strong>{{ item.nome }}</strong> (SAP: {{ item.sap or 'N/D' }}) - Quantità attuale: <span class="badge bg-danger">{{ item.quantita }}</span> (Soglia: {{ item.soglia_minima }})</li>
+                <li><strong>{{ item.nome }}</strong> (Matricola/QR: {{ item.qr_code }}) - Quantità attuale: <span class="badge bg-danger">{{ item.quantita }}</span> (Soglia: {{ item.soglia_minima }})</li>
                 {% endfor %}
             </ul>
         </div>
         {% endif %}
 
-        <!-- Intestazione e pulsanti azione rapida (Carico, Scarico, Scanner e Nuovo Articolo) -->
+        <!-- Intestazione e pulsanti azione rapida -->
         <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
             <h2><i class="fa-solid fa-warehouse me-2"></i>Inventario Magazzino Principale</h2>
             <div class="d-flex gap-2 flex-wrap">
@@ -144,7 +144,7 @@
                     <table class="table table-hover align-middle">
                         <thead class="table-dark">
                             <tr>
-                                <th>QR Code</th>
+                                <th>Matricola / QR Code</th>
                                 <th>Nome Articolo</th>
                                 <th>SAP</th>
                                 <th>Quantità</th>
@@ -156,7 +156,7 @@
                         <tbody>
                             {% for p in prodotti %}
                             <tr>
-                                <td><code>{{ p.qr_code }}</code></td>
+                                <td><span class="badge bg-secondary font-monospace">{{ p.qr_code }}</span></td>
                                 <td class="fw-bold">{{ p.nome }}</td>
                                 <td>{{ p.sap or '-' }}</td>
                                 <td>
@@ -195,7 +195,7 @@
                     </div>
                     <div class="modal-body">
                         <div class="mb-3">
-                            <label class="form-label">QR Code / Codice a Barre *</label>
+                            <label class="form-label">Matricola / QR Code / Codice a Barre *</label>
                             <input type="text" class="form-control" name="qr_code" required>
                         </div>
                         <div class="mb-3">
