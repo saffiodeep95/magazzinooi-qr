@@ -1,182 +1,310 @@
 import os
+import io
+import csv
+from datetime import datetime
 import psycopg2
 from psycopg2.extras import RealDictCursor
-from flask import Flask, render_template, request, redirect, url_for, flash, session, jsonify
+from flask import Flask, render_template, request, redirect, url_for, flash, session, Response, jsonify
+from werkzeug.security import generate_password_hash, check_password_hash
 
-app = Flask(__name__)
-app.secret_key = os.environ.get("SECRET_KEY", "super_segreto_omg_2026")
+# ==============================================================================
+# Magazzino OMG Application
+# Copyright (c) 2026 Marco Pavan. All Rights Reserved.
+# Designed & Developed by Marco Pavan
+# ==============================================================================
+
+app = Flask(_name_)
+app.secret_key = os.environ.get("SECRET_KEY", "super_segreto_omg_2026_marcopavan")
 
 def get_db_connection():
     db_url = os.environ.get("DATABASE_URL")
+    if not db_url:
+        raise RuntimeError("DATABASE_URL non impostata nelle variabili d'ambiente.")
     conn = psycopg2.connect(db_url, cursor_factory=RealDictCursor)
     return conn
 
-def registra_log(messaggio):
-    print(f"[LOG OMG]: {messaggio}")
+def registra_log(descrizione):
+    try:
+        username = session.get('username', 'Sistema')
+        conn = get_db_connection()
+        cur = conn.cursor()
+        cur.execute("INSERT INTO log_attivita (username, descrizione) VALUES (%s, %s);", (username, descrizione))
+        conn.commit()
+        cur.close()
+        conn.close()
+    except Exception as e:
+        print(f"Errore registrazione log: {e}")
 
-# --- INIZIALIZZAZIONE COMPLETA DEL DATABASE ---
+# --- INIZIALIZZAZIONE DEL DATABASE ---
 def init_db():
-    conn = get_db_connection()
-    cur = conn.cursor()
-    
-    # 1. Tabella Prodotti & Magazzino Pesante (con Matricola e Stato Pezzo)
-    cur.execute("""
-        CREATE TABLE IF NOT EXISTS prodotti (
-            qr_code VARCHAR(100) PRIMARY KEY,
-            nome VARCHAR(255) NOT NULL,
-            sap VARCHAR(100),
-            quantita INT DEFAULT 0,
-            posizione VARCHAR(100),
-            peso VARCHAR(50),
-            soglia_minima INT DEFAULT 3,
-            magazzino_pesante BOOLEAN DEFAULT FALSE,
-            matricola VARCHAR(100),
-            stato_pezzo VARCHAR(100) DEFAULT 'Nuovo ✨',
-            volte_riparato INT DEFAULT 0,
-            in_manutenzione BOOLEAN DEFAULT FALSE,
-            cliente_manutenzione VARCHAR(255),
-            quantita_manutenzione INT DEFAULT 0,
-            data_spedizione DATE,
-            data_riconsegna DATE,
-            vettore VARCHAR(100),
-            ordine_amministrativo BOOLEAN DEFAULT FALSE,
-            note_manutenzione TEXT
-        );
-    """)
+    try:
+        conn = get_db_connection()
+        cur = conn.cursor()
+        
+        cur.execute("""
+            CREATE TABLE IF NOT EXISTS utenti (
+                id SERIAL PRIMARY KEY,
+                username VARCHAR(255) UNIQUE NOT NULL,
+                password VARCHAR(255) NOT NULL,
+                is_admin INT DEFAULT 0,
+                puo_vedere_manutenzione INT DEFAULT 1,
+                puo_eliminare INT DEFAULT 0,
+                puo_eliminare_storico INT DEFAULT 0,
+                puo_gestire_documenti INT DEFAULT 1
+            );
+        """)
 
-    # 2. Tabella Storico Manutenzioni Esterne
-    cur.execute("""
-        CREATE TABLE IF NOT EXISTS storico_manutenzioni (
-            id SERIAL PRIMARY KEY,
-            nome_prodotto VARCHAR(255),
-            qr_code VARCHAR(100),
-            sap VARCHAR(100),
-            cliente VARCHAR(255),
-            quantita INT DEFAULT 1,
-            data_riconsegna DATE,
-            note TEXT,
-            esito VARCHAR(100),
-            registrato_il TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-        );
-    """)
+        cur.execute("""
+            CREATE TABLE IF NOT EXISTS prodotti (
+                qr_code VARCHAR(255) PRIMARY KEY,
+                nome VARCHAR(255) NOT NULL,
+                sap VARCHAR(255),
+                quantita INT DEFAULT 0,
+                posizione VARCHAR(255),
+                peso VARCHAR(255),
+                magazzino_pesante BOOLEAN DEFAULT FALSE,
+                matricola VARCHAR(255),
+                stato_pezzo VARCHAR(255) DEFAULT 'Nuovo',
+                volte_riparato INT DEFAULT 0,
+                in_manutenzione BOOLEAN DEFAULT FALSE,
+                cliente_manutenzione VARCHAR(255),
+                quantita_manutenzione INT DEFAULT 1,
+                data_spedizione VARCHAR(255),
+                data_riconsegna VARCHAR(255),
+                vettore VARCHAR(255),
+                ordine_amministrativo BOOLEAN DEFAULT FALSE,
+                note TEXT
+            );
+        """)
 
-    # 3. Tabella Richieste Interventi Officina Interna
-    cur.execute("""
-        CREATE TABLE IF NOT EXISTS richieste_manutenzione (
-            id SERIAL PRIMARY KEY,
-            impianto_macchina VARCHAR(255),
-            titolo VARCHAR(255) NOT NULL,
-            tipo_guasto VARCHAR(100) DEFAULT 'Meccanico',
-            priorita VARCHAR(50) DEFAULT 'Media',
-            stato VARCHAR(50) DEFAULT 'Aperto',
-            creato_da VARCHAR(100),
-            assegnato_a VARCHAR(100),
-            descrizione TEXT,
-            inizio_lavoro TIMESTAMP,
-            fine_lavoro TIMESTAMP,
-            tempo_lavorato_minuti INT DEFAULT 0,
-            note_lavoro TEXT,
-            creato_il TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-        );
-    """)
+        cur.execute("""
+            CREATE TABLE IF NOT EXISTS storico_manutenzioni (
+                id SERIAL PRIMARY KEY,
+                registrato_il TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                nome_prodotto VARCHAR(255),
+                qr_code VARCHAR(255),
+                sap VARCHAR(255),
+                cliente VARCHAR(255),
+                quantita INT,
+                data_spedizione VARCHAR(255),
+                data_riconsegna VARCHAR(255),
+                vettore VARCHAR(255),
+                ordine_amministrativo BOOLEAN DEFAULT FALSE,
+                note TEXT,
+                esito VARCHAR(255)
+            );
+        """)
 
-    # 4. Tabella Fornitori
-    cur.execute("""
-        CREATE TABLE IF NOT EXISTS fornitori (
-            id SERIAL PRIMARY KEY,
-            nome_azienda VARCHAR(255) NOT NULL,
-            contatto VARCHAR(255),
-            telefono VARCHAR(100),
-            email VARCHAR(255),
-            settore_note TEXT
-        );
-    """)
+        cur.execute("""
+            CREATE TABLE IF NOT EXISTS richieste_manutenzione (
+                id SERIAL PRIMARY KEY,
+                titolo VARCHAR(255) NOT NULL,
+                impianto_macchina VARCHAR(255),
+                descrizione TEXT,
+                priorita VARCHAR(50) DEFAULT 'Media',
+                stato VARCHAR(50) DEFAULT 'Aperta',
+                tipo_guasto VARCHAR(50) DEFAULT 'Meccanico',
+                assegnato_a VARCHAR(255),
+                creato_da VARCHAR(255),
+                inizio_lavoro TIMESTAMP,
+                fine_lavoro TIMESTAMP,
+                tempo_lavorato_minuti INT DEFAULT 0,
+                note_lavoro TEXT,
+                allegato_nome VARCHAR(255),
+                allegato_dati BYTEA,
+                creato_il TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            );
+        """)
 
-    # 5. Tabella Notifiche di Sistema
-    cur.execute("""
-        CREATE TABLE IF NOT EXISTS notifiche (
-            id SERIAL PRIMARY KEY,
-            titolo VARCHAR(255),
-            messaggio TEXT,
-            letta BOOLEAN DEFAULT FALSE,
-            creata_il TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-        );
-    """)
+        cur.execute("""
+            CREATE TABLE IF NOT EXISTS fornitori (
+                id SERIAL PRIMARY KEY,
+                nome_azienda VARCHAR(255) NOT NULL,
+                contatto VARCHAR(255),
+                telefono VARCHAR(255),
+                email VARCHAR(255),
+                settore_note TEXT
+            );
+        """)
 
-    conn.commit()
-    cur.close()
-    conn.close()
+        cur.execute("""
+            CREATE TABLE IF NOT EXISTS log_attivita (
+                id SERIAL PRIMARY KEY,
+                data_ora TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                username VARCHAR(255),
+                descrizione TEXT
+            );
+        """)
 
-try:
-    init_db()
-except Exception as e:
-    print(f"Errore inizializzazione DB: {e}")
+        # Colonne di migrazione sicure
+        colonne_migrazione = [
+            ("fornitori", "settore_note", "VARCHAR(255)"),
+            ("prodotti", "soglia_minima", "INT DEFAULT 3"),
+            ("prodotti", "matricola", "VARCHAR(255)"),
+            ("prodotti", "stato_pezzo", "VARCHAR(255) DEFAULT 'Nuovo'"),
+            ("prodotti", "volte_riparato", "INT DEFAULT 0"),
+            ("storico_manutenzioni", "esito", "VARCHAR(255)"),
+            ("richieste_manutenzione", "tipo_guasto", "VARCHAR(50) DEFAULT 'Meccanico'"),
+            ("richieste_manutenzione", "tempo_lavorato_minuti", "INT DEFAULT 0"),
+            ("utenti", "puo_aprire_manutenzioni", "INT DEFAULT 1"),
+            ("utenti", "puo_assegnare_manutenzioni", "INT DEFAULT 1")
+        ]
 
+        for tabella, colonna, tipo in colonne_migrazione:
+            cur.execute(f"ALTER TABLE {tabella} ADD COLUMN IF NOT EXISTS {colonna} {tipo};")
 
-# --- GESTIONE AUTENTICAZIONE E ADMIN ---
+        # Crea utente admin di default se non esiste
+        cur.execute("SELECT * FROM utenti WHERE username = 'admin';")
+        if not cur.fetchone():
+            hashed_pw = generate_password_hash("admin")
+            cur.execute("""
+                INSERT INTO utenti (username, password, is_admin, puo_vedere_manutenzione, puo_eliminare, puo_eliminare_storico, puo_gestire_documenti, puo_aprire_manutenzioni, puo_assegnare_manutenzioni) 
+                VALUES (%s, %s, 1, 1, 1, 1, 1, 1, 1);
+            """, ('admin', hashed_pw))
+
+        conn.commit()
+        cur.close()
+        conn.close()
+        print("Database inizializzato con successo.")
+    except Exception as e:
+        print(f"Errore init_db: {e}")
+
+init_db()
+
+@app.before_request
+def require_login():
+    allowed_routes = ['login', 'registra', 'static']
+    if request.endpoint and request.endpoint not in allowed_routes and 'username' not in session:
+        return redirect(url_for('login'))
+
+# --- AUTENTICAZIONE ---
 @app.route("/login", methods=["GET", "POST"])
 def login():
     if request.method == "POST":
-        username = request.form.get("username", "").strip()
-        password = request.form.get("password", "").strip()
-        
-        admin_password = os.environ.get("ADMIN_PASSWORD", "omg2026admin")
-        
-        if username == "admin" and password == admin_password:
-            session['is_admin'] = True
-            session['username'] = username
-            session['puo_modificare_prodotti'] = True
-            session['puo_eliminare'] = True
-            flash("Login effettuato con successo come Amministratore!", "success")
-            return redirect(url_for("index"))
-        else:
-            flash("Credenziali non valide. Riprova.", "error")
-            
-    return render_template("login.html")
+        username = request.form.get("username")
+        password = request.form.get("password")
+        try:
+            conn = get_db_connection()
+            cur = conn.cursor()
+            cur.execute("SELECT * FROM utenti WHERE username = %s;", (username,))
+            user = cur.fetchone()
+            cur.close()
+            conn.close()
 
+            if user and check_password_hash(user['password'], password):
+                session['username'] = user['username']
+                session['is_admin'] = user['is_admin']
+                session['puo_vedere_manutenzione'] = user.get('puo_vedere_manutenzione', 1)
+                session['puo_eliminare'] = user.get('puo_eliminare', 0)
+                session['puo_eliminare_storico'] = user.get('puo_eliminare_storico', 0)
+                session['puo_gestire_documenti'] = user.get('puo_gestire_documenti', 1)
+                session['puo_aprire_manutenzioni'] = user.get('puo_aprire_manutenzioni', 1)
+                session['puo_assegnare_manutenzioni'] = user.get('puo_assegnare_manutenzioni', 1)
+                registra_log("Accesso effettuato al sistema")
+                return redirect(url_for('index'))
+            else:
+                flash("Credenziali non valide!", "error")
+        except Exception as e:
+            flash(f"Errore login: {e}", "error")
+    return render_template("login.html")
 
 @app.route("/logout")
 def logout():
+    registra_log("Disconnessione dal sistema")
     session.clear()
-    flash("Logout effettuato con successo.", "success")
-    return redirect(url_for("index"))
+    return redirect(url_for('login'))
 
+@app.route("/registra", methods=["GET", "POST"])
+def registra():
+    if request.method == "POST":
+        username = request.form.get("username")
+        password = request.form.get("password")
+        if username and password:
+            try:
+                conn = get_db_connection()
+                cur = conn.cursor()
+                hashed_pw = generate_password_hash(password)
+                cur.execute("""
+                    INSERT INTO utenti (username, password, is_admin, puo_vedere_manutenzione, puo_eliminare, puo_eliminare_storico, puo_gestire_documenti, puo_aprire_manutenzioni, puo_assegnare_manutenzioni) 
+                    VALUES (%s, %s, 0, 1, 0, 0, 1, 1, 1);
+                """, (username, hashed_pw))
+                conn.commit()
+                cur.close()
+                conn.close()
+                registra_log(f"Registrato nuovo utente: {username}")
+                flash("Registrazione completata! Ora puoi effettuare il login.", "success")
+                return redirect(url_for('login'))
+            except Exception as e:
+                flash("Username già esistente o errore di registrazione.", "error")
+    return render_template("registra.html")
 
 # --- DASHBOARD PRINCIPALE ---
 @app.route("/")
 def index():
-    conn = get_db_connection()
-    cur = conn.cursor()
-    
-    cur.execute("SELECT * FROM prodotti ORDER BY nome ASC;")
-    prodotti = cur.fetchall()
-    
-    prodotti_sotto_soglia = [p for p in prodotti if p['quantita'] <= (p.get('soglia_minima') or 3)]
+    prodotti = []
+    prodotti_sotto_soglia = []
+    interventi_aperti_count = 0
+    interventi_in_lavoro_count = 0
+    interventi_attesa_count = 0
 
     try:
-        cur.execute("SELECT COUNT(*) FROM richieste_manutenzione WHERE stato = 'Aperto';")
+        conn = get_db_connection()
+        cur = conn.cursor()
+
+        cur.execute("SELECT * FROM prodotti ORDER BY nome ASC;")
+        tutti = cur.fetchall()
+
+        cur.execute("SELECT COUNT(*) as count FROM richieste_manutenzione WHERE stato = 'Aperta';")
         interventi_aperti_count = cur.fetchone()['count']
-        cur.execute("SELECT COUNT(*) FROM richieste_manutenzione WHERE stato = 'In Lavoro';")
+        cur.execute("SELECT COUNT(*) as count FROM richieste_manutenzione WHERE stato IN ('In Lavoro', 'In Pausa');")
         interventi_in_lavoro_count = cur.fetchone()['count']
-    except Exception:
-        interventi_aperti_count = 0
-        interventi_in_lavoro_count = 0
+        cur.execute("SELECT COUNT(*) as count FROM richieste_manutenzione WHERE stato = 'Attesa Ricambio';")
+        interventi_attesa_count = cur.fetchone()['count']
 
-    cur.execute("SELECT * FROM fornitori ORDER BY nome_azienda ASC;")
-    fornitori = cur.fetchall()
+        cur.close()
+        conn.close()
 
-    cur.close()
-    conn.close()
-    
-    return render_template("index.html", 
-                           prodotti=prodotti, 
+        for p in tutti:
+            val_pesante = p.get('magazzino_pesante')
+            is_pesante = (val_pesante == 1 or val_pesante == '1' or val_pesante is True or val_pesante == 1.0)
+            if not is_pesante:
+                prodotti.append(p)
+                soglia = p.get('soglia_minima', 3) or 3
+                if p.get('quantita', 0) <= soglia:
+                    prodotti_sotto_soglia.append(p)
+    except Exception as e:
+        print(f"Errore index: {e}")
+
+    return render_template("index.html",
+                           prodotti=prodotti,
                            prodotti_sotto_soglia=prodotti_sotto_soglia,
                            interventi_aperti_count=interventi_aperti_count,
                            interventi_in_lavoro_count=interventi_in_lavoro_count,
-                           fornitori=fornitori)
+                           interventi_attesa_count=interventi_attesa_count)
 
+# --- ESPORTAZIONE CSV ---
+@app.route("/esporta_inventario")
+def esporta_inventario():
+    conn = get_db_connection()
+    cur = conn.cursor()
+    cur.execute("SELECT qr_code, nome, sap, quantita, posizione, peso, magazzino_pesante FROM prodotti ORDER BY nome ASC;")
+    prodotti = cur.fetchall()
+    cur.close()
+    conn.close()
 
-# --- INSERIMENTO E MODIFICA PRODOTTI ---
+    output = io.StringIO()
+    writer = csv.writer(output)
+    writer.writerow(['QR Code', 'Nome Articolo', 'SAP', 'Quantita', 'Posizione', 'Peso', 'Magazzino Pesante'])
+    for p in prodotti:
+        writer.writerow([p['qr_code'], p['nome'], p['sap'], p['quantita'], p['posizione'], p['peso'], 'Si' if p['magazzino_pesante'] else 'No'])
+
+    return Response(
+        output.getvalue(),
+        mimetype="text/csv",
+        headers={"Content-disposition": "attachment; filename=Inventario_Magazzino.csv"}
+    )
+
+# --- GESTIONE PRODOTTI & SCHEDA ---
 @app.route("/aggiungi_prodotto", methods=["POST"])
 def aggiungi_prodotto():
     qr_code = request.form.get("qr_code", "").strip()
@@ -188,7 +316,7 @@ def aggiungi_prodotto():
     soglia_minima = int(request.form.get("soglia_minima", 3))
     magazzino_pesante = True if request.form.get("magazzino_pesante") else False
     matricola = request.form.get("matricola", "").strip()
-    stato_pezzo = request.form.get("stato_pezzo", "Nuovo ✨")
+    stato_pezzo = request.form.get("stato_pezzo", "Nuovo")
 
     if not qr_code or not nome:
         flash("QR Code e Nome Articolo sono obbligatori!", "error")
@@ -206,46 +334,31 @@ def aggiungi_prodotto():
         conn.close()
         flash(f"Articolo {nome} salvato con successo!", "success")
     except Exception as e:
-        flash(f"Errore durante il salvataggio (Codice o Matricola duplicati?): {e}", "error")
+        flash(f"Errore salvataggio articolo (QR Code duplicato?): {e}", "error")
 
     return redirect(url_for("index"))
 
-
-# --- SCHEDA DETTAGLIO ARTICOLO ---
 @app.route("/gestisci/<qr_code>")
 def gestisci_prodotto(qr_code):
     conn = get_db_connection()
     cur = conn.cursor()
-
     cur.execute("SELECT * FROM prodotti WHERE qr_code = %s;", (qr_code,))
     prodotto = cur.fetchone()
-    
-    lista_fornitori = []
-    try:
-        cur.execute("SELECT * FROM fornitori ORDER BY nome_azienda ASC;")
-        lista_fornitori = cur.fetchall()
-    except Exception as e:
-        print(f"Errore recupero fornitori: {e}")
 
-    cur.execute("""
-        SELECT * FROM storico_manutenzioni 
-        WHERE qr_code = %s 
-        ORDER BY id DESC;
-    """, (qr_code,))
+    cur.execute("SELECT * FROM fornitori ORDER BY nome_azienda ASC;")
+    fornitori = cur.fetchall()
+
+    cur.execute("SELECT * FROM storico_manutenzioni WHERE qr_code = %s ORDER BY id DESC;", (qr_code,))
     storico_prodotto = cur.fetchall()
 
     cur.close()
     conn.close()
-    
-    if not prodotto:
-        flash("Prodotto non trovato!", "error")
-        return redirect(url_for("index"))
-        
-    return render_template("gestisci.html", 
-                           prodotto=prodotto, 
-                           fornitori=lista_fornitori, 
-                           storico_prodotto=storico_prodotto)
 
+    if not prodotto:
+        flash("Prodotto non trovato.", "error")
+        return redirect(url_for("index"))
+
+    return render_template("gestisci.html", prodotto=prodotto, fornitori=fornitori, storico_prodotto=storico_prodotto)
 
 @app.route("/aggiorna_prodotto/<qr_code>", methods=["POST"])
 def aggiorna_prodotto(qr_code):
@@ -268,20 +381,38 @@ def aggiorna_prodotto(qr_code):
         conn.commit()
         cur.close()
         conn.close()
-        flash("Dati articolo aggiornati con successo!", "success")
+        flash("Articolo aggiornato con successo!", "success")
     except Exception as e:
-        flash(f"Errore aggiornamento articolo: {e}", "error")
+        flash(f"Errore aggiornamento: {e}", "error")
 
     return redirect(url_for("gestisci_prodotto", qr_code=qr_code))
 
+@app.route("/elimina_prodotto", methods=["POST"])
+def elimina_prodotto():
+    if not (session.get('is_admin') or session.get('puo_eliminare')):
+        flash("Non hai i permessi per eliminare articoli.", "error")
+        return redirect(url_for("index"))
 
-# --- INVIO IN MANUTENZIONE ESTERNA ---
+    qr_code = request.form.get("qr_code")
+    try:
+        conn = get_db_connection()
+        cur = conn.cursor()
+        cur.execute("DELETE FROM prodotti WHERE qr_code = %s;", (qr_code,))
+        conn.commit()
+        cur.close()
+        conn.close()
+        flash("Articolo eliminato.", "success")
+    except Exception as e:
+        flash(f"Errore eliminazione: {e}", "error")
+    return redirect(url_for("index"))
+
+# --- MANUTENZIONE ESTERNA & TERZISTI ---
 @app.route("/manda_manutenzione/<qr_code>", methods=["POST"])
 def manda_manutenzione(qr_code):
     cliente = request.form.get("cliente_manutenzione", "").strip()
     quantita = int(request.form.get("quantita_manutenzione", 1))
-    data_sp = request.form.get("data_spedizione") or None
-    data_ric = request.form.get("data_riconsegna") or None
+    data_spedizione = request.form.get("data_spedizione", "")
+    data_riconsegna = request.form.get("data_riconsegna", "")
     vettore = request.form.get("vettore", "").strip()
     note = request.form.get("note_manutenzione", "").strip()
 
@@ -299,24 +430,16 @@ def manda_manutenzione(qr_code):
                 note_manutenzione = %s,
                 quantita = GREATEST(0, quantita - %s)
             WHERE qr_code = %s;
-        """, (cliente, quantita, data_sp, data_ric, vettore, note, quantita, qr_code))
-        
-        cur.execute("""
-            INSERT INTO notifiche (titolo, messaggio)
-            VALUES (%s, %s);
-        """, ("Invio in Manutenzione", f"Articolo {qr_code} spedito a {cliente}"))
-
+        """, (cliente, quantita, data_spedizione, data_riconsegna, vettore, note, quantita, qr_code))
         conn.commit()
         cur.close()
         conn.close()
-        flash(f"Articolo inviato in manutenzione a {cliente}!", "success")
+        flash("Articolo inviato in manutenzione esterna.", "success")
     except Exception as e:
-        flash(f"Errore registrazione invio: {e}", "error")
+        flash(f"Errore invio in manutenzione: {e}", "error")
 
     return redirect(url_for("gestisci_prodotto", qr_code=qr_code))
 
-
-# --- RIENTRO DA MANUTENZIONE CON ESITO E CONTEGGIO ---
 @app.route("/ripristina_magazzino/<qr_code>", methods=["POST"])
 def ripristina_magazzino(qr_code):
     esito = request.form.get("esito_riparazione", "Riparato e Collaudato")
@@ -325,13 +448,19 @@ def ripristina_magazzino(qr_code):
     try:
         conn = get_db_connection()
         cur = conn.cursor()
-        
         cur.execute("SELECT * FROM prodotti WHERE qr_code = %s;", (qr_code,))
         prod = cur.fetchone()
-        
+
         if prod:
             qta_rientro = prod.get('quantita_manutenzione', 1) or 1
             
+            # Registra nello storico
+            cur.execute("""
+                INSERT INTO storico_manutenzioni (nome_prodotto, qr_code, sap, cliente, quantita, data_spedizione, data_riconsegna, vettore, note, esito)
+                VALUES (%s, %s, %s, %s, %s, %s, CURRENT_DATE, %s, %s, %s);
+            """, (prod['nome'], qr_code, prod['sap'], prod.get('cliente_manutenzione'), qta_rientro, prod.get('data_spedizione'), prod.get('vettore'), note_rientro, esito))
+
+            # Ripristina in magazzino e aggiorna contatore riparazioni
             cur.execute("""
                 UPDATE prodotti 
                 SET quantita = quantita + %s,
@@ -339,7 +468,7 @@ def ripristina_magazzino(qr_code):
                     stato_pezzo = %s,
                     in_manutenzione = FALSE,
                     cliente_manutenzione = NULL,
-                    quantita_manutenzione = 0,
+                    quantita_manutenzione = 1,
                     data_spedizione = NULL,
                     data_riconsegna = NULL,
                     vettore = NULL,
@@ -347,104 +476,16 @@ def ripristina_magazzino(qr_code):
                 WHERE qr_code = %s;
             """, (qta_rientro, esito, qr_code))
 
-            cur.execute("""
-                INSERT INTO storico_manutenzioni (nome_prodotto, qr_code, sap, cliente, quantita, data_riconsegna, note, esito)
-                VALUES (%s, %s, %s, %s, %s, CURRENT_DATE, %s, %s);
-            """, (prod['nome'], qr_code, prod['sap'], prod.get('cliente_manutenzione', 'Terzista'), qta_rientro, note_rientro, esito))
-
-            cur.execute("""
-                INSERT INTO notifiche (titolo, messaggio)
-                VALUES (%s, %s);
-            """, ("Rientro da Manutenzione", f"Articolo {prod['nome']} rientrato con esito: {esito}"))
-
             conn.commit()
-            flash(f"✅ Articolo rientrato in magazzino! Esito registrato: {esito}", "success")
-            
+            flash(f"Articolo rientrato con successo! Esito: {esito}", "success")
+
         cur.close()
         conn.close()
     except Exception as e:
-        flash(f"Errore durante il rientro in magazzino: {e}", "error")
-        
+        flash(f"Errore rientro magazzino: {e}", "error")
+
     return redirect(url_for("gestisci_prodotto", qr_code=qr_code))
 
-
-# --- INTERVENTI OFFICINA INTERNA ---
-@app.route("/richieste_manutenzione")
-def richieste_manutenzione():
-    conn = get_db_connection()
-    cur = conn.cursor()
-    cur.execute("SELECT * FROM richieste_manutenzione ORDER BY id DESC;")
-    richieste = cur.fetchall()
-    cur.close()
-    conn.close()
-    return render_template("richieste_manutenzione.html", richieste=richieste)
-
-@app.route("/nuova_richiesta_manutenzione", methods=["POST"])
-def nuova_richiesta_manutenzione():
-    impianto = request.form.get("impianto_macchina", "").strip()
-    titolo = request.form.get("titolo", "").strip()
-    tipo_guasto = request.form.get("tipo_guasto", "Meccanico")
-    priorita = request.form.get("priorita", "Media")
-    assegnato_a = request.form.get("assegnato_a", "").strip()
-    descrizione = request.form.get("descrizione", "").strip()
-    creato_da = session.get("username", "Operatore Officina")
-
-    if not titolo:
-        flash("Il titolo dell'intervento è obbligatorio!", "error")
-        return redirect(url_for("richieste_manutenzione"))
-
-    try:
-        conn = get_db_connection()
-        cur = conn.cursor()
-        cur.execute("""
-            INSERT INTO richieste_manutenzione (impianto_macchina, titolo, tipo_guasto, priorita, assegnato_a, descrizione, creato_da, stato)
-            VALUES (%s, %s, %s, %s, %s, %s, %s, 'Aperto');
-        """, (impianto, titolo, tipo_guasto, priorita, assegnato_a, descrizione, creato_da))
-        conn.commit()
-        cur.close()
-        conn.close()
-        flash("Richiesta di intervento creata con successo!", "success")
-    except Exception as e:
-        flash(f"Errore creazione richiesta: {e}", "error")
-
-    return redirect(url_for("richieste_manutenzione"))
-
-@app.route("/stampa_intervento/<int:intervento_id>")
-def stampa_intervento(intervento_id):
-    conn = get_db_connection()
-    cur = conn.cursor()
-    cur.execute("SELECT * FROM richieste_manutenzione WHERE id = %s;", (intervento_id,))
-    r = cur.fetchone()
-    
-    ricambi = []
-    try:
-        cur.execute("SELECT * FROM ricambi_intervento WHERE intervento_id = %s;", (intervento_id,))
-        ricambi = cur.fetchall()
-    except Exception:
-        pass
-
-    cur.close()
-    conn.close()
-
-    if not r:
-        flash("Intervento non trovato.", "error")
-        return redirect(url_for("richieste_manutenzione"))
-
-    return render_template("stampa_intervento.html", r=r, ricambi=ricambi)
-
-
-# --- ROTTA REPORT ORE (AGGIUNTA PER RISOLVERE IL BUILD ERROR NEL TEMPLATE) ---
-@app.route("/report_ore")
-def report_ore():
-    conn = get_db_connection()
-    cur = conn.cursor()
-    # Eventuale logica per recuperare i dati del report
-    cur.close()
-    conn.close()
-    return render_template("report_ore.html")
-
-
-# --- STORICO MANUTENZIONI ESTERNE GLOBALE ---
 @app.route("/storico_manutenzioni")
 def storico_manutenzioni():
     conn = get_db_connection()
@@ -457,8 +498,8 @@ def storico_manutenzioni():
 
 @app.route("/elimina_storico_manutenzione/<int:id>", methods=["POST"])
 def elimina_storico_manutenzione(id):
-    if not (session.get('is_admin') or session.get('puo_eliminare', True)):
-        flash("Non hai i permessi amministrativi per eliminare dallo storico.", "error")
+    if not (session.get('is_admin') or session.get('puo_eliminare_storico')):
+        flash("Non hai i permessi per eliminare elementi dallo storico.", "error")
         return redirect(url_for("storico_manutenzioni"))
 
     try:
@@ -468,13 +509,13 @@ def elimina_storico_manutenzione(id):
         conn.commit()
         cur.close()
         conn.close()
-        flash("Voce eliminata dallo storico con successo.", "success")
+        flash("Voce eliminata dallo storico.", "success")
     except Exception as e:
-        flash(f"Errore eliminazione: {e}", "error")
+        flash(f"Errore eliminazione storico: {e}", "error")
+
     return redirect(url_for("storico_manutenzioni"))
 
-
-# --- GESTIONE FORNITORI ---
+# --- FORNITORI ---
 @app.route("/aggiungi_fornitore", methods=["POST"])
 def aggiungi_fornitore():
     nome_azienda = request.form.get("nome_azienda", "").strip()
@@ -497,14 +538,13 @@ def aggiungi_fornitore():
         conn.commit()
         cur.close()
         conn.close()
-        flash(f"Fornitore {nome_azienda} aggiunto!", "success")
+        flash(f"Fornitore {nome_azienda} aggiunto con successo!", "success")
     except Exception as e:
         flash(f"Errore salvataggio fornitore: {e}", "error")
 
     return redirect(url_for("index"))
 
-
-# --- STAMPE E BOLLA ---
+# --- STAMPE ---
 @app.route("/stampa_bolla/<qr_code>")
 def stampa_bolla(qr_code):
     conn = get_db_connection()
@@ -513,11 +553,11 @@ def stampa_bolla(qr_code):
     prodotto = cur.fetchone()
     cur.close()
     conn.close()
-    
+
     if not prodotto:
         flash("Prodotto non trovato.", "error")
         return redirect(url_for("index"))
-        
+
     return render_template("bolla.html", prodotto=prodotto)
 
 @app.route("/stampa_singolo_qr/<qr_code>")
@@ -528,63 +568,12 @@ def stampa_singolo_qr(qr_code):
     prodotto = cur.fetchone()
     cur.close()
     conn.close()
-    
+
     if not prodotto:
         flash("Prodotto non trovato.", "error")
         return redirect(url_for("index"))
-        
+
     return render_template("stampa_qr.html", prodotto=prodotto)
 
-
-# --- ELIMINAZIONE PRODOTTO ---
-@app.route("/elimina_prodotto", methods=["POST"])
-def elimina_prodotto():
-    if not (session.get('is_admin') or session.get('puo_eliminare', True)):
-        flash("Non hai i permessi amministrativi per eliminare prodotti.", "error")
-        return redirect(url_for("index"))
-
-    qr_code = request.form.get("qr_code")
-    try:
-        conn = get_db_connection()
-        cur = conn.cursor()
-        cur.execute("DELETE FROM prodotti WHERE qr_code = %s;", (qr_code,))
-        conn.commit()
-        cur.close()
-        conn.close()
-        flash("Articolo eliminato dal database.", "success")
-    except Exception as e:
-        flash(f"Errore eliminazione: {e}", "error")
-
-    return redirect(url_for("index"))
-
-
-# --- API NOTIFICHE COMPLETE ---
-@app.route("/api/notifiche")
-def api_notifiche():
-    try:
-        conn = get_db_connection()
-        cur = conn.cursor()
-        cur.execute("SELECT * FROM notifiche WHERE letta = FALSE ORDER BY creata_il DESC;")
-        notifiche = cur.fetchall()
-        cur.close()
-        conn.close()
-        return jsonify(notifiche)
-    except Exception:
-        return jsonify([])
-
-@app.route("/api/notifiche/segna_lette", methods=["POST"])
-def api_segna_lette():
-    try:
-        conn = get_db_connection()
-        cur = conn.cursor()
-        cur.execute("UPDATE notifiche SET letta = TRUE WHERE letta = FALSE;")
-        conn.commit()
-        cur.close()
-        conn.close()
-        return jsonify({"status": "ok"})
-    except Exception as e:
-        return jsonify({"status": "error", "message": str(e)}), 500
-
-
-if __name__ == "_main_":
+if _name_ == "_main_":
     app.run(debug=True, host="0.0.0.0", port=5000)
