@@ -5,12 +5,15 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Gestionale OMG - Scheda {{ prodotto.nome }}</title>
     <style>
-        body { font-family: sans-serif; max-width: 900px; margin: 0 auto; padding: 15px; background: #f8fafc; color: #1e293b; }
+        body { font-family: sans-serif; max-width: 950px; margin: 0 auto; padding: 15px; background: #f8fafc; color: #1e293b; }
         .card { background: white; padding: 20px; border-radius: 12px; border: 1px solid #e2e8f0; margin-bottom: 20px; box-shadow: 0 2px 4px rgba(0,0,0,0.04); }
         .btn { background: #0284c7; color: white !important; padding: 8px 14px; border: none; border-radius: 6px; font-weight: bold; cursor: pointer; text-decoration: none; display: inline-block; font-size: 0.85rem; }
         .btn:hover { opacity: 0.9; }
         .form-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; margin-bottom: 12px; }
         input, select, textarea { width: 100%; padding: 8px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 0.85rem; box-sizing: border-box; }
+        table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 0.85rem; }
+        th, td { padding: 10px; text-align: left; border-bottom: 1px solid #e2e8f0; }
+        th { background: #f1f5f9; color: #475569; }
     </style>
 </head>
 <body>
@@ -33,6 +36,27 @@
       {% endif %}
     {% endwith %}
 
+    <!-- STATO STORICO DELL'ARTICOLO -->
+    <div class="card" style="display: flex; justify-content: space-between; align-items: center; background: #f1f5f9;">
+        <div>
+            <h4 style="margin: 0; color: #475569;">📊 Stato / Tracciabilità del Pezzo</h4>
+            <p style="margin: 4px 0 0 0; font-size: 0.85rem; color: #64748b;">
+                Matricola S/N: <strong>{{ prodotto.matricola or 'Non specificata' }}</strong>
+            </p>
+        </div>
+        <div>
+            {% if prodotto.stato_pezzo %}
+                <span style="background: #e0f2fe; color: #0369a1; padding: 6px 12px; border-radius: 20px; font-weight: bold; font-size: 0.85rem;">
+                    📌 Stato Attuale: {{ prodotto.stato_pezzo }}
+                </span>
+            {% endif %}
+            <span style="background: #fef3c7; color: #92400e; padding: 6px 12px; border-radius: 20px; font-weight: bold; font-size: 0.85rem; margin-left: 5px;">
+                ⚙️ Interventi Subiti: {{ prodotto.volte_riparato or 0 }}
+            </span>
+        </div>
+    </div>
+
+    <!-- SCHEDA DATI ARTICOLO -->
     <div class="card">
         <h3 style="margin-top: 0; color: #0284c7;">📝 Dettagli e Modifica Articolo</h3>
         <form method="POST" action="{{ url_for('aggiorna_prodotto', qr_code=prodotto.qr_code) }}">
@@ -79,7 +103,7 @@
 
     <!-- SEZIONE MANUTENZIONE ESTERNA -->
     <div class="card" style="border-left: 4px solid #f59e0b;">
-        <h3 style="margin-top: 0; color: #d97706;">🚚 Manutenzione Esterna / Riparazione</h3>
+        <h3 style="margin-top: 0; color: #d97706;">🚚 Gestione Manutenzione Esterna / Riparazione</h3>
         
         {% if prodotto.in_manutenzione in [1, '1', True, 1.0] %}
             <div style="background: #fef3c7; border: 1px solid #fcd34d; padding: 12px; border-radius: 8px; margin-bottom: 15px;">
@@ -97,10 +121,10 @@
             </div>
             
             <form method="POST" action="{{ url_for('ripristina_magazzino', qr_code=prodotto.qr_code) }}" style="background: #f0fdf4; border: 1px solid #bbf7d0; padding: 15px; border-radius: 8px;">
-                <h4 style="margin-top: 0; color: #166534;">✅ Segnala Rientro in Magazzino</h4>
+                <h4 style="margin-top: 0; color: #166534;">✅ Segnala Rientro in Magazzino e Registra Esito</h4>
                 <div class="form-grid">
                     <div>
-                        <label><strong>Esito Riparazione *:</strong></label>
+                        <label><strong>Esito Riparazione / Stato Rientro *:</strong></label>
                         <select name="esito_riparazione" required>
                             <option value="Riparato e Collaudato" selected>✅ Riparato e Collaudato</option>
                             <option value="Sostituito con Nuovo">🔄 Sostituito con Nuovo</option>
@@ -109,8 +133,8 @@
                         </select>
                     </div>
                     <div>
-                        <label><strong>Note Rientro / Intervento Eseguito:</strong></label>
-                        <input type="text" name="note_rientro" placeholder="Es. Sostituite guarnizioni e cuscinetti">
+                        <label><strong>Note Intervento / Lavoro Eseguito:</strong></label>
+                        <input type="text" name="note_rientro" placeholder="Es. Sostituito avvolgimento motore e cuscinetti">
                     </div>
                 </div>
                 <button type="submit" class="btn" style="background: #10b981; margin-top: 5px;">📥 Conferma Rientro e Ripristina Giacenza</button>
@@ -125,7 +149,7 @@
                             {% for f in fornitori %}
                                 <option value="{{ f.nome_azienda }}">{{ f.nome_azienda }} {% if f.settore_note %}({{ f.settore_note }}){% endif %}</option>
                             {% else %}
-                                <option value="" disabled>Nessun fornitore presente in anagrafica</option>
+                                <option value="" disabled>Nessun fornitore in anagrafica</option>
                             {% endfor %}
                         </select>
                     </div>
@@ -155,6 +179,43 @@
                 <button type="submit" class="btn" style="background: #f59e0b;">🚚 Registra Invio in Manutenzione</button>
             </form>
         {% endif %}
+    </div>
+
+    <!-- TABELLA STORICO DEDICATA A QUESTO SPECIFICO ARTICOLO -->
+    <div class="card">
+        <h3 style="margin-top: 0; color: #0284c7;">📜 Cronologia Manutenzioni ed Esiti di Questo Articolo</h3>
+        <div style="overflow-x: auto;">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Data Rientro</th>
+                        <th>Fornitore / Terzista</th>
+                        <th>Esito Riparazione</th>
+                        <th>Note Intervento</th>
+                        <th>Quantità</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for st in storico_prodotto %}
+                    <tr>
+                        <td><strong>{{ st.data_riconsegna or (st.registrato_il.strftime('%d/%m/%Y') if st.registrato_il else '-') }}</strong></td>
+                        <td>{{ st.cliente or '-' }}</td>
+                        <td>
+                            <span style="background: #dcfce7; color: #166534; padding: 4px 8px; border-radius: 6px; font-weight: bold; font-size: 0.8rem;">
+                                {{ st.esito or 'Riparato' }}
+                            </span>
+                        </td>
+                        <td>{{ st.note or '-' }}</td>
+                        <td>{{ st.quantita or 1 }} pz</td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="5" style="text-align: center; color: #64748b; padding: 15px;">Nessuna riparazione precedente registrata per questo codice. Articolo mai inviato in manutenzione.</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
     </div>
 
     {% if session.get('is_admin') or session.get('puo_eliminare', 0) %}
