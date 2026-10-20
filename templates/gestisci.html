@@ -79,7 +79,7 @@
             <!-- SCHEDA 1: ANAGRAFICA E MOVIMENTI -->
             <div class="tab-pane fade show active" id="anagrafica-pane" role="tabpanel">
                 <div class="row">
-                    <!-- Modifica Anagrafica, Magazzino Pesante ed Eliminazione -->
+                    <!-- Modifica Anagrafica (con Matricola/QR Code) -->
                     <div class="col-md-7 mb-4">
                         <div class="card shadow-sm h-100">
                             <div class="card-header bg-primary text-white">
@@ -87,13 +87,19 @@
                             </div>
                             <div class="card-body d-flex flex-column justify-content-between">
                                 <form action="{{ url_for('aggiorna_prodotto', qr_code=prodotto.qr_code) }}" method="POST">
-                                    <div class="mb-3">
-                                        <label class="form-label">Nome Articolo</label>
-                                        <input type="text" class="form-control" name="nome" value="{{ prodotto.nome }}" required>
+                                    <div class="row">
+                                        <div class="col-md-6 mb-3">
+                                            <label class="form-label fw-bold">Matricola / QR Code</label>
+                                            <input type="text" class="form-control font-monospace bg-light" name="qr_code" value="{{ prodotto.qr_code }}" readonly>
+                                        </div>
+                                        <div class="col-md-6 mb-3">
+                                            <label class="form-label fw-bold">Codice SAP</label>
+                                            <input type="text" class="form-control" name="sap" value="{{ prodotto.sap or '' }}">
+                                        </div>
                                     </div>
                                     <div class="mb-3">
-                                        <label class="form-label">Codice SAP</label>
-                                        <input type="text" class="form-control" name="sap" value="{{ prodotto.sap or '' }}">
+                                        <label class="form-label fw-bold">Nome Articolo *</label>
+                                        <input type="text" class="form-control" name="nome" value="{{ prodotto.nome }}" required>
                                     </div>
                                     <div class="row">
                                         <div class="col-md-6 mb-3">
