@@ -1,5 +1,5 @@
 # ========================================================================
-# Magazzino OMG Application - System with Push & In-App Notifications
+# Gestionale OMG Application - System with Push Notifications & Ore Report
 # Copyright (c) 2026 Marco Pavan. All Rights Reserved.
 # Designed & Developed by Marco Pavan
 # ========================================================================
@@ -16,7 +16,7 @@ from flask import Flask, render_template, request, redirect, url_for, flash, ses
 from werkzeug.security import generate_password_hash, check_password_hash
 
 app = Flask(__name__)
-app.secret_key = os.environ.get("SECRET_KEY", "chiave-segreta-magazzino")
+app.secret_key = os.environ.get("SECRET_KEY", "chiave-segreta-gestionale")
 
 DATABASE_URL = os.environ.get("DATABASE_URL")
 
@@ -175,7 +175,8 @@ def init_db():
                 puo_gestire_documenti INT DEFAULT 1,
                 puo_eliminare_documenti INT DEFAULT 0,
                 puo_vedere_promemoria INT DEFAULT 1,
-                puo_assegnare_promemoria INT DEFAULT 0
+                puo_assegnare_promemoria INT DEFAULT 0,
+                puo_vedere_report_ore INT DEFAULT 1
             );
         """)
 
@@ -256,7 +257,8 @@ def init_db():
             ("puo_gestire_documenti", "INT DEFAULT 1"),
             ("puo_eliminare_documenti", "INT DEFAULT 0"),
             ("puo_vedere_promemoria", "INT DEFAULT 1"),
-            ("puo_assegnare_promemoria", "INT DEFAULT 0")
+            ("puo_assegnare_promemoria", "INT DEFAULT 0"),
+            ("puo_vedere_report_ore", "INT DEFAULT 1")
         ]
         
         for p_col, p_type in permessi_lista:
@@ -266,14 +268,14 @@ def init_db():
         if not cur.fetchone():
             hashed_pw = generate_password_hash("admin")
             cur.execute("""
-                INSERT INTO utenti (username, password, is_admin, puo_vedere_magazzino, puo_aggiungere_prodotti, puo_modificare_prodotti, puo_caricare_scaricare, puo_eliminare, puo_vedere_pesante, puo_vedere_manutenzione, puo_aprire_manutenzioni, puo_gestire_interventi, puo_assegnare_manutenzioni, puo_eliminare_interventi, puo_vedere_manutenzioni_esterne, puo_vedere_storico_manutenzioni, puo_eliminare_storico, puo_gestire_fornitori, puo_importare_fornitori, puo_gestire_documenti, puo_eliminare_documenti, puo_vedere_promemoria, puo_assegnare_promemoria)
-                VALUES (%s, %s, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1);
+                INSERT INTO utenti (username, password, is_admin, puo_vedere_magazzino, puo_aggiungere_prodotti, puo_modificare_prodotti, puo_caricare_scaricare, puo_eliminare, puo_vedere_pesante, puo_vedere_manutenzione, puo_aprire_manutenzioni, puo_gestire_interventi, puo_assegnare_manutenzioni, puo_eliminare_interventi, puo_vedere_manutenzioni_esterne, puo_vedere_storico_manutenzioni, puo_eliminare_storico, puo_gestire_fornitori, puo_importare_fornitori, puo_gestire_documenti, puo_eliminare_documenti, puo_vedere_promemoria, puo_assegnare_promemoria, puo_vedere_report_ore)
+                VALUES (%s, %s, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1);
             """, ('admin', hashed_pw))
 
         conn.commit()
         cur.close()
         conn.close()
-        print("Database, tabelle notifiche e permessi inizializzati.")
+        print("Database e permessi Gestionale OMG inizializzati.")
     except Exception as e:
         print(f"Errore init_db: {e}")
 
@@ -285,7 +287,6 @@ def require_login():
     if request.endpoint and request.endpoint not in allowed_routes and 'username' not in session:
         return redirect(url_for('login'))
 
-# --- ENDPOINT PER LE NOTIFICHE PUSH & IN-APP ---
 @app.route("/api/notifiche")
 def api_notifiche():
     username = session.get('username')
@@ -315,7 +316,6 @@ def api_segna_lette():
         cur.close()
         conn.close()
     return jsonify({"status": "ok"})
-
 
 @app.route("/")
 def index():
@@ -420,8 +420,8 @@ def registra():
                 cur = conn.cursor()
                 hashed_pw = generate_password_hash(password)
                 cur.execute("""
-                    INSERT INTO utenti (username, password, is_admin, puo_vedere_magazzino, puo_aggiungere_prodotti, puo_modificare_prodotti, puo_caricare_scaricare, puo_eliminare, puo_vedere_pesante, puo_vedere_manutenzione, puo_aprire_manutenzioni, puo_gestire_interventi, puo_assegnare_manutenzioni, puo_eliminare_interventi, puo_vedere_manutenzioni_esterne, puo_vedere_storico_manutenzioni, puo_eliminare_storico, puo_gestire_fornitori, puo_importare_fornitori, puo_gestire_documenti, puo_eliminare_documenti, puo_vedere_promemoria, puo_assegnare_promemoria)
-                    VALUES (%s, %s, 0, 1, 1, 1, 1, 0, 1, 1, 1, 1, 1, 0, 1, 1, 0, 1, 1, 1, 0, 1, 0);
+                    INSERT INTO utenti (username, password, is_admin, puo_vedere_magazzino, puo_aggiungere_prodotti, puo_modificare_prodotti, puo_caricare_scaricare, puo_eliminare, puo_vedere_pesante, puo_vedere_manutenzione, puo_aprire_manutenzioni, puo_gestire_interventi, puo_assegnare_manutenzioni, puo_eliminare_interventi, puo_vedere_manutenzioni_esterne, puo_vedere_storico_manutenzioni, puo_eliminare_storico, puo_gestire_fornitori, puo_importare_fornitori, puo_gestire_documenti, puo_eliminare_documenti, puo_vedere_promemoria, puo_assegnare_promemoria, puo_vedere_report_ore)
+                    VALUES (%s, %s, 0, 1, 1, 1, 1, 0, 1, 1, 1, 1, 1, 0, 1, 1, 0, 1, 1, 1, 0, 1, 0, 1);
                 """, (username, hashed_pw))
                 conn.commit()
                 cur.close()
@@ -512,6 +512,105 @@ def elimina_utente(user_id):
         flash(f"Errore eliminazione utente: {e}", "error")
     return redirect(url_for('admin_utenti'))
 
+# --- NUOVO MODULO: REPORT ORE & STATISTICHE MANUTENZIONI ---
+@app.route("/report_ore")
+def report_ore():
+    if not (session.get('is_admin') or session.get('puo_vedere_report_ore', 1)):
+        flash("Accesso al modulo Report Ore non autorizzato.", "error")
+        return redirect(url_for('index'))
+
+    filtro_tecnico = request.args.get("tecnico", "Tutti")
+    data_inizio = request.args.get("data_inizio", "")
+    data_fine = request.args.get("data_fine", "")
+    periodo_predefinito = request.args.get("periodo", "mese")
+
+    today = datetime.now().date()
+    if periodo_predefinito == "oggi":
+        data_inizio = today.strftime("%Y-%m-%d")
+        data_fine = today.strftime("%Y-%m-%d")
+    elif periodo_predefinito == "mese":
+        data_inizio = today.replace(day=1).strftime("%Y-%m-%d")
+        data_fine = today.strftime("%Y-%m-%d")
+    elif periodo_predefinito == "anno":
+        data_inizio = today.replace(month=1, day=1).strftime("%Y-%m-%d")
+        data_fine = today.strftime("%Y-%m-%d")
+
+    conn = get_db_connection()
+    cur = conn.cursor()
+    
+    cur.execute("SELECT username FROM utenti ORDER BY username ASC;")
+    utenti = cur.fetchall()
+
+    query = """
+        SELECT id, titolo, impianto_macchina, priorita, tipo_guasto, stato, assegnato_a, 
+               creato_da, inizio_lavoro, fine_lavoro, COALESCE(tempo_lavorato_minuti, 0) as tempo_lavorato_minuti, creato_il 
+        FROM richieste_manutenzione 
+        WHERE 1=1
+    """
+    params = []
+
+    if data_inizio:
+        query += " AND DATE(COALESCE(fine_lavoro, creato_il)) >= %s"
+        params.append(data_inizio)
+    if data_fine:
+        query += " AND DATE(COALESCE(fine_lavoro, creato_il)) <= %s"
+        params.append(data_fine)
+
+    query += " ORDER BY creato_il DESC;"
+    cur.execute(query, tuple(params))
+    interventi = cur.fetchall()
+
+    ore_per_tecnico = {}
+    ore_per_tipo = {}
+    interventi_filtrati = []
+    totale_minuti_generale = 0
+
+    for u in utenti:
+        ore_per_tecnico[u['username']] = 0
+
+    for r in interventi:
+        assegnati = [t.strip() for t in (r['assegnato_a'] or "").split(",") if t.strip()]
+        
+        if filtro_tecnico != "Tutti" and filtro_tecnico not in assegnati:
+            continue
+
+        interventi_filtrati.append(r)
+        minuti = r['tempo_lavorato_minuti'] or 0
+        totale_minuti_generale += minuti
+
+        tipo = r['tipo_guasto'] or 'Meccanico'
+        ore_per_tipo[tipo] = ore_per_tipo.get(tipo, 0) + (minuti / 60.0)
+
+        if assegnati:
+            quota_minuti = minuti
+            for tec in assegnati:
+                ore_per_tecnico[tec] = ore_per_tecnico.get(tec, 0) + (quota_minuti / 60.0)
+
+    cur.close()
+    conn.close()
+
+    totale_ore_generale = round(totale_minuti_generale / 60.0, 1)
+
+    chart_tecnici_labels = [k for k, v in ore_per_tecnico.items() if filtro_tecnico == "Tutti" or k == filtro_tecnico]
+    chart_tecnici_values = [round(ore_per_tecnico[k], 1) for k in chart_tecnici_labels]
+
+    chart_tipi_labels = list(ore_per_tipo.keys())
+    chart_tipi_values = [round(v, 1) for v in ore_per_tipo.values()]
+
+    return render_template("report_ore.html",
+                           utenti=utenti,
+                           interventi=interventi_filtrati,
+                           filtro_tecnico=filtro_tecnico,
+                           data_inizio=data_inizio,
+                           data_fine=data_fine,
+                           periodo_predefinito=periodo_predefinito,
+                           totale_ore_generale=totale_ore_generale,
+                           totale_interventi=len(interventi_filtrati),
+                           chart_tecnici_labels=chart_tecnici_labels,
+                           chart_tecnici_values=chart_tecnici_values,
+                           chart_tipi_labels=chart_tipi_labels,
+                           chart_tipi_values=chart_tipi_values)
+
 # --- RICHIESTE INTERVENTO MANUTENZIONE OFFICINA ---
 @app.route("/richieste_manutenzione", methods=["GET", "POST"])
 def richieste_manutenzione():
@@ -562,7 +661,6 @@ def richieste_manutenzione():
             """, (titolo, impianto_macchina, descrizione, priorita, tipo_guasto, assegnato_a, username_corrente, allegato_nome, allegato_dati))
             conn.commit()
             
-            # --- CREAZIONE NOTIFICA PER I TECNICI ASSEGNATI ---
             for tec in tecnici_selezionati:
                 tec_clean = tec.strip()
                 if tec_clean:
@@ -695,7 +793,6 @@ def cambia_stato_intervento(intervento_id):
                 WHERE id = %s;
             """, (nuovo_stato, now, tempo_totale, note_lavoro, intervento_id))
             
-            # Notifica chi ha creato la richiesta
             creato_da = req.get('creato_da')
             if creato_da and creato_da != username_corrente:
                 crea_notifica(
@@ -754,7 +851,7 @@ def stampa_intervento(intervento_id):
     cur = conn.cursor()
     cur.execute("SELECT id, titolo, impianto_macchina, descrizione, priorita, stato, tipo_guasto, assegnato_a, creato_da, inizio_lavoro, fine_lavoro, tempo_lavorato_minuti, note_lavoro, creato_il FROM richieste_manutenzione WHERE id = %s;", (intervento_id,))
     intervento = cur.fetchone()
-    cur.execute("SELECT * FROM intervento_ricambi WHERE intervento_id = %s;", (intervento_id,))
+    cur.execute("SELECT * FROM intervento_ricambi WHERE id = %s;", (intervento_id,))
     ricambi = cur.fetchall()
     cur.close()
     conn.close()
@@ -1191,7 +1288,7 @@ def documenti(cartella_id):
             percorso_breadcrumb.insert(0, curr)
             if curr['parent_id']:
                 cur.execute("SELECT * FROM cartelle WHERE id = %s;", (curr['parent_id'],))
-                curr = cur.fetchone()
+                curr = curr.fetchone()
             else:
                 curr = None
 
@@ -1314,7 +1411,7 @@ def elimina_file(file_id):
         return redirect(url_for("documenti", cartella_id=cartella_id))
     return redirect(url_for("documenti"))
 
-# --- ALTRE ROTTE MAGAZZINO ---
+# --- ALTRE ROTTE GESTIONALE ---
 @app.route("/esporta_inventario")
 def esporta_inventario():
     conn = get_db_connection()
@@ -1333,7 +1430,7 @@ def esporta_inventario():
     return Response(
         output.getvalue(),
         mimetype="text/csv",
-        headers={"Content-disposition": "attachment; filename=Inventario_Magazzino.csv"}
+        headers={"Content-disposition": "attachment; filename=Inventario_Gestionale_OMG.csv"}
     )
 
 @app.route("/esporta_interventi")
@@ -1354,7 +1451,7 @@ def esporta_interventi():
     return Response(
         output.getvalue(),
         mimetype="text/csv",
-        headers={"Content-disposition": "attachment; filename=Report_Interventi_Officina.csv"}
+        headers={"Content-disposition": "attachment; filename=Report_Interventi_Gestionale_OMG.csv"}
     )
 
 @app.route("/upload", methods=["GET", "POST"])
