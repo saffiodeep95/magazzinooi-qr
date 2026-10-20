@@ -15,7 +15,7 @@ from psycopg2.extras import RealDictCursor
 from flask import Flask, render_template, request, redirect, url_for, flash, session, send_file, Response, jsonify
 from werkzeug.security import generate_password_hash, check_password_hash
 
-app = Flask(__name__)
+app = Flask(_name_)
 app.secret_key = os.environ.get("SECRET_KEY", "chiave-segreta-gestionale")
 
 DATABASE_URL = os.environ.get("DATABASE_URL")
@@ -203,7 +203,6 @@ def init_db():
             );
         """)
 
-        # Migrazione sicura colonne
         migrazioni = [
             ("prodotti", "matricola", "VARCHAR(255)"),
             ("prodotti", "stato_pezzo", "VARCHAR(255) DEFAULT 'Nuovo'"),
@@ -224,7 +223,7 @@ def init_db():
         conn.commit()
         cur.close()
         conn.close()
-        print("Database inizializzato con successo.")
+        print("Database inizializzato correttamente.")
     except Exception as e:
         print(f"Errore init_db: {e}")
 
@@ -266,6 +265,21 @@ def api_segna_lette():
         conn.close()
         return jsonify({"status": "ok"})
     return jsonify({"status": "error"})
+
+# --- ROTTA ADMIN UTENTI (RISOLVE L'ERRORE DEI LOG) ---
+@app.route("/admin_utenti")
+def admin_utenti():
+    if not session.get('is_admin'):
+        flash("Accesso negato. Area riservata agli amministratori.", "error")
+        return redirect(url_for("index"))
+    
+    conn = get_db_connection()
+    cur = conn.cursor()
+    cur.execute("SELECT * FROM utenti ORDER BY username ASC;")
+    utenti = cur.fetchall()
+    cur.close()
+    conn.close()
+    return render_template("admin_utenti.html", utenti=utenti)
 
 # --- DASHBOARD (INDEX) ---
 @app.route("/")
@@ -684,5 +698,5 @@ def stampa_singolo_qr(qr_code):
 
     return render_template("stampa_qr.html", prodotto=prodotto)
 
-if __name__ == "_main_":
+if _name_ == "_main_":
     app.run(debug=True, host="0.0.0.0", port=5000)
