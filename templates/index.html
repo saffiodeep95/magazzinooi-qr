@@ -3,119 +3,202 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Magazzino OMG - Home Dashboard</title>
-    
+    <title>Magazzino OMG - Dashboard</title>
+
     <link rel="manifest" href="{{ url_for('static', filename='manifest.json') }}">
     <link rel="icon" type="image/png" href="{{ url_for('static', filename='icon.png') }}">
     <link rel="apple-touch-icon" href="{{ url_for('static', filename='icon.png') }}">
-    <meta name="theme-color" content="#4f46e5">
+    <meta name="theme-color" content="#0284c7">
 
     <style>
-        body { font-family: sans-serif; max-width: 980px; margin: 0 auto; padding: 15px; background: #f8fafc; color: #1e293b; box-sizing: border-box; }
-        .card { background: white; padding: 20px; border-radius: 12px; border: 1px solid #e2e8f0; margin-bottom: 20px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
-        .btn { background: #0284c7; color: #ffffff !important; padding: 8px 14px; border: none; border-radius: 6px; font-weight: bold; cursor: pointer; text-decoration: none; display: inline-block; font-size: 0.85rem; margin: 2px; }
+        body { font-family: sans-serif; max-width: 1200px; margin: 0 auto; padding: 15px; background: #f8fafc; color: #1e293b; }
+        .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; flex-wrap: wrap; gap: 10px; }
+        .user-badge { background: #e0f2fe; color: #0369a1; padding: 6px 12px; border-radius: 20px; font-weight: bold; font-size: 0.85rem; }
+        .btn { background: #0284c7; color: white !important; padding: 8px 14px; border: none; border-radius: 6px; font-weight: bold; cursor: pointer; text-decoration: none; display: inline-block; font-size: 0.85rem; }
         .btn:hover { opacity: 0.9; }
-        table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 0.9rem; }
-        th, td { padding: 10px 12px; text-align: left; border-bottom: 1px solid #e2e8f0; vertical-align: middle; }
-        th { background: #f1f5f9; color: #475569; font-weight: 600; }
-        input, select { width: 100%; padding: 10px; margin-top: 5px; margin-bottom: 12px; border: 1px solid #cbd5e1; border-radius: 6px; box-sizing: border-box; font-size: 0.9rem; }
-        label { font-weight: bold; font-size: 0.85rem; color: #475569; display: block; }
-        .dashboard-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px; margin-bottom: 20px; }
-        .dash-card { background: white; padding: 15px; border-radius: 10px; border: 1px solid #e2e8f0; text-align: center; }
-        footer { text-align: center; margin-top: 30px; padding: 15px 0; color: #64748b; font-size: 0.8rem; border-top: 1px solid #e2e8f0; }
+        
+        .grid-mattoncini { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 15px; margin-bottom: 25px; }
+        .card-mattoncino { background: white; border: 1px solid #e2e8f0; border-radius: 12px; padding: 20px; text-decoration: none; color: inherit; display: flex; flex-direction: column; justify-content: space-between; transition: transform 0.15s, box-shadow 0.15s; box-shadow: 0 2px 4px rgba(0,0,0,0.04); }
+        .card-mattoncino:hover { transform: translateY(-3px); box-shadow: 0 6px 12px rgba(0,0,0,0.08); border-color: #0284c7; }
+        .card-mattoncino h3 { margin: 0 0 5px 0; font-size: 1.1rem; color: #0284c7; }
+        .card-mattoncino p { margin: 0; font-size: 0.8rem; color: #64748b; }
+        .counter-badge { margin-top: 10px; font-size: 1.2rem; font-weight: bold; color: #1e293b; }
+        
+        /* Dropdown Notifiche */
+        .notif-wrapper { position: relative; display: inline-block; }
+        .notif-btn { background: #f1f5f9; border: 1px solid #cbd5e1; padding: 6px 12px; border-radius: 20px; cursor: pointer; font-size: 1.1rem; position: relative; }
+        .notif-badge { position: absolute; top: -5px; right: -5px; background: #ef4444; color: white; border-radius: 50%; padding: 2px 6px; font-size: 0.7rem; font-weight: bold; display: none; }
+        .notif-dropdown { display: none; position: absolute; right: 0; top: 35px; width: 300px; background: white; border: 1px solid #e2e8f0; border-radius: 10px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); z-index: 1000; max-height: 350px; overflow-y: auto; }
+        .notif-item { padding: 10px; border-bottom: 1px solid #f1f5f9; font-size: 0.8rem; text-decoration: none; color: inherit; display: block; }
+        .notif-item:hover { background: #f8fafc; }
+        .notif-item.non-letta { background: #f0f9ff; font-weight: bold; }
+
+        table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 0.85rem; }
+        th, td { padding: 10px; text-align: left; border-bottom: 1px solid #e2e8f0; }
+        th { background: #f1f5f9; color: #475569; }
+        .card { background: white; padding: 20px; border-radius: 12px; border: 1px solid #e2e8f0; margin-bottom: 20px; }
     </style>
 </head>
 <body>
 
-    <!-- INTESTAZIONE E MENU RAPIDO -->
-    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; flex-wrap: wrap; gap: 10px;">
-        <h1 style="font-size: 1.5rem; margin: 0;">📦 Magazzino OMG</h1>
-        <div style="display: flex; gap: 5px; flex-wrap: wrap;">
-            <a href="{{ url_for('carico') }}" class="btn" style="background: #10b981;">➕ Carico</a>
-            <a href="{{ url_for('scarico') }}" class="btn" style="background: #ef4444;">➖ Scarico</a>
-            <a href="{{ url_for('scanner_globale') }}" class="btn" style="background: #8b5cf6;">📷 Scanner</a>
-            <a href="{{ url_for('magazzino_pesante') }}" class="btn" style="background: #0284c7;">🏋️ Mag. Pesante</a>
-            <a href="{{ url_for('manutenzioni') }}" class="btn" style="background: #f59e0b;">🔧 Man. Magazzino</a>
-            <a href="{{ url_for('richieste_manutenzione') }}" class="btn" style="background: #dc2626; position: relative;">
-                🛠️ Interventi Officina
-                {% if (interventi_aperti_count + interventi_in_lavoro_count) > 0 %}
-                    <span style="background: #ef4444; color: white; border-radius: 50%; padding: 2px 6px; font-size: 0.7rem; position: absolute; top: -5px; right: -5px;">{{ interventi_aperti_count + interventi_in_lavoro_count }}</span>
-                {% endif %}
-            </a>
-            <a href="{{ url_for('storico_manutenzioni') }}" class="btn" style="background: #64748b;">📜 Storico</a>
-            <a href="{{ url_for('fornitori') }}" class="btn" style="background: #0369a1;">🏢 Fornitori</a>
-            <a href="{{ url_for('documenti') }}" class="btn" style="background: #0e7490;">📁 Documenti</a>
-            
-            <a href="{{ url_for('promemoria') }}" class="btn" style="background: #d97706; position: relative;">
-                ⏰ Promemoria
-                {% if promemoria_urgenti > 0 %}
-                    <span style="background: #ef4444; color: white; border-radius: 50%; padding: 2px 6px; font-size: 0.7rem; position: absolute; top: -5px; right: -5px;">{{ promemoria_urgenti }}</span>
-                {% endif %}
-            </a>
+    <div class="header">
+        <div>
+            <h1 style="margin: 0; font-size: 1.6rem; color: #0284c7;">🏬 Magazzino OMG</h1>
+            <p style="margin: 2px 0 0 0; color: #64748b; font-size: 0.85rem;">Pannello di Controllo Generale</p>
+        </div>
+        <div style="display: flex; align-items: center; gap: 10px;">
+            <!-- ICONA CAMPANELLA NOTIFICHE -->
+            <div class="notif-wrapper">
+                <button class="notif-btn" id="btn-campanella" onclick="toggleNotifiche()">
+                    🔔 <span class="notif-badge" id="notif-count">0</span>
+                </button>
+                <div class="notif-dropdown" id="notif-list">
+                    <div style="padding: 10px; text-align: center; color: #64748b; font-size: 0.8rem;">Caricamento notifiche...</div>
+                </div>
+            </div>
 
+            <span class="user-badge">👤 {{ session.get('username') }}</span>
             {% if session.get('is_admin') %}
-                <a href="{{ url_for('admin_utenti') }}" class="btn" style="background: #334155;">⚙️ Utenti & Log</a>
+                <a href="{{ url_for('admin_utenti') }}" class="btn" style="background: #7c3aed;">⚙️ Permessi Admin</a>
             {% endif %}
-            <a href="{{ url_for('logout') }}" class="btn" style="background: #94a3b8;">🚪 Esci</a>
+            <a href="{{ url_for('logout') }}" class="btn" style="background: #ef4444;">Disconnetti</a>
         </div>
     </div>
 
     {% with messages = get_flashed_messages(with_categories=true) %}
       {% if messages %}
         {% for category, message in messages %}
-          <div style="background: {% if category == 'error' %}#fee2e2; color: #991b1b; border: 1px solid #fca5a5;{% else %}#dcfce7; color: #166534; border: 1px solid #bbf7d0;{% endif %} padding: 12px; border-radius: 8px; margin-bottom: 15px; font-size: 0.9rem;">
+          <div style="background: {% if category == 'error' %}#fee2e2; color: #991b1b;{% else %}#dcfce7; color: #166534;{% endif %} padding: 10px; border-radius: 8px; margin-bottom: 15px;">
             {{ message }}
           </div>
         {% endfor %}
       {% endif %}
     {% endwith %}
 
-    <!-- WIDGET DASHBOARD STATO OFFICINA -->
-    <div class="dashboard-grid">
-        <div class="dash-card" style="border-left: 5px solid #ef4444;">
-            <span style="font-size: 0.8rem; color: #64748b; font-weight: bold;">INTERVENTI APERTI</span>
-            <div style="font-size: 1.8rem; font-weight: bold; color: #ef4444;">{{ interventi_aperti_count }}</div>
-        </div>
-        <div class="dash-card" style="border-left: 5px solid #f59e0b;">
-            <span style="font-size: 0.8rem; color: #64748b; font-weight: bold;">IN LAVORAZIONE</span>
-            <div style="font-size: 1.8rem; font-weight: bold; color: #f59e0b;">{{ interventi_in_lavoro_count }}</div>
-        </div>
-        <div class="dash-card" style="border-left: 5px solid #ea580c;">
-            <span style="font-size: 0.8rem; color: #64748b; font-weight: bold;">ATTESA RICAMBIO</span>
-            <div style="font-size: 1.8rem; font-weight: bold; color: #ea580c;">{{ interventi_attesa_count }}</div>
-        </div>
-        <div class="dash-card" style="border-left: 5px solid #10b981;">
-            <span style="font-size: 0.8rem; color: #64748b; font-weight: bold;">PROMEMORIA ATTIVI</span>
-            <div style="font-size: 1.8rem; font-weight: bold; color: #10b981;">{{ promemoria_urgenti }}</div>
-        </div>
+    <div class="grid-mattoncini">
+        {% if session.get('is_admin') or session.get('puo_vedere_manutenzione', 1) %}
+        <a href="{{ url_for('richieste_manutenzione') }}" class="card-mattoncino" style="border-left: 4px solid #0284c7;">
+            <div>
+                <h3>🛠️ Interventi Officina</h3>
+                <p>Schede guasti, manutenzioni e timer di lavoro</p>
+            </div>
+            <div class="counter-badge">
+                <span style="color: #ef4444;">{{ interventi_aperti_count }} aperte</span> / 
+                <span style="color: #f59e0b;">{{ interventi_in_lavoro_count }} in lavoro</span>
+            </div>
+        </a>
+        {% endif %}
+
+        {% if session.get('is_admin') or session.get('puo_vedere_pesante', 1) %}
+        <a href="{{ url_for('magazzino_pesante') }}" class="card-mattoncino" style="border-left: 4px solid #475569;">
+            <div>
+                <h3>🏗️ Magazzino Pesante</h3>
+                <p>Gestione articoli e componenti pesanti</p>
+            </div>
+            <div class="counter-badge" style="font-size: 0.9rem; color: #64748b;">Accedi alla sezione →</div>
+        </a>
+        {% endif %}
+
+        {% if session.get('is_admin') or session.get('puo_vedere_manutenzioni_esterne', 1) %}
+        <a href="{{ url_for('manutenzioni') }}" class="card-mattoncino" style="border-left: 4px solid #f59e0b;">
+            <div>
+                <h3>🚚 Manutenzioni Esterne</h3>
+                <p>Materiale inviato a terzisti o in riparazione fuori</p>
+            </div>
+            <div class="counter-badge" style="font-size: 0.9rem; color: #64748b;">Vedi invii →</div>
+        </a>
+        {% endif %}
+
+        {% if session.get('is_admin') or session.get('puo_vedere_storico_manutenzioni', 1) %}
+        <a href="{{ url_for('storico_manutenzioni') }}" class="card-mattoncino" style="border-left: 4px solid #10b981;">
+            <div>
+                <h3>📜 Storico Manutenzioni</h3>
+                <p>Registro storico di tutte le riparazioni terminate</p>
+            </div>
+            <div class="counter-badge" style="font-size: 0.9rem; color: #64748b;">Consulta archivio →</div>
+        </a>
+        {% endif %}
+
+        {% if session.get('is_admin') or session.get('puo_gestire_fornitori', 1) %}
+        <a href="{{ url_for('fornitori') }}" class="card-mattoncino" style="border-left: 4px solid #6366f1;">
+            <div>
+                <h3>🏬 Fornitori & Contatti</h3>
+                <p>Anagrafica aziende e numeri contatti tecnici</p>
+            </div>
+            <div class="counter-badge" style="font-size: 0.9rem; color: #64748b;">Apri rubrica →</div>
+        </a>
+        {% endif %}
+
+        {% if session.get('is_admin') or session.get('puo_gestire_documenti', 1) %}
+        <a href="{{ url_for('documenti') }}" class="card-mattoncino" style="border-left: 4px solid #ec4899;">
+            <div>
+                <h3>📁 Archivio Documenti</h3>
+                <p>Cartelle, manuali tecnici e schede PDF</p>
+            </div>
+            <div class="counter-badge" style="font-size: 0.9rem; color: #64748b;">Esplora file →</div>
+        </a>
+        {% endif %}
+
+        {% if session.get('is_admin') or session.get('puo_vedere_promemoria', 1) %}
+        <a href="{{ url_for('promemoria') }}" class="card-mattoncino" style="border-left: 4px solid #8b5cf6;">
+            <div>
+                <h3>📌 Promemoria</h3>
+                <p>Scadenze, note e compiti assegnati</p>
+            </div>
+            <div class="counter-badge" style="color: #8b5cf6;">
+                {{ promemoria_urgenti }} da completare
+            </div>
+        </a>
+        {% endif %}
     </div>
 
-    <!-- AVVISO SCORTE MINIME / SOTTO SOGLIA -->
-    {% if prodotti_sotto_soglia %}
-    <div class="card" style="border-left: 5px solid #ef4444; background: #fff5f5;">
-        <h3 style="margin-top: 0; font-size: 1rem; color: #991b1b;">⚠️ Attenzione: Articoli Sotto Soglia Minima ({{ prodotti_sotto_soglia|length }})</h3>
+    {% if session.get('is_admin') or session.get('puo_vedere_magazzino', 1) %}
+    <div class="card">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; flex-wrap: wrap; gap: 10px;">
+            <h2 style="margin: 0; font-size: 1.2rem; color: #1e293b;">📦 Inventario Articoli Magazzino</h2>
+            <div style="display: flex; gap: 5px; flex-wrap: wrap;">
+                {% if session.get('is_admin') or session.get('puo_caricare_scaricare', 1) %}
+                    <a href="{{ url_for('carico') }}" class="btn" style="background: #10b981;">➕ Carico</a>
+                    <a href="{{ url_for('scarico') }}" class="btn" style="background: #f59e0b;">➖ Scarico</a>
+                {% endif %}
+                <a href="{{ url_for('scanner_globale') }}" class="btn" style="background: #6366f1;">📷 Scanner QR</a>
+                <a href="{{ url_for('esporta_inventario') }}" class="btn" style="background: #059669;">📊 Esporta CSV</a>
+            </div>
+        </div>
+
+        {% if prodotti_sotto_soglia %}
+            <div style="background: #fef2f2; border: 1px solid #fca5a5; color: #991b1b; padding: 10px; border-radius: 8px; margin-bottom: 15px; font-size: 0.85rem;">
+                ⚠️ <strong>Attenzione:</strong> Ci sono {{ prodotti_sotto_soglia|length }} articoli sotto la soglia minima di scorta!
+            </div>
+        {% endif %}
+
         <div style="overflow-x: auto;">
             <table>
                 <thead>
                     <tr>
-                        <th>Articolo</th>
                         <th>QR Code</th>
-                        <th>Q.tà Attuale</th>
-                        <th>Soglia Minima</th>
+                        <th>Nome Articolo</th>
+                        <th>SAP</th>
+                        <th>Quantità</th>
                         <th>Posizione</th>
                         <th>Azione</th>
                     </tr>
                 </thead>
                 <tbody>
-                    {% for p in prodotti_sotto_soglia %}
-                    <tr>
-                        <td><strong>{{ p.nome }}</strong></td>
+                    {% for p in prodotti %}
+                    <tr style="{% if p.quantita <= (p.soglia_minima or 3) %}background: #fff1f2;{% endif %}">
                         <td><code>{{ p.qr_code }}</code></td>
-                        <td><span style="color: #ef4444; font-weight: bold;">{{ p.quantita }}</span></td>
-                        <td>{{ p.soglia_minima or 3 }}</td>
+                        <td><strong>{{ p.nome }}</strong></td>
+                        <td>{{ p.sap or '-' }}</td>
+                        <td>
+                            <strong>{{ p.quantita }}</strong>
+                            {% if p.quantita <= (p.soglia_minima or 3) %}
+                                <span style="color: #ef4444; font-size: 0.75rem; font-weight: bold;">(Sotto Soglia {{ p.soglia_minima or 3 }})</span>
+                            {% endif %}
+                        </td>
                         <td>{{ p.posizione or '-' }}</td>
                         <td>
-                            <a href="{{ url_for('gestisci_prodotto', qr_code=p.qr_code) }}" class="btn" style="background: #10b981; padding: 4px 8px; font-size: 0.75rem;">+ Ricarica</a>
+                            <a href="{{ url_for('gestisci_prodotto', qr_code=p.qr_code) }}" class="btn" style="padding: 4px 8px; font-size: 0.75rem;">Gestisci / Scheda</a>
                         </td>
                     </tr>
                     {% endfor %}
@@ -125,118 +208,76 @@
     </div>
     {% endif %}
 
-    <!-- CARD AGGIUNTA PRODOTTO -->
-    <div class="card">
-        <h3 style="margin-top: 0; font-size: 1.1rem; color: #334155;">➕ Aggiungi o Aggiorna Articolo</h3>
-        <form action="{{ url_for('aggiungi_prodotto') }}" method="POST" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 10px; align-items: end;">
-            <div>
-                <label>QR Code / Codice:</label>
-                <input type="text" name="qr_code" placeholder="Scansiona o scrivi..." required>
-            </div>
-            <div>
-                <label>Nome Articolo:</label>
-                <input type="text" name="nome" placeholder="Nome componente" required>
-            </div>
-            <div>
-                <label>Codice SAP:</label>
-                <input type="text" name="sap" placeholder="Codice SAP">
-            </div>
-            <div>
-                <label>Quantità Iniziale:</label>
-                <input type="number" name="quantita" value="1" min="0">
-            </div>
-            <div>
-                <label>Soglia Minima Allarme:</label>
-                <input type="number" name="soglia_minima" value="3" min="1">
-            </div>
-            <div>
-                <label>Posizione / Scaffale:</label>
-                <input type="text" name="posizione" placeholder="Es. Reparto A1">
-            </div>
-            <div style="display: flex; align-items: center; height: 40px; margin-bottom: 12px;">
-                <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; margin: 0;">
-                    <input type="checkbox" name="magazzino_pesante" value="1" style="width: 18px; height: 18px; margin: 0;">
-                    Magazzino Pesante
-                </label>
-            </div>
-            <div>
-                <button type="submit" class="btn" style="background: #10b981; width: 100%; padding: 10px;">Salva Articolo</button>
-            </div>
-        </form>
-    </div>
-
-    <!-- ELENCO PRODOTTI CON RICERCA ISTANTANEA ED ESPORTAZIONE -->
-    <div class="card">
-        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; margin-bottom: 10px;">
-            <h3 style="margin: 0; font-size: 1.1rem; color: #334155;">Elenco Articoli in Magazzino</h3>
-            <div style="display: flex; gap: 5px; align-items: center; flex-wrap: wrap;">
-                <input type="text" id="filtroProdotti" placeholder="🔍 Cerca articolo..." onkeyup="FiltraProdotti()" style="width: 200px; margin: 0; padding: 6px 10px;">
-                <a href="{{ url_for('esporta_inventario') }}" class="btn" style="background: #059669; padding: 7px 10px; font-size: 0.8rem;">📊 Esporta CSV</a>
-                <a href="{{ url_for('upload') }}" class="btn" style="background: #4f46e5; padding: 7px 10px; font-size: 0.8rem;">📥 Importa CSV</a>
-                <a href="{{ url_for('stampa_tutti_qr') }}" class="btn" style="background: #0284c7; padding: 7px 10px; font-size: 0.8rem;" target="_blank">🖨️ Stampa QR</a>
-            </div>
-        </div>
-
-        {% if prodotti %}
-            <div style="overflow-x: auto;">
-                <table id="tabellaProdotti">
-                    <thead>
-                        <tr>
-                            <th>QR Code</th>
-                            <th>Nome Articolo</th>
-                            <th>SAP</th>
-                            <th>Q.tà</th>
-                            <th>Posizione</th>
-                            <th>Azioni</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for p in prodotti %}
-                        <tr>
-                            <td><code>{{ p.qr_code }}</code></td>
-                            <td><strong>{{ p.nome }}</strong></td>
-                            <td>{{ p.sap or '-' }}</td>
-                            <td>
-                                <span style="font-weight: bold; color: {% if p.quantita <= (p.soglia_minima or 3) %}#ef4444{% else %}#10b981{% endif %};">
-                                    {{ p.quantita }}
-                                </span>
-                            </td>
-                            <td>{{ p.posizione or '-' }}</td>
-                            <td>
-                                <a href="{{ url_for('gestisci_prodotto', qr_code=p.qr_code) }}" class="btn" style="background: #0284c7; padding: 6px 10px; font-size: 0.8rem;">Gestisci</a>
-                            </td>
-                        </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
-            </div>
-        {% else %}
-            <p style="color: #64748b; text-align: center; padding: 20px 0;">Nessun articolo presente nel magazzino principale.</p>
-        {% endif %}
-    </div>
-
-    <footer>
-        <p style="margin: 0;">© 2026 <strong>Marco Pavan</strong> — Tutti i diritti riservati.</p>
-        <p style="margin: 3px 0 0 0; opacity: 0.75;">Sviluppato da Marco Pavan</p>
-    </footer>
-
+    <!-- SCRIPT GESTIONE NOTIFICHE PUSH BROWSER E CAMPANELLA -->
     <script>
-        function FiltraProdotti() {
-            let input = document.getElementById("filtroProdotti");
-            let filter = input.value.toUpperCase();
-            let table = document.getElementById("tabellaProdotti");
-            if (!table) return;
-            let tr = table.getElementsByTagName("tr");
-            
-            for (let i = 1; i < tr.length; i++) {
-                let rowText = tr[i].textContent || tr[i].innerText;
-                if (rowText.toUpperCase().indexOf(filter) > -1) {
-                    tr[i].style.display = "";
-                } else {
-                    tr[i].style.display = "none";
-                }
+        let notificheVisteState = new Set();
+
+        if ("Notification" in window) {
+            if (Notification.permission === "default") {
+                Notification.requestPermission();
             }
         }
+
+        function caricaNotifiche() {
+            fetch("/api/notifiche")
+                .then(res => res.json())
+                .then(data => {
+                    const countBadge = document.getElementById("notif-count");
+                    const listContainer = document.getElementById("notif-list");
+                    
+                    let nonLette = data.filter(n => !n.letta);
+                    
+                    if (nonLette.length > 0) {
+                        countBadge.innerText = nonLette.length;
+                        countBadge.style.display = "inline-block";
+                    } else {
+                        countBadge.style.display = "none";
+                    }
+
+                    if (data.length === 0) {
+                        listContainer.innerHTML = '<div style="padding: 10px; text-align: center; color: #64748b; font-size: 0.8rem;">Nessuna notifica presente</div>';
+                        return;
+                    }
+
+                    let html = '';
+                    data.forEach(n => {
+                        html += `
+                            <a href="${n.link || '#'}" class="notif-item ${!n.letta ? 'non-letta' : ''}">
+                                <div style="color: #0284c7;">${n.titolo}</div>
+                                <div style="color: #475569;">${n.messaggio}</div>
+                            </a>
+                        `;
+
+                        // NOTIFICA PUSH DEL BROWSER
+                        if (!n.letta && !notificheVisteState.has(n.id)) {
+                            notificheVisteState.add(n.id);
+                            if ("Notification" in window && Notification.permission === "granted") {
+                                new Notification(n.titolo, {
+                                    body: n.messaggio,
+                                    icon: "{{ url_for('static', filename='icon.png') }}"
+                                });
+                            }
+                        }
+                    });
+                    listContainer.innerHTML = html;
+                }).catch(err => console.error("Errore recupero notifiche:", err));
+        }
+
+        function toggleNotifiche() {
+            const listContainer = document.getElementById("notif-list");
+            if (listContainer.style.display === "block") {
+                listContainer.style.display = "none";
+            } else {
+                listContainer.style.display = "block";
+                fetch("/api/notifiche/segna_lette", { method: "POST" })
+                    .then(() => {
+                        document.getElementById("notif-count").style.display = "none";
+                    });
+            }
+        }
+
+        setInterval(caricaNotifiche, 10000);
+        caricaNotifiche();
     </script>
 </body>
 </html>
