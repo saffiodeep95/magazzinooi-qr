@@ -3,7 +3,7 @@ import psycopg2
 from psycopg2.extras import RealDictCursor
 from flask import Flask, render_template, request, redirect, url_for, flash, session, jsonify
 
-app = Flask(_name_)
+app = Flask(__name__)
 app.secret_key = os.environ.get("SECRET_KEY", "super_segreto_omg_2026")
 
 def get_db_connection():
@@ -575,5 +575,5 @@ def api_segna_lette():
         return jsonify({"status": "error", "message": str(e)}), 500
 
 
-if _name_ == "_main_":
+if __name__ == "_main_":
     app.run(debug=True, host="0.0.0.0", port=5000)
