@@ -126,9 +126,6 @@
                 <a href="{{ url_for('scanner_globale') }}" class="btn btn-primary">
                     <i class="fa-solid fa-camera me-1"></i> Scanner QR
                 </a>
-                <a href="{{ url_for('selezione_stampa_qr') }}" class="btn btn-secondary">
-                    <i class="fa-solid fa-qrcode me-1"></i> Stampa QR
-                </a>
                 {% if session.get('is_admin') or session.get('puo_aggiungere_prodotti', 1) %}
                 <button class="btn btn-dark" data-bs-toggle="modal" data-bs-target="#modalAggiungi">
                     <i class="fa-solid fa-plus me-1"></i> Nuovo Articolo
