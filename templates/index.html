@@ -1,4 +1,19 @@
-<!DOCTYPE html>
+[07:22, 20/10/2026] Marco Pavan: <!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gestionale OMG - Dashboard</title>
+
+    <link rel="manifest" href="{{ url_for('static', filename='manifest.json') }}">
+    <link rel="icon" type="image/png" href="{{ url_for('static', filename='icon.png') }}">
+    <link rel="apple-touch-icon" href="{{ url_for('static', filename='icon.png') }}">
+    <meta name="theme-color" content="#0284c7">
+
+    <style>
+        body { font-family: sans-serif; max-width: 1200px; margin: 0 auto; padding: 15px; background: #f8fafc; color: #1e293b; }
+        .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; flex-wrap: wrap; gap: …
+[11:07, 20/10/2026] Marco Pavan: <!DOCTYPE html>
 <html lang="it">
 <head>
     <meta charset="UTF-8">
@@ -29,7 +44,6 @@
         .notif-btn { background: #f1f5f9; border: 1px solid #cbd5e1; padding: 6px 12px; border-radius: 20px; cursor: pointer; font-size: 1.1rem; position: relative; }
         .notif-badge { position: absolute; top: -5px; right: -5px; background: #ef4444; color: white; border-radius: 50%; padding: 2px 6px; font-size: 0.7rem; font-weight: bold; display: none; }
         
-        /* Stile Tendina Notifiche */
         .notif-dropdown { 
             display: none; 
             position: absolute; 
@@ -45,7 +59,6 @@
             overflow-y: auto; 
         }
 
-        /* Adattamento Responsivo per Smartphone */
         @media (max-width: 600px) {
             .notif-dropdown {
                 position: fixed;
@@ -60,6 +73,9 @@
         .notif-item { padding: 12px; border-bottom: 1px solid #f1f5f9; font-size: 0.85rem; text-decoration: none; color: inherit; display: block; }
         .notif-item:hover { background: #f8fafc; }
         .notif-item.non-letta { background: #f0f9ff; font-weight: bold; border-left: 3px solid #0284c7; }
+
+        .form-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 10px; margin-bottom: 10px; }
+        input, select { width: 100%; padding: 8px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 0.85rem; box-sizing: border-box; }
 
         table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 0.85rem; }
         th, td { padding: 10px; text-align: left; border-bottom: 1px solid #e2e8f0; }
@@ -102,6 +118,7 @@
       {% endif %}
     {% endwith %}
 
+    <!-- SCHEDE SEZIONI RAPIDE -->
     <div class="grid-mattoncini">
         {% if session.get('is_admin') or session.get('puo_vedere_manutenzione', 1) %}
         <a href="{{ url_for('richieste_manutenzione') }}" class="card-mattoncino" style="border-left: 4px solid #0284c7;">
@@ -189,6 +206,52 @@
         {% endif %}
     </div>
 
+    <!-- FORM DI AGGIUNTA NUOVO PRODOTTO -->
+    {% if session.get('is_admin') or session.get('puo_aggiungere_prodotti', 1) %}
+    <div class="card">
+        <h3 style="margin-top: 0; color: #0284c7;">➕ Aggiungi Nuovo Articolo in Magazzino</h3>
+        <form method="POST" action="{{ url_for('aggiungi_prodotto') }}">
+            <div class="form-grid">
+                <div>
+                    <label><strong>QR Code / Codice *:</strong></label>
+                    <input type="text" name="qr_code" required placeholder="Es. ART-1002">
+                </div>
+                <div>
+                    <label><strong>Nome Articolo *:</strong></label>
+                    <input type="text" name="nome" required placeholder="Es. Cuscinetto a sfere SKF">
+                </div>
+                <div>
+                    <label><strong>Codice SAP:</strong></label>
+                    <input type="text" name="sap" placeholder="Es. 45001234">
+                </div>
+                <div>
+                    <label><strong>Quantità Iniziale:</strong></label>
+                    <input type="number" name="quantita" value="1" min="0">
+                </div>
+                <div>
+                    <label><strong>Posizione Scaffale:</strong></label>
+                    <input type="text" name="posizione" placeholder="Es. A-02-3">
+                </div>
+                <div>
+                    <label><strong>Peso:</strong></label>
+                    <input type="text" name="peso" placeholder="Es. 1.5 kg">
+                </div>
+                <div>
+                    <label><strong>Soglia Minima Scorta:</strong></label>
+                    <input type="number" name="soglia_minima" value="3" min="0">
+                </div>
+                <div style="display: flex; align-items: center; gap: 8px; margin-top: 18px;">
+                    <input type="checkbox" name="magazzino_pesante" id="chk_pesante" style="width: auto;">
+                    <label for="chk_pesante"><strong>🏗️ Magazzino Pesante</strong></label>
+                </div>
+            </div>
+
+            <button type="submit" class="btn" style="background: #10b981; margin-top: 10px;">💾 Salva Articolo in Magazzino</button>
+        </form>
+    </div>
+    {% endif %}
+
+    <!-- TABELLA INVENTARIO ARTICOLI -->
     {% if session.get('is_admin') or session.get('puo_vedere_magazzino', 1) %}
     <div class="card">
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; flex-wrap: wrap; gap: 10px;">
@@ -237,6 +300,10 @@
                         <td>
                             <a href="{{ url_for('gestisci_prodotto', qr_code=p.qr_code) }}" class="btn" style="padding: 4px 8px; font-size: 0.75rem;">Gestisci / Scheda</a>
                         </td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="6" style="text-align: center; color: #64748b; padding: 15px;">Nessun articolo presente in magazzino.</td>
                     </tr>
                     {% endfor %}
                 </tbody>
@@ -311,7 +378,6 @@
             }
         }
 
-        // Chiudi notifiche se si clicca fuori dalla campanella
         document.addEventListener('click', function(event) {
             const wrapper = document.querySelector('.notif-wrapper');
             const listContainer = document.getElementById("notif-list");
