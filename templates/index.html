@@ -111,18 +111,26 @@
         </div>
         {% endif %}
 
-        <!-- Intestazione e pulsanti azione rapida -->
-        <div class="d-flex justify-content-between align-items-center mb-4">
+        <!-- Intestazione e pulsanti azione rapida (Carico, Scarico, Scanner e Nuovo Articolo) -->
+        <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
             <h2><i class="fa-solid fa-warehouse me-2"></i>Inventario Magazzino Principale</h2>
-            <div>
+            <div class="d-flex gap-2 flex-wrap">
+                {% if session.get('is_admin') or session.get('puo_caricare_scaricare', 1) %}
+                <a href="{{ url_for('carico') }}" class="btn btn-success">
+                    <i class="fa-solid fa-circle-plus me-1"></i> Carico Rapido
+                </a>
+                <a href="{{ url_for('scarico') }}" class="btn btn-danger">
+                    <i class="fa-solid fa-circle-minus me-1"></i> Scarico Rapido
+                </a>
+                {% endif %}
+                <a href="{{ url_for('scanner_globale') }}" class="btn btn-primary">
+                    <i class="fa-solid fa-camera me-1"></i> Scanner QR
+                </a>
                 {% if session.get('is_admin') or session.get('puo_aggiungere_prodotti', 1) %}
-                <button class="btn btn-success" data-bs-toggle="modal" data-bs-target="#modalAggiungi">
+                <button class="btn btn-dark" data-bs-toggle="modal" data-bs-target="#modalAggiungi">
                     <i class="fa-solid fa-plus me-1"></i> Nuovo Articolo
                 </button>
                 {% endif %}
-                <a href="{{ url_for('scanner_globale') }}" class="btn btn-primary">
-                    <i class="fa-solid fa-qrcode me-1"></i> Scanner QR
-                </a>
                 <a href="{{ url_for('esporta_inventario') }}" class="btn btn-outline-secondary">
                     <i class="fa-solid fa-file-csv me-1"></i> Esporta CSV
                 </a>
