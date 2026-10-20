@@ -241,7 +241,7 @@ def init_db():
             );
         """)
         
-        # Migrazioni sicure per colonne aggiuntive
+        # Migrazioni sicure per colonne aggiuntive nel DB esistente su Render
         migrazioni = [
             ("prodotti", "matricola", "VARCHAR(255)"),
             ("prodotti", "stato_pezzo", "VARCHAR(255) DEFAULT 'Nuovo'"),
@@ -1574,12 +1574,12 @@ def storico_manutenzioni():
     try:
         conn = get_db_connection()
         cur = conn.cursor()
-        cur.execute("SELECT * FROM storico_manutenzioni ORDER BY registrato_il DESC;")
+        cur.execute("SELECT * FROM storico_manutenzioni ORDER BY registrato_il DESC, id DESC;")
         storico = cur.fetchall()
         cur.close()
         conn.close()
-    except Exception:
-        pass
+    except Exception as e:
+        print(f"Errore caricamento storico: {e}")
     return render_template("storico_manutenzioni.html", storico=storico)
 
 @app.route("/elimina_storico_manutenzione/<int:storico_id>", methods=["POST"])
@@ -1587,14 +1587,17 @@ def elimina_storico_manutenzione(storico_id):
     if not (session.get('is_admin') or session.get('puo_eliminare_storico', 0)):
         flash("Permesso negato.", "error")
         return redirect(url_for('storico_manutenzioni'))
-    conn = get_db_connection()
-    cur = conn.cursor()
-    cur.execute("DELETE FROM storico_manutenzioni WHERE id = %s;", (storico_id,))
-    conn.commit()
-    cur.close()
-    conn.close()
-    registra_log(f"Eliminato record storico manutenzione ID {storico_id}")
-    flash("Record eliminato dallo storico.", "success")
+    try:
+        conn = get_db_connection()
+        cur = conn.cursor()
+        cur.execute("DELETE FROM storico_manutenzioni WHERE id = %s;", (storico_id,))
+        conn.commit()
+        cur.close()
+        conn.close()
+        registra_log(f"Eliminato record storico manutenzione ID {storico_id}")
+        flash("Record eliminato dallo storico.", "success")
+    except Exception as e:
+        flash(f"Errore eliminazione: {e}", "error")
     return redirect(url_for('storico_manutenzioni'))
 
 @app.route("/stampa_bolla/<qr_code>")
@@ -1688,7 +1691,7 @@ def gestisci_prodotto(qr_code):
     except Exception:
         pass
 
-    # Recupera lo storico specifico per questo prodotto
+    # Recupera lo storico specifico per questo articolo/QR code
     storico_prodotto = []
     try:
         cur.execute("SELECT * FROM storico_manutenzioni WHERE qr_code = %s ORDER BY id DESC;", (qr_code,))
@@ -1844,14 +1847,14 @@ def ripristina_magazzino(qr_code):
         if prod:
             qta_rientro = prod.get('quantita_manutenzione', 1) or 1
             
-            # Aggiorna lo storico esistente con l'esito o inseriscine uno nuovo se necessario
+            # Aggiorna il record nello storico con l'esito della riparazione
             cur.execute("""
                 UPDATE storico_manutenzioni 
                 SET esito = %s, data_riconsegna = CURRENT_DATE, note = COALESCE(NULLIF(%s, ''), note)
-                WHERE qr_code = %s AND data_riconsegna IS NULL;
+                WHERE qr_code = %s AND (data_riconsegna IS NULL OR data_riconsegna = '');
             """, (esito, note_rientro, qr_code))
 
-            # Ripristina in magazzino, incrementa volte_riparato e aggiorna stato pezzo
+            # Ripristina il magazzino, incrementa i rientri e aggiorna lo stato del pezzo
             cur.execute("""
                 UPDATE prodotti 
                 SET quantita = quantita + %s,
