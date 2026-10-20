@@ -784,6 +784,31 @@ def stampa_intervento(intervento_id):
         return redirect(url_for("richieste_manutenzione"))
     return render_template("stampa_intervento.html", r=intervento, ricambi=ricambi)
 
+@app.route("/esporta_interventi")
+def esporta_interventi():
+    if not (session.get('is_admin') or session.get('puo_vedere_manutenzione', 1)):
+        flash("Accesso negato.", "error")
+        return redirect(url_for('index'))
+        
+    conn = get_db_connection()
+    cur = conn.cursor()
+    cur.execute("SELECT id, titolo, impianto_macchina, priorita, tipo_guasto, stato, assegnato_a, creato_da, inizio_lavoro, fine_lavoro, tempo_lavorato_minuti, note_lavoro, creato_il FROM richieste_manutenzione ORDER BY creato_il DESC;")
+    richieste = cur.fetchall()
+    cur.close()
+    conn.close()
+    
+    output = io.StringIO()
+    writer = csv.writer(output)
+    writer.writerow(['ID', 'Titolo', 'Macchina', 'Priorità', 'Tipo Guasto', 'Stato', 'Assegnato A', 'Creato Da', 'Inizio', 'Fine', 'Minuti Lavorati', 'Note', 'Data Creazione'])
+    for r in richieste:
+        writer.writerow([r['id'], r['titolo'], r['impianto_macchina'], r['priorita'], r['tipo_guasto'], r['stato'], r['assegnato_a'], r['creato_da'], r['inizio_lavoro'], r['fine_lavoro'], r['tempo_lavorato_minuti'], r['note_lavoro'], r['creato_il']])
+    
+    return Response(
+        output.getvalue(),
+        mimetype="text/csv",
+        headers={"Content-disposition": "attachment; filename=Report_Interventi_Gestionale_OMG.csv"}
+    )
+
 @app.route("/promemoria", methods=["GET", "POST"])
 def promemoria():
     if not (session.get('is_admin') or session.get('puo_vedere_promemoria', 1)):
