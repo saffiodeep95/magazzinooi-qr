@@ -1128,6 +1128,36 @@ def gestisci_prodotto(qr_code):
         return redirect(url_for("index"))
     return render_template("gestisci.html", prodotto=prodotto, fornitori=lista_fornitori, storico_prodotto=storico_prodotto)
 
+@app.route("/carica_scarica/<qr_code>/<azione>", methods=["POST"])
+def carica_scarica(qr_code, azione):
+    if not (session.get('is_admin') or session.get('puo_caricare_scaricare', 1)):
+        flash("Permesso negato.", "error")
+        return redirect(url_for("gestisci_prodotto", qr_code=qr_code))
+    
+    try:
+        quantita = int(request.form.get("quantita_movimento", 1))
+    except (TypeError, ValueError):
+        quantita = 1
+
+    try:
+        conn = get_db_connection()
+        cur = conn.cursor()
+        if azione == 'carica':
+            cur.execute("UPDATE prodotti SET quantita = quantita + %s WHERE qr_code = %s;", (quantita, qr_code))
+            registra_log(f"Carico rapido di +{quantita} pz su QR: {qr_code}")
+            flash(f"Carico di +{quantita} pezzi effettuato con successo!", "success")
+        elif azione == 'scarica':
+            cur.execute("UPDATE prodotti SET quantita = GREATEST(0, quantita - %s) WHERE qr_code = %s;", (quantita, qr_code))
+            registra_log(f"Scarico rapido di -{quantita} pz su QR: {qr_code}")
+            flash(f"Scarico di -{quantita} pezzi effettuato con successo!", "success")
+        conn.commit()
+        cur.close()
+        conn.close()
+    except Exception as e:
+        flash(f"Errore durante il movimento: {e}", "error")
+        
+    return redirect(url_for("gestisci_prodotto", qr_code=qr_code))
+
 @app.route("/storico_manutenzioni")
 def storico_manutenzioni():
     if not (session.get('is_admin') or session.get('puo_vedere_storico_manutenzioni', 1)):
@@ -1306,24 +1336,6 @@ def elimina_prodotto():
         except Exception as e:
             flash(f"Errore durante l'eliminazione: {e}", "error")
     return redirect(url_for("index"))
-
-@app.route("/carica_scarica/<qr_code>/<azione>", methods=["POST"])
-def carica_scarica(qr_code, azione):
-    quantita = int(request.form.get("quantita_movimento", 1))
-    try:
-        conn = get_db_connection()
-        cur = conn.cursor()
-        if azione == 'carica':
-            cur.execute("UPDATE prodotti SET quantita = quantita + %s WHERE qr_code = %s;", (quantita, qr_code))
-        elif azione == 'scarica':
-            cur.execute("UPDATE prodotti SET quantita = GREATEST(0, quantita - %s) WHERE qr_code = %s;", (quantita, qr_code))
-        conn.commit()
-        cur.close()
-        conn.close()
-        flash(f"Operazione di {azione} eseguita!", "success")
-    except Exception as e:
-        flash(f"Errore movimento: {e}", "error")
-    return redirect(url_for("gestisci_prodotto", qr_code=qr_code))
 
 @app.route("/carico", methods=["GET", "POST"])
 def carico():
