@@ -1,5 +1,5 @@
 # ========================================================================
-# Magazzino OMG Application
+# Magazzino OMG Application - System with Push & In-App Notifications
 # Copyright (c) 2026 Marco Pavan. All Rights Reserved.
 # Designed & Developed by Marco Pavan
 # ========================================================================
@@ -12,7 +12,7 @@ from datetime import datetime, timedelta
 import pandas as pd
 import psycopg2
 from psycopg2.extras import RealDictCursor
-from flask import Flask, render_template, request, redirect, url_for, flash, session, send_file, Response
+from flask import Flask, render_template, request, redirect, url_for, flash, session, send_file, Response, jsonify
 from werkzeug.security import generate_password_hash, check_password_hash
 
 app = Flask(__name__)
@@ -37,6 +37,20 @@ def registra_log(descrizione):
         conn.close()
     except Exception as e:
         print(f"Errore registrazione log: {e}")
+
+def crea_notifica(destinatario, titolo, messaggio, link=""):
+    try:
+        conn = get_db_connection()
+        cur = conn.cursor()
+        cur.execute("""
+            INSERT INTO notifiche (destinatario, titolo, messaggio, link)
+            VALUES (%s, %s, %s, %s);
+        """, (destinatario, titolo, messaggio, link))
+        conn.commit()
+        cur.close()
+        conn.close()
+    except Exception as e:
+        print(f"Errore inserimento notifica: {e}")
 
 def init_db():
     if not DATABASE_URL:
@@ -142,13 +156,26 @@ def init_db():
                 username VARCHAR(255) UNIQUE NOT NULL,
                 password VARCHAR(255) NOT NULL,
                 is_admin INT DEFAULT 0,
-                puo_vedere_manutenzione INT DEFAULT 1,
+                puo_vedere_magazzino INT DEFAULT 1,
+                puo_aggiungere_prodotti INT DEFAULT 1,
+                puo_modificare_prodotti INT DEFAULT 1,
+                puo_caricare_scaricare INT DEFAULT 1,
                 puo_eliminare INT DEFAULT 0,
-                puo_eliminare_storico INT DEFAULT 0,
-                puo_gestire_documenti INT DEFAULT 1,
-                puo_assegnare_promemoria INT DEFAULT 0,
+                puo_vedere_pesante INT DEFAULT 1,
+                puo_vedere_manutenzione INT DEFAULT 1,
                 puo_aprire_manutenzioni INT DEFAULT 1,
-                puo_assegnare_manutenzioni INT DEFAULT 1
+                puo_gestire_interventi INT DEFAULT 1,
+                puo_assegnare_manutenzioni INT DEFAULT 1,
+                puo_eliminare_interventi INT DEFAULT 0,
+                puo_vedere_manutenzioni_esterne INT DEFAULT 1,
+                puo_vedere_storico_manutenzioni INT DEFAULT 1,
+                puo_eliminare_storico INT DEFAULT 0,
+                puo_gestire_fornitori INT DEFAULT 1,
+                puo_importare_fornitori INT DEFAULT 1,
+                puo_gestire_documenti INT DEFAULT 1,
+                puo_eliminare_documenti INT DEFAULT 0,
+                puo_vedere_promemoria INT DEFAULT 1,
+                puo_assegnare_promemoria INT DEFAULT 0
             );
         """)
 
@@ -196,34 +223,57 @@ def init_db():
                 caricato_il TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             );
         """)
+
+        cur.execute("""
+            CREATE TABLE IF NOT EXISTS notifiche (
+                id SERIAL PRIMARY KEY,
+                destinatario VARCHAR(255) NOT NULL,
+                titolo VARCHAR(255) NOT NULL,
+                messaggio TEXT NOT NULL,
+                link VARCHAR(255),
+                letta BOOLEAN DEFAULT FALSE,
+                creato_il TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            );
+        """)
         
-        colonne_migrazione = [
-            ("fornitori", "settore_note", "VARCHAR(255)"),
-            ("contatti_tecnici", "email", "VARCHAR(255)"),
-            ("promemoria", "ricorrenza", "VARCHAR(50) DEFAULT 'Nessuna'"),
-            ("promemoria", "assegnato_a", "VARCHAR(255)"),
-            ("utenti", "puo_assegnare_promemoria", "INT DEFAULT 0"),
-            ("utenti", "puo_aprire_manutenzioni", "INT DEFAULT 1"),
-            ("utenti", "puo_assegnare_manutenzioni", "INT DEFAULT 1"),
-            ("prodotti", "soglia_minima", "INT DEFAULT 3"),
-            ("richieste_manutenzione", "tipo_guasto", "VARCHAR(50) DEFAULT 'Meccanico'"),
-            ("richieste_manutenzione", "tempo_lavorato_minuti", "INT DEFAULT 0"),
-            ("richieste_manutenzione", "allegato_nome", "VARCHAR(255)"),
-            ("richieste_manutenzione", "allegato_dati", "BYTEA")
+        permessi_lista = [
+            ("puo_vedere_magazzino", "INT DEFAULT 1"),
+            ("puo_aggiungere_prodotti", "INT DEFAULT 1"),
+            ("puo_modificare_prodotti", "INT DEFAULT 1"),
+            ("puo_caricare_scaricare", "INT DEFAULT 1"),
+            ("puo_eliminare", "INT DEFAULT 0"),
+            ("puo_vedere_pesante", "INT DEFAULT 1"),
+            ("puo_vedere_manutenzione", "INT DEFAULT 1"),
+            ("puo_aprire_manutenzioni", "INT DEFAULT 1"),
+            ("puo_gestire_interventi", "INT DEFAULT 1"),
+            ("puo_assegnare_manutenzioni", "INT DEFAULT 1"),
+            ("puo_eliminare_interventi", "INT DEFAULT 0"),
+            ("puo_vedere_manutenzioni_esterne", "INT DEFAULT 1"),
+            ("puo_vedere_storico_manutenzioni", "INT DEFAULT 1"),
+            ("puo_eliminare_storico", "INT DEFAULT 0"),
+            ("puo_gestire_fornitori", "INT DEFAULT 1"),
+            ("puo_importare_fornitori", "INT DEFAULT 1"),
+            ("puo_gestire_documenti", "INT DEFAULT 1"),
+            ("puo_eliminare_documenti", "INT DEFAULT 0"),
+            ("puo_vedere_promemoria", "INT DEFAULT 1"),
+            ("puo_assegnare_promemoria", "INT DEFAULT 0")
         ]
         
-        for tabella, colonna, tipo in colonne_migrazione:
-            cur.execute(f"ALTER TABLE {tabella} ADD COLUMN IF NOT EXISTS {colonna} {tipo};")
+        for p_col, p_type in permessi_lista:
+            cur.execute(f"ALTER TABLE utenti ADD COLUMN IF NOT EXISTS {p_col} {p_type};")
         
         cur.execute("SELECT * FROM utenti WHERE username = 'admin';")
         if not cur.fetchone():
             hashed_pw = generate_password_hash("admin")
-            cur.execute("INSERT INTO utenti (username, password, is_admin, puo_vedere_manutenzione, puo_eliminare, puo_eliminare_storico, puo_gestire_documenti, puo_assegnare_promemoria, puo_aprire_manutenzioni, puo_assegnare_manutenzioni) VALUES (%s, %s, 1, 1, 1, 1, 1, 1, 1, 1);", ('admin', hashed_pw))
+            cur.execute("""
+                INSERT INTO utenti (username, password, is_admin, puo_vedere_magazzino, puo_aggiungere_prodotti, puo_modificare_prodotti, puo_caricare_scaricare, puo_eliminare, puo_vedere_pesante, puo_vedere_manutenzione, puo_aprire_manutenzioni, puo_gestire_interventi, puo_assegnare_manutenzioni, puo_eliminare_interventi, puo_vedere_manutenzioni_esterne, puo_vedere_storico_manutenzioni, puo_eliminare_storico, puo_gestire_fornitori, puo_importare_fornitori, puo_gestire_documenti, puo_eliminare_documenti, puo_vedere_promemoria, puo_assegnare_promemoria)
+                VALUES (%s, %s, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1);
+            """, ('admin', hashed_pw))
 
         conn.commit()
         cur.close()
         conn.close()
-        print("Database inizializzato con successo.")
+        print("Database, tabelle notifiche e permessi inizializzati.")
     except Exception as e:
         print(f"Errore init_db: {e}")
 
@@ -234,6 +284,38 @@ def require_login():
     allowed_routes = ['login', 'registra', 'static']
     if request.endpoint and request.endpoint not in allowed_routes and 'username' not in session:
         return redirect(url_for('login'))
+
+# --- ENDPOINT PER LE NOTIFICHE PUSH & IN-APP ---
+@app.route("/api/notifiche")
+def api_notifiche():
+    username = session.get('username')
+    if not username:
+        return jsonify([])
+    conn = get_db_connection()
+    cur = conn.cursor()
+    cur.execute("""
+        SELECT id, titolo, messaggio, link, letta, creato_il 
+        FROM notifiche 
+        WHERE destinatario = %s 
+        ORDER BY creato_il DESC LIMIT 15;
+    """, (username,))
+    notifiche = cur.fetchall()
+    cur.close()
+    conn.close()
+    return jsonify(notifiche)
+
+@app.route("/api/notifiche/segna_lette", methods=["POST"])
+def api_segna_lette():
+    username = session.get('username')
+    if username:
+        conn = get_db_connection()
+        cur = conn.cursor()
+        cur.execute("UPDATE notifiche SET letta = TRUE WHERE destinatario = %s;", (username,))
+        conn.commit()
+        cur.close()
+        conn.close()
+    return jsonify({"status": "ok"})
+
 
 @app.route("/")
 def index():
@@ -308,13 +390,11 @@ def login():
             if user and check_password_hash(user['password'], password):
                 session['username'] = user['username']
                 session['is_admin'] = user['is_admin']
-                session['puo_vedere_manutenzione'] = user.get('puo_vedere_manutenzione', 1)
-                session['puo_eliminare'] = user.get('puo_eliminare', 0)
-                session['puo_eliminare_storico'] = user.get('puo_eliminare_storico', 0)
-                session['puo_gestire_documenti'] = user.get('puo_gestire_documenti', 1)
-                session['puo_assegnare_promemoria'] = user.get('puo_assegnare_promemoria', 0)
-                session['puo_aprire_manutenzioni'] = user.get('puo_aprire_manutenzioni', 1)
-                session['puo_assegnare_manutenzioni'] = user.get('puo_assegnare_manutenzioni', 1)
+                
+                for k in user.keys():
+                    if k.startswith('puo_'):
+                        session[k] = user.get(k, 1)
+                        
                 registra_log("Accesso effettuato al sistema")
                 return redirect(url_for('index'))
             else:
@@ -339,7 +419,10 @@ def registra():
                 conn = get_db_connection()
                 cur = conn.cursor()
                 hashed_pw = generate_password_hash(password)
-                cur.execute("INSERT INTO utenti (username, password, is_admin, puo_vedere_manutenzione, puo_eliminare, puo_eliminare_storico, puo_gestire_documenti, puo_assegnare_promemoria, puo_aprire_manutenzioni, puo_assegnare_manutenzioni) VALUES (%s, %s, 0, 1, 0, 0, 1, 0, 1, 1);", (username, hashed_pw))
+                cur.execute("""
+                    INSERT INTO utenti (username, password, is_admin, puo_vedere_magazzino, puo_aggiungere_prodotti, puo_modificare_prodotti, puo_caricare_scaricare, puo_eliminare, puo_vedere_pesante, puo_vedere_manutenzione, puo_aprire_manutenzioni, puo_gestire_interventi, puo_assegnare_manutenzioni, puo_eliminare_interventi, puo_vedere_manutenzioni_esterne, puo_vedere_storico_manutenzioni, puo_eliminare_storico, puo_gestire_fornitori, puo_importare_fornitori, puo_gestire_documenti, puo_eliminare_documenti, puo_vedere_promemoria, puo_assegnare_promemoria)
+                    VALUES (%s, %s, 0, 1, 1, 1, 1, 0, 1, 1, 1, 1, 1, 0, 1, 1, 0, 1, 1, 1, 0, 1, 0);
+                """, (username, hashed_pw))
                 conn.commit()
                 cur.close()
                 conn.close()
@@ -350,61 +433,104 @@ def registra():
                 flash("Username già esistente o errore di registrazione.", "error")
     return render_template("registra.html")
 
-@app.route("/esporta_inventario")
-def esporta_inventario():
-    conn = get_db_connection()
-    cur = conn.cursor()
-    cur.execute("SELECT qr_code, nome, sap, quantita, posizione, peso, magazzino_pesante FROM prodotti ORDER BY nome ASC;")
-    prodotti = cur.fetchall()
-    cur.close()
-    conn.close()
-    
-    output = io.StringIO()
-    writer = csv.writer(output)
-    writer.writerow(['QR Code', 'Nome Articolo', 'SAP', 'Quantita', 'Posizione', 'Peso', 'Magazzino Pesante'])
-    for p in prodotti:
-        writer.writerow([p['qr_code'], p['nome'], p['sap'], p['quantita'], p['posizione'], p['peso'], 'Si' if p['magazzino_pesante'] else 'No'])
-    
-    return Response(
-        output.getvalue(),
-        mimetype="text/csv",
-        headers={"Content-disposition": "attachment; filename=Inventario_Magazzino.csv"}
-    )
+# --- PANNELLO PERMESSI ADMIN ---
+@app.route("/admin_utenti")
+def admin_utenti():
+    if not session.get('is_admin'):
+        flash("Accesso riservato all'Amministratore.", "error")
+        return redirect(url_for('index'))
+    utenti = []
+    logs = []
+    try:
+        conn = get_db_connection()
+        cur = conn.cursor()
+        cur.execute("SELECT * FROM utenti ORDER BY username ASC;")
+        utenti = cur.fetchall()
+        
+        cur.execute("DELETE FROM log_attivita WHERE data_ora < NOW() - INTERVAL '30 days';")
+        conn.commit()
+        cur.execute("SELECT * FROM log_attivita ORDER BY data_ora DESC LIMIT 100;")
+        logs = cur.fetchall()
+        
+        cur.close()
+        conn.close()
+    except Exception as e:
+        print(f"Errore admin: {e}")
+    return render_template("admin_utenti.html", utenti=utenti, logs=logs)
 
-@app.route("/esporta_interventi")
-def esporta_interventi():
-    conn = get_db_connection()
-    cur = conn.cursor()
-    cur.execute("SELECT id, titolo, impianto_macchina, priorita, tipo_guasto, stato, assegnato_a, creato_da, inizio_lavoro, fine_lavoro, tempo_lavorato_minuti, note_lavoro, creato_il FROM richieste_manutenzione ORDER BY creato_il DESC;")
-    richieste = cur.fetchall()
-    cur.close()
-    conn.close()
-    
-    output = io.StringIO()
-    writer = csv.writer(output)
-    writer.writerow(['ID', 'Titolo', 'Macchina', 'Priorità', 'Tipo Guasto', 'Stato', 'Assegnato A', 'Creato Da', 'Inizio', 'Fine', 'Minuti Lavorati', 'Note', 'Data Creazione'])
-    for r in richieste:
-        writer.writerow([r['id'], r['titolo'], r['impianto_macchina'], r['priorita'], r['tipo_guasto'], r['stato'], r['assegnato_a'], r['creato_da'], r['inizio_lavoro'], r['fine_lavoro'], r['tempo_lavorato_minuti'], r['note_lavoro'], r['creato_il']])
-    
-    return Response(
-        output.getvalue(),
-        mimetype="text/csv",
-        headers={"Content-disposition": "attachment; filename=Report_Interventi_Officina.csv"}
-    )
+@app.route("/toggle_permesso/<int:user_id>/<campo>", methods=["POST"])
+def toggle_permesso(user_id, campo):
+    if not session.get('is_admin'):
+        return redirect(url_for('index'))
+    try:
+        conn = get_db_connection()
+        cur = conn.cursor()
+        if campo.startswith("puo_"):
+            cur.execute(f"UPDATE utenti SET {campo} = 1 - COALESCE({campo}, 0) WHERE id = %s;", (user_id,))
+            conn.commit()
+            registra_log(f"Modificato permesso {campo} per utente ID {user_id}")
+        cur.close()
+        conn.close()
+    except Exception as e:
+        flash(f"Errore aggiornamento permesso: {e}", "error")
+    return redirect(url_for('admin_utenti'))
+
+@app.route("/reset_password/<int:user_id>", methods=["POST"])
+def reset_password(user_id):
+    if not session.get('is_admin'):
+        return redirect(url_for('index'))
+    nuova_password = request.form.get("nuova_password")
+    if nuova_password:
+        try:
+            conn = get_db_connection()
+            cur = conn.cursor()
+            hashed_pw = generate_password_hash(nuova_password)
+            cur.execute("UPDATE utenti SET password = %s WHERE id = %s;", (hashed_pw, user_id))
+            conn.commit()
+            cur.close()
+            conn.close()
+            registra_log(f"Reset password per utente ID {user_id}")
+            flash("Password aggiornata con successo!", "success")
+        except Exception as e:
+            flash(f"Errore reset password: {e}", "error")
+    return redirect(url_for('admin_utenti'))
+
+@app.route("/elimina_utente/<int:user_id>", methods=["POST"])
+def elimina_utente(user_id):
+    if not session.get('is_admin'):
+        return redirect(url_for('index'))
+    try:
+        conn = get_db_connection()
+        cur = conn.cursor()
+        cur.execute("DELETE FROM utenti WHERE id = %s AND username != 'admin';", (user_id,))
+        conn.commit()
+        cur.close()
+        conn.close()
+        registra_log(f"Eliminato utente ID {user_id}")
+        flash("Utente eliminato con successo.", "success")
+    except Exception as e:
+        flash(f"Errore eliminazione utente: {e}", "error")
+    return redirect(url_for('admin_utenti'))
 
 # --- RICHIESTE INTERVENTO MANUTENZIONE OFFICINA ---
 @app.route("/richieste_manutenzione", methods=["GET", "POST"])
 def richieste_manutenzione():
+    if not (session.get('is_admin') or session.get('puo_vedere_manutenzione', 1)):
+        flash("Accesso non autorizzato.", "error")
+        return redirect(url_for('index'))
+
     username_corrente = session.get('username')
     is_admin = session.get('is_admin')
-    puo_aprire_global = session.get('is_admin') or session.get('puo_aprire_manutenzioni', 1)
-    puo_assegnare_global = session.get('is_admin') or session.get('puo_assegnare_manutenzioni', 1)
+    puo_aprire = is_admin or session.get('puo_aprire_manutenzioni', 1)
+    puo_assegnare = is_admin or session.get('puo_assegnare_manutenzioni', 1)
+    puo_gestire = is_admin or session.get('puo_gestire_interventi', 1)
+    puo_elimina_int = is_admin or session.get('puo_eliminare_interventi', 0)
     
     conn = get_db_connection()
     cur = conn.cursor()
     
     if request.method == "POST":
-        if not puo_aprire_global:
+        if not puo_aprire:
             flash("Non hai i permessi per aprire nuove richieste di intervento.", "error")
             return redirect(url_for("richieste_manutenzione"))
 
@@ -414,11 +540,13 @@ def richieste_manutenzione():
         priorita = request.form.get("priorita", "Media")
         tipo_guasto = request.form.get("tipo_guasto", "Meccanico")
         
-        if puo_assegnare_global:
+        tecnici_selezionati = []
+        if puo_assegnare:
             tecnici_selezionati = request.form.getlist("assegnato_a[]")
             assegnato_a = ", ".join(tecnici_selezionati) if tecnici_selezionati else ""
         else:
             assegnato_a = username_corrente
+            tecnici_selezionati = [username_corrente]
         
         allegato_nome = None
         allegato_dati = None
@@ -433,8 +561,20 @@ def richieste_manutenzione():
                 VALUES (%s, %s, %s, %s, %s, %s, %s, 'Aperta', %s, %s);
             """, (titolo, impianto_macchina, descrizione, priorita, tipo_guasto, assegnato_a, username_corrente, allegato_nome, allegato_dati))
             conn.commit()
+            
+            # --- CREAZIONE NOTIFICA PER I TECNICI ASSEGNATI ---
+            for tec in tecnici_selezionati:
+                tec_clean = tec.strip()
+                if tec_clean:
+                    crea_notifica(
+                        destinatario=tec_clean,
+                        titolo="🛠️ Nuova Manutenzione Assegnata",
+                        messaggio=f"Ti è stato assegnato un intervento su {impianto_macchina}: {titolo}",
+                        link="/richieste_manutenzione"
+                    )
+
             registra_log(f"Creata richiesta intervento: {titolo} su {impianto_macchina}")
-            flash("Richiesta di intervento creata con successo!", "success")
+            flash("Richiesta di intervento creata e notifiche inviate!", "success")
         return redirect(url_for("richieste_manutenzione"))
 
     cur.execute("SELECT username FROM utenti ORDER BY username ASC;")
@@ -466,8 +606,10 @@ def richieste_manutenzione():
                            lista_utenti=lista_utenti, 
                            lista_prodotti=lista_prodotti,
                            ricambi_per_intervento=ricambi_per_intervento,
-                           puo_aprire=puo_aprire_global,
-                           puo_assegnare_manut=puo_assegnare_global)
+                           puo_aprire=puo_aprire,
+                           puo_assegnare=puo_assegnare,
+                           puo_gestire=puo_gestire,
+                           puo_elimina_int=puo_elimina_int)
 
 @app.route("/cambia_stato_intervento/<int:intervento_id>", methods=["POST"])
 def cambia_stato_intervento(intervento_id):
@@ -552,6 +694,17 @@ def cambia_stato_intervento(intervento_id):
                     note_lavoro = COALESCE(NULLIF(%s, ''), note_lavoro) 
                 WHERE id = %s;
             """, (nuovo_stato, now, tempo_totale, note_lavoro, intervento_id))
+            
+            # Notifica chi ha creato la richiesta
+            creato_da = req.get('creato_da')
+            if creato_da and creato_da != username_corrente:
+                crea_notifica(
+                    destinatario=creato_da,
+                    titolo="✅ Intervento Completato",
+                    messaggio=f"L'intervento su {req.get('impianto_macchina')} è stato completato da {username_corrente}.",
+                    link="/richieste_manutenzione"
+                )
+                
             flash("Intervento completato e chiuso con successo!", "success")
             
         elif nuovo_stato == 'Riassegna':
@@ -559,6 +712,16 @@ def cambia_stato_intervento(intervento_id):
                 tecnici_nuovi = request.form.getlist("nuovi_assegnatari[]")
                 nuova_lista = ", ".join(tecnici_nuovi) if tecnici_nuovi else ""
                 cur.execute("UPDATE richieste_manutenzione SET assegnato_a = %s WHERE id = %s;", (nuova_lista, intervento_id))
+                
+                for tec in tecnici_nuovi:
+                    tec_clean = tec.strip()
+                    if tec_clean:
+                        crea_notifica(
+                            destinatario=tec_clean,
+                            titolo="🔄 Intervento Riassegnato",
+                            messaggio=f"Ti è stato riassegnato l'intervento su {req.get('impianto_macchina')}.",
+                            link="/richieste_manutenzione"
+                        )
                 flash("Squadra / Tecnici aggiornati per l'intervento.", "success")
 
         conn.commit()
@@ -602,8 +765,8 @@ def stampa_intervento(intervento_id):
 
 @app.route("/elimina_intervento/<int:intervento_id>", methods=["POST"])
 def elimina_intervento(intervento_id):
-    if not session.get('is_admin'):
-        flash("Permesso negato.", "error")
+    if not (session.get('is_admin') or session.get('puo_eliminare_interventi')):
+        flash("Permesso negato per eliminare gli interventi.", "error")
         return redirect(url_for("richieste_manutenzione"))
         
     conn = get_db_connection()
@@ -616,104 +779,13 @@ def elimina_intervento(intervento_id):
     flash("Intervento eliminato.", "success")
     return redirect(url_for("richieste_manutenzione"))
 
-# --- GESTIONE UTENTI E LOG ---
-@app.route("/admin_utenti")
-def admin_utenti():
-    if not session.get('is_admin'):
-        flash("Accesso negato.", "error")
-        return redirect(url_for('index'))
-    utenti = []
-    logs = []
-    try:
-        conn = get_db_connection()
-        cur = conn.cursor()
-        cur.execute("SELECT * FROM utenti ORDER BY username ASC;")
-        utenti = cur.fetchall()
-        
-        cur.execute("DELETE FROM log_attivita WHERE data_ora < NOW() - INTERVAL '30 days';")
-        conn.commit()
-        cur.execute("SELECT * FROM log_attivita ORDER BY data_ora DESC LIMIT 100;")
-        logs = cur.fetchall()
-        
-        cur.close()
-        conn.close()
-    except Exception as e:
-        print(f"Errore admin: {e}")
-    return render_template("admin_utenti.html", utenti=utenti, logs=logs)
-
-@app.route("/toggle_permesso/<int:user_id>/<tipo>", methods=["POST"])
-def toggle_permesso(user_id, tipo):
-    if not session.get('is_admin'):
-        return redirect(url_for('index'))
-    try:
-        conn = get_db_connection()
-        cur = conn.cursor()
-        if tipo == 'manutenzione':
-            cur.execute("UPDATE utenti SET puo_vedere_manutenzione = 1 - puo_vedere_manutenzione WHERE id = %s;", (user_id,))
-        elif tipo == 'eliminazione':
-            cur.execute("UPDATE utenti SET puo_eliminare = 1 - puo_eliminare WHERE id = %s;", (user_id,))
-        elif tipo == 'eliminazione_storico':
-            cur.execute("UPDATE utenti SET puo_eliminare_storico = 1 - puo_eliminare_storico WHERE id = %s;", (user_id,))
-        elif tipo == 'documenti':
-            cur.execute("UPDATE utenti SET puo_gestire_documenti = 1 - puo_gestire_documenti WHERE id = %s;", (user_id,))
-        elif tipo == 'assegnare_promemoria':
-            cur.execute("UPDATE utenti SET puo_assegnare_promemoria = 1 - puo_assegnare_promemoria WHERE id = %s;", (user_id,))
-        elif tipo == 'aprire_manutenzioni':
-            cur.execute("UPDATE utenti SET puo_aprire_manutenzioni = 1 - puo_aprire_manutenzioni WHERE id = %s;", (user_id,))
-        elif tipo == 'assegnare_manutenzioni':
-            cur.execute("UPDATE utenti SET puo_assegnare_manutenzioni = 1 - puo_assegnare_manutenzioni WHERE id = %s;", (user_id,))
-        conn.commit()
-        cur.close()
-        conn.close()
-        registra_log(f"Modificati permessi utente ID {user_id} ({tipo})")
-    except Exception as e:
-        flash(f"Errore aggiornamento permessi: {e}", "error")
-    return redirect(url_for('admin_utenti'))
-
-@app.route("/reset_password/<int:user_id>", methods=["POST"])
-def reset_password(user_id):
-    if not session.get('is_admin'):
-        return redirect(url_for('index'))
-    nuova_password = request.form.get("nuova_password")
-    if nuova_password:
-        try:
-            conn = get_db_connection()
-            cur = conn.cursor()
-            hashed_pw = generate_password_hash(nuova_password)
-            cur.execute("UPDATE utenti SET password = %s WHERE id = %s;", (hashed_pw, user_id))
-            conn.commit()
-            cur.close()
-            conn.close()
-            registra_log(f"Reset password per utente ID {user_id}")
-            flash("Password aggiornata con successo!", "success")
-        except Exception as e:
-            flash(f"Errore reset password: {e}", "error")
-    return redirect(url_for('admin_utenti'))
-
-@app.route("/elimina_utente/<int:user_id>", methods=["POST"])
-def elimina_utente(user_id):
-    if not session.get('is_admin'):
-        return redirect(url_for('index'))
-    try:
-        conn = get_db_connection()
-        cur = conn.cursor()
-        cur.execute("DELETE FROM utenti WHERE id = %s AND username != 'admin';", (user_id,))
-        conn.commit()
-        cur.close()
-        conn.close()
-        registra_log(f"Eliminato utente ID {user_id}")
-        flash("Utente eliminato con successo.", "success")
-    except Exception as e:
-        flash(f"Errore eliminazione utente: {e}", "error")
-    return redirect(url_for('admin_utenti'))
-
-@app.route("/log_attivita")
-def visualizza_log():
-    return redirect(url_for('admin_utenti'))
-
 # --- GESTIONE PROMEMORIA ---
 @app.route("/promemoria", methods=["GET", "POST"])
 def promemoria():
+    if not (session.get('is_admin') or session.get('puo_vedere_promemoria', 1)):
+        flash("Accesso non autorizzato.", "error")
+        return redirect(url_for('index'))
+
     username_corrente = session.get('username')
     is_admin = session.get('is_admin')
     puo_assegnare = session.get('puo_assegnare_promemoria')
@@ -741,6 +813,15 @@ def promemoria():
                 VALUES (%s, %s, %s, %s, %s, %s);
             """, (titolo, descrizione, data_scadenza, priorita, ricorrenza, assegnato_a))
             conn.commit()
+            
+            if assegnato_a and assegnato_a != username_corrente:
+                crea_notifica(
+                    destinatario=assegnato_a,
+                    titolo="📌 Nuovo Promemoria Assegnato",
+                    messaggio=f"Ti è stato assegnato un promemoria: {titolo}",
+                    link="/promemoria"
+                )
+                
             registra_log(f"Creato promemoria: {titolo} per utente {assegnato_a}")
             flash("Promemoria aggiunto con successo!", "success")
         return redirect(url_for("promemoria"))
@@ -832,6 +913,10 @@ def elimina_promemoria(promemoria_id):
 # --- GESTIONE FORNITORI E CONTATTI ---
 @app.route("/fornitori", methods=["GET", "POST"])
 def fornitori():
+    if not (session.get('is_admin') or session.get('puo_gestire_fornitori', 1)):
+        flash("Accesso non autorizzato.", "error")
+        return redirect(url_for('index'))
+
     conn = get_db_connection()
     cur = conn.cursor()
     if request.method == "POST":
@@ -864,6 +949,10 @@ def fornitori():
 
 @app.route("/modifica_fornitore/<int:fornitore_id>", methods=["POST"])
 def modifica_fornitore(fornitore_id):
+    if not (session.get('is_admin') or session.get('puo_gestire_fornitori', 1)):
+        flash("Permesso negato.", "error")
+        return redirect(url_for("fornitori"))
+
     nome_azienda = request.form.get("nome_azienda")
     settore_note = request.form.get("settore_note", "")
     indirizzo = request.form.get("indirizzo", "")
@@ -975,6 +1064,10 @@ def elimina_fornitore(fornitore_id):
 
 @app.route("/importa_intelligente", methods=["POST"])
 def importa_intelligente():
+    if not (session.get('is_admin') or session.get('puo_importare_fornitori', 1)):
+        flash("Permesso negato per l'importazione.", "error")
+        return redirect(url_for("fornitori"))
+
     file_caricato = request.files.get("file_caricato")
     if not file_caricato or file_caricato.filename == '':
         flash("Nessun file selezionato.", "error")
@@ -1081,7 +1174,7 @@ def importa_intelligente():
 @app.route("/documenti", defaults={"cartella_id": None}, methods=["GET", "POST"])
 @app.route("/documenti/<int:cartella_id>", methods=["GET", "POST"])
 def documenti(cartella_id):
-    if not (session.get('is_admin') or session.get('puo_gestire_documenti')):
+    if not (session.get('is_admin') or session.get('puo_gestire_documenti', 1)):
         flash("Accesso ai documenti non autorizzato.", "error")
         return redirect(url_for('index'))
 
@@ -1148,11 +1241,12 @@ def documenti(cartella_id):
                            cartella_corrente=cartella_corrente, 
                            sottocartelle=sottocartelle, 
                            lista_file=lista_file, 
-                           percorso_breadcrumb=percorso_breadcrumb)
+                           percorso_breadcrumb=percorso_breadcrumb,
+                           puo_elimina_doc=(session.get('is_admin') or session.get('puo_eliminare_documenti', 0)))
 
 @app.route("/scarica_file/<int:file_id>")
 def scarica_file(file_id):
-    if not (session.get('is_admin') or session.get('puo_gestire_documenti')):
+    if not (session.get('is_admin') or session.get('puo_gestire_documenti', 1)):
         flash("Accesso negato.", "error")
         return redirect(url_for('index'))
 
@@ -1176,8 +1270,8 @@ def scarica_file(file_id):
 
 @app.route("/elimina_cartella/<int:cartella_id>", methods=["POST"])
 def elimina_cartella(cartella_id):
-    if not session.get('is_admin'):
-        flash("Solo l'amministratore può eliminare le cartelle.", "error")
+    if not (session.get('is_admin') or session.get('puo_eliminare_documenti', 0)):
+        flash("Permesso negato per eliminare cartelle.", "error")
         return redirect(url_for('documenti'))
 
     conn = get_db_connection()
@@ -1199,8 +1293,8 @@ def elimina_cartella(cartella_id):
 
 @app.route("/elimina_file/<int:file_id>", methods=["POST"])
 def elimina_file(file_id):
-    if not session.get('is_admin'):
-        flash("Solo l'amministratore può eliminare i documenti.", "error")
+    if not (session.get('is_admin') or session.get('puo_eliminare_documenti', 0)):
+        flash("Permesso negato per eliminare i file.", "error")
         return redirect(url_for('documenti'))
 
     conn = get_db_connection()
@@ -1221,6 +1315,48 @@ def elimina_file(file_id):
     return redirect(url_for("documenti"))
 
 # --- ALTRE ROTTE MAGAZZINO ---
+@app.route("/esporta_inventario")
+def esporta_inventario():
+    conn = get_db_connection()
+    cur = conn.cursor()
+    cur.execute("SELECT qr_code, nome, sap, quantita, posizione, peso, magazzino_pesante FROM prodotti ORDER BY nome ASC;")
+    prodotti = cur.fetchall()
+    cur.close()
+    conn.close()
+    
+    output = io.StringIO()
+    writer = csv.writer(output)
+    writer.writerow(['QR Code', 'Nome Articolo', 'SAP', 'Quantita', 'Posizione', 'Peso', 'Magazzino Pesante'])
+    for p in prodotti:
+        writer.writerow([p['qr_code'], p['nome'], p['sap'], p['quantita'], p['posizione'], p['peso'], 'Si' if p['magazzino_pesante'] else 'No'])
+    
+    return Response(
+        output.getvalue(),
+        mimetype="text/csv",
+        headers={"Content-disposition": "attachment; filename=Inventario_Magazzino.csv"}
+    )
+
+@app.route("/esporta_interventi")
+def esporta_interventi():
+    conn = get_db_connection()
+    cur = conn.cursor()
+    cur.execute("SELECT id, titolo, impianto_macchina, priorita, tipo_guasto, stato, assegnato_a, creato_da, inizio_lavoro, fine_lavoro, tempo_lavorato_minuti, note_lavoro, creato_il FROM richieste_manutenzione ORDER BY creato_il DESC;")
+    richieste = cur.fetchall()
+    cur.close()
+    conn.close()
+    
+    output = io.StringIO()
+    writer = csv.writer(output)
+    writer.writerow(['ID', 'Titolo', 'Macchina', 'Priorità', 'Tipo Guasto', 'Stato', 'Assegnato A', 'Creato Da', 'Inizio', 'Fine', 'Minuti Lavorati', 'Note', 'Data Creazione'])
+    for r in richieste:
+        writer.writerow([r['id'], r['titolo'], r['impianto_macchina'], r['priorita'], r['tipo_guasto'], r['stato'], r['assegnato_a'], r['creato_da'], r['inizio_lavoro'], r['fine_lavoro'], r['tempo_lavorato_minuti'], r['note_lavoro'], r['creato_il']])
+    
+    return Response(
+        output.getvalue(),
+        mimetype="text/csv",
+        headers={"Content-disposition": "attachment; filename=Report_Interventi_Officina.csv"}
+    )
+
 @app.route("/upload", methods=["GET", "POST"])
 def upload():
     if request.method == "POST":
@@ -1280,6 +1416,9 @@ def stampa_singolo_qr(qr_code):
 
 @app.route("/magazzino_pesante")
 def magazzino_pesante():
+    if not (session.get('is_admin') or session.get('puo_vedere_pesante', 1)):
+        flash("Accesso al Magazzino Pesante negato.", "error")
+        return redirect(url_for('index'))
     prodotti = []
     try:
         conn = get_db_connection()
@@ -1297,6 +1436,9 @@ def magazzino_pesante():
 
 @app.route("/manutenzioni")
 def manutenzioni():
+    if not (session.get('is_admin') or session.get('puo_vedere_manutenzioni_esterne', 1)):
+        flash("Accesso negato.", "error")
+        return redirect(url_for('index'))
     prodotti = []
     try:
         conn = get_db_connection()
@@ -1314,6 +1456,9 @@ def manutenzioni():
 
 @app.route("/storico_manutenzioni")
 def storico_manutenzioni():
+    if not (session.get('is_admin') or session.get('puo_vedere_storico_manutenzioni', 1)):
+        flash("Accesso allo storico negato.", "error")
+        return redirect(url_for('index'))
     storico = []
     try:
         conn = get_db_connection()
@@ -1328,7 +1473,7 @@ def storico_manutenzioni():
 
 @app.route("/elimina_storico_manutenzione/<int:storico_id>", methods=["POST"])
 def elimina_storico_manutenzione(storico_id):
-    if not (session.get('is_admin') or session.get('puo_eliminare_storico')):
+    if not (session.get('is_admin') or session.get('puo_eliminare_storico', 0)):
         flash("Permesso negato.", "error")
         return redirect(url_for('storico_manutenzioni'))
     conn = get_db_connection()
@@ -1356,6 +1501,10 @@ def stampa_bolla(qr_code):
 
 @app.route("/carico", methods=["GET", "POST"])
 def carico():
+    if not (session.get('is_admin') or session.get('puo_caricare_scaricare', 1)):
+        flash("Permesso negato per il carico.", "error")
+        return redirect(url_for('index'))
+
     if request.method == "POST":
         qr_code = request.form.get("qr_code")
         quantita = int(request.form.get("quantita", 1))
@@ -1373,6 +1522,10 @@ def carico():
 
 @app.route("/scarico", methods=["GET", "POST"])
 def scarico():
+    if not (session.get('is_admin') or session.get('puo_caricare_scaricare', 1)):
+        flash("Permesso negato per lo scarico.", "error")
+        return redirect(url_for('index'))
+
     if request.method == "POST":
         qr_code = request.form.get("qr_code")
         quantita_da_scaricare = int(request.form.get("quantita", 1))
@@ -1431,6 +1584,10 @@ def gestisci_prodotto(qr_code):
 
 @app.route("/aggiorna/<qr_code>", methods=["POST"])
 def aggiorna_prodotto(qr_code):
+    if not (session.get('is_admin') or session.get('puo_modificare_prodotti', 1)):
+        flash("Permesso negato per modificare gli articoli.", "error")
+        return redirect(url_for("gestisci_prodotto", qr_code=qr_code))
+
     nome = request.form.get("nome")
     sap = request.form.get("sap", "")
     posizione = request.form.get("posizione", "")
@@ -1456,6 +1613,10 @@ def aggiorna_prodotto(qr_code):
 
 @app.route("/aggiungi", methods=["POST"])
 def aggiungi_prodotto():
+    if not (session.get('is_admin') or session.get('puo_aggiungere_prodotti', 1)):
+        flash("Permesso negato per inserire nuovi prodotti.", "error")
+        return redirect(url_for("index"))
+
     qr_code = request.form.get("qr_code")
     nome = request.form.get("nome")
     sap = request.form.get("sap", "")
@@ -1571,6 +1732,10 @@ def ripristina_magazzino(qr_code):
 
 @app.route("/elimina", methods=["POST"])
 def elimina_prodotto():
+    if not (session.get('is_admin') or session.get('puo_eliminare', 0)):
+        flash("Permesso negato per eliminare prodotti.", "error")
+        return redirect(url_for("index"))
+
     qr_code = request.form.get("qr_code")
     if qr_code:
         try:
