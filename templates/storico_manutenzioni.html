@@ -28,16 +28,16 @@
     <div class="container my-4">
         
         <!-- Flash Messages -->
-        with messages = get_flashed_messages(with_categories=true)
-            if messages
-                for category, message in messages
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
                     <div class="alert alert-{{ 'danger' if category == 'error' else 'success' }} alert-dismissible fade show" role="alert">
                         {{ message }}
                         <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
                     </div>
-                endfor
-            endif
-        endwith
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
 
         <div class="d-flex justify-content-between align-items-center mb-4">
             <h2><i class="fas fa-history text-primary me-2"></i>Storico Manutenzioni Esterne</h2>
@@ -62,12 +62,16 @@
                             </tr>
                         </thead>
                         <tbody>
-                            if storico
-                                for item in storico
+                            {% if storico %}
+                                {% for item in storico %}
                                     <tr>
                                         <td>
                                             <small class="text-muted">
-                                                {{ item.registrato_il.strftime('%d/%m/%Y %H:%M') if item.registrato_il else '-' }}
+                                                {% if item.registrato_il %}
+                                                    {{ item.registrato_il.strftime('%d/%m/%Y %H:%M') }}
+                                                {% else %}
+                                                    -
+                                                {% endif %}
                                             </small>
                                         </td>
                                         <td>
@@ -80,7 +84,11 @@
                                         <td>{{ item.cliente or '-' }}</td>
                                         <td><span class="badge bg-info text-dark">{{ item.quantita }}</span></td>
                                         <td>
-                                            {{ item.data_riconsegna.strftime('%d/%m/%Y') if item.data_riconsegna else '<span class="badge bg-warning text-dark">In Corso</span>'|safe }}
+                                            {% if item.data_riconsegna %}
+                                                {{ item.data_riconsegna }}
+                                            {% else %}
+                                                <span class="badge bg-warning text-dark">In Corso</span>
+                                            {% endif %}
                                         </td>
                                         <td>
                                             {% if item.esito %}
@@ -97,7 +105,7 @@
                                         </td>
                                         <td class="text-center">
                                             {% if session.get('is_admin') or session.get('puo_eliminare_storico', 0) %}
-                                                <form action="{{ url_for('elimina_storico_manutenzione', id=item.id) }}" method="POST" class="d-inline" onsubmit="return confirm('Sei sicuro di voler eliminare questa voce dallo storico?');">
+                                                <form action="{{ url_for('elimina_storico_manutenzione', storico_id=item.id) }}" method="POST" class="d-inline" onsubmit="return confirm('Sei sicuro di voler eliminare questa voce dallo storico?');">
                                                     <button type="submit" class="btn btn-outline-danger btn-sm" title="Elimina record">
                                                         <i class="fas fa-trash-alt"></i>
                                                     </button>
@@ -107,15 +115,15 @@
                                             {% endif %}
                                         </td>
                                     </tr>
-                                endfor
-                            else
+                                {% endfor %}
+                            {% else %}
                                 <tr>
                                     <td colspan="9" class="text-center py-4 text-muted">
                                         <i class="fas fa-folder-open fa-2x mb-2"></i><br>
                                         Nessuna manutenzione esterna registrata nello storico.
                                     </td>
                                 </tr>
-                            endif
+                            {% endif %}
                         </tbody>
                     </table>
                 </div>
