@@ -13,7 +13,7 @@ from werkzeug.security import generate_password_hash, check_password_hash
 # Designed & Developed by Marco Pavan
 # ==============================================================================
 
-app = Flask(_name_)
+app = Flask(__name__)
 app.secret_key = os.environ.get("SECRET_KEY", "super_segreto_omg_2026_marcopavan")
 
 def get_db_connection():
@@ -575,5 +575,5 @@ def stampa_singolo_qr(qr_code):
 
     return render_template("stampa_qr.html", prodotto=prodotto)
 
-if _name_ == "_main_":
+if __name__ == "_main_":
     app.run(debug=True, host="0.0.0.0", port=5000)
