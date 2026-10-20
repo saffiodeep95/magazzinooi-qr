@@ -1,3 +1,8 @@
+
+marco pavan <marco.pavan1995@gmail.com>
+15:18 (0 minuti fa)
+a me
+
 # ========================================================================
 # Gestionale OMG Application - System with Push Notifications & Ore Report
 # Copyright (c) 2026 Marco Pavan. All Rights Reserved.
@@ -950,6 +955,14 @@ def elimina_contatto_tecnico(contatto_id, fornitore_id):
     conn.close()
     flash("Contatto eliminato.", "success")
     return redirect(url_for("dettaglio_fornitore", fornitore_id=fornitore_id))
+
+@app.route("/importa_intelligente", methods=["POST"])
+def importa_intelligente():
+    if not (session.get('is_admin') or session.get('puo_importare_fornitori', 1)):
+        flash("Permesso negato.", "error")
+        return redirect(url_for("fornitori"))
+    flash("Funzione di importazione non attiva.", "info")
+    return redirect(url_for("fornitori"))
 
 @app.route("/documenti", defaults={"cartella_id": None}, methods=["GET", "POST"])
 @app.route("/documenti/<int:cartella_id>", methods=["GET", "POST"])
