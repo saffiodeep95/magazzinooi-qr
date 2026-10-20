@@ -1,8 +1,3 @@
-
-marco pavan <marco.pavan1995@gmail.com>
-15:18 (0 minuti fa)
-a me
-
 # ========================================================================
 # Gestionale OMG Application - System with Push Notifications & Ore Report
 # Copyright (c) 2026 Marco Pavan. All Rights Reserved.
