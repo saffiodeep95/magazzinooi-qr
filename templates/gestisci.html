@@ -33,7 +33,6 @@
       {% endif %}
     {% endwith %}
 
-    <!-- SCHEDA DATI ARTICOLO -->
     <div class="card">
         <h3 style="margin-top: 0; color: #0284c7;">📝 Dettagli e Modifica Articolo</h3>
         <form method="POST" action="{{ url_for('aggiorna_prodotto', qr_code=prodotto.qr_code) }}">
@@ -78,18 +77,43 @@
         </form>
     </div>
 
-    <!-- SEZIONE INVIO IN MANUTENZIONE ESTERNA -->
+    <!-- SEZIONE MANUTENZIONE ESTERNA -->
     <div class="card" style="border-left: 4px solid #f59e0b;">
-        <h3 style="margin-top: 0; color: #d97706;">🚚 Invia in Manutenzione Esterna / Riparazione</h3>
+        <h3 style="margin-top: 0; color: #d97706;">🚚 Manutenzione Esterna / Riparazione</h3>
         
         {% if prodotto.in_manutenzione in [1, '1', True, 1.0] %}
             <div style="background: #fef3c7; border: 1px solid #fcd34d; padding: 12px; border-radius: 8px; margin-bottom: 15px;">
-                <p style="margin: 0; font-weight: bold; color: #92400e;">⚠️ Articolo attualmente in manutenzione presso: {{ prodotto.cliente_manutenzione or '-' }}</p>
-                <p style="margin: 5px 0 0 0; font-size: 0.85rem; color: #78350f;">Quantità inviata: {{ prodotto.quantita_manutenzione or 1 }} pz | Spedito il: {{ prodotto.data_spedizione or '-' }} | Vettore: {{ prodotto.vettore or '-' }}</p>
+                <p style="margin: 0; font-weight: bold; color: #92400e;">⚠️ Articolo in manutenzione presso: {{ prodotto.cliente_manutenzione or '-' }}</p>
+                <p style="margin: 5px 0 0 0; font-size: 0.85rem; color: #78350f;">
+                    Quantità: {{ prodotto.quantita_manutenzione or 1 }} pz | Spedito il: {{ prodotto.data_spedizione or '-' }} | Vettore: {{ prodotto.vettore or '-' }}
+                </p>
+                {% if prodotto.note_manutenzione %}
+                    <p style="margin: 5px 0 0 0; font-size: 0.85rem; color: #78350f;"><strong>Note spedizione:</strong> {{ prodotto.note_manutenzione }}</p>
+                {% endif %}
+
+                <div style="margin-top: 10px;">
+                    <a href="{{ url_for('stampa_bolla', qr_code=prodotto.qr_code) }}" target="_blank" class="btn" style="background: #6366f1; padding: 6px 12px;">🖨️ Stampa Riassunto / Bolla Invio</a>
+                </div>
             </div>
             
-            <form method="POST" action="{{ url_for('ripristina_magazzino', qr_code=prodotto.qr_code) }}">
-                <button type="submit" class="btn" style="background: #10b981;">✅ Rientro da Manutenzione (Ripristina in Magazzino)</button>
+            <form method="POST" action="{{ url_for('ripristina_magazzino', qr_code=prodotto.qr_code) }}" style="background: #f0fdf4; border: 1px solid #bbf7d0; padding: 15px; border-radius: 8px;">
+                <h4 style="margin-top: 0; color: #166534;">✅ Segnala Rientro in Magazzino</h4>
+                <div class="form-grid">
+                    <div>
+                        <label><strong>Esito Riparazione *:</strong></label>
+                        <select name="esito_riparazione" required>
+                            <option value="Riparato e Collaudato" selected>✅ Riparato e Collaudato</option>
+                            <option value="Sostituito con Nuovo">🔄 Sostituito con Nuovo</option>
+                            <option value="Non Riparabile / Reso">❌ Non Riparabile / Reso</option>
+                            <option value="Manutenzione Preventiva OK">⚙️ Manutenzione Preventiva OK</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label><strong>Note Rientro / Intervento Eseguito:</strong></label>
+                        <input type="text" name="note_rientro" placeholder="Es. Sostituite guarnizioni e cuscinetti">
+                    </div>
+                </div>
+                <button type="submit" class="btn" style="background: #10b981; margin-top: 5px;">📥 Conferma Rientro e Ripristina Giacenza</button>
             </form>
         {% else %}
             <form method="POST" action="{{ url_for('manda_manutenzione', qr_code=prodotto.qr_code) }}">
@@ -101,7 +125,7 @@
                             {% for f in fornitori %}
                                 <option value="{{ f.nome_azienda }}">{{ f.nome_azienda }} {% if f.settore_note %}({{ f.settore_note }}){% endif %}</option>
                             {% else %}
-                                <option value="" disabled>Nessun fornitore in rubrica</option>
+                                <option value="" disabled>Nessun fornitore presente in anagrafica</option>
                             {% endfor %}
                         </select>
                     </div>
@@ -125,7 +149,7 @@
 
                 <div style="margin-bottom: 10px;">
                     <label><strong>Note / Motivo Riparazione:</strong></label>
-                    <textarea name="note_manutenzione" rows="2" placeholder="Dettagli sul guasto o riparazione richiesta..."></textarea>
+                    <textarea name="note_manutenzione" rows="2" placeholder="Dettagli sul guasto o interventi richiesti..."></textarea>
                 </div>
 
                 <button type="submit" class="btn" style="background: #f59e0b;">🚚 Registra Invio in Manutenzione</button>
@@ -133,7 +157,6 @@
         {% endif %}
     </div>
 
-    <!-- ELIMINAZIONE ARTICOLO -->
     {% if session.get('is_admin') or session.get('puo_eliminare', 0) %}
     <div class="card" style="border: 1px solid #fca5a5; background: #fff5f5;">
         <h4 style="margin-top: 0; color: #991b1b;">🗑️ Zona Pericolo</h4>
