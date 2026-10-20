@@ -287,7 +287,7 @@ def init_db():
         conn.commit()
         cur.close()
         conn.close()
-        print("Database e permessi inizializzati correttamente.")
+        print("Database e permessi Gestionale OMG inizializzati.")
     except Exception as e:
         print(f"Errore init_db: {e}")
 
@@ -367,7 +367,9 @@ def index():
         conn.close()
         
         for p in tutti:
-            if not p.get('magazzino_pesante'):
+            val_pesante = p.get('magazzino_pesante')
+            is_pesante = (val_pesante == 1 or val_pesante == '1' or val_pesante is True or val_pesante == 1.0)
+            if not is_pesante:
                 prodotti.append(p)
             soglia = p.get('soglia_minima', 3) or 3
             if p.get('quantita', 0) <= soglia:
@@ -382,6 +384,27 @@ def index():
                            interventi_aperti_count=interventi_aperti_count,
                            interventi_in_lavoro_count=interventi_in_lavoro_count,
                            interventi_attesa_count=interventi_attesa_count)
+
+@app.route("/magazzino_pesante")
+def magazzino_pesante():
+    if not (session.get('is_admin') or session.get('puo_vedere_pesante', 1)):
+        flash("Accesso al Magazzino Pesante negato.", "error")
+        return redirect(url_for('index'))
+    prodotti = []
+    try:
+        conn = get_db_connection()
+        cur = conn.cursor()
+        cur.execute("SELECT * FROM prodotti ORDER BY nome ASC;")
+        tutti = cur.fetchall()
+        cur.close()
+        conn.close()
+        for p in tutti:
+            val_pesante = p.get('magazzino_pesante')
+            if val_pesante in [1, '1', True, 1.0]:
+                prodotti.append(p)
+    except Exception as e:
+        print(f"Errore magazzino pesante: {e}")
+    return render_template("magazzino_pesante.html", prodotti=prodotti)
 
 @app.route("/login", methods=["GET", "POST"])
 def login():
@@ -703,10 +726,58 @@ def cambia_stato_intervento(intervento_id):
             minuti = int((now - req['inizio_lavoro']).total_seconds() / 60) if req.get('inizio_lavoro') and req.get('stato') == 'In Lavoro' else 0
             tempo_totale = req.get('tempo_lavorato_minuti', 0) + minuti
             cur.execute("UPDATE richieste_manutenzione SET stato = %s, fine_lavoro = %s, tempo_lavorato_minuti = %s, note_lavoro = COALESCE(NULLIF(%s, ''), note_lavoro) WHERE id = %s;", (nuovo_stato, now, tempo_totale, note_lavoro, intervento_id))
-        
+        elif nuovo_stato == 'Attesa Ricambio':
+            cur.execute("UPDATE richieste_manutenzione SET stato = %s WHERE id = %s;", (nuovo_stato, intervento_id))
+
         conn.commit()
     cur.close()
     conn.close()
+    return redirect(url_for("richieste_manutenzione"))
+
+@app.route("/elimina_intervento/<int:intervento_id>", methods=["POST"])
+def elimina_intervento(intervento_id):
+    if not (session.get('is_admin') or session.get('puo_eliminare_interventi', 0)):
+        flash("Permesso negato per eliminare gli interventi.", "error")
+        return redirect(url_for("richieste_manutenzione"))
+    try:
+        conn = get_db_connection()
+        cur = conn.cursor()
+        cur.execute("DELETE FROM richieste_manutenzione WHERE id = %s;", (intervento_id,))
+        conn.commit()
+        cur.close()
+        conn.close()
+        flash("Intervento eliminato con successo.", "success")
+    except Exception as e:
+        flash(f"Errore durante l'eliminazione: {e}", "error")
+    return redirect(url_for("richieste_manutenzione"))
+
+@app.route("/aggiungi_ricambio_intervento/<int:intervento_id>", methods=["POST"])
+def aggiungi_ricambio_intervento(intervento_id):
+    qr_code = request.form.get("qr_code")
+    quantita = int(request.form.get("quantita", 1))
+
+    try:
+        conn = get_db_connection()
+        cur = conn.cursor()
+        cur.execute("SELECT * FROM prodotti WHERE qr_code = %s;", (qr_code,))
+        prod = cur.fetchone()
+
+        if prod:
+            if prod['quantita'] >= quantita:
+                cur.execute("UPDATE prodotti SET quantita = quantita - %s WHERE qr_code = %s;", (quantita, qr_code))
+                cur.execute("INSERT INTO intervento_ricambi (intervento_id, qr_code, nome_ricambio, quantita) VALUES (%s, %s, %s, %s);", (intervento_id, qr_code, prod['nome'], quantita))
+                conn.commit()
+                flash(f"Scaricati {quantita} pezzi di {prod['nome']} per l'intervento.", "success")
+            else:
+                flash(f"Quantità insufficiente in magazzino per {prod['nome']}!", "error")
+        else:
+            flash("Articolo non trovato!", "error")
+
+        cur.close()
+        conn.close()
+    except Exception as e:
+        flash(f"Errore scarico ricambio: {e}", "error")
+
     return redirect(url_for("richieste_manutenzione"))
 
 @app.route("/promemoria", methods=["GET", "POST"])
@@ -792,6 +863,24 @@ def documenti(cartella_id):
     cur.close()
     conn.close()
     return render_template("documenti.html", sottocartelle=sottocartelle, lista_file=lista_file, cartella_corrente=None)
+
+@app.route("/scarica_documento/<int:doc_id>")
+def scarica_documento(doc_id):
+    conn = get_db_connection()
+    cur = conn.cursor()
+    cur.execute("SELECT nome_file, tipo_file, dati_file FROM documenti WHERE id = %s;", (doc_id,))
+    doc = cur.fetchone()
+    cur.close()
+    conn.close()
+    if doc:
+        return send_file(
+            io.BytesIO(doc['dati_file']),
+            download_name=doc['nome_file'],
+            mimetype=doc['tipo_file'] or 'application/octet-stream',
+            as_attachment=True
+        )
+    flash("Documento non trovato.", "error")
+    return redirect(url_for("documenti"))
 
 @app.route("/aggiungi", methods=["POST"])
 def aggiungi_prodotto():
@@ -1021,6 +1110,40 @@ def ripristina_magazzino(qr_code):
         flash(f"Errore: {e}", "error")
     return redirect(url_for("gestisci_prodotto", qr_code=qr_code))
 
+@app.route("/elimina/<qr_code>", methods=["POST"])
+def elimina_prodotto(qr_code):
+    if not (session.get('is_admin') or session.get('puo_eliminare', 0)):
+        flash("Permesso negato per eliminare gli articoli.", "error")
+        return redirect(url_for("index"))
+    try:
+        conn = get_db_connection()
+        cur = conn.cursor()
+        cur.execute("DELETE FROM prodotti WHERE qr_code = %s;", (qr_code,))
+        conn.commit()
+        cur.close()
+        conn.close()
+        flash("Prodotto eliminato con successo.", "success")
+    except Exception as e:
+        flash(f"Errore eliminazione: {e}", "error")
+    return redirect(url_for("index"))
+
+@app.route("/carica_scarica/<qr_code>/<azione>", methods=["POST"])
+def carica_scarica(qr_code, azione):
+    quantita = int(request.form.get("quantita_movimento", 1))
+    try:
+        conn = get_db_connection()
+        cur = conn.cursor()
+        if azione == 'carica':
+            cur.execute("UPDATE prodotti SET quantita = quantita + %s WHERE qr_code = %s;", (quantita, qr_code))
+        elif azione == 'scarica':
+            cur.execute("UPDATE prodotti SET quantita = GREATEST(0, quantita - %s) WHERE qr_code = %s;", (quantita, qr_code))
+        conn.commit()
+        cur.close()
+        conn.close()
+        flash(f"Operazione di {azione} eseguita!", "success")
+    except Exception as e:
+        flash(f"Errore movimento: {e}", "error")
+    return redirect(url_for("gestisci_prodotto", qr_code=qr_code))
+
 if __name__ == "__main__":
     app.run(debug=True)
-
