@@ -15,7 +15,7 @@ from psycopg2.extras import RealDictCursor
 from flask import Flask, render_template, request, redirect, url_for, flash, session, send_file, Response, jsonify
 from werkzeug.security import generate_password_hash, check_password_hash
 
-app = Flask(__name__)
+app = Flask(_name_)
 app.secret_key = os.environ.get("SECRET_KEY", "chiave-segreta-gestionale")
 
 DATABASE_URL = os.environ.get("DATABASE_URL")
@@ -100,17 +100,6 @@ def init_db():
         """)
 
         cur.execute("""
-            CREATE TABLE IF NOT EXISTS contatti_tecnici (
-                id SERIAL PRIMARY KEY,
-                fornitore_id INT REFERENCES fornitori(id) ON DELETE CASCADE,
-                nome VARCHAR(255) NOT NULL,
-                telefono VARCHAR(255) NOT NULL,
-                mansione VARCHAR(255),
-                email VARCHAR(255)
-            );
-        """)
-
-        cur.execute("""
             CREATE TABLE IF NOT EXISTS promemoria (
                 id SERIAL PRIMARY KEY,
                 titolo VARCHAR(255) NOT NULL,
@@ -142,16 +131,6 @@ def init_db():
                 allegato_nome VARCHAR(255),
                 allegato_dati BYTEA,
                 creato_il TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-            );
-        """)
-
-        cur.execute("""
-            CREATE TABLE IF NOT EXISTS intervento_ricambi (
-                id SERIAL PRIMARY KEY,
-                intervento_id INT REFERENCES richieste_manutenzione(id) ON DELETE CASCADE,
-                qr_code VARCHAR(255),
-                nome_ricambio VARCHAR(255),
-                quantita INT DEFAULT 1
             );
         """)
 
@@ -213,25 +192,6 @@ def init_db():
         """)
 
         cur.execute("""
-            CREATE TABLE IF NOT EXISTS cartelle (
-                id SERIAL PRIMARY KEY,
-                nome VARCHAR(255) NOT NULL,
-                parent_id INT REFERENCES cartelle(id) ON DELETE CASCADE
-            );
-        """)
-
-        cur.execute("""
-            CREATE TABLE IF NOT EXISTS documenti (
-                id SERIAL PRIMARY KEY,
-                cartella_id INT REFERENCES cartelle(id) ON DELETE CASCADE,
-                nome_file VARCHAR(255) NOT NULL,
-                tipo_file VARCHAR(255),
-                dati_file BYTEA NOT NULL,
-                caricato_il TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-            );
-        """)
-
-        cur.execute("""
             CREATE TABLE IF NOT EXISTS notifiche (
                 id SERIAL PRIMARY KEY,
                 destinatario VARCHAR(255) NOT NULL,
@@ -243,7 +203,7 @@ def init_db():
             );
         """)
 
-        # Migrazione sicura delle colonne aggiuntive
+        # Migrazione sicura colonne
         migrazioni = [
             ("prodotti", "matricola", "VARCHAR(255)"),
             ("prodotti", "stato_pezzo", "VARCHAR(255) DEFAULT 'Nuovo'"),
@@ -264,7 +224,7 @@ def init_db():
         conn.commit()
         cur.close()
         conn.close()
-        print("Database e tabelle inizializzate correttamente.")
+        print("Database inizializzato con successo.")
     except Exception as e:
         print(f"Errore init_db: {e}")
 
@@ -307,6 +267,7 @@ def api_segna_lette():
         return jsonify({"status": "ok"})
     return jsonify({"status": "error"})
 
+# --- DASHBOARD (INDEX) ---
 @app.route("/")
 def index():
     prodotti = []
@@ -425,7 +386,7 @@ def registra():
                 flash("Username già esistente o errore di registrazione.", "error")
     return render_template("registra.html")
 
-# --- ESPORTAZIONE E GESTIONE PRODOTTI ---
+# --- GESTIONE PRODOTTI & SCHEDA (GESTISCI) ---
 @app.route("/esporta_inventario")
 def esporta_inventario():
     conn = get_db_connection()
@@ -557,7 +518,7 @@ def elimina_prodotto():
 
     return redirect(url_for("index"))
 
-# --- MANUTENZIONE ESTERNA E STORICO AGGIORNATO ---
+# --- MANUTENZIONE ESTERNA E STORICO ---
 @app.route("/manda_manutenzione/<qr_code>", methods=["POST"])
 def manda_manutenzione(qr_code):
     cliente = request.form.get("cliente_manutenzione", "").strip()
@@ -723,5 +684,5 @@ def stampa_singolo_qr(qr_code):
 
     return render_template("stampa_qr.html", prodotto=prodotto)
 
-if __name__ == "__main__":
+if _name_ == "_main_":
     app.run(debug=True, host="0.0.0.0", port=5000)
