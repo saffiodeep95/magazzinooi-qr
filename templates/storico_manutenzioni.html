@@ -58,8 +58,8 @@
                     {% for s in storico %}
                     <tr>
                         <td><strong>{{ s.data_riconsegna or (s.registrato_il.strftime('%d/%m/%Y') if s.registrato_il else '-') }}</strong></td>
-                        <td><strong>{{ s.nome_prodotto }}</strong></td>
-                        <td><code>{{ s.qr_code }}</code></td>
+                        <td><strong>{{ s.nome_prodotto or '-' }}</strong></td>
+                        <td><code>{{ s.qr_code or '-' }}</code></td>
                         <td>{{ s.sap or '-' }}</td>
                         <td>{{ s.cliente or '-' }}</td>
                         <td>{{ s.quantita or 1 }} pz</td>
@@ -71,9 +71,13 @@
                         <td>{{ s.note or '-' }}</td>
                         {% if session.get('is_admin') or session.get('puo_eliminare', 0) %}
                         <td style="text-align: center;">
+                            {% if s.id %}
                             <form method="POST" action="{{ url_for('elimina_storico_manutenzione', id=s.id) }}" style="margin: 0;" onsubmit="return confirm('Sei sicuro di voler eliminare questa voce dallo storico?');">
                                 <button type="submit" class="btn" style="background: #ef4444; padding: 4px 8px; font-size: 0.75rem;">🗑️ Elimina</button>
                             </form>
+                            {% else %}
+                            -
+                            {% endif %}
                         </td>
                         {% endif %}
                     </tr>
