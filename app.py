@@ -19,7 +19,7 @@ def init_db():
     conn = get_db_connection()
     cur = conn.cursor()
     
-    # 1. Tabella Prodotti & Magazzino Pesante (con Matricola, Stato Pezzo e Riparazioni)
+    # 1. Tabella Prodotti & Magazzino Pesante (con Matricola e Stato Pezzo)
     cur.execute("""
         CREATE TABLE IF NOT EXISTS prodotti (
             qr_code VARCHAR(100) PRIMARY KEY,
@@ -44,7 +44,7 @@ def init_db():
         );
     """)
 
-    # 2. Tabella Storico Manutenzioni Esterne (con Esito e Rientro)
+    # 2. Tabella Storico Manutenzioni Esterne
     cur.execute("""
         CREATE TABLE IF NOT EXISTS storico_manutenzioni (
             id SERIAL PRIMARY KEY,
@@ -431,6 +431,17 @@ def stampa_intervento(intervento_id):
         return redirect(url_for("richieste_manutenzione"))
 
     return render_template("stampa_intervento.html", r=r, ricambi=ricambi)
+
+
+# --- ROTTA REPORT ORE (AGGIUNTA PER RISOLVERE IL BUILD ERROR NEL TEMPLATE) ---
+@app.route("/report_ore")
+def report_ore():
+    conn = get_db_connection()
+    cur = conn.cursor()
+    # Eventuale logica per recuperare i dati del report
+    cur.close()
+    conn.close()
+    return render_template("report_ore.html")
 
 
 # --- STORICO MANUTENZIONI ESTERNE GLOBALE ---
