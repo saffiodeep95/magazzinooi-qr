@@ -44,7 +44,10 @@
                     {% if session.get('is_admin') or session.get('puo_vedere_promemoria', 1) %}
                     <li class="nav-item">
                         <a class="nav-link" href="{{ url_for('promemoria') }}">
-                            <i class="fa-solid fa-calendar-check me-1"></i> Attività & Promemoria
+                            <i class="fa-solid fa-calendar-check me-1"></i> Promemoria
+                            {% if promemoria_urgenti > 0 %}
+                            <span class="badge bg-warning text-dark rounded-pill">{{ promemoria_urgenti }}</span>
+                            {% endif %}
                         </a>
                     </li>
                     {% endif %}
@@ -66,21 +69,8 @@
                     {% endif %}
                 </ul>
 
-                <!-- Notifiche Campanella Attività e Profilo Utente -->
-                <ul class="navbar-nav ms-auto align-items-center gap-2">
-                    {% if session.get('is_admin') or session.get('puo_vedere_promemoria', 1) %}
-                    <li class="nav-item me-2">
-                        <a class="nav-link position-relative px-2 fs-5" href="{{ url_for('promemoria') }}" title="Notifiche Attività e Promemoria">
-                            <i class="fa-solid fa-bell"></i>
-                            {% if promemoria_urgenti > 0 %}
-                            <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger border border-light fs-6">
-                                {{ promemoria_urgenti }}
-                            </span>
-                            {% endif %}
-                        </a>
-                    </li>
-                    {% endif %}
-
+                <!-- Profilo Utente a destra -->
+                <ul class="navbar-nav ms-auto">
                     <li class="nav-item dropdown">
                         <a class="nav-link dropdown-toggle text-light" href="#" role="button" data-bs-toggle="dropdown">
                             <i class="fa-solid fa-user-circle me-1"></i> {{ session.get('username', 'Utente') }}
