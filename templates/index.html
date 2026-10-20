@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Magazzino OMG - Dashboard</title>
+    <title>Gestionale OMG - Dashboard</title>
 
     <link rel="manifest" href="{{ url_for('static', filename='manifest.json') }}">
     <link rel="icon" type="image/png" href="{{ url_for('static', filename='icon.png') }}">
@@ -24,14 +24,42 @@
         .card-mattoncino p { margin: 0; font-size: 0.8rem; color: #64748b; }
         .counter-badge { margin-top: 10px; font-size: 1.2rem; font-weight: bold; color: #1e293b; }
         
-        /* Dropdown Notifiche */
+        /* Sistema Notifiche Mobile-Friendly */
         .notif-wrapper { position: relative; display: inline-block; }
         .notif-btn { background: #f1f5f9; border: 1px solid #cbd5e1; padding: 6px 12px; border-radius: 20px; cursor: pointer; font-size: 1.1rem; position: relative; }
         .notif-badge { position: absolute; top: -5px; right: -5px; background: #ef4444; color: white; border-radius: 50%; padding: 2px 6px; font-size: 0.7rem; font-weight: bold; display: none; }
-        .notif-dropdown { display: none; position: absolute; right: 0; top: 35px; width: 300px; background: white; border: 1px solid #e2e8f0; border-radius: 10px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); z-index: 1000; max-height: 350px; overflow-y: auto; }
-        .notif-item { padding: 10px; border-bottom: 1px solid #f1f5f9; font-size: 0.8rem; text-decoration: none; color: inherit; display: block; }
+        
+        /* Stile Tendina Notifiche */
+        .notif-dropdown { 
+            display: none; 
+            position: absolute; 
+            left: 0; 
+            top: 40px; 
+            width: 320px; 
+            background: white; 
+            border: 1px solid #e2e8f0; 
+            border-radius: 12px; 
+            box-shadow: 0 10px 25px rgba(0,0,0,0.15); 
+            z-index: 2000; 
+            max-height: 380px; 
+            overflow-y: auto; 
+        }
+
+        /* Adattamento Responsivo per Smartphone */
+        @media (max-width: 600px) {
+            .notif-dropdown {
+                position: fixed;
+                left: 15px;
+                right: 15px;
+                top: 70px;
+                width: auto;
+                max-height: 70vh;
+            }
+        }
+
+        .notif-item { padding: 12px; border-bottom: 1px solid #f1f5f9; font-size: 0.85rem; text-decoration: none; color: inherit; display: block; }
         .notif-item:hover { background: #f8fafc; }
-        .notif-item.non-letta { background: #f0f9ff; font-weight: bold; }
+        .notif-item.non-letta { background: #f0f9ff; font-weight: bold; border-left: 3px solid #0284c7; }
 
         table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 0.85rem; }
         th, td { padding: 10px; text-align: left; border-bottom: 1px solid #e2e8f0; }
@@ -43,11 +71,10 @@
 
     <div class="header">
         <div>
-            <h1 style="margin: 0; font-size: 1.6rem; color: #0284c7;">🏬 Magazzino OMG</h1>
+            <h1 style="margin: 0; font-size: 1.6rem; color: #0284c7;">🏢 Gestionale OMG</h1>
             <p style="margin: 2px 0 0 0; color: #64748b; font-size: 0.85rem;">Pannello di Controllo Generale</p>
         </div>
-        <div style="display: flex; align-items: center; gap: 10px;">
-            <!-- ICONA CAMPANELLA NOTIFICHE -->
+        <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
             <div class="notif-wrapper">
                 <button class="notif-btn" id="btn-campanella" onclick="toggleNotifiche()">
                     🔔 <span class="notif-badge" id="notif-count">0</span>
@@ -86,6 +113,16 @@
                 <span style="color: #ef4444;">{{ interventi_aperti_count }} aperte</span> / 
                 <span style="color: #f59e0b;">{{ interventi_in_lavoro_count }} in lavoro</span>
             </div>
+        </a>
+        {% endif %}
+
+        {% if session.get('is_admin') or session.get('puo_vedere_report_ore', 1) %}
+        <a href="{{ url_for('report_ore') }}" class="card-mattoncino" style="border-left: 4px solid #059669;">
+            <div>
+                <h3>📊 Report Ore Manutenzioni</h3>
+                <p>Consuntivo ore, grafici e statistica manutentori</p>
+            </div>
+            <div class="counter-badge" style="font-size: 0.9rem; color: #64748b;">Apri Report →</div>
         </a>
         {% endif %}
 
@@ -208,7 +245,6 @@
     </div>
     {% endif %}
 
-    <!-- SCRIPT GESTIONE NOTIFICHE PUSH BROWSER E CAMPANELLA -->
     <script>
         let notificheVisteState = new Set();
 
@@ -243,12 +279,11 @@
                     data.forEach(n => {
                         html += `
                             <a href="${n.link || '#'}" class="notif-item ${!n.letta ? 'non-letta' : ''}">
-                                <div style="color: #0284c7;">${n.titolo}</div>
-                                <div style="color: #475569;">${n.messaggio}</div>
+                                <div style="color: #0284c7; font-weight: bold;">${n.titolo}</div>
+                                <div style="color: #475569; margin-top: 2px;">${n.messaggio}</div>
                             </a>
                         `;
 
-                        // NOTIFICA PUSH DEL BROWSER
                         if (!n.letta && !notificheVisteState.has(n.id)) {
                             notificheVisteState.add(n.id);
                             if ("Notification" in window && Notification.permission === "granted") {
@@ -275,6 +310,15 @@
                     });
             }
         }
+
+        // Chiudi notifiche se si clicca fuori dalla campanella
+        document.addEventListener('click', function(event) {
+            const wrapper = document.querySelector('.notif-wrapper');
+            const listContainer = document.getElementById("notif-list");
+            if (wrapper && !wrapper.contains(event.target)) {
+                listContainer.style.display = "none";
+            }
+        });
 
         setInterval(caricaNotifiche, 10000);
         caricaNotifiche();
