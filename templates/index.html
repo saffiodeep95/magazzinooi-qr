@@ -113,7 +113,7 @@
         {% endif %}
 
         <!-- Intestazione e pulsanti azione rapida -->
-        <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
+        <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
             <h2><i class="fa-solid fa-warehouse me-2"></i>Inventario Magazzino Principale</h2>
             <div class="d-flex gap-2 flex-wrap">
                 {% if session.get('is_admin') or session.get('puo_caricare_scaricare', 1) %}
@@ -141,6 +141,17 @@
                 <a href="{{ url_for('esporta_inventario') }}" class="btn btn-outline-secondary">
                     <i class="fa-solid fa-file-csv me-1"></i> Esporta CSV
                 </a>
+            </div>
+        </div>
+
+        <!-- BARRA DI RICERCA GLOBALE IN PRIMO PIANO -->
+        <div class="card shadow-sm mb-4 border-primary">
+            <div class="card-body bg-white py-3">
+                <div class="input-group input-group-lg">
+                    <span class="input-group-text bg-primary text-white border-primary"><i class="fa-solid fa-magnifying-glass"></i></span>
+                    <input type="text" id="inputRicercaLive" class="form-control border-primary" placeholder="Cerca qualsiasi articolo per Nome, QR Code, Matricola o Codice SAP..." onkeyup="filtraTabellaLive()">
+                    <button class="btn btn-outline-secondary" type="button" onclick="pulisciRicerca()"><i class="fa-solid fa-xmark"></i> Pulisci</button>
+                </div>
             </div>
         </div>
 
@@ -200,7 +211,7 @@
             <div class="card-body">
                 <form id="formStampaMultipla" action="{{ url_for('stampa_qr_multipli') }}" method="POST">
                     <div class="table-responsive">
-                        <table class="table table-hover align-middle">
+                        <table class="table table-hover align-middle" id="tabellaProdotti">
                             <thead class="table-dark">
                                 <tr>
                                     <th style="width: 40px;" class="text-center">
@@ -216,7 +227,7 @@
                             </thead>
                             <tbody>
                                 {% for p in prodotti %}
-                                <tr>
+                                <tr class="riga-prodotto">
                                     <td class="text-center">
                                         <input type="checkbox" name="qr_selezionati" value="{{ p.qr_code }}" class="form-check-input">
                                     </td>
@@ -288,7 +299,6 @@
                             <label class="form-label">Peso</label>
                             <input type="text" class="form-control" name="peso">
                         </div>
-                        <!-- Checkbox Magazzino Pesante -->
                         <div class="form-check mb-3">
                             <input class="form-check-input" type="checkbox" name="magazzino_pesante" value="1" id="modalPesanteCheck">
                             <label class="form-check-label fw-bold text-danger" for="modalPesanteCheck">
@@ -305,7 +315,7 @@
         </div>
     </div>
 
-    <!-- Bootstrap JS + Script Selezione Tutti -->
+    <!-- Bootstrap JS + Script Selezione Tutti e Ricerca Live -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script>
     function toggleSelezionaTutti(source) {
@@ -313,6 +323,27 @@
         for(var i=0, n=checkboxes.length; i<n; i++) {
             checkboxes[i].checked = source.checked;
         }
+    }
+
+    function filtraTabellaLive() {
+        var input = document.getElementById("inputRicercaLive");
+        var filter = input.value.toLowerCase();
+        var table = document.getElementById("tabellaProdotti");
+        var tr = table.getElementsByClassName("riga-prodotto");
+
+        for (var i = 0; i < tr.length; i++) {
+            var testoRiga = tr[i].textContent || tr[i].innerText;
+            if (testoRiga.toLowerCase().indexOf(filter) > -1) {
+                tr[i].style.display = "";
+            } else {
+                tr[i].style.display = "none";
+            }
+        }
+    }
+
+    function pulisciRicerca() {
+        document.getElementById("inputRicercaLive").value = "";
+        filtraTabellaLive();
     }
     </script>
 </body>
