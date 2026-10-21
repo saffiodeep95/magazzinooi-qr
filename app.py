@@ -635,7 +635,7 @@ def report_ore():
                            chart_tipi_labels=chart_tipi_labels,
                            chart_tipi_values=chart_tipi_values)
 
-# --- CAMBI SERIE FORNI (FILTRI FORNO E SETTIMANA) ---
+# --- CAMBI SERIE FORNI ---
 @app.route("/cambi_serie")
 def cambi_serie():
     forno_filtro = request.args.get("forno", "Tutti")
@@ -735,7 +735,25 @@ def richieste_manutenzione():
 
         titolo = request.form.get("titolo")
         impianto_macchina = request.form.get("impianto_macchina", "")
+        fornitore_id = request.form.get("fornitore_id")
+        
+        # Recupera dati fornitore selezionato dal DB
+        dati_fornitore_str = ""
+        if fornitore_id:
+            cur.execute("SELECT nome_azienda, telefono, email, p_iva FROM fornitori WHERE id = %s;", (fornitore_id,))
+            f_data = cur.fetchone()
+            if f_data:
+                dati_fornitore_str = f" [FORNITORE: {f_data['nome_azienda']}"
+                if f_data['telefono']:
+                    dati_fornitore_str += f" - Tel: {f_data['telefono']}"
+                if f_data['email']:
+                    dati_fornitore_str += f" - Email: {f_data['email']}"
+                dati_fornitore_str += "]"
+
         descrizione = request.form.get("descrizione", "")
+        if dati_fornitore_str:
+            descrizione = f"{descrizione}\n\n{dati_fornitore_str}".strip()
+
         priorita = request.form.get("priorita", "Media")
         tipo_guasto = request.form.get("tipo_guasto", "Meccanico")
         
@@ -781,6 +799,9 @@ def richieste_manutenzione():
     cur.execute("SELECT qr_code, nome, quantita FROM prodotti ORDER BY nome ASC;")
     lista_prodotti = cur.fetchall()
 
+    cur.execute("SELECT id, nome_azienda, settore_note, telefono, email FROM fornitori ORDER BY nome_azienda ASC;")
+    lista_fornitori = cur.fetchall()
+
     cur.execute("""
         SELECT id, titolo, impianto_macchina, descrizione, priorita, stato, tipo_guasto, 
                assegnato_a, creato_da, inizio_lavoro, fine_lavoro, 
@@ -803,6 +824,7 @@ def richieste_manutenzione():
                            richieste=richieste, 
                            lista_utenti=lista_utenti, 
                            lista_prodotti=lista_prodotti,
+                           lista_fornitori=lista_fornitori,
                            ricambi_per_intervento=ricambi_per_intervento,
                            puo_aprire=puo_aprire,
                            puo_assegnare=puo_assegnare,
@@ -951,7 +973,7 @@ def stampa_intervento(intervento_id):
     cur = conn.cursor()
     cur.execute("SELECT id, titolo, impianto_macchina, descrizione, priorita, stato, tipo_guasto, assegnato_a, creato_da, inizio_lavoro, fine_lavoro, tempo_lavorato_minuti, note_lavoro, creato_il FROM richieste_manutenzione WHERE id = %s;", (intervento_id,))
     intervento = cur.fetchone()
-    cur.execute("SELECT * FROM intervento_ricambi WHERE id = %s;", (intervento_id,))
+    cur.execute("SELECT * FROM intervento_ricambi WHERE intervento_id = %s;", (intervento_id,))
     ricambi = cur.fetchall()
     cur.close()
     conn.close()
