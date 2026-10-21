@@ -24,7 +24,7 @@
             border: none;
             border-radius: 4px;
         }
-        .btn-indietro {
+        .btn-dietro {
             padding: 10px 20px;
             font-size: 16px;
             text-decoration: none;
@@ -48,6 +48,20 @@
             page-break-inside: avoid;
             box-shadow: 0 2px 4px rgba(0,0,0,0.1);
         }
+        .qr-card h3 {
+            margin-top: 0;
+            margin-bottom: 8px;
+            font-size: 16px;
+        }
+        .qr-card p {
+            margin: 4px 0;
+            font-size: 13px;
+        }
+        .qr-card img {
+            width: 120px;
+            height: 120px;
+            margin: 8px 0;
+        }
         @media print {
             .no-print {
                 display: none;
@@ -64,10 +78,10 @@
 </head>
 <body>
 
-    <!-- Pulsanti di navigazione e stampa (nascosti in stampa) -->
+    <!-- Pulsanti di navigazione e stampa -->
     <div class="no-print">
         <button class="btn-stampa" onclick="window.print()">🖨️ Stampa</button>
-        <a class="btn-indietro" href="{{ url_for('index') }}">⬅️ Torna al Magazzino</a>
+        <a class="btn-dietro" href="{{ url_for('index') }}">⬅️ Torna al Magazzino</a>
     </div>
 
     <!-- Griglia dei QR code selezionati -->
@@ -76,7 +90,12 @@
         <div class="qr-card">
             <h3>{{ p.nome }}</h3>
             <p><strong>SAP:</strong> {{ p.sap or '-' }}</p>
+            
+            <!-- Generazione automatica del QR Code tramite API Google Charts -->
+            <img src="https://api.qrserver.com/v1/create-qr-code/?size=150x150&data={{ p.qr_code }}" alt="QR Code">
+            
             <p><strong>QR:</strong> <code>{{ p.qr_code }}</code></p>
+            <p><strong>Pezzi:</strong> {{ p.quantita }}</p>
             <p><small>Posizione: {{ p.posizione or '-' }}</small></p>
         </div>
         {% else %}
