@@ -635,17 +635,37 @@ def report_ore():
                            chart_tipi_labels=chart_tipi_labels,
                            chart_tipi_values=chart_tipi_values)
 
-# --- CAMBI SERIE FORNI ---
+# --- CAMBI SERIE FORNI (FILTRI FORNO E SETTIMANA) ---
 @app.route("/cambi_serie")
 def cambi_serie():
-    forno_selezionato = request.args.get("forno", "Forno 1")
+    forno_filtro = request.args.get("forno", "Tutti")
+    settimana_filtro = request.args.get("settimana", "")
+    
     conn = get_db_connection()
     cur = conn.cursor()
-    cur.execute("SELECT * FROM cambi_serie WHERE forno = %s ORDER BY data_cambio DESC, id DESC;", (forno_selezionato,))
+    
+    query = "SELECT * FROM cambi_serie WHERE 1=1"
+    params = []
+    
+    if forno_filtro and forno_filtro != "Tutti":
+        query += " AND forno = %s"
+        params.append(forno_filtro)
+        
+    if settimana_filtro and "-W" in settimana_filtro:
+        try:
+            anno, num_sett = settimana_filtro.split("-W")
+            query += " AND EXTRACT(ISOYEAR FROM TO_DATE(data_cambio, 'YYYY-MM-DD')) = %s AND EXTRACT(WEEK FROM TO_DATE(data_cambio, 'YYYY-MM-DD')) = %s"
+            params.extend([int(anno), int(num_sett)])
+        except Exception:
+            pass
+        
+    query += " ORDER BY data_cambio ASC, id DESC;"
+    cur.execute(query, tuple(params))
     record_serie = cur.fetchall()
+    
     cur.close()
     conn.close()
-    return render_template("cambi_serie.html", forno_selezionato=forno_selezionato, record_serie=record_serie)
+    return render_template("cambi_serie.html", forno_filtro=forno_filtro, settimana_filtro=settimana_filtro, record_serie=record_serie)
 
 @app.route("/aggiungi_cambio_serie", methods=["POST"])
 def aggiungi_cambio_serie():
@@ -678,7 +698,6 @@ def aggiungi_cambio_serie():
 
 @app.route("/elimina_cambio_serie/<int:id_cambio>", methods=["POST"])
 def elimina_cambio_serie(id_cambio):
-    forno = request.form.get("forno", "Forno 1")
     try:
         conn = get_db_connection()
         cur = conn.cursor()
@@ -690,7 +709,7 @@ def elimina_cambio_serie(id_cambio):
         flash("Record eliminato con successo.", "success")
     except Exception as e:
         flash(f"Errore eliminazione: {e}", "error")
-    return redirect(url_for("cambi_serie", forno=forno))
+    return redirect(url_for("cambi_serie"))
 
 # --- RICHIESTE INTERVENTO MANUTENZIONE OFFICINA ---
 @app.route("/richieste_manutenzione", methods=["GET", "POST"])
@@ -1492,7 +1511,6 @@ def elimina_file(file_id):
         return redirect(url_for("documenti", cartella_id=cartella_id))
     return redirect(url_for("documenti"))
 
-# --- ALTRE ROTTE GESTIONALE ---
 @app.route("/esporta_inventario")
 def esporta_inventario():
     conn = get_db_connection()
@@ -1513,107 +1531,6 @@ def esporta_inventario():
         mimetype="text/csv",
         headers={"Content-disposition": "attachment; filename=Inventario_Gestionale_OMG.csv"}
     )
-
-@app.route("/esporta_interventi")
-def esporta_interventi():
-    conn = get_db_connection()
-    cur = conn.cursor()
-    cur.execute("SELECT id, titolo, impianto_macchina, priorita, tipo_guasto, stato, assegnato_a, creato_da, inizio_lavoro, fine_lavoro, tempo_lavorato_minuti, note_lavoro, creato_il FROM richieste_manutenzione ORDER BY creato_il DESC;")
-    richieste = cur.fetchall()
-    cur.close()
-    conn.close()
-    
-    output = io.StringIO()
-    writer = csv.writer(output)
-    writer.writerow(['ID', 'Titolo', 'Macchina', 'Priorità', 'Tipo Guasto', 'Stato', 'Assegnato A', 'Creato Da', 'Inizio', 'Fine', 'Minuti Lavorati', 'Note', 'Data Creazione'])
-    for r in richieste:
-        writer.writerow([r['id'], r['titolo'], r['impianto_macchina'], r['priorita'], r['tipo_guasto'], r['stato'], r['assegnato_a'], r['creato_da'], r['inizio_lavoro'], r['fine_lavoro'], r['tempo_lavorato_minuti'], r['note_lavoro'], r['creato_il']])
-    
-    return Response(
-        output.getvalue(),
-        mimetype="text/csv",
-        headers={"Content-disposition": "attachment; filename=Report_Interventi_Gestionale_OMG.csv"}
-    )
-
-@app.route("/upload", methods=["GET", "POST"])
-def upload():
-    if request.method == "POST":
-        file_csv = request.files.get("file_csv")
-        if file_csv and file_csv.filename.endswith('.csv'):
-            try:
-                stream = io.TextIOWrapper(file_csv.stream, encoding="utf-8")
-                reader = csv.reader(stream)
-                conn = get_db_connection()
-                cur = conn.cursor()
-                count = 0
-                for row in reader:
-                    if len(row) >= 2:
-                        qr_code = row[0].strip()
-                        nome = row[1].strip()
-                        sap = row[2].strip() if len(row) > 2 and row[2] else ""
-                        quantita = int(row[3].strip()) if len(row) > 3 and row[3].strip().isdigit() else 0
-                        posizione = row[4].strip() if len(row) > 4 and row[4] else ""
-                        cur.execute("""
-                            INSERT INTO prodotti (qr_code, nome, sap, quantita, posizione)
-                            VALUES (%s, %s, %s, %s, %s)
-                            ON CONFLICT (qr_code)
-                            DO UPDATE SET nome = EXCLUDED.nome, sap = EXCLUDED.sap, quantita = prodotti.quantita + EXCLUDED.quantita, posizione = EXCLUDED.posizione;
-                        """, (qr_code, nome, sap, quantita, posizione))
-                        count += 1
-                conn.commit()
-                cur.close()
-                conn.close()
-                flash(f"Importati/Aggiornati {count} articoli!", "success")
-            except Exception as e:
-                flash(f"Errore CSV: {e}", "error")
-        return redirect(url_for("upload"))
-    return render_template("upload.html")
-
-@app.route("/stampa_tutti_qr")
-def stampa_tutti_qr():
-    conn = get_db_connection()
-    cur = conn.cursor()
-    cur.execute("SELECT * FROM prodotti ORDER BY nome ASC;")
-    prodotti = cur.fetchall()
-    cur.close()
-    conn.close()
-    return render_template("stampa_tutti_qr.html", prodotti=prodotti)
-
-@app.route("/stampa_singolo_qr/<qr_code>")
-def stampa_singolo_qr(qr_code):
-    conn = get_db_connection()
-    cur = conn.cursor()
-    cur.execute("SELECT * FROM prodotti WHERE qr_code = %s;", (qr_code,))
-    prodotto = cur.fetchone()
-    cur.close()
-    conn.close()
-    if not prodotto:
-        flash("Prodotto non trovato.", "error")
-        return redirect(url_for("index"))
-    return render_template("stampa_singolo_qr.html", prodotto=prodotto)
-
-@app.route("/stampa_qr_multipli", methods=["GET", "POST"])
-def stampa_qr_multipli():
-    if 'username' not in session:
-        return redirect(url_for('login'))
-        
-    qr_selezionati = request.form.getlist("qr_selezionati")
-    
-    if not qr_selezionati:
-        flash("Nessun articolo selezionato per la stampa.", "error")
-        return redirect(url_for('index'))
-        
-    conn = get_db_connection()
-    cur = conn.cursor()
-    
-    format_strings = ','.join(['%s'] * len(qr_selezionati))
-    cur.execute(f"SELECT * FROM prodotti WHERE qr_code IN ({format_strings}) ORDER BY nome ASC;", tuple(qr_selezionati))
-    prodotti_da_stampare = cur.fetchall()
-    
-    cur.close()
-    conn.close()
-    
-    return render_template("stampa_multipla_qr.html", prodotti=prodotti_da_stampare)
 
 @app.route("/magazzino_pesante")
 def magazzino_pesante():
@@ -1654,51 +1571,6 @@ def manutenzioni():
     except Exception:
         pass
     return render_template("manutenzioni.html", prodotti=prodotti)
-
-@app.route("/storico_manutenzioni")
-def storico_manutenzioni():
-    if not (session.get('is_admin') or session.get('puo_vedere_storico_manutenzioni', 1)):
-        flash("Accesso allo storico negato.", "error")
-        return redirect(url_for('index'))
-    storico = []
-    try:
-        conn = get_db_connection()
-        cur = conn.cursor()
-        cur.execute("SELECT * FROM storico_manutenzioni ORDER BY registrato_il DESC;")
-        storico = cur.fetchall()
-        cur.close()
-        conn.close()
-    except Exception:
-        pass
-    return render_template("storico_manutenzioni.html", storico=storico)
-
-@app.route("/elimina_storico_manutenzione/<int:storico_id>", methods=["POST"])
-def elimina_storico_manutenzione(storico_id):
-    if not (session.get('is_admin') or session.get('puo_eliminare_storico', 0)):
-        flash("Permesso negato.", "error")
-        return redirect(url_for('storico_manutenzioni'))
-    conn = get_db_connection()
-    cur = conn.cursor()
-    cur.execute("DELETE FROM storico_manutenzioni WHERE id = %s;", (storico_id,))
-    conn.commit()
-    cur.close()
-    conn.close()
-    registra_log(f"Eliminato record storico manutenzione ID {storico_id}")
-    flash("Record eliminato dallo storico.", "success")
-    return redirect(url_for('storico_manutenzioni'))
-
-@app.route("/stampa_bolla/<qr_code>")
-def stampa_bolla(qr_code):
-    conn = get_db_connection()
-    cur = conn.cursor()
-    cur.execute("SELECT * FROM prodotti WHERE qr_code = %s;", (qr_code,))
-    prodotto = cur.fetchone()
-    cur.close()
-    conn.close()
-    if not prodotto:
-        flash("Prodotto non trovato.", "error")
-        return redirect(url_for("index"))
-    return render_template("bolla.html", prodotto=prodotto)
 
 @app.route("/carico", methods=["GET", "POST"])
 def carico():
@@ -1770,25 +1642,18 @@ def gestisci_prodotto(qr_code):
     cur = conn.cursor()
     cur.execute("SELECT * FROM prodotti WHERE qr_code = %s;", (qr_code,))
     prodotto = cur.fetchone()
-    lista_fornitori = []
-    try:
-        cur.execute("SELECT * FROM fornitori ORDER BY nome_azienda ASC;")
-        lista_fornitori = cur.fetchall()
-    except Exception:
-        pass
     cur.close()
     conn.close()
     if not prodotto:
         flash("Prodotto non trovato!", "error")
         return redirect(url_for("index"))
-    return render_template("gestisci.html", prodotto=prodotto, fornitori=lista_fornitori)
+    return render_template("gestisci.html", prodotto=prodotto)
 
 @app.route("/aggiorna/<qr_code>", methods=["POST"])
 def aggiorna_prodotto(qr_code):
     if not (session.get('is_admin') or session.get('puo_modificare_prodotti', 1)):
-        flash("Permesso negato per modificare gli articoli.", "error")
+        flash("Permesso negato.", "error")
         return redirect(url_for("gestisci_prodotto", qr_code=qr_code))
-
     nome = request.form.get("nome")
     sap = request.form.get("sap", "")
     posizione = request.form.get("posizione", "")
@@ -1806,7 +1671,6 @@ def aggiorna_prodotto(qr_code):
         conn.commit()
         cur.close()
         conn.close()
-        registra_log(f"Aggiornato articolo: {nome} (QR: {qr_code})")
         flash("Articolo aggiornato con successo!", "success")
     except Exception as e:
         flash(f"Errore: {e}", "error")
@@ -1815,9 +1679,8 @@ def aggiorna_prodotto(qr_code):
 @app.route("/aggiungi", methods=["POST"])
 def aggiungi_prodotto():
     if not (session.get('is_admin') or session.get('puo_aggiungere_prodotti', 1)):
-        flash("Permesso negato per inserire nuovi prodotti.", "error")
+        flash("Permesso negato.", "error")
         return redirect(url_for("index"))
-
     qr_code = request.form.get("qr_code")
     nome = request.form.get("nome")
     sap = request.form.get("sap", "")
@@ -1827,129 +1690,38 @@ def aggiungi_prodotto():
     posizione = request.form.get("posizione", "")
     flag_sezione = 1 if request.form.get("magazzino_pesante") else 0
 
-    if not qr_code or not nome:
-        flash("QR Code e Nome sono obbligatori!", "error")
-        return redirect(url_for("index"))
-
-    try:
-        conn = get_db_connection()
-        cur = conn.cursor()
-        cur.execute("""
-            INSERT INTO prodotti (qr_code, nome, sap, peso, quantita, posizione, magazzino_pesante, soglia_minima)
-            VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
-            ON CONFLICT (qr_code)
-            DO UPDATE SET 
-                quantita = prodotti.quantita + EXCLUDED.quantita,
-                nome = EXCLUDED.nome,
-                sap = EXCLUDED.sap,
-                peso = EXCLUDED.peso,
-                posizione = EXCLUDED.posizione,
-                magazzino_pesante = EXCLUDED.magazzino_pesante,
-                soglia_minima = EXCLUDED.soglia_minima;
-        """, (qr_code, nome, sap, peso, quantita, posizione, flag_sezione, soglia_minima))
-        conn.commit()
-        cur.close()
-        conn.close()
-        registra_log(f"Aggiunto prodotto: {nome} (QR: {qr_code})")
-        flash("Prodotto salvato con successo!", "success")
-    except Exception as e:
-        flash(f"Errore: {e}", "error")
-
-    if flag_sezione == 1:
-        return redirect(url_for("magazzino_pesante"))
-    return redirect(url_for("index"))
-
-@app.route("/manda_manutenzione/<qr_code>", methods=["POST"])
-def manda_manutenzione(qr_code):
-    cliente_manutenzione = request.form.get("cliente_manutenzione")
-    quantita_manutenzione = int(request.form.get("quantita_manutenzione", 1))
-    data_spedizione = request.form.get("data_spedizione", "").strip() or None
-    data_riconsegna = request.form.get("data_riconsegna", "").strip() or None
-    vettore = request.form.get("vettore", "").strip()
-    ordine_amministrativo = True if request.form.get("ordine_amministrativo") else False
-    note_manutenzione = request.form.get("note_manutenzione", "").strip()
-
-    try:
-        conn = get_db_connection()
-        cur = conn.cursor()
-        cur.execute("SELECT * FROM prodotti WHERE qr_code = %s;", (qr_code,))
-        prod = cur.fetchone()
-        
-        cur.execute("""
-            UPDATE prodotti 
-            SET quantita = GREATEST(0, quantita - %s),
-                in_manutenzione = TRUE,
-                cliente_manutenzione = %s,
-                quantita_manutenzione = %s,
-                data_spedizione = %s,
-                data_riconsegna = %s,
-                vettore = %s,
-                ordine_amministrativo = %s,
-                note_manutenzione = %s
-            WHERE qr_code = %s;
-        """, (quantita_manutenzione, cliente_manutenzione, quantita_manutenzione, data_spedizione, data_riconsegna, vettore, ordine_amministrativo, note_manutenzione, qr_code))
-        
-        if prod:
+    if qr_code and nome:
+        try:
+            conn = get_db_connection()
+            cur = conn.cursor()
             cur.execute("""
-                INSERT INTO storico_manutenzioni (nome_prodotto, qr_code, sap, cliente, quantita, data_spedizione, data_riconsegna, vettore, ordine_amministrativo, note)
-                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s);
-            """, (prod['nome'], qr_code, prod['sap'], cliente_manutenzione, quantita_manutenzione, data_spedizione, data_riconsegna, vettore, ordine_amministrativo, note_manutenzione))
-
-        conn.commit()
-        cur.close()
-        conn.close()
-        registra_log(f"Inviato in manutenzione: {qr_code}")
-        flash("Articolo inviato in manutenzione e registrato nello storico!", "success")
-    except Exception as e:
-        flash(f"Errore: {e}", "error")
-    return redirect(url_for("gestisci_prodotto", qr_code=qr_code))
-
-@app.route("/ripristina_magazzino/<qr_code>", methods=["POST"])
-def ripristina_magazzino(qr_code):
-    try:
-        conn = get_db_connection()
-        cur = conn.cursor()
-        cur.execute("""
-            UPDATE prodotti 
-            SET quantita = quantita + quantita_manutenzione,
-                in_manutenzione = FALSE,
-                cliente_manutenzione = NULL,
-                quantita_manutenzione = 0,
-                data_spedizione = NULL,
-                data_riconsegna = NULL,
-                vettore = NULL,
-                ordine_amministrativo = FALSE,
-                note_manutenzione = NULL
-            WHERE qr_code = %s;
-        """, (qr_code,))
-        conn.commit()
-        cur.close()
-        conn.close()
-        registra_log(f"Rientrato da manutenzione: {qr_code}")
-        flash("Articolo rientrato in magazzino con successo!", "success")
-    except Exception as e:
-        flash(f"Errore: {e}", "error")
-    return redirect(url_for("gestisci_prodotto", qr_code=qr_code))
+                INSERT INTO prodotti (qr_code, nome, sap, peso, quantita, posizione, magazzino_pesante, soglia_minima)
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
+                ON CONFLICT (qr_code)
+                DO UPDATE SET quantita = prodotti.quantita + EXCLUDED.quantita, nome = EXCLUDED.nome;
+            """, (qr_code, nome, sap, peso, quantita, posizione, flag_sezione, soglia_minima))
+            conn.commit()
+            cur.close()
+            conn.close()
+            flash("Prodotto salvato con successo!", "success")
+        except Exception as e:
+            flash(f"Errore: {e}", "error")
+    return redirect(url_for("magazzino_pesante" if flag_sezione == 1 else "index"))
 
 @app.route("/elimina", methods=["POST"])
 def elimina_prodotto():
     if not (session.get('is_admin') or session.get('puo_eliminare', 0)):
-        flash("Permesso negato per eliminare prodotti.", "error")
+        flash("Permesso negato.", "error")
         return redirect(url_for("index"))
-
     qr_code = request.form.get("qr_code")
     if qr_code:
-        try:
-            conn = get_db_connection()
-            cur = conn.cursor()
-            cur.execute("DELETE FROM prodotti WHERE qr_code = %s;", (qr_code,))
-            conn.commit()
-            cur.close()
-            conn.close()
-            registra_log(f"Eliminato prodotto QR: {qr_code}")
-            flash("Articolo eliminato dal magazzino con successo!", "success")
-        except Exception as e:
-            flash(f"Errore durante l'eliminazione: {e}", "error")
+        conn = get_db_connection()
+        cur = conn.cursor()
+        cur.execute("DELETE FROM prodotti WHERE qr_code = %s;", (qr_code,))
+        conn.commit()
+        cur.close()
+        conn.close()
+        flash("Articolo eliminato.", "success")
     return redirect(url_for("index"))
 
 if __name__ == "__main__":
