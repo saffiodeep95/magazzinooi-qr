@@ -69,7 +69,7 @@
                     {% endif %}
                 </ul>
 
-                <!-- Profilo Utente a destra -->
+                <!-- Profilo Utente -->
                 <ul class="navbar-nav ms-auto">
                     <li class="nav-item dropdown">
                         <a class="nav-link dropdown-toggle text-light" href="#" role="button" data-bs-toggle="dropdown">
@@ -127,6 +127,12 @@
                 <a href="{{ url_for('scanner_globale') }}" class="btn btn-primary">
                     <i class="fa-solid fa-camera me-1"></i> Scanner QR
                 </a>
+
+                <!-- Pulsante Stampa Multipla QR -->
+                <button type="submit" form="formStampaMultipla" class="btn btn-outline-dark">
+                    <i class="fa-solid fa-qrcode me-1"></i> Stampa QR Selezionati
+                </button>
+
                 {% if session.get('is_admin') or session.get('puo_aggiungere_prodotti', 1) %}
                 <button class="btn btn-dark" data-bs-toggle="modal" data-bs-target="#modalAggiungi">
                     <i class="fa-solid fa-plus me-1"></i> Nuovo Articolo
@@ -138,49 +144,55 @@
             </div>
         </div>
 
-        <!-- Tabella Prodotti -->
+        <!-- Tabella Prodotti con Form per la selezione multipla -->
         <div class="card shadow-sm">
             <div class="card-body">
-                <div class="table-responsive">
-                    <table class="table table-hover align-middle">
-                        <thead class="table-dark">
-                            <tr>
-                                <th>Matricola / QR Code</th>
-                                <th>Nome Articolo</th>
-                                <th>SAP</th>
-                                <th>Quantità Disponibile</th>
-                                <th>Posizione</th>
-                                <th>Peso</th>
-                                <th class="text-end">Azioni</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {% for p in prodotti %}
-                            <tr>
-                                <td><span class="badge bg-secondary font-monospace">{{ p.qr_code }}</span></td>
-                                <td class="fw-bold">{{ p.nome }}</td>
-                                <td>{{ p.sap or '-' }}</td>
-                                <td>
-                                    <span class="badge {{ 'bg-danger' if p.quantita <= (p.soglia_minima or 3) else 'bg-success' }} fs-6">
-                                        {{ p.quantita }} pz
-                                    </span>
-                                </td>
-                                <td>{{ p.posizione or '-' }}</td>
-                                <td>{{ p.peso or '-' }}</td>
-                                <td class="text-end">
-                                    <a href="{{ url_for('gestisci_prodotto', qr_code=p.qr_code) }}" class="btn btn-sm btn-outline-primary" title="Gestisci / Movimenti">
-                                        <i class="fa-solid fa-gear"></i> Gestisci
-                                    </a>
-                                </td>
-                            </tr>
-                            {% else %}
-                            <tr>
-                                <td colspan="7" class="text-center text-muted py-4">Nessun articolo presente nel magazzino principale.</td>
-                            </tr>
-                            {% endfor %}
-                        </tbody>
-                    </table>
-                </div>
+                <form id="formStampaMultipla" action="{{ url_for('stampa_qr_multipli') }}" method="POST" target="_blank">
+                    <div class="table-responsive">
+                        <table class="table table-hover align-middle">
+                            <thead class="table-dark">
+                                <tr>
+                                    <th style="width: 40px;" class="text-center">
+                                        <input type="checkbox" id="SelezionaTutti" class="form-check-input" onclick="toggleSelezionaTutti(this)">
+                                    </th>
+                                    <th>Matricola / QR Code</th>
+                                    <th>Nome Articolo</th>
+                                    <th>SAP</th>
+                                    <th>Quantità</th>
+                                    <th>Posizione</th>
+                                    <th class="text-end">Azioni</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for p in prodotti %}
+                                <tr>
+                                    <td class="text-center">
+                                        <input type="checkbox" name="qr_selezionati" value="{{ p.qr_code }}" class="form-check-input">
+                                    </td>
+                                    <td><span class="badge bg-secondary font-monospace">{{ p.qr_code }}</span></td>
+                                    <td class="fw-bold">{{ p.nome }}</td>
+                                    <td>{{ p.sap or '-' }}</td>
+                                    <td>
+                                        <span class="badge {{ 'bg-danger' if p.quantita <= (p.soglia_minima or 3) else 'bg-success' }} fs-6">
+                                            {{ p.quantita }} pz
+                                        </span>
+                                    </td>
+                                    <td>{{ p.posizione or '-' }}</td>
+                                    <td class="text-end">
+                                        <a href="{{ url_for('gestisci_prodotto', qr_code=p.qr_code) }}" class="btn btn-sm btn-outline-primary" title="Gestisci / Movimenti">
+                                            <i class="fa-solid fa-gear"></i> Gestisci
+                                        </a>
+                                    </td>
+                                </tr>
+                                {% else %}
+                                <tr>
+                                    <td colspan="7" class="text-center text-muted py-4">Nessun articolo presente nel magazzino principale.</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </form>
             </div>
         </div>
     </div>
@@ -235,7 +247,15 @@
         </div>
     </div>
 
-    <!-- Bootstrap JS -->
+    <!-- Bootstrap JS + Script Selezione Tutti -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+    function toggleSelezionaTutti(source) {
+        checkboxes = document.getElementsByName('qr_selezionati');
+        for(var i=0, n=checkboxes.length; i<n; i++) {
+            checkboxes[i].checked = source.checked;
+        }
+    }
+    </script>
 </body>
 </html>
