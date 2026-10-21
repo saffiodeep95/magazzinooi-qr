@@ -40,6 +40,8 @@
         <div class="row">
             <!-- Colonna Informazioni e Modifica Articolo -->
             <div class="col-lg-8 mb-4">
+                
+                <!-- Card Modifica Dati Articolo -->
                 <div class="card shadow-sm mb-4">
                     <div class="card-header bg-dark text-white d-flex justify-content-between align-items-center">
                         <h5 class="mb-0"><i class="fa-solid fa-gear me-2"></i>Gestione Articolo: {{ prodotto.nome }}</h5>
@@ -92,6 +94,65 @@
                             </button>
                             {% endif %}
                         </form>
+                    </div>
+                </div>
+
+                <!-- Sezione Invio in Manutenzione Esterna / Ripristino -->
+                <div class="card shadow-sm mb-4 border-warning">
+                    <div class="card-header bg-warning text-dark">
+                        <h5 class="mb-0"><i class="fa-solid fa-wrench me-2"></i>Gestione Manutenzione Esterna</h5>
+                    </div>
+                    <div class="card-body">
+                        {% if prodotto.in_manutenzione %}
+                            <div class="alert alert-info">
+                                <h6 class="fw-bold mb-1"><i class="fa-solid info-circle me-1"></i> Articolo attualmente in manutenzione presso: <strong>{{ prodotto.cliente_manutenzione }}</strong></h6>
+                                <p class="small mb-1">Q.tà in manutenzione: <strong>{{ prodotto.quantita_manutenzione }} pz</strong> | Spedito il: {{ prodotto.data_spedizione or '-' }}</p>
+                                <p class="small mb-0">Riconsegna prevista: {{ prodotto.data_riconsegna or '-' }} | Vettore: {{ prodotto.vettore or '-' }}</p>
+                            </div>
+                            <form action="{{ url_for('ripristina_magazzino', qr_code=prodotto.qr_code) }}" method="POST">
+                                <button type="submit" class="btn btn-success w-100 py-2 fw-bold">
+                                    <i class="fa-solid fa-arrow-rotate-left me-1"></i> Rientra Articolo in Magazzino
+                                </button>
+                            </form>
+                        {% else %}
+                            <form action="{{ url_for('manda_manutenzione', qr_code=prodotto.qr_code) }}" method="POST">
+                                <div class="mb-3">
+                                    <label class="form-label fw-bold">Cliente / Fornitore Manutenzione *</label>
+                                    <input type="text" class="form-control" name="cliente_manutenzione" placeholder="Nome azienda o riparatore" required>
+                                </div>
+                                <div class="row">
+                                    <div class="col-md-6 mb-3">
+                                        <label class="form-label">Quantità da Inviare</label>
+                                        <input type="number" class="form-control" name="quantita_manutenzione" value="1" min="1" max="{{ prodotto.quantita }}" required>
+                                    </div>
+                                    <div class="col-md-6 mb-3">
+                                        <label class="form-label">Vettore / Corriere</label>
+                                        <input type="text" class="form-control" name="vettore" placeholder="Es. Bartolini / GLS">
+                                    </div>
+                                </div>
+                                <div class="row">
+                                    <div class="col-md-6 mb-3">
+                                        <label class="form-label">Data Spedizione</label>
+                                        <input type="date" class="form-control" name="data_spedizione">
+                                    </div>
+                                    <div class="col-md-6 mb-3">
+                                        <label class="form-label">Data Riconsegna Prevista</label>
+                                        <input type="date" class="form-control" name="data_riconsegna">
+                                    </div>
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label">Note / Dettagli Manutenzione</label>
+                                    <textarea class="form-control" name="note_manutenzione" rows="2" placeholder="Guasto riscontrato o interventi richiesti..."></textarea>
+                                </div>
+                                <div class="mb-3 form-check">
+                                    <input type="checkbox" class="form-check-input" name="ordine_amministrativo" value="1" id="ordineAdmin">
+                                    <label class="form-check-label" for="ordineAdmin">Richiede Ordine Amministrativo</label>
+                                </div>
+                                <button type="submit" class="btn btn-warning text-dark w-100 py-2 fw-bold">
+                                    <i class="fa-solid fa-paper-plane me-1"></i> Invia in Manutenzione
+                                </button>
+                            </form>
+                        {% endif %}
                     </div>
                 </div>
 
