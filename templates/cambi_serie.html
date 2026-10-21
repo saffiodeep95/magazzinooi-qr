@@ -126,24 +126,38 @@
                     <table class="table table-hover align-middle">
                         <thead class="table-light">
                             <tr>
+                                <th>Data Cambio</th>
+                                <th>Linea / Macchina</th>
                                 <th>Nome Bottiglia</th>
                                 <th>Tempo Cambio</th>
                                 <th>Altezza Paratie</th>
                                 <th>N° Bottiglie in Tempera</th>
                                 <th>Quantità Trattamento</th>
-                                <th>Data Registrazione</th>
+                                <th>Inserito Il</th>
                                 <th class="text-end">Azioni</th>
                             </tr>
                         </thead>
                         <tbody>
                             {% for r in record_serie %}
                             <tr>
+                                <td>
+                                    <span class="badge bg-primary fs-6 font-monospace">
+                                        <i class="fa-regular fa-calendar-check me-1"></i> {{ r.data_cambio or '-' }}
+                                    </span>
+                                </td>
+                                <td>
+                                    <span class="badge bg-dark fs-6 font-monospace">
+                                        Linea {{ r.linea or '-' }}
+                                    </span>
+                                </td>
                                 <td class="fw-bold text-primary fs-5">{{ r.nome_bottiglia }}</td>
                                 <td><span class="badge bg-secondary fs-6">{{ r.tempo_cambio or '-' }}</span></td>
                                 <td>{{ r.altezza_paratie or '-' }}</td>
                                 <td><span class="badge bg-info text-dark fs-6">{{ r.num_bottiglie_tempera }} pz</span></td>
                                 <td>{{ r.quantita_trattamento or '-' }}</td>
-                                <td class="text-muted small">{{ r.creato_il.strftime('%d/%m/%Y %H:%M') if r.creato_il else '-' }}</td>
+                                <td class="text-muted small">
+                                    {{ r.creato_il.strftime('%d/%m/%Y %H:%M') if r.creato_il else '-' }}
+                                </td>
                                 <td class="text-end">
                                     <form action="{{ url_for('elimina_cambio_serie', id_cambio=r.id) }}" method="POST" onsubmit="return confirm('Eliminare questo record di cambio serie?');" class="d-inline">
                                         <input type="hidden" name="forno" value="{{ forno_selezionato }}">
@@ -155,7 +169,7 @@
                             </tr>
                             {% else %}
                             <tr>
-                                <td colspan="7" class="text-center text-muted py-4">Nessun cambio serie registrato per il {{ forno_selezionato }}.</td>
+                                <td colspan="9" class="text-center text-muted py-4">Nessun cambio serie registrato per il {{ forno_selezionato }}.</td>
                             </tr>
                             {% endfor %}
                         </tbody>
@@ -176,14 +190,28 @@
                         <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
                     </div>
                     <div class="modal-body">
-                        <div class="mb-3">
-                            <label class="form-label fw-bold">Seleziona Forno *</label>
-                            <select class="form-select" name="forno" required>
-                                <option value="Forno 1" {% if forno_selezionato == 'Forno 1' %}selected{% endif %}>Forno 1</option>
-                                <option value="Forno 3" {% if forno_selezionato == 'Forno 3' %}selected{% endif %}>Forno 3</option>
-                                <option value="Forno 4" {% if forno_selezionato == 'Forno 4' %}selected{% endif %}>Forno 4</option>
-                            </select>
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label fw-bold">Seleziona Forno *</label>
+                                <select class="form-select" name="forno" id="selectForno" onchange="aggiornaLineeModal()" required>
+                                    <option value="Forno 1" {% if forno_selezionato == 'Forno 1' %}selected{% endif %}>Forno 1</option>
+                                    <option value="Forno 3" {% if forno_selezionato == 'Forno 3' %}selected{% endif %}>Forno 3</option>
+                                    <option value="Forno 4" {% if forno_selezionato == 'Forno 4' %}selected{% endif %}>Forno 4</option>
+                                </select>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label fw-bold">Linea / Macchina *</label>
+                                <select class="form-select" name="linea" id="selectLinea" required>
+                                    <!-- Popolato dinamicamente da JS -->
+                                </select>
+                            </div>
                         </div>
+
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">Data Effettiva Cambio Serie *</label>
+                            <input type="date" class="form-control" name="data_cambio" required>
+                        </div>
+
                         <div class="mb-3">
                             <label class="form-label fw-bold">Nome Bottiglia *</label>
                             <input type="text" class="form-control" name="nome_bottiglia" placeholder="Es. Bordolese 75cl / Renana..." required>
@@ -218,7 +246,33 @@
         </div>
     </div>
 
-    <!-- Bootstrap JS -->
+    <!-- Bootstrap JS + Script gestione dinamica linee -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+    const lineePerForno = {
+        "Forno 1": ["11", "12", "13"],
+        "Forno 3": ["31", "32", "34", "35"],
+        "Forno 4": ["41", "42"]
+    };
+
+    function aggiornaLineeModal() {
+        const forno = document.getElementById("selectForno").value;
+        const selectLinea = document.getElementById("selectLinea");
+        selectLinea.innerHTML = "";
+
+        const opzioni = lineePerForno[forno] || [];
+        opzioni.forEach(function(linea) {
+            const opt = document.createElement("option");
+            opt.value = linea;
+            opt.textContent = "Linea " + linea;
+            selectLinea.appendChild(opt);
+        });
+    }
+
+    // Esegui la prima volta all'apertura
+    document.addEventListener("DOMContentLoaded", function() {
+        aggiornaLineeModal();
+    });
+    </script>
 </body>
 </html>
