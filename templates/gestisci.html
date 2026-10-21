@@ -38,7 +38,7 @@
         {% endwith %}
 
         <div class="row">
-            <!-- Colonna Informazioni e Modifica Articolo -->
+            <!-- Colonna Sinistra: Modifica, Manutenzione ed Eliminazione -->
             <div class="col-lg-8 mb-4">
                 
                 <!-- Card Modifica Dati Articolo -->
@@ -88,11 +88,9 @@
                                 </div>
                             </div>
                             
-                            {% if session.get('is_admin') or session.get('puo_modificare_prodotti', 1) %}
                             <button type="submit" class="btn btn-primary w-100 py-2">
                                 <i class="fa-solid fa-floppy-disk me-1"></i> Salva Modifiche Articolo
                             </button>
-                            {% endif %}
                         </form>
                     </div>
                 </div>
@@ -105,7 +103,7 @@
                     <div class="card-body">
                         {% if prodotto.in_manutenzione %}
                             <div class="alert alert-info">
-                                <h6 class="fw-bold mb-1"><i class="fa-solid info-circle me-1"></i> Articolo attualmente in manutenzione presso: <strong>{{ prodotto.cliente_manutenzione }}</strong></h6>
+                                <h6 class="fw-bold mb-1"><i class="fa-solid fa-info-circle me-1"></i> Articolo attualmente in manutenzione presso: <strong>{{ prodotto.cliente_manutenzione }}</strong></h6>
                                 <p class="small mb-1">Q.tà in manutenzione: <strong>{{ prodotto.quantita_manutenzione }} pz</strong> | Spedito il: {{ prodotto.data_spedizione or '-' }}</p>
                                 <p class="small mb-0">Riconsegna prevista: {{ prodotto.data_riconsegna or '-' }} | Vettore: {{ prodotto.vettore or '-' }}</p>
                             </div>
@@ -157,7 +155,6 @@
                 </div>
 
                 <!-- Sezione Eliminazione Definitiva Articolo -->
-                {% if session.get('is_admin') or session.get('puo_eliminare', 0) %}
                 <div class="card shadow-sm border-danger">
                     <div class="card-body bg-light">
                         <h6 class="text-danger fw-bold"><i class="fa-solid fa-triangle-exclamation me-1"></i> Area Pericolosa</h6>
@@ -171,11 +168,12 @@
                         </form>
                     </div>
                 </div>
-                {% endif %}
             </div>
 
-            <!-- Colonna QR Code e Azioni Rapide -->
+            <!-- Colonna Destra: QR Code, Azioni Rapide e Progress Bar -->
             <div class="col-lg-4">
+                
+                <!-- 1. Card QR Code -->
                 <div class="card shadow-sm text-center mb-4">
                     <div class="card-body">
                         <h5 class="card-title fw-bold mb-3">QR Code Articolo</h5>
@@ -188,6 +186,60 @@
                         </a>
                     </div>
                 </div>
+
+                <!-- 2. Pulsanti Carico/Scarico Rapido (+1 / -1) -->
+                <div class="card shadow-sm mb-4">
+                    <div class="card-body text-center">
+                        <h6 class="fw-bold mb-3"><i class="fa-solid fa-bolt me-1 text-warning"></i> Azioni Rapide Scorte</h6>
+                        <div class="d-flex gap-2 justify-content-center">
+                            <form action="{{ url_for('carico') }}" method="POST" class="flex-fill">
+                                <input type="hidden" name="qr_code" value="{{ prodotto.qr_code }}">
+                                <input type="hidden" name="quantita" value="1">
+                                <button type="submit" class="btn btn-success w-100 fw-bold">
+                                    <i class="fa-solid fa-plus"></i> +1 PZ
+                                </button>
+                            </form>
+                            <form action="{{ url_for('scarico') }}" method="POST" class="flex-fill">
+                                <input type="hidden" name="qr_code" value="{{ prodotto.qr_code }}">
+                                <input type="hidden" name="quantita" value="1">
+                                <button type="submit" class="btn btn-danger w-100 fw-bold">
+                                    <i class="fa-solid fa-minus"></i> -1 PZ
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 3. Indicatore Visivo Stato Scorte (Progress Bar) -->
+                <div class="card shadow-sm mb-4">
+                    <div class="card-body">
+                        <h6 class="fw-bold mb-2"><i class="fa-solid fa-chart-bar me-1 text-primary"></i> Livello Scorte</h6>
+                        {% set soglia = prodotto.soglia_minima or 3 %}
+                        {% set percentuale = (prodotto.quantita / (soglia * 2) * 100) if soglia > 0 else 100 %}
+                        {% if percentuale > 100 %}{% set percentuale = 100 %}{% endif %}
+                        <div class="progress mb-2" style="height: 22px;">
+                            <div class="progress-bar {{ 'bg-danger' if prodotto.quantita <= soglia else 'bg-success' }}" 
+                                 role="progressbar" style="width: {{ percentuale }}%;" 
+                                 aria-valuenow="{{ prodotto.quantita }}" aria-valuemin="0" aria-valuemax="{{ soglia * 2 }}">
+                                 <strong>{{ prodotto.quantita }} pz</strong>
+                            </div>
+                        </div>
+                        <small class="text-muted">Soglia minima di allerta: <strong>{{ soglia }} pz</strong></small>
+                    </div>
+                </div>
+
+                <!-- 4. Info Rapide / Dettagli -->
+                <div class="card shadow-sm mb-4">
+                    <div class="card-body">
+                        <h6 class="fw-bold mb-2"><i class="fa-solid fa-circle-info me-1 text-secondary"></i> Dettagli Articolo</h6>
+                        <ul class="list-unstyled small mb-0">
+                            <li class="py-1 border-bottom d-flex justify-content-between"><span>Posizione:</span> <strong>{{ prodotto.posizione or 'N/D' }}</strong></li>
+                            <li class="py-1 border-bottom d-flex justify-content-between"><span>Codice SAP:</span> <strong>{{ prodotto.sap or 'N/D' }}</strong></li>
+                            <li class="py-1 d-flex justify-content-between"><span>Peso:</span> <strong>{{ prodotto.peso or 'N/D' }}</strong></li>
+                        </ul>
+                    </div>
+                </div>
+
             </div>
         </div>
 
