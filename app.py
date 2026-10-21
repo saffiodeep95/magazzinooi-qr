@@ -398,6 +398,34 @@ def index():
                            promemoria_urgenti=promemoria_urgenti,
                            interventi_aperti_count=interventi_aperti_count)
 
+# --- DOPPIO ALIAS PER LA STAMPA QR MULTIPLI (Risolve qualsiasi BuildError) ---
+def logica_stampa_qr_multipli():
+    conn = get_db_connection()
+    cur = conn.cursor()
+    
+    if request.method == "POST":
+        ids = request.form.getlist("prodotti_ids[]")
+        if ids:
+            cur.execute("SELECT * FROM prodotti WHERE id IN %s ORDER BY nome ASC;", (tuple(ids),))
+            prodotti = cur.fetchall()
+        else:
+            prodotti = []
+    else:
+        cur.execute("SELECT * FROM prodotti ORDER BY nome ASC;")
+        prodotti = cur.fetchall()
+        
+    cur.close()
+    conn.close()
+    return render_template("stampa_multipla_qr.html", prodotti=prodotti)
+
+@app.route("/stampa_qr_multipli", methods=["GET", "POST"])
+def stampa_qr_multipli():
+    return logica_stampa_qr_multipli()
+
+@app.route("/stampa_multipla_qr", methods=["GET", "POST"])
+def stampa_multipla_qr():
+    return logica_stampa_qr_multipli()
+
 @app.route("/login", methods=["GET", "POST"])
 def login():
     if request.method == "POST":
@@ -737,7 +765,6 @@ def richieste_manutenzione():
         impianto_macchina = request.form.get("impianto_macchina", "")
         fornitore_id = request.form.get("fornitore_id")
         
-        # Recupera dati fornitore selezionato dal DB
         dati_fornitore_str = ""
         if fornitore_id:
             cur.execute("SELECT nome_azienda, telefono, email, p_iva FROM fornitori WHERE id = %s;", (fornitore_id,))
