@@ -2,13 +2,36 @@
 <html lang="it">
 <head>
     <meta charset="UTF-8">
-    <title>Stampa QR Multipli</title>
+    <title>Gestionale OMG - Stampa QR Multipli</title>
     <style>
-        /* Stili CSS per la griglia di stampa */
         body {
             font-family: Arial, sans-serif;
             margin: 0;
             padding: 20px;
+            background-color: #f8f9fa;
+        }
+        .no-print {
+            margin-bottom: 20px;
+            display: flex;
+            gap: 15px;
+        }
+        .btn-stampa {
+            padding: 10px 20px;
+            font-size: 16px;
+            cursor: pointer;
+            background-color: #007bff;
+            color: white;
+            border: none;
+            border-radius: 4px;
+        }
+        .btn-indietro {
+            padding: 10px 20px;
+            font-size: 16px;
+            text-decoration: none;
+            background-color: #6c757d;
+            color: white;
+            border-radius: 4px;
+            display: inline-block;
         }
         .qr-grid {
             display: flex;
@@ -17,33 +40,44 @@
         }
         .qr-card {
             border: 1px solid #ccc;
+            background: white;
             padding: 15px;
-            width: 200px;
+            width: 220px;
             text-align: center;
+            border-radius: 6px;
             page-break-inside: avoid;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
         }
         @media print {
             .no-print {
                 display: none;
+            }
+            body {
+                background-color: white;
+            }
+            .qr-card {
+                box-shadow: none;
+                border: 1px solid #000;
             }
         }
     </style>
 </head>
 <body>
 
-    <div class="no-print" style="margin-bottom: 20px;">
-        <button onclick="window.print()" style="padding: 10px 20px; font-size: 16px; cursor: pointer;">🖨️ Stampa</button>
+    <!-- Pulsanti di navigazione e stampa (nascosti in stampa) -->
+    <div class="no-print">
+        <button class="btn-stampa" onclick="window.print()">🖨️ Stampa</button>
+        <a class="btn-indietro" href="{{ url_for('index') }}">⬅️ Torna al Magazzino</a>
     </div>
 
+    <!-- Griglia dei QR code selezionati -->
     <div class="qr-grid">
-        <!-- Ciclo che scorre i prodotti passati da app.py -->
         {% for p in prodotti %}
         <div class="qr-card">
             <h3>{{ p.nome }}</h3>
             <p><strong>SAP:</strong> {{ p.sap or '-' }}</p>
-            <!-- Esempio di visualizzazione del QR Code (o immagine/codice) -->
-            <p><code>{{ p.qr_code }}</code></p>
-            <p><small>Pos: {{ p.posizione or '-' }}</small></p>
+            <p><strong>QR:</strong> <code>{{ p.qr_code }}</code></p>
+            <p><small>Posizione: {{ p.posizione or '-' }}</small></p>
         </div>
         {% else %}
         <p>Nessun articolo selezionato o trovato per la stampa.</p>
