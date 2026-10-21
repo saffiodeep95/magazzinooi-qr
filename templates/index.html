@@ -41,6 +41,8 @@
                     </li>
                     {% endif %}
 
+                    <li class="nav-item"><a class="nav-link" href="{{ url_for('cambi_serie') }}"><i class="fa-solid fa-arrows-rotate me-1"></i> Cambi Serie</a></li>
+
                     {% if session.get('is_admin') or session.get('puo_vedere_promemoria', 1) %}
                     <li class="nav-item">
                         <a class="nav-link" href="{{ url_for('promemoria') }}">
