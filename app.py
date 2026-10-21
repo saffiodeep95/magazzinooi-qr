@@ -320,11 +320,12 @@ def api_segna_lette():
 @app.route("/")
 def index():
     prodotti = []
+    prodotti_pesanti = []
     prodotti_sotto_soglia = []
+    totale_pezzi_principale = 0
+    totale_pezzi_pesante = 0
     promemoria_urgenti = 0
     interventi_aperti_count = 0
-    interventi_in_lavoro_count = 0
-    interventi_attesa_count = 0
     
     username = session.get('username')
     is_admin = session.get('is_admin')
@@ -346,11 +347,9 @@ def index():
             promemoria_urgenti = res_p['count']
             
         cur.execute("SELECT COUNT(*) as count FROM richieste_manutenzione WHERE stato = 'Aperta';")
-        interventi_aperti_count = cur.fetchone()['count']
-        cur.execute("SELECT COUNT(*) as count FROM richieste_manutenzione WHERE stato IN ('In Lavoro', 'In Pausa');")
-        interventi_in_lavoro_count = cur.fetchone()['count']
-        cur.execute("SELECT COUNT(*) as count FROM richieste_manutenzione WHERE stato = 'Attesa Ricambio';")
-        interventi_attesa_count = cur.fetchone()['count']
+        res_i = cur.fetchone()
+        if res_i:
+            interventi_aperti_count = res_i['count']
         
         cur.close()
         conn.close()
@@ -358,21 +357,29 @@ def index():
         for p in tutti:
             val_pesante = p.get('magazzino_pesante')
             is_pesante = (val_pesante == 1 or val_pesante == '1' or val_pesante is True or val_pesante == 1.0)
-            if not is_pesante:
+            qta = p.get('quantita', 0) or 0
+            
+            if is_pesante:
+                prodotti_pesanti.append(p)
+                totale_pezzi_pesante += qta
+            else:
                 prodotti.append(p)
+                totale_pezzi_principale += qta
+                
             soglia = p.get('soglia_minima', 3) or 3
-            if p.get('quantita', 0) <= soglia:
+            if qta <= soglia:
                 prodotti_sotto_soglia.append(p)
     except Exception as e:
         print(f"Errore index: {e}")
         
     return render_template("index.html", 
                            prodotti=prodotti, 
+                           prodotti_pesanti=prodotti_pesanti,
                            prodotti_sotto_soglia=prodotti_sotto_soglia,
+                           totale_pezzi_principale=totale_pezzi_principale,
+                           totale_pezzi_pesante=totale_pezzi_pesante,
                            promemoria_urgenti=promemoria_urgenti,
-                           interventi_aperti_count=interventi_aperti_count,
-                           interventi_in_lavoro_count=interventi_in_lavoro_count,
-                           interventi_attesa_count=interventi_attesa_count)
+                           interventi_aperti_count=interventi_aperti_count)
 
 @app.route("/login", methods=["GET", "POST"])
 def login():
@@ -512,7 +519,7 @@ def elimina_utente(user_id):
         flash(f"Errore eliminazione utente: {e}", "error")
     return redirect(url_for('admin_utenti'))
 
-# --- NUOVO MODULO: REPORT ORE & STATISTICHE MANUTENZIONI ---
+# --- REPORT ORE & STATISTICHE MANUTENZIONI ---
 @app.route("/report_ore")
 def report_ore():
     if not (session.get('is_admin') or session.get('puo_vedere_report_ore', 1)):
@@ -1512,7 +1519,7 @@ def stampa_singolo_qr(qr_code):
     return render_template("stampa_singolo_qr.html", prodotto=prodotto)
 
 # --- ROTTA PER LA STAMPA MULTIPLA QR CODE SELEZIONATI ---
-@app.route("/stampa_qr_multipli", methods=["POST"])
+@app.route("/stampa_qr_multipli", methods=["GET", "POST"])
 def stampa_qr_multipli():
     if 'username' not in session:
         return redirect(url_for('login'))
