@@ -1,88 +1,243 @@
-<!--
-========================================================================
-  Magazzino Web Application
-  Copyright (c) 2026 Marco Pavan. All Rights Reserved.
-  Designed & Developed by Marco Pavan
-========================================================================
--->
 <!DOCTYPE html>
 <html lang="it">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Magazzino Pesante</title>
-    <style>
-        body { font-family: sans-serif; max-width: 1000px; margin: 0 auto; padding: 15px; background: #f8fafc; color: #1e293b; box-sizing: border-box; }
-        .card { background: white; padding: 20px; border-radius: 12px; border: 1px solid #e2e8f0; margin-bottom: 20px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
-        .btn { background: #4f46e5; color: white; padding: 8px 14px; border: none; border-radius: 6px; font-weight: bold; cursor: pointer; text-decoration: none; display: inline-block; font-size: 0.85rem; margin: 2px; }
-        .btn:hover { opacity: 0.9; }
-        table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 0.9rem; }
-        th, td { padding: 10px 12px; text-align: left; border-bottom: 1px solid #e2e8f0; vertical-align: middle; }
-        th { background: #f1f5f9; color: #475569; font-weight: 600; }
-        footer { text-align: center; margin-top: 30px; padding: 15px 0; color: #64748b; font-size: 0.8rem; border-top: 1px solid #e2e8f0; }
-    </style>
+    <title>Gestionale OMG - Magazzino Pesante</title>
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- FontAwesome per le icone -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </head>
-<body>
+<body class="bg-light">
 
-    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; flex-wrap: wrap; gap: 10px;">
-        <h1 style="font-size: 1.5rem; margin: 0;">⚖️ Magazzino Pesante</h1>
-        <a href="{{ url_for('index') }}" class="btn" style="background: #64748b;">← Torna al Magazzino Standard</a>
-    </div>
+    <!-- Navbar principale -->
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark shadow-sm">
+        <div class="container-fluid">
+            <a class="navbar-brand fw-bold" href="{{ url_for('index') }}"><i class="fa-solid fa-industry me-2"></i>Gestionale OMG</a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav me-auto">
+                    <li class="nav-item"><a class="nav-link" href="{{ url_for('index') }}"><i class="fa-solid fa-boxes-stacked me-1"></i> Magazzino</a></li>
+                    
+                    {% if session.get('is_admin') or session.get('puo_vedere_pesante', 1) %}
+                    <li class="nav-item"><a class="nav-link active" href="{{ url_for('magazzino_pesante') }}"><i class="fa-solid fa-weight-scale me-1"></i> Magazzino Pesante</a></li>
+                    {% endif %}
 
-    {% with messages = get_flashed_messages(with_categories=true) %}
-      {% if messages %}
-        {% for category, message in messages %}
-          <div style="background: {% if category == 'error' %}#fee2e2; color: #991b1b; border: 1px solid #fca5a5;{% else %}#dcfce7; color: #166534; border: 1px solid #bbf7d0;{% endif %} padding: 12px; border-radius: 8px; margin-bottom: 15px; font-size: 0.9rem;">
-            {{ message }}
-          </div>
-        {% endfor %}
-      {% endif %}
-    {% endwith %}
+                    {% if session.get('is_admin') or session.get('puo_vedere_manutenzioni_esterne', 1) %}
+                    <li class="nav-item"><a class="nav-link" href="{{ url_for('manutenzioni') }}"><i class="fa-solid fa-wrench me-1"></i> Manutenzioni Esterne</a></li>
+                    {% endif %}
 
-    <div class="card">
-        <h3 style="margin-top: 0; font-size: 1.1rem; color: #334155;">Articoli in Sezione Pesante</h3>
-        
-        {% if prodotti %}
-            <div style="overflow-x: auto;">
-                <table>
-                    <thead>
-                        <tr>
-                            <th>Nome Articolo</th>
-                            <th>Codice QR</th>
-                            <th>SAP</th>
-                            <th>Peso</th>
-                            <th>Quantità</th>
-                            <th>Posizione</th>
-                            <th>Azioni</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for p in prodotti %}
-                        <!-- RIGA COLORATA AUTOMATICAMENTE IN BASE ALLA QUANTITÀ -->
-                        <tr style="{% if p.quantita == 0 %}background-color: #fee2e2; color: #991b1b; font-weight: bold;{% elif p.quantita == 1 %}background-color: #fef3c7; color: #92400e; font-weight: bold;{% endif %}">
-                            <td>{{ p.nome }}</td>
-                            <td style="font-family: monospace; font-size: 0.85rem;">{{ p.qr_code }}</td>
-                            <td>{{ p.sap or '-' }}</td>
-                            <td><strong>{{ p.peso or '-' }}</strong></td>
-                            <td><strong>{{ p.quantita }}</strong></td>
-                            <td>{{ p.posizione or '-' }}</td>
-                            <td>
-                                <a href="{{ url_for('gestisci_prodotto', qr_code=p.qr_code) }}" class="btn" style="padding: 5px 10px; font-size: 0.8rem;">Gestisci</a>
-                            </td>
-                        </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
+                    {% if session.get('is_admin') or session.get('puo_vedere_manutenzione', 1) %}
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('richieste_manutenzione') }}">
+                            <i class="fa-solid fa-clipboard-list me-1"></i> Officina 
+                        </a>
+                    </li>
+                    {% endif %}
+
+                    {% if session.get('is_admin') or session.get('puo_vedere_promemoria', 1) %}
+                    <li class="nav-item"><a class="nav-link" href="{{ url_for('promemoria') }}"><i class="fa-solid fa-calendar-check me-1"></i> Promemoria</a></li>
+                    {% endif %}
+
+                    {% if session.get('is_admin') or session.get('puo_gestire_fornitori', 1) %}
+                    <li class="nav-item"><a class="nav-link" href="{{ url_for('fornitori') }}"><i class="fa-solid fa-address-book me-1"></i> Fornitori</a></li>
+                    {% endif %}
+
+                    {% if session.get('is_admin') or session.get('puo_gestire_documenti', 1) %}
+                    <li class="nav-item"><a class="nav-link" href="{{ url_for('documenti') }}"><i class="fa-solid fa-folder-open me-1"></i> Documenti</a></li>
+                    {% endif %}
+
+                    {% if session.get('is_admin') or session.get('puo_vedere_report_ore', 1) %}
+                    <li class="nav-item"><a class="nav-link" href="{{ url_for('report_ore') }}"><i class="fa-solid fa-chart-pie me-1"></i> Report Ore</a></li>
+                    {% endif %}
+
+                    {% if session.get('is_admin') %}
+                    <li class="nav-item"><a class="nav-link" href="{{ url_for('admin_utenti') }}"><i class="fa-solid fa-users-gear me-1"></i> Admin</a></li>
+                    {% endif %}
+                </ul>
+
+                <!-- Profilo Utente -->
+                <ul class="navbar-nav ms-auto">
+                    <li class="nav-item dropdown">
+                        <a class="nav-link dropdown-toggle text-light" href="#" role="button" data-bs-toggle="dropdown">
+                            <i class="fa-solid fa-user-circle me-1"></i> {{ session.get('username', 'Utente') }}
+                        </a>
+                        <ul class="dropdown-menu dropdown-menu-end">
+                            <li><a class="dropdown-item text-danger" href="{{ url_for('logout') }}"><i class="fa-solid fa-right-from-bracket me-1"></i> Logout</a></li>
+                        </ul>
+                    </li>
+                </ul>
             </div>
-        {% else %}
-            <p style="color: #64748b; text-align: center; padding: 20px 0;">Nessun articolo presente nel magazzino pesante.</p>
-        {% endif %}
+        </div>
+    </nav>
+
+    <!-- Contenuto principale -->
+    <div class="container my-4">
+
+        <!-- Flash messages -->
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                    <div class="alert alert-{{ 'danger' if category == 'error' else 'success' }} alert-dismissible fade show" role="alert">
+                        {{ message }}
+                        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                    </div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+
+        <!-- Intestazione e pulsanti azione -->
+        <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
+            <h2><i class="fa-solid fa-weight-scale me-2 text-danger"></i>Magazzino Pesante</h2>
+            <div class="d-flex gap-2 flex-wrap">
+                {% if session.get('is_admin') or session.get('puo_caricare_scaricare', 1) %}
+                <a href="{{ url_for('carico') }}" class="btn btn-success">
+                    <i class="fa-solid fa-circle-plus me-1"></i> Carico Rapido
+                </a>
+                <a href="{{ url_for('scarico') }}" class="btn btn-danger">
+                    <i class="fa-solid fa-circle-minus me-1"></i> Scarico Rapido
+                </a>
+                {% endif %}
+                <a href="{{ url_for('scanner_globale') }}" class="btn btn-primary">
+                    <i class="fa-solid fa-camera me-1"></i> Scanner QR
+                </a>
+
+                <!-- Pulsante Stampa Multipla QR -->
+                <button type="submit" form="formStampaMultiplaPesante" class="btn btn-outline-dark">
+                    <i class="fa-solid fa-qrcode me-1"></i> Stampa QR Selezionati
+                </button>
+
+                {% if session.get('is_admin') or session.get('puo_aggiungere_prodotti', 1) %}
+                <button class="btn btn-dark" data-bs-toggle="modal" data-bs-target="#modalAggiungi">
+                    <i class="fa-solid fa-plus me-1"></i> Nuovo Articolo
+                </button>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Tabella Prodotti Magazzino Pesante -->
+        <div class="card shadow-sm border-danger">
+            <div class="card-body">
+                <form id="formStampaMultiplaPesante" action="{{ url_for('stampa_qr_multipli') }}" method="POST">
+                    <div class="table-responsive">
+                        <table class="table table-hover align-middle">
+                            <thead class="table-dark">
+                                <tr>
+                                    <th style="width: 40px;" class="text-center">
+                                        <input type="checkbox" id="SelezionaTutti" class="form-check-input" onclick="toggleSelezionaTutti(this)">
+                                    </th>
+                                    <th>Matricola / QR Code</th>
+                                    <th>Nome Articolo</th>
+                                    <th>SAP</th>
+                                    <th>Quantità</th>
+                                    <th>Peso</th>
+                                    <th>Posizione</th>
+                                    <th class="text-end">Azioni</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for p in prodotti %}
+                                <tr>
+                                    <td class="text-center">
+                                        <input type="checkbox" name="qr_selezionati" value="{{ p.qr_code }}" class="form-check-input">
+                                    </td>
+                                    <td><span class="badge bg-secondary font-monospace">{{ p.qr_code }}</span></td>
+                                    <td class="fw-bold">{{ p.nome }}</td>
+                                    <td>{{ p.sap or '-' }}</td>
+                                    <td>
+                                        <span class="badge {{ 'bg-danger' if p.quantita <= (p.soglia_minima or 3) else 'bg-success' }} fs-6">
+                                            {{ p.quantita }} pz
+                                        </span>
+                                    </td>
+                                    <td><span class="badge bg-warning text-dark">{{ p.peso or '-' }}</span></td>
+                                    <td>{{ p.posizione or '-' }}</td>
+                                    <td class="text-end">
+                                        <a href="{{ url_for('gestisci_prodotto', qr_code=p.qr_code) }}" class="btn btn-sm btn-outline-primary" title="Gestisci">
+                                            <i class="fa-solid fa-gear"></i> Gestisci
+                                        </a>
+                                    </td>
+                                </tr>
+                                {% else %}
+                                <tr>
+                                    <td colspan="8" class="text-center text-muted py-4">Nessun articolo presente nel magazzino pesante.</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </form>
+            </div>
+        </div>
     </div>
 
-    <footer>
-        <p style="margin: 0;">© 2026 <strong>Marco Pavan</strong> — Tutti i diritti riservati.</p>
-        <p style="margin: 3px 0 0 0; opacity: 0.75;">Sviluppato da Marco Pavan</p>
-    </footer>
+    <!-- Modal Aggiungi Prodotto (Default impostato su Pesante) -->
+    <div class="modal fade" id="modalAggiungi" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <form action="{{ url_for('aggiungi_prodotto') }}" method="POST">
+                    <div class="modal-header bg-danger text-white">
+                        <h5 class="modal-title"><i class="fa-solid fa-plus-circle me-1"></i> Aggiungi ad Articolo Pesante</h5>
+                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body">
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">Matricola / QR Code *</label>
+                            <input type="text" class="form-control" name="qr_code" placeholder="Es. MAT-001 o Codice a barre" required>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">Nome Articolo *</label>
+                            <input type="text" class="form-control" name="nome" required>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Codice SAP</label>
+                            <input type="text" class="form-control" name="sap">
+                        </div>
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Quantità Iniziale</label>
+                                <input type="number" class="form-control" name="quantita" value="0" min="0">
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Soglia Minima Avviso</label>
+                                <input type="number" class="form-control" name="soglia_minima" value="3" min="0">
+                            </div>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Posizione in Magazzino</label>
+                            <input type="text" class="form-control" name="posizione" placeholder="Es. Settore Pesanti B1">
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Peso</label>
+                            <input type="text" class="form-control" name="peso" placeholder="Es. 150 kg">
+                        </div>
+                        <div class="form-check mb-3">
+                            <input class="form-check-input" type="checkbox" name="magazzino_pesante" value="1" id="modalPesanteCheck" checked>
+                            <label class="form-check-label fw-bold text-danger" for="modalPesanteCheck">
+                                <i class="fa-solid fa-weight-scale me-1"></i> Magazzino Pesante
+                            </label>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annulla</button>
+                        <button type="submit" class="btn btn-danger">Salva Articolo Pesante</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
 
+    <!-- Bootstrap JS + Script Selezione Tutti -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+    function toggleSelezionaTutti(source) {
+        checkboxes = document.getElementsByName('qr_selezionati');
+        for(var i=0, n=checkboxes.length; i<n; i++) {
+            checkboxes[i].checked = source.checked;
+        }
+    }
+    </script>
 </body>
 </html>
