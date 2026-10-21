@@ -3,8 +3,10 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Gestione Articolo - {{ prodotto.nome }}</title>
+    <title>Gestionale OMG - Gestione Articolo</title>
+    <!-- Bootstrap CSS -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- FontAwesome per le icone -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </head>
 <body class="bg-light">
@@ -14,12 +16,15 @@
         <div class="container-fluid">
             <a class="navbar-brand fw-bold" href="{{ url_for('index') }}"><i class="fa-solid fa-industry me-2"></i>Gestionale OMG</a>
             <div class="ms-auto">
-                <a href="{{ url_for('index') }}" class="btn btn-outline-light btn-sm"><i class="fa-solid fa-arrow-left me-1"></i> Torna al Magazzino</a>
+                <a href="{{ url_for('index') }}" class="btn btn-outline-light btn-sm">
+                    <i class="fa-solid fa-arrow-left me-1"></i> Torna al Magazzino
+                </a>
             </div>
         </div>
     </nav>
 
     <div class="container my-4">
+
         <!-- Flash messages -->
         {% with messages = get_flashed_messages(with_categories=true) %}
             {% if messages %}
@@ -32,286 +37,99 @@
             {% endif %}
         {% endwith %}
 
-        <!-- Intestazione Articolo -->
-        <div class="card shadow-sm mb-4">
-            <div class="card-body d-flex justify-content-between align-items-center flex-wrap gap-3">
-                <div>
-                    <h3 class="mb-1"><i class="fa-solid fa-box me-2 text-primary"></i>{{ prodotto.nome }}</h3>
-                    <span class="badge bg-secondary font-monospace">Matricola / QR: {{ prodotto.qr_code }}</span>
-                    {% if prodotto.sap %}
-                    <span class="badge bg-info text-dark ms-2">SAP: {{ prodotto.sap }}</span>
-                    {% endif %}
-                    {% if prodotto.magazzino_pesante %}
-                    <span class="badge bg-warning text-dark ms-2"><i class="fa-solid fa-weight-scale me-1"></i> Magazzino Pesante</span>
-                    {% endif %}
+        <div class="row">
+            <!-- Colonna Informazioni e Modifica Articolo -->
+            <div class="col-lg-8 mb-4">
+                <div class="card shadow-sm mb-4">
+                    <div class="card-header bg-dark text-white d-flex justify-content-between align-items-center">
+                        <h5 class="mb-0"><i class="fa-solid fa-gear me-2"></i>Gestione Articolo: {{ prodotto.nome }}</h5>
+                        <span class="badge bg-secondary font-monospace">QR: {{ prodotto.qr_code }}</span>
+                    </div>
+                    <div class="card-body">
+                        <form action="{{ url_for('aggiorna_prodotto', qr_code=prodotto.qr_code) }}" method="POST">
+                            <div class="mb-3">
+                                <label class="form-label fw-bold">Nome Articolo *</label>
+                                <input type="text" class="form-control" name="nome" value="{{ prodotto.nome }}" required>
+                            </div>
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label class="form-label">Codice SAP</label>
+                                    <input type="text" class="form-control" name="sap" value="{{ prodotto.sap or '' }}">
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label class="form-label">Quantità Attuale</label>
+                                    <input type="text" class="form-control bg-light" value="{{ prodotto.quantita }}" readonly>
+                                </div>
+                            </div>
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label class="form-label">Posizione</label>
+                                    <input type="text" class="form-control" name="posizione" value="{{ prodotto.posizione or '' }}">
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label class="form-label">Peso</label>
+                                    <input type="text" class="form-control" name="peso" value="{{ prodotto.peso or '' }}">
+                                </div>
+                            </div>
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label class="form-label">Soglia Minima Avviso</label>
+                                    <input type="number" class="form-control" name="soglia_minima" value="{{ prodotto.soglia_minima or 3 }}" min="0">
+                                </div>
+                                <div class="col-md-6 mb-3 d-flex align-items-center">
+                                    <div class="form-check mt-4">
+                                        <input class="form-check-input" type="checkbox" name="magazzino_pesante" value="1" id="pesanteCheck" {% if prodotto.magazzino_pesante in [1, '1', True, 1.0] %}checked{% endif %}>
+                                        <label class="form-check-label fw-bold text-danger" for="pesanteCheck">
+                                            <i class="fa-solid fa-weight-scale me-1"></i> Magazzino Pesante
+                                        </label>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            {% if session.get('is_admin') or session.get('puo_modificare_prodotti', 1) %}
+                            <button type="submit" class="btn btn-primary w-100 py-2">
+                                <i class="fa-solid fa-floppy-disk me-1"></i> Salva Modifiche Articolo
+                            </button>
+                            {% endif %}
+                        </form>
+                    </div>
                 </div>
-                <div class="d-flex gap-2">
-                    <a href="{{ url_for('stampa_singolo_qr', qr_code=prodotto.qr_code) }}" target="_blank" class="btn btn-outline-dark btn-sm">
-                        <i class="fa-solid fa-qrcode me-1"></i> Stampa QR
-                    </a>
-                    <a href="{{ url_for('stampa_bolla', qr_code=prodotto.qr_code) }}" target="_blank" class="btn btn-outline-secondary btn-sm">
-                        <i class="fa-solid fa-file-lines me-1"></i> Stampa Bolla
-                    </a>
+
+                <!-- Sezione Eliminazione Definitiva Articolo -->
+                {% if session.get('is_admin') or session.get('puo_eliminare', 0) %}
+                <div class="card shadow-sm border-danger">
+                    <div class="card-body bg-light">
+                        <h6 class="text-danger fw-bold"><i class="fa-solid fa-triangle-exclamation me-1"></i> Area Pericolosa</h6>
+                        <p class="text-muted small mb-3">L'eliminazione definitiva rimuoverà completamente l'articolo dal magazzino.</p>
+                        
+                        <form action="{{ url_for('elimina_prodotto') }}" method="POST" onsubmit="return confirm('Sei assolutamente sicuro di voler eliminare definitivamente questo articolo?');">
+                            <input type="hidden" name="qr_code" value="{{ prodotto.qr_code }}">
+                            <button type="submit" class="btn btn-danger w-100 py-2">
+                                <i class="fa-solid fa-trash-can me-1"></i> Elimina Articolo Definitivamente
+                            </button>
+                        </form>
+                    </div>
+                </div>
+                {% endif %}
+            </div>
+
+            <!-- Colonna QR Code e Azioni Rapide -->
+            <div class="col-lg-4">
+                <div class="card shadow-sm text-center mb-4">
+                    <div class="card-body">
+                        <h5 class="card-title fw-bold mb-3">QR Code Articolo</h5>
+                        <div class="bg-white p-3 border rounded d-inline-block shadow-sm mb-3">
+                            <img src="https://api.qrserver.com/v1/create-qr-code/?size=180x180&data={{ prodotto.qr_code }}" alt="QR Code" class="img-fluid">
+                        </div>
+                        <div class="font-monospace fw-bold text-secondary fs-5 mb-3">{{ prodotto.qr_code }}</div>
+                        <a href="{{ url_for('stampa_singolo_qr', qr_code=prodotto.qr_code) }}" target="_blank" class="btn btn-outline-dark w-100">
+                            <i class="fa-solid fa-print me-1"></i> Stampa Etichetta Singola
+                        </a>
+                    </div>
                 </div>
             </div>
         </div>
 
-        <!-- Tab Navigation -->
-        <ul class="nav nav-tabs mb-4" id="gestioneTab" role="tablist">
-            <li class="nav-item" role="presentation">
-                <button class="nav-link active fw-bold" id="anagrafica-tab" data-bs-toggle="tab" data-bs-target="#anagrafica-pane" type="button" role="tab">
-                    <i class="fa-solid fa-pen-to-square me-1"></i> Anagrafica e Movimenti Magazzino
-                </button>
-            </li>
-            <li class="nav-item" role="presentation">
-                <button class="nav-link fw-bold text-warning-emphasis" id="manutenzione-tab" data-bs-toggle="tab" data-bs-target="#manutenzione-pane" type="button" role="tab">
-                    <i class="fa-solid fa-wrench me-1"></i> Gestione Manutenzione Esterna
-                    {% if prodotto.in_manutenzione %}
-                    <span class="badge bg-danger ms-1">In Manutenzione</span>
-                    {% endif %}
-                </button>
-            </li>
-        </ul>
-
-        <!-- Tab Contents -->
-        <div class="tab-content" id="gestioneTabContent">
-            
-            <!-- SCHEDA 1: ANAGRAFICA E MOVIMENTI -->
-            <div class="tab-pane fade show active" id="anagrafica-pane" role="tabpanel">
-                <div class="row">
-                    <!-- Modifica Anagrafica (con Matricola/QR Code) -->
-                    <div class="col-md-7 mb-4">
-                        <div class="card shadow-sm h-100">
-                            <div class="card-header bg-primary text-white">
-                                <h5 class="mb-0"><i class="fa-solid id-card me-2"></i>Modifica Dati Articolo & Magazzino</h5>
-                            </div>
-                            <div class="card-body d-flex flex-column justify-content-between">
-                                <form action="{{ url_for('aggiorna_prodotto', qr_code=prodotto.qr_code) }}" method="POST">
-                                    <div class="row">
-                                        <div class="col-md-6 mb-3">
-                                            <label class="form-label fw-bold">Matricola / QR Code</label>
-                                            <input type="text" class="form-control font-monospace bg-light" name="qr_code" value="{{ prodotto.qr_code }}" readonly>
-                                        </div>
-                                        <div class="col-md-6 mb-3">
-                                            <label class="form-label fw-bold">Codice SAP</label>
-                                            <input type="text" class="form-control" name="sap" value="{{ prodotto.sap or '' }}">
-                                        </div>
-                                    </div>
-                                    <div class="mb-3">
-                                        <label class="form-label fw-bold">Nome Articolo *</label>
-                                        <input type="text" class="form-control" name="nome" value="{{ prodotto.nome }}" required>
-                                    </div>
-                                    <div class="row">
-                                        <div class="col-md-6 mb-3">
-                                            <label class="form-label">Posizione</label>
-                                            <input type="text" class="form-control" name="posizione" value="{{ prodotto.posizione or '' }}">
-                                        </div>
-                                        <div class="col-md-6 mb-3">
-                                            <label class="form-label">Peso</label>
-                                            <input type="text" class="form-control" name="peso" value="{{ prodotto.peso or '' }}">
-                                        </div>
-                                    </div>
-                                    <div class="row">
-                                        <div class="col-md-6 mb-3">
-                                            <label class="form-label">Soglia Minima Avviso</label>
-                                            <input type="number" class="form-control" name="soglia_minima" value="{{ prodotto.soglia_minima or 3 }}" min="0">
-                                        </div>
-                                        <div class="col-md-6 mb-3 d-flex align-items-center">
-                                            <div class="form-check mt-4 p-2 border rounded bg-light w-100">
-                                                <input class="form-check-input ms-1" type="checkbox" name="magazzino_pesante" id="magazzino_pesante" {% if prodotto.magazzino_pesante in [1, '1', True, 1.0] %}checked{% endif %}>
-                                                <label class="form-check-label fw-bold ms-2 text-dark" for="magazzino_pesante">
-                                                    <i class="fa-solid fa-weight-scale me-1"></i> Sposta in Magazzino Pesante
-                                                </label>
-                                            </div>
-                                        </div>
-                                    </div>
-                                    <button type="submit" class="btn btn-primary w-100 mb-3"><i class="fa-solid fa-save me-1"></i> Salva Modifiche Anagrafica</button>
-                                </form>
-
-                                <!-- Sezione Eliminazione Articolo -->
-                                <div class="border-top pt-3 mt-2 text-end">
-                                    <form action="{{ url_for('elimina_prodotto', qr_code=prodotto.qr_code) }}" method="POST" onsubmit="return confirm('Sei sicuro di voler eliminare definitivamente questo articolo dal magazzino? L\'operazione non è reversibile.');">
-                                        <button type="submit" class="btn btn-outline-danger btn-sm w-100">
-                                            <i class="fa-solid fa-trash-can me-1"></i> Elimina Articolo dal Magazzino
-                                        </button>
-                                    </form>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Quantità e Carico/Scarico Rapido Fisico -->
-                    <div class="col-md-5 mb-4">
-                        <div class="card shadow-sm h-100">
-                            <div class="card-header bg-dark text-white">
-                                <h5 class="mb-0"><i class="fa-solid fa-arrows-up-down me-2"></i>Quantità in Magazzino</h5>
-                            </div>
-                            <div class="card-body text-center d-flex flex-column justify-content-center">
-                                <h1 class="display-3 fw-bold text-{{ 'danger' if prodotto.quantita <= (prodotto.soglia_minima or 3) else 'success' }}">
-                                    {{ prodotto.quantita }} pz
-                                </h1>
-                                <p class="text-muted mb-4">Disponibilità fisica attuale</p>
-
-                                <form method="POST" class="row g-2 justify-content-center align-items-center">
-                                    <div class="col-auto">
-                                        <input type="number" class="form-control" name="quantita_movimento" value="1" min="1" style="width: 90px;" required>
-                                    </div>
-                                    <div class="col-auto">
-                                        <button type="submit" formaction="{{ url_for('carica_scarica', qr_code=prodotto.qr_code, azione='carica') }}" class="btn btn-success">
-                                            <i class="fa-solid fa-plus me-1"></i> Carica
-                                        </button>
-                                        <button type="submit" formaction="{{ url_for('carica_scarica', qr_code=prodotto.qr_code, azione='scarica') }}" class="btn btn-danger">
-                                            <i class="fa-solid fa-minus me-1"></i> Scarico
-                                        </button>
-                                    </div>
-                                </form>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- SCHEDA 2: GESTIONE MANUTENZIONE ESTERNA -->
-            <div class="tab-pane fade" id="manutenzione-pane" role="tabpanel">
-                <div class="row">
-                    <!-- Sezione Stato e Invio/Rientro Manutenzione con Esito -->
-                    <div class="col-md-6 mb-4">
-                        <div class="card shadow-sm border-warning h-100">
-                            <div class="card-header bg-warning text-dark">
-                                <h5 class="mb-0"><i class="fa-solid fa-wrench me-2"></i>Stato e Operazioni Manutenzione</h5>
-                            </div>
-                            <div class="card-body">
-                                {% if prodotto.in_manutenzione %}
-                                    <div class="alert alert-warning mb-3">
-                                        <h6 class="fw-bold text-danger"><i class="fa-solid fa-triangle-exclamation me-1"></i> Articolo attualmente in manutenzione</h6>
-                                        <hr>
-                                        <p class="mb-1"><strong>Cliente / Fornitore:</strong> {{ prodotto.cliente_manutenzione or '-' }}</p>
-                                        <p class="mb-1"><strong>Quantità inviata:</strong> {{ prodotto.quantita_manutenzione or 0 }} pz</p>
-                                        <p class="mb-1"><strong>Spedizione:</strong> {{ prodotto.data_spedizione or '-' }} | <strong>Prevista:</strong> {{ prodotto.data_riconsegna or '-' }}</p>
-                                        <p class="mb-1"><strong>Vettore:</strong> {{ prodotto.vettore or '-' }} {% if prodotto.ordine_amministrativo %}| <span class="badge bg-info text-dark">Ordine Amministrativo</span>{% endif %}</p>
-                                        {% if prodotto.note_manutenzione %}
-                                        <p class="mb-0 small text-muted mt-2"><strong>Note invio:</strong> {{ prodotto.note_manutenzione }}</p>
-                                        {% endif %}
-                                    </div>
-
-                                    <!-- Form di Chiusura e Rientro con Esito -->
-                                    <form action="{{ url_for('ripristina_magazzino', qr_code=prodotto.qr_code) }}" method="POST" class="border p-3 rounded bg-white shadow-sm">
-                                        <h6 class="text-success fw-bold mb-3"><i class="fa-solid fa-circle-check me-1"></i> Registra Rientro ed Esito Riparazione</h6>
-                                        
-                                        <div class="mb-2">
-                                            <label class="form-label small fw-bold">Esito Riparazione *</label>
-                                            <select class="form-select form-select-sm" name="esito_riparazione" required>
-                                                <option value="Riparato e Collaudato" selected>Riparato e Collaudato</option>
-                                                <option value="Sostituito in Garanzia">Sostituito in Garanzia</option>
-                                                <option value="Non Riparabile / Scartato">Non Riparabile / Scartato</option>
-                                                <option value="Riparazione Parziale">Riparazione Parziale</option>
-                                                <option value="Aggiornato / Revisionato">Aggiornato / Revisionato</option>
-                                            </select>
-                                        </div>
-
-                                        <div class="mb-3">
-                                            <label class="form-label small fw-bold">Note di Rientro / Lavorazione</label>
-                                            <textarea class="form-control form-control-sm" name="note_rientro" rows="2" placeholder="Dettagli tecnici sull'esito..."></textarea>
-                                        </div>
-
-                                        <button type="submit" class="btn btn-success w-100 fw-bold">
-                                            <i class="fa-solid fa-rotate-left me-1"></i> Chiudi Manutenzione e Rientra in Magazzino
-                                        </button>
-                                    </form>
-                                {% else %}
-                                    <!-- Form Invio in Manutenzione -->
-                                    <form action="{{ url_for('manda_manutenzione', qr_code=prodotto.qr_code) }}" method="POST">
-                                        <div class="mb-2">
-                                            <label class="form-label small fw-bold">Cliente / Fornitore / Terzista *</label>
-                                            <select class="form-select form-select-sm" name="cliente_manutenzione" required>
-                                                <option value="" disabled selected>Seleziona fornitore / cliente...</option>
-                                                {% for f in fornitori %}
-                                                <option value="{{ f.nome_azienda }}">{{ f.nome_azienda }}</option>
-                                                {% endfor %}
-                                            </select>
-                                        </div>
-                                        <div class="row g-2 mb-2">
-                                            <div class="col-6">
-                                                <label class="form-label small fw-bold">Quantità da inviare</label>
-                                                <input type="number" class="form-control form-control-sm" name="quantita_manutenzione" value="1" min="1" max="{{ prodotto.quantita }}" required>
-                                            </div>
-                                            <div class="col-6">
-                                                <label class="form-label small fw-bold">Vettore</label>
-                                                <input type="text" class="form-control form-control-sm" name="vettore" placeholder="Es. Bartolini">
-                                            </div>
-                                        </div>
-                                        <div class="row g-2 mb-2">
-                                            <div class="col-6">
-                                                <label class="form-label small fw-bold">Data Spedizione</label>
-                                                <input type="date" class="form-control form-control-sm" name="data_spedizione">
-                                            </div>
-                                            <div class="col-6">
-                                                <label class="form-label small fw-bold">Data Riconsegna Prevista</label>
-                                                <input type="date" class="form-control form-control-sm" name="data_riconsegna">
-                                            </div>
-                                        </div>
-                                        <div class="mb-2 form-check">
-                                            <input type="checkbox" class="form-check-input" name="ordine_amministrativo" id="ordine_amm">
-                                            <label class="form-check-label small" for="ordine_amm">Ordine Amministrativo</label>
-                                        </div>
-                                        <div class="mb-3">
-                                            <label class="form-label small fw-bold">Note / Guasto riscontrato</label>
-                                            <textarea class="form-control form-control-sm" name="note_manutenzione" rows="2" placeholder="Descrivi il motivo dell'invio..."></textarea>
-                                        </div>
-                                        <button type="submit" class="btn btn-warning w-100 text-dark fw-bold">
-                                            <i class="fa-solid fa-paper-plane me-1"></i> Invia in Manutenzione Esterna
-                                        </button>
-                                    </form>
-                                {% endif %}
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Storico Manutenzioni dell'Articolo -->
-                    <div class="col-md-6 mb-4">
-                        <div class="card shadow-sm h-100">
-                            <div class="card-header bg-secondary text-white">
-                                <h5 class="mb-0"><i class="fa-solid fa-clock-rotate-left me-2"></i>Storico Manutenzioni Articolo</h5>
-                            </div>
-                            <div class="card-body">
-                                <div class="table-responsive">
-                                    <table class="table table-sm table-striped align-middle small">
-                                        <thead>
-                                            <tr>
-                                                <th>Data</th>
-                                                <th>Cliente</th>
-                                                <th>Qta</th>
-                                                <th>Esito / Note</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody>
-                                            {% for s in storico_prodotto %}
-                                            <tr>
-                                                <td>{{ s.data_riconsegna or s.registrato_il.strftime('%d/%m/%Y') }}</td>
-                                                <td>{{ s.cliente or '-' }}</td>
-                                                <td>{{ s.quantita }}</td>
-                                                <td>
-                                                    {% if s.esito %}
-                                                        <span class="badge bg-info text-dark mb-1">{{ s.esito }}</span><br>
-                                                    {% endif %}
-                                                    {{ s.note or '-' }}
-                                                </td>
-                                            </tr>
-                                            {% else %}
-                                            <tr>
-                                                <td colspan="4" class="text-center text-muted py-3">Nessuno storico di manutenzione registrato per questo articolo.</td>
-                                            </tr>
-                                            {% endfor %}
-                                        </tbody>
-                                    </table>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-        </div>
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
