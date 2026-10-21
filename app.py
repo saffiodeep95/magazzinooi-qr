@@ -398,7 +398,7 @@ def index():
                            promemoria_urgenti=promemoria_urgenti,
                            interventi_aperti_count=interventi_aperti_count)
 
-# --- DOPPIO ALIAS PER LA STAMPA QR MULTIPLI (Risolve qualsiasi BuildError) ---
+# --- GESTIONE UNIFICATA STAMPA QR MULTIPLI (Doppio Alias) ---
 def logica_stampa_qr_multipli():
     conn = get_db_connection()
     cur = conn.cursor()
@@ -406,11 +406,16 @@ def logica_stampa_qr_multipli():
     if request.method == "POST":
         ids = request.form.getlist("prodotti_ids[]")
         if ids:
-            cur.execute("SELECT * FROM prodotti WHERE id IN %s ORDER BY nome ASC;", (tuple(ids),))
-            prodotti = cur.fetchall()
+            ids_int = [int(i) for i in ids if str(i).isdigit()]
+            if ids_int:
+                cur.execute("SELECT * FROM prodotti WHERE id IN %s ORDER BY nome ASC;", (tuple(ids_int),))
+                prodotti = cur.fetchall()
+            else:
+                prodotti = []
         else:
             prodotti = []
     else:
+        # Se viene aperto in GET, mostra tutti i prodotti per evitare schermate vuote
         cur.execute("SELECT * FROM prodotti ORDER BY nome ASC;")
         prodotti = cur.fetchall()
         
