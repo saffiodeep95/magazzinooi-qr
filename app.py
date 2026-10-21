@@ -154,6 +154,8 @@ def init_db():
             CREATE TABLE IF NOT EXISTS cambi_serie (
                 id SERIAL PRIMARY KEY,
                 forno VARCHAR(50) NOT NULL,
+                linea VARCHAR(50),
+                data_cambio VARCHAR(50),
                 nome_bottiglia VARCHAR(255) NOT NULL,
                 tempo_cambio VARCHAR(255),
                 altezza_paratie VARCHAR(255),
@@ -162,6 +164,8 @@ def init_db():
                 creato_il TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             );
         """)
+        cur.execute("ALTER TABLE cambi_serie ADD COLUMN IF NOT EXISTS linea VARCHAR(50);")
+        cur.execute("ALTER TABLE cambi_serie ADD COLUMN IF NOT EXISTS data_cambio VARCHAR(50);")
 
         cur.execute("""
             CREATE TABLE IF NOT EXISTS utenti (
@@ -637,7 +641,7 @@ def cambi_serie():
     forno_selezionato = request.args.get("forno", "Forno 1")
     conn = get_db_connection()
     cur = conn.cursor()
-    cur.execute("SELECT * FROM cambi_serie WHERE forno = %s ORDER BY id DESC;", (forno_selezionato,))
+    cur.execute("SELECT * FROM cambi_serie WHERE forno = %s ORDER BY data_cambio DESC, id DESC;", (forno_selezionato,))
     record_serie = cur.fetchall()
     cur.close()
     conn.close()
@@ -646,6 +650,8 @@ def cambi_serie():
 @app.route("/aggiungi_cambio_serie", methods=["POST"])
 def aggiungi_cambio_serie():
     forno = request.form.get("forno", "Forno 1")
+    linea = request.form.get("linea", "")
+    data_cambio = request.form.get("data_cambio", "")
     nome_bottiglia = request.form.get("nome_bottiglia")
     tempo_cambio = request.form.get("tempo_cambio", "")
     altezza_paratie = request.form.get("altezza_paratie", "")
@@ -657,13 +663,13 @@ def aggiungi_cambio_serie():
             conn = get_db_connection()
             cur = conn.cursor()
             cur.execute("""
-                INSERT INTO cambi_serie (forno, nome_bottiglia, tempo_cambio, altezza_paratie, num_bottiglie_tempera, quantita_trattamento)
-                VALUES (%s, %s, %s, %s, %s, %s);
-            """, (forno, nome_bottiglia, tempo_cambio, altezza_paratie, num_bottiglie_tempera, quantita_trattamento))
+                INSERT INTO cambi_serie (forno, linea, data_cambio, nome_bottiglia, tempo_cambio, altezza_paratie, num_bottiglie_tempera, quantita_trattamento)
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s);
+            """, (forno, linea, data_cambio, nome_bottiglia, tempo_cambio, altezza_paratie, num_bottiglie_tempera, quantita_trattamento))
             conn.commit()
             cur.close()
             conn.close()
-            registra_log(f"Inserito cambio serie per {forno}: {nome_bottiglia}")
+            registra_log(f"Inserito cambio serie {forno} - Linea {linea}: {nome_bottiglia} per il {data_cambio}")
             flash("Cambio serie registrato con successo!", "success")
         except Exception as e:
             flash(f"Errore salvataggio cambio serie: {e}", "error")
@@ -1586,7 +1592,6 @@ def stampa_singolo_qr(qr_code):
         return redirect(url_for("index"))
     return render_template("stampa_singolo_qr.html", prodotto=prodotto)
 
-# --- ROTTA PER LA STAMPA MULTIPLA QR CODE SELEZIONATI ---
 @app.route("/stampa_qr_multipli", methods=["GET", "POST"])
 def stampa_qr_multipli():
     if 'username' not in session:
