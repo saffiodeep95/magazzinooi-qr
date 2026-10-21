@@ -151,6 +151,19 @@ def init_db():
         """)
 
         cur.execute("""
+            CREATE TABLE IF NOT EXISTS cambi_serie (
+                id SERIAL PRIMARY KEY,
+                forno VARCHAR(50) NOT NULL,
+                nome_bottiglia VARCHAR(255) NOT NULL,
+                tempo_cambio VARCHAR(255),
+                altezza_paratie VARCHAR(255),
+                num_bottiglie_tempera INT DEFAULT 0,
+                quantita_trattamento VARCHAR(255),
+                creato_il TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            );
+        """)
+
+        cur.execute("""
             CREATE TABLE IF NOT EXISTS utenti (
                 id SERIAL PRIMARY KEY,
                 username VARCHAR(255) UNIQUE NOT NULL,
@@ -617,6 +630,61 @@ def report_ore():
                            chart_tecnici_values=chart_tecnici_values,
                            chart_tipi_labels=chart_tipi_labels,
                            chart_tipi_values=chart_tipi_values)
+
+# --- CAMBI SERIE FORNI ---
+@app.route("/cambi_serie")
+def cambi_serie():
+    forno_selezionato = request.args.get("forno", "Forno 1")
+    conn = get_db_connection()
+    cur = conn.cursor()
+    cur.execute("SELECT * FROM cambi_serie WHERE forno = %s ORDER BY id DESC;", (forno_selezionato,))
+    record_serie = cur.fetchall()
+    cur.close()
+    conn.close()
+    return render_template("cambi_serie.html", forno_selezionato=forno_selezionato, record_serie=record_serie)
+
+@app.route("/aggiungi_cambio_serie", methods=["POST"])
+def aggiungi_cambio_serie():
+    forno = request.form.get("forno", "Forno 1")
+    nome_bottiglia = request.form.get("nome_bottiglia")
+    tempo_cambio = request.form.get("tempo_cambio", "")
+    altezza_paratie = request.form.get("altezza_paratie", "")
+    num_bottiglie_tempera = int(request.form.get("num_bottiglie_tempera", 0) or 0)
+    quantita_trattamento = request.form.get("quantita_trattamento", "")
+    
+    if nome_bottiglia:
+        try:
+            conn = get_db_connection()
+            cur = conn.cursor()
+            cur.execute("""
+                INSERT INTO cambi_serie (forno, nome_bottiglia, tempo_cambio, altezza_paratie, num_bottiglie_tempera, quantita_trattamento)
+                VALUES (%s, %s, %s, %s, %s, %s);
+            """, (forno, nome_bottiglia, tempo_cambio, altezza_paratie, num_bottiglie_tempera, quantita_trattamento))
+            conn.commit()
+            cur.close()
+            conn.close()
+            registra_log(f"Inserito cambio serie per {forno}: {nome_bottiglia}")
+            flash("Cambio serie registrato con successo!", "success")
+        except Exception as e:
+            flash(f"Errore salvataggio cambio serie: {e}", "error")
+            
+    return redirect(url_for("cambi_serie", forno=forno))
+
+@app.route("/elimina_cambio_serie/<int:id_cambio>", methods=["POST"])
+def elimina_cambio_serie(id_cambio):
+    forno = request.form.get("forno", "Forno 1")
+    try:
+        conn = get_db_connection()
+        cur = conn.cursor()
+        cur.execute("DELETE FROM cambi_serie WHERE id = %s;", (id_cambio,))
+        conn.commit()
+        cur.close()
+        conn.close()
+        registra_log(f"Eliminato cambio serie ID {id_cambio}")
+        flash("Record eliminato con successo.", "success")
+    except Exception as e:
+        flash(f"Errore eliminazione: {e}", "error")
+    return redirect(url_for("cambi_serie", forno=forno))
 
 # --- RICHIESTE INTERVENTO MANUTENZIONE OFFICINA ---
 @app.route("/richieste_manutenzione", methods=["GET", "POST"])
@@ -1295,7 +1363,7 @@ def documenti(cartella_id):
             percorso_breadcrumb.insert(0, curr)
             if curr['parent_id']:
                 cur.execute("SELECT * FROM cartelle WHERE id = %s;", (curr['parent_id'],))
-                curr = curr.fetchone()
+                curr = cur.fetchone()
             else:
                 curr = None
 
