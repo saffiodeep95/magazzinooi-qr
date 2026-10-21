@@ -343,6 +343,9 @@ def index():
     interventi_in_lavoro_count = 0
     interventi_attesa_count = 0
     
+    totale_pezzi_principale = 0
+    totale_pezzi_pesante = 0
+    
     username = session.get('username')
     is_admin = session.get('is_admin')
     puo_assegnare = session.get('puo_assegnare_promemoria')
@@ -375,10 +378,16 @@ def index():
         for p in tutti:
             val_pesante = p.get('magazzino_pesante')
             is_pesante = (val_pesante == 1 or val_pesante == '1' or val_pesante is True or val_pesante == 1.0)
-            if not is_pesante:
+            qta = p.get('quantita', 0) or 0
+            
+            if is_pesante:
+                totale_pezzi_pesante += qta
+            else:
                 prodotti.append(p)
+                totale_pezzi_principale += qta
+                
             soglia = p.get('soglia_minima', 3) or 3
-            if p.get('quantita', 0) <= soglia:
+            if qta <= soglia:
                 prodotti_sotto_soglia.append(p)
     except Exception as e:
         print(f"Errore index: {e}")
@@ -389,7 +398,9 @@ def index():
                            promemoria_urgenti=promemoria_urgenti,
                            interventi_aperti_count=interventi_aperti_count,
                            interventi_in_lavoro_count=interventi_in_lavoro_count,
-                           interventi_attesa_count=interventi_attesa_count)
+                           interventi_attesa_count=interventi_attesa_count,
+                           totale_pezzi_principale=totale_pezzi_principale,
+                           totale_pezzi_pesante=totale_pezzi_pesante)
 
 # --- ROTTA UNIFICATA STAMPA QR MULTIPLI (Etichette Armadi) ---
 def logica_stampa_qr_multipli():
@@ -627,7 +638,7 @@ def elimina_cambio_serie(id_cambio):
         flash(f"Errore eliminazione: {e}", "error")
     return redirect(url_for("cambi_serie"))
 
-# --- NUOVO MODULO: REPORT ORE & STATISTICHE MANUTENZIONI ---
+# --- MODULO REPORT ORE & STATISTICHE MANUTENZIONI ---
 @app.route("/report_ore")
 def report_ore():
     if not (session.get('is_admin') or session.get('puo_vedere_report_ore', 1)):
