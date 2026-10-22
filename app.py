@@ -419,8 +419,9 @@ def magazzino_pesante():
         print(f"Errore magazzino pesante: {e}")
     return render_template("magazzino_pesante.html", prodotti=prodotti)
 
-# ================= ESPORTAZIONI CSV & ALIAS =================
+# ================= ESPORTAZIONI & ALIAS COMPLETI =================
 @app.route("/esportazioni")
+@app.route("/esportazioni.html")
 def esportazioni():
     if not (session.get('is_admin') or session.get('puo_vedere_magazzino', 1)):
         flash("Accesso negato.", "error")
@@ -472,9 +473,10 @@ def esporta_interventi():
         headers={"Content-disposition": "attachment; filename=Report_Interventi_Gestionale_OMG.csv"}
     )
 
-# ================= STAMPA QR CODE & ALIAS =================
+# ================= STAMPA & ALIAS TEMPLATE =================
 @app.route("/stampa_tutti_qr")
 @app.route("/stampa_qr_multipli")
+@app.route("/stampa_multipla_qr")
 def stampa_tutti_qr():
     conn = get_db_connection()
     cur = conn.cursor()
@@ -485,6 +487,7 @@ def stampa_tutti_qr():
     return render_template("stampa_tutti_qr.html", prodotti=prodotti)
 
 @app.route("/stampa_singolo_qr/<qr_code>")
+@app.route("/stampa_singolo_qr.html")
 def stampa_singolo_qr(qr_code):
     conn = get_db_connection()
     cur = conn.cursor()
@@ -499,6 +502,7 @@ def stampa_singolo_qr(qr_code):
 
 @app.route("/stampa_intervento/<int:intervento_id>")
 @app.route("/stampa_interventi")
+@app.route("/stampa_intervento.html")
 def stampa_intervento(intervento_id=None):
     conn = get_db_connection()
     cur = conn.cursor()
@@ -518,9 +522,10 @@ def stampa_intervento(intervento_id=None):
         conn.close()
         return render_template("stampa_intervento.html", interventi=interventi)
 
-# ================= CAMBI SERIE & ALIAS =================
+# ================= CAMBI SERIE =================
 @app.route("/cambi_serie")
 @app.route("/cambia_serie")
+@app.route("/cambi_serie.html")
 def cambi_serie():
     if not (session.get('is_admin') or session.get('puo_vedere_manutenzione', 1)):
         flash("Accesso non autorizzato.", "error")
