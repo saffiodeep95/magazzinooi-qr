@@ -237,9 +237,48 @@ def init_db():
             );
         """)
         
+        permessi_lista = [
+            ("puo_vedere_magazzino", "INT DEFAULT 1"),
+            ("puo_aggiungere_prodotti", "INT DEFAULT 1"),
+            ("puo_modificare_prodotti", "INT DEFAULT 1"),
+            ("puo_caricare_scaricare", "INT DEFAULT 1"),
+            ("puo_eliminare", "INT DEFAULT 0"),
+            ("puo_vedere_pesante", "INT DEFAULT 1"),
+            ("puo_vedere_manutenzione", "INT DEFAULT 1"),
+            ("puo_aprire_manutenzioni", "INT DEFAULT 1"),
+            ("puo_gestire_interventi", "INT DEFAULT 1"),
+            ("puo_assegnare_manutenzioni", "INT DEFAULT 1"),
+            ("puo_eliminare_interventi", "INT DEFAULT 0"),
+            ("puo_vedere_manutenzioni_esterne", "INT DEFAULT 1"),
+            ("puo_vedere_storico_manutenzioni", "INT DEFAULT 1"),
+            ("puo_eliminare_storico", "INT DEFAULT 0"),
+            ("puo_gestire_fornitori", "INT DEFAULT 1"),
+            ("puo_importare_fornitori", "INT DEFAULT 1"),
+            ("puo_gestire_documenti", "INT DEFAULT 1"),
+            ("puo_eliminare_documenti", "INT DEFAULT 0"),
+            ("puo_vedere_promemoria", "INT DEFAULT 1"),
+            ("puo_assegnare_promemoria", "INT DEFAULT 0"),
+            ("puo_vedere_report_ore", "INT DEFAULT 1")
+        ]
+        
+        for p_col, p_type in permessi_lista:
+            try:
+                cur.execute(f"ALTER TABLE utenti ADD COLUMN IF NOT EXISTS {p_col} {p_type};")
+            except Exception:
+                pass
+        
+        cur.execute("SELECT * FROM utenti WHERE username = 'admin';")
+        if not cur.fetchone():
+            hashed_pw = generate_password_hash("admin")
+            cur.execute("""
+                INSERT INTO utenti (username, password, is_admin, puo_vedere_magazzino, puo_aggiungere_prodotti, puo_modificare_prodotti, puo_caricare_scaricare, puo_eliminare, puo_vedere_pesante, puo_vedere_manutenzione, puo_aprire_manutenzioni, puo_gestire_interventi, puo_assegnare_manutenzioni, puo_eliminare_interventi, puo_vedere_manutenzioni_esterne, puo_vedere_storico_manutenzioni, puo_eliminare_storico, puo_gestire_fornitori, puo_importare_fornitori, puo_gestire_documenti, puo_eliminare_documenti, puo_vedere_promemoria, puo_assegnare_promemoria, puo_vedere_report_ore)
+                VALUES (%s, %s, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1);
+            """, ('admin', hashed_pw))
+
         conn.commit()
         cur.close()
         conn.close()
+        print("Database e permessi Gestionale OMG inizializzati.")
     except Exception as e:
         print(f"Errore init_db: {e}")
 
@@ -358,6 +397,111 @@ def index():
                            interventi_assegnati_count=interventi_assegnati_count,
                            notifiche_attive=notifiche_attive)
 
+# ================= SEZIONE MAGAZZINO PESANTE =================
+@app.route("/magazzino_pesante")
+def magazzino_pesante():
+    if not (session.get('is_admin') or session.get('puo_vedere_pesante', 1)):
+        flash("Accesso al Magazzino Pesante negato.", "error")
+        return redirect(url_for('index'))
+    prodotti = []
+    try:
+        conn = get_db_connection()
+        cur = conn.cursor()
+        cur.execute("SELECT * FROM prodotti ORDER BY nome ASC;")
+        tutti = cur.fetchall()
+        cur.close()
+        conn.close()
+        for p in tutti:
+            val_pesante = p.get('magazzino_pesante')
+            if val_pesante in [1, '1', True, 1.0]:
+                prodotti.append(p)
+    except Exception as e:
+        print(f"Errore magazzino pesante: {e}")
+    return render_template("magazzino_pesante.html", prodotti=prodotti)
+
+# ================= SEZIONE ESPORTAZIONI CSV =================
+@app.route("/esportazioni")
+def esportazioni():
+    if not (session.get('is_admin') or session.get('puo_vedere_magazzino', 1)):
+        flash("Accesso negato.", "error")
+        return redirect(url_for('index'))
+    return render_template("esportazioni.html")
+
+@app.route("/esporta_inventario")
+def esporta_inventario():
+    conn = get_db_connection()
+    cur = conn.cursor()
+    cur.execute("SELECT qr_code, nome, sap, quantita, posizione, peso, magazzino_pesante FROM prodotti ORDER BY nome ASC;")
+    prodotti = cur.fetchall()
+    cur.close()
+    conn.close()
+    
+    output = io.StringIO()
+    writer = csv.writer(output)
+    writer.writerow(['QR Code', 'Nome Articolo', 'SAP', 'Quantita', 'Posizione', 'Peso', 'Magazzino Pesante'])
+    for p in prodotti:
+        writer.writerow([p['qr_code'], p['nome'], p['sap'], p['quantita'], p['posizione'], p['peso'], 'Si' if p['magazzino_pesante'] else 'No'])
+    
+    return Response(
+        output.getvalue(),
+        mimetype="text/csv",
+        headers={"Content-disposition": "attachment; filename=Inventario_Gestionale_OMG.csv"}
+    )
+
+@app.route("/esporta_interventi")
+def esporta_interventi():
+    conn = get_db_connection()
+    cur = conn.cursor()
+    cur.execute("SELECT id, titolo, impianto_macchina, priorita, tipo_guasto, stato, assegnato_a, creato_da, inizio_lavoro, fine_lavoro, tempo_lavorato_minuti, note_lavoro, creato_il FROM richieste_manutenzione ORDER BY creato_il DESC;")
+    richieste = cur.fetchall()
+    cur.close()
+    conn.close()
+    
+    output = io.StringIO()
+    writer = csv.writer(output)
+    writer.writerow(['ID', 'Titolo', 'Macchina', 'Priorità', 'Tipo Guasto', 'Stato', 'Assegnato A', 'Creato Da', 'Inizio', 'Fine', 'Minuti Lavorati', 'Note', 'Data Creazione'])
+    for r in richieste:
+        writer.writerow([r['id'], r['titolo'], r['impianto_macchina'], r['priorita'], r['tipo_guasto'], r['stato'], r['assegnato_a'], r['creato_da'], r['inizio_lavoro'], r['fine_lavoro'], r['tempo_lavorato_minuti'], r['note_lavoro'], r['creato_il']])
+    
+    return Response(
+        output.getvalue(),
+        mimetype="text/csv",
+        headers={"Content-disposition": "attachment; filename=Report_Interventi_Gestionale_OMG.csv"}
+    )
+
+# ================= STAMPA QR CODE =================
+@app.route("/stampa_tutti_qr")
+def stampa_tutti_qr():
+    conn = get_db_connection()
+    cur = conn.cursor()
+    cur.execute("SELECT * FROM prodotti ORDER BY nome ASC;")
+    prodotti = cur.fetchall()
+    cur.close()
+    conn.close()
+    return render_template("stampa_tutti_qr.html", prodotti=prodotti)
+
+@app.route("/stampa_singolo_qr/<qr_code>")
+def stampa_singolo_qr(qr_code):
+    conn = get_db_connection()
+    cur = conn.cursor()
+    cur.execute("SELECT * FROM prodotti WHERE qr_code = %s;", (qr_code,))
+    prodotto = cur.fetchone()
+    cur.close()
+    conn.close()
+    if not prodotto:
+        flash("Prodotto non trovato.", "error")
+        return redirect(url_for("index"))
+    return render_template("stampa_singolo_qr.html", prodotto=prodotto)
+
+# ================= CAMBI SERIE =================
+@app.route("/cambi_serie")
+def cambi_serie():
+    if not (session.get('is_admin') or session.get('puo_vedere_manutenzione', 1)):
+        flash("Accesso non autorizzato.", "error")
+        return redirect(url_for('index'))
+    return render_template("cambi_serie.html", cambi=[])
+
+# ================= AUTENTICAZIONE =================
 @app.route("/login", methods=["GET", "POST"])
 def login():
     if request.method == "POST":
@@ -415,6 +559,7 @@ def registra():
                 flash("Username già esistente o errore di registrazione.", "error")
     return render_template("registra.html")
 
+# ================= PANNELLO ADMIN =================
 @app.route("/admin_utenti")
 def admin_utenti():
     if not session.get('is_admin'):
@@ -491,6 +636,7 @@ def elimina_utente(user_id):
         flash(f"Errore eliminazione utente: {e}", "error")
     return redirect(url_for('admin_utenti'))
 
+# ================= REPORT ORE =================
 @app.route("/report_ore")
 def report_ore():
     if not (session.get('is_admin') or session.get('puo_vedere_report_ore', 1)):
@@ -569,6 +715,7 @@ def report_ore():
                            chart_tecnici_values=chart_tecnici_values, chart_tipi_labels=chart_tipi_labels,
                            chart_tipi_values=chart_tipi_values)
 
+# ================= RICHIESTE INTERVENTO OFFICINA =================
 @app.route("/richieste_manutenzione", methods=["GET", "POST"])
 def richieste_manutenzione():
     if not (session.get('is_admin') or session.get('puo_vedere_manutenzione', 1)):
@@ -746,6 +893,7 @@ def cambia_stato_intervento(intervento_id):
     conn.close()
     return redirect(url_for("richieste_manutenzione"))
 
+# ================= PROMEMORIA =================
 @app.route("/promemoria", methods=["GET", "POST"])
 def promemoria():
     if not (session.get('is_admin') or session.get('puo_vedere_promemoria', 1)):
@@ -787,6 +935,7 @@ def promemoria():
     conn.close()
     return render_template("promemoria.html", promemoria=lista_promemoria, lista_utenti=lista_utenti, puo_assegnare=(is_admin or puo_assegnare))
 
+# ================= FORNITORI & CONTATTI =================
 @app.route("/fornitori", methods=["GET", "POST"])
 def fornitori():
     if not (session.get('is_admin') or session.get('puo_gestire_fornitori', 1)):
@@ -816,6 +965,7 @@ def fornitori():
     conn.close()
     return render_template("fornitori.html", fornitori=lista_fornitori)
 
+# ================= DOCUMENTI & FILE =================
 @app.route("/documenti", defaults={"cartella_id": None}, methods=["GET", "POST"])
 @app.route("/documenti/<int:cartella_id>", methods=["GET", "POST"])
 def documenti(cartella_id):
@@ -864,26 +1014,7 @@ def documenti(cartella_id):
                            lista_file=lista_file, percorso_breadcrumb=percorso_breadcrumb,
                            puo_elimina_doc=(session.get('is_admin') or session.get('puo_eliminare_documenti', 0)))
 
-@app.route("/magazzino_pesante")
-def magazzino_pesante():
-    if not (session.get('is_admin') or session.get('puo_vedere_pesante', 1)):
-        flash("Accesso negato.", "error")
-        return redirect(url_for('index'))
-    prodotti = []
-    try:
-        conn = get_db_connection()
-        cur = conn.cursor()
-        cur.execute("SELECT * FROM prodotti ORDER BY nome ASC;")
-        tutti = cur.fetchall()
-        cur.close()
-        conn.close()
-        for p in tutti:
-            if p.get('magazzino_pesante') in [1, '1', True, 1.0]:
-                prodotti.append(p)
-    except Exception:
-        pass
-    return render_template("magazzino_pesante.html", prodotti=prodotti)
-
+# ================= MANUTENZIONI ESTERNE & STORICO =================
 @app.route("/manutenzioni")
 def manutenzioni():
     if not (session.get('is_admin') or session.get('puo_vedere_manutenzioni_esterne', 1)):
@@ -921,6 +1052,7 @@ def storico_manutenzioni():
         pass
     return render_template("storico_manutenzioni.html", storico=storico)
 
+# ================= CARICO, SCARICO & SCANNER =================
 @app.route("/carico", methods=["GET", "POST"])
 def carico():
     if request.method == "POST":
@@ -1000,11 +1132,6 @@ def aggiungi_prodotto():
         conn.close()
         flash("Articolo salvato!", "success")
     return redirect(url_for("magazzino_pesante") if flag_sezione == 1 else url_for("index"))
-
-@app.route("/logout")
-def logout():
-    session.clear()
-    return redirect(url_for('login'))
 
 if __name__ == "__main__":
     app.run(debug=True)
