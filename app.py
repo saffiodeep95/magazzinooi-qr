@@ -278,7 +278,7 @@ def init_db():
         conn.commit()
         cur.close()
         conn.close()
-        print("Database e permessi Gestionale OMG inizializzati.")
+        print("Database e permessi inizializzati con successo.")
     except Exception as e:
         print(f"Errore init_db: {e}")
 
@@ -397,7 +397,7 @@ def index():
                            interventi_assegnati_count=interventi_assegnati_count,
                            notifiche_attive=notifiche_attive)
 
-# ================= SEZIONE MAGAZZINO PESANTE =================
+# ================= MAGAZZINO PESANTE =================
 @app.route("/magazzino_pesante")
 def magazzino_pesante():
     if not (session.get('is_admin') or session.get('puo_vedere_pesante', 1)):
@@ -419,7 +419,7 @@ def magazzino_pesante():
         print(f"Errore magazzino pesante: {e}")
     return render_template("magazzino_pesante.html", prodotti=prodotti)
 
-# ================= SEZIONE ESPORTAZIONI CSV =================
+# ================= ESPORTAZIONI CSV =================
 @app.route("/esportazioni")
 def esportazioni():
     if not (session.get('is_admin') or session.get('puo_vedere_magazzino', 1)):
