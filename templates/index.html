@@ -4,226 +4,391 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Gestionale OMG - Home & Magazzino</title>
+    <!-- Bootstrap 5 CSS -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- FontAwesome Icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
-        body { background-color: #f8f9fa; }
-        .card-stat { border-radius: 12px; border: none; box-shadow: 0 4px 12px rgba(0,0,0,0.05); }
-        .badge-soglia { background-color: #dc3545; color: white; }
+        :root {
+            --dark-primary: #1e2229;
+            --dark-accent: #111317;
+            --card-border-radius: 12px;
+        }
+
+        body {
+            background-color: #f3f4f6;
+            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+            color: #212529;
+        }
+
+        /* Top Header Dark Details */
+        .navbar-custom {
+            background-color: var(--dark-primary);
+            border-bottom: 3px solid #0d6efd;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.15);
+        }
+
+        .navbar-brand-title {
+            color: #ffffff;
+            font-weight: 700;
+            letter-spacing: 0.5px;
+        }
+
+        .user-pill {
+            background-color: rgba(255, 255, 255, 0.1);
+            color: #e2e8f0;
+            border-radius: 20px;
+            padding: 4px 12px;
+            font-size: 0.88rem;
+        }
+
+        /* Stat Cards */
+        .card-stat {
+            border-radius: var(--card-border-radius);
+            border: none;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+
+        .card-stat:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 16px rgba(0, 0, 0, 0.08);
+        }
+
+        .card-dark-detail {
+            background-color: var(--dark-primary);
+            color: #ffffff;
+        }
+
+        /* Table Design */
+        .card-table-container {
+            border-radius: var(--card-border-radius);
+            border: none;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+            background: #ffffff;
+        }
+
+        .table-dark-header {
+            background-color: var(--dark-primary) !important;
+            color: #ffffff !important;
+        }
+
+        .table-dark-header th {
+            color: #ffffff !important;
+            border-bottom: none;
+            padding: 12px 16px;
+        }
+
+        .badge-soglia {
+            background-color: #dc3545;
+            color: white;
+            font-weight: 600;
+        }
+
+        .badge-ok {
+            background-color: #198754;
+            color: white;
+            font-weight: 600;
+        }
+
+        /* Custom Buttons */
+        .btn-dark-custom {
+            background-color: var(--dark-primary);
+            color: #ffffff;
+            border: 1px solid var(--dark-primary);
+        }
+
+        .btn-dark-custom:hover {
+            background-color: var(--dark-accent);
+            color: #ffffff;
+        }
+
+        .btn-outline-dark-custom {
+            border: 1px solid var(--dark-primary);
+            color: var(--dark-primary);
+        }
+
+        .btn-outline-dark-custom:hover {
+            background-color: var(--dark-primary);
+            color: #ffffff;
+        }
+
+        /* Responsive Nav Buttons Adjustment */
+        @media (min-width: 992px) {
+            .nav-buttons-container {
+                display: flex;
+                flex-wrap: wrap;
+                align-items: center;
+                gap: 0.5rem;
+            }
+        }
     </style>
 </head>
 <body>
 
-<div class="container py-4">
-    <!-- Navbar / Header Principale -->
-    <div class="d-flex justify-content-between align-items-center mb-4 pb-3 border-bottom">
-        <div>
-            <h2 class="fw-bold mb-0 text-primary"><i class="fa-solid fa-boxes-packing me-2"></i>Gestionale OMG</h2>
-            <small class="text-muted">Benvenuto/a, <strong>{{ session.username }}</strong></small>
-        </div>
-        <div class="d-flex align-items-center gap-2">
-            <!-- Link alla pagina centrale delle esportazioni CSV -->
-            <a href="{{ url_for('esportazioni') }}" class="btn btn-outline-success">
-                <i class="fa-solid fa-file-csv me-1"></i> Esporta Dati (CSV)
+    <!-- Header Navbar con dettagli Neri e Menu a Tendina per Cellulare (Bootstrap Collapse) -->
+    <nav class="navbar navbar-expand-lg navbar-dark navbar-custom py-2 mb-4">
+        <div class="container-fluid px-4">
+            
+            <!-- Logo / Nome App -->
+            <a class="navbar-brand d-flex align-items-center me-3" href="#">
+                <i class="fa-solid fa-boxes-packing text-primary fs-3 me-2"></i>
+                <span class="navbar-brand-title fs-4">Gestionale OMG</span>
             </a>
 
-            <a href="{{ url_for('richieste_manutenzione') }}" class="btn btn-outline-primary">
-                <i class="fa-solid fa-wrench me-1"></i> Officina & Interventi
-            </a>
-            <a href="{{ url_for('fornitori') }}" class="btn btn-outline-info">
-                <i class="fa-solid fa-building me-1"></i> Fornitori
-            </a>
-            <a href="{{ url_for('promemoria') }}" class="btn btn-outline-warning text-dark position-relative">
-                <i class="fa-solid fa-bell me-1"></i> Promemoria
-                {% if promemoria_urgenti > 0 %}
-                <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger">
-                    {{ promemoria_urgenti }}
-                </span>
-                {% endif %}
-            </a>
-            <a href="{{ url_for('documenti') }}" class="btn btn-outline-secondary">
-                <i class="fa-solid fa-folder-open me-1"></i> Documenti
-            </a>
-            {% if session.is_admin %}
-            <a href="{{ url_for('admin_utenti') }}" class="btn btn-dark">
-                <i class="fa-solid fa-user-gear me-1"></i> Admin
-            </a>
-            {% endif %}
-            <a href="{{ url_for('logout') }}" class="btn btn-danger ms-2">
-                <i class="fa-solid fa-right-from-bracket"></i>
-            </a>
-        </div>
-    </div>
+            <!-- Pulsante Hamburger Toggle per Cellulari / Tablet -->
+            <button class="navbar-toggler border-0" type="button" data-bs-toggle="collapse" data-bs-target="#navbarMainContent" aria-controls="navbarMainContent" aria-expanded="false" aria-label="Toggle navigation">
+                <span class="navbar-toggler-icon"></span>
+            </button>
 
-    {% with messages = get_flashed_messages(with_categories=true) %}
-      {% if messages %}
-        {% for category, message in messages %}
-          <div class="alert alert-{{ 'danger' if category == 'error' else category }} alert-dismissible fade show" role="alert">
-            {{ message }}
-            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-          </div>
-        {% endfor %}
-      {% endif %}
-    {% endwith %}
+            <!-- Contenuto Navigazione (Visibile esteso su PC, a tendina su Mobile) -->
+            <div class="collapse navbar-collapse mt-2 mt-lg-0" id="navbarMainContent">
+                
+                <!-- Info Utente su Mobile -->
+                <div class="d-lg-none mb-3 pb-2 border-bottom border-secondary text-light">
+                    <i class="fa-solid fa-circle-user me-1 text-primary"></i> Utente: <strong>Marco Pavan</strong>
+                </div>
 
-    <!-- Carte Statistiche e Contatori -->
-    <div class="row g-3 mb-4">
-        <div class="col-md-3">
-            <div class="card card-stat p-3 bg-primary text-white">
-                <div class="d-flex justify-content-between align-items-center">
-                    <div>
-                        <h6 class="text-white-50 mb-1">Pezzi Magazzino Principale</h6>
-                        <h3 class="fw-bold mb-0">{{ totale_pezzi_principale }}</h3>
+                <!-- Lista Menu e Pulsanti -->
+                <div class="ms-auto nav-buttons-container">
+                    
+                    <!-- Hub CSV Export -->
+                    <a href="#" class="btn btn-success btn-sm w-100 w-lg-auto my-1 my-lg-0 fw-semibold">
+                        <i class="fa-solid fa-file-csv me-1"></i> Esporta Dati CSV
+                    </a>
+
+                    <!-- Officina & Manutenzioni -->
+                    <a href="#" class="btn btn-outline-light btn-sm w-100 w-lg-auto my-1 my-lg-0">
+                        <i class="fa-solid fa-wrench me-1 text-warning"></i> Officina
+                    </a>
+
+                    <!-- Cambi Serie -->
+                    <a href="#" class="btn btn-outline-light btn-sm w-100 w-lg-auto my-1 my-lg-0">
+                        <i class="fa-solid fa-rotate me-1 text-info"></i> Cambi Serie
+                    </a>
+
+                    <!-- Magazzino Pesante -->
+                    <a href="#" class="btn btn-outline-light btn-sm w-100 w-lg-auto my-1 my-lg-0">
+                        <i class="fa-solid fa-weight-hanging me-1"></i> Magazzino Pesante
+                    </a>
+
+                    <!-- Manutenzioni Esterne -->
+                    <a href="#" class="btn btn-outline-light btn-sm w-100 w-lg-auto my-1 my-lg-0">
+                        <i class="fa-solid fa-truck-ramp-box me-1"></i> Manutenzioni Esterne
+                    </a>
+
+                    <!-- Report Ore -->
+                    <a href="#" class="btn btn-outline-light btn-sm w-100 w-lg-auto my-1 my-lg-0">
+                        <i class="fa-solid fa-user-clock me-1"></i> Report Ore
+                    </a>
+
+                    <!-- Fornitori -->
+                    <a href="#" class="btn btn-outline-light btn-sm w-100 w-lg-auto my-1 my-lg-0">
+                        <i class="fa-solid fa-truck-field me-1"></i> Fornitori
+                    </a>
+
+                    <!-- Promemoria -->
+                    <a href="#" class="btn btn-outline-warning btn-sm w-100 w-lg-auto my-1 my-lg-0 position-relative">
+                        <i class="fa-solid fa-bell me-1"></i> Promemoria
+                        <span class="badge rounded-pill bg-danger ms-1">2</span>
+                    </a>
+
+                    <!-- Documenti -->
+                    <a href="#" class="btn btn-outline-light btn-sm w-100 w-lg-auto my-1 my-lg-0">
+                        <i class="fa-solid fa-folder-open me-1"></i> Documenti
+                    </a>
+
+                    <!-- Campanella Notifiche Dropdown -->
+                    <div class="dropdown d-inline-block w-100 w-lg-auto my-1 my-lg-0">
+                        <button class="btn btn-outline-light btn-sm w-100 position-relative dropdown-toggle" type="button" id="dropdownNotifiche" data-bs-toggle="dropdown" aria-expanded="false">
+                            <i class="fa-solid fa-bell text-warning"></i> Notifiche
+                            <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger d-none d-lg-inline-block">3</span>
+                        </button>
+                        <ul class="dropdown-menu dropdown-menu-end p-2 shadow-lg" aria-labelledby="dropdownNotifiche" style="min-width: 290px;">
+                            <li><h6 class="dropdown-header text-dark fw-bold border-bottom pb-2">Notifiche In Tempo Reale</h6></li>
+                            <li>
+                                <a class="dropdown-item py-2 border-bottom" href="#">
+                                    <div class="small fw-bold text-primary"><i class="fa-solid fa-wrench me-1"></i> Nuova Manutenzione</div>
+                                    <div class="small text-muted">Assegnato intervento su Linea 11</div>
+                                </a>
+                            </li>
+                            <li>
+                                <a class="dropdown-item py-2 border-bottom" href="#">
+                                    <div class="small fw-bold text-danger"><i class="fa-solid fa-triangle-exclamation me-1"></i> Scorta Minima</div>
+                                    <div class="small text-muted">Cuscinetto SKF sotto soglia (1 pz)</div>
+                                </a>
+                            </li>
+                            <li>
+                                <a class="dropdown-item py-2" href="#">
+                                    <div class="small fw-bold text-success"><i class="fa-solid fa-truck me-1"></i> Fornitore Esterno</div>
+                                    <div class="small text-muted">Materiale spedito da Rossi Meccanica</div>
+                                </a>
+                            </li>
+                        </ul>
                     </div>
-                    <i class="fa-solid fa-box-open fs-1 opacity-50"></i>
+
+                    <!-- Admin (Solo se admin) -->
+                    <a href="#" class="btn btn-secondary btn-sm w-100 w-lg-auto my-1 my-lg-0">
+                        <i class="fa-solid fa-user-gear me-1"></i> Admin
+                    </a>
+
+                    <!-- Logout -->
+                    <a href="#" class="btn btn-outline-danger btn-sm w-100 w-lg-auto my-1 my-lg-0 ms-lg-2">
+                        <i class="fa-solid fa-right-from-bracket"></i>
+                    </a>
+
                 </div>
             </div>
+
+            <!-- User Pill Visibile Solo su PC -->
+            <div class="d-none d-lg-flex align-items-center ms-3 border-start border-secondary ps-3">
+                <span class="user-pill"><i class="fa-solid fa-circle-user me-1 text-primary"></i> Marco Pavan</span>
+            </div>
+
         </div>
-        <div class="col-md-3">
-            <div class="card card-stat p-3 bg-secondary text-white">
-                <div class="d-flex justify-content-between align-items-center">
-                    <div>
-                        <h6 class="text-white-50 mb-1">Pezzi Magazzino Pesante</h6>
-                        <h3 class="fw-bold mb-0">{{ totale_pezzi_pesante }}</h3>
+    </nav>
+
+    <!-- Main Container -->
+    <div class="container-fluid px-4">
+
+        <!-- Carte Statistiche con dettagli neri e contatori -->
+        <div class="row g-3 mb-4">
+            
+            <!-- Magazzino Principale -->
+            <div class="col-6 col-md-3">
+                <div class="card card-stat p-3 card-dark-detail">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <span class="text-white-50 small fw-semibold">Pezzi Magazzino</span>
+                            <h2 class="fw-bold mb-0 text-white mt-1">1,240</h2>
+                        </div>
+                        <div class="bg-primary bg-opacity-25 p-3 rounded-circle text-primary">
+                            <i class="fa-solid fa-boxes-stacked fs-3"></i>
+                        </div>
                     </div>
-                    <i class="fa-solid fa-weight-hanging fs-1 opacity-50"></i>
                 </div>
             </div>
-        </div>
-        <div class="col-md-3">
-            <div class="card card-stat p-3 bg-warning text-dark">
-                <div class="d-flex justify-content-between align-items-center">
-                    <div>
-                        <h6 class="text-dark-50 mb-1">Interventi Aperti</h6>
-                        <h3 class="fw-bold mb-0">{{ interventi_aperti_count }}</h3>
+
+            <!-- Magazzino Pesante -->
+            <div class="col-6 col-md-3">
+                <div class="card card-stat p-3 bg-white">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <span class="text-muted small fw-semibold">Magazzino Pesante</span>
+                            <h2 class="fw-bold mb-0 text-dark mt-1">380</h2>
+                        </div>
+                        <div class="bg-secondary bg-opacity-10 p-3 rounded-circle text-secondary">
+                            <i class="fa-solid fa-weight-hanging fs-3"></i>
+                        </div>
                     </div>
-                    <i class="fa-solid fa-triangle-exclamation fs-1 opacity-50"></i>
                 </div>
             </div>
-        </div>
-        <div class="col-md-3">
-            <div class="card card-stat p-3 bg-info text-white">
-                <div class="d-flex justify-content-between align-items-center">
-                    <div>
-                        <h6 class="text-white-50 mb-1">Interventi In Lavoro</h6>
-                        <h3 class="fw-bold mb-0">{{ interventi_in_lavoro_count }}</h3>
+
+            <!-- Interventi Officina Aperti -->
+            <div class="col-6 col-md-3">
+                <div class="card card-stat p-3 bg-white">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <span class="text-muted small fw-semibold">Interventi Aperti</span>
+                            <h2 class="fw-bold mb-0 text-danger mt-1">4</h2>
+                        </div>
+                        <div class="bg-danger bg-opacity-10 p-3 rounded-circle text-danger">
+                            <i class="fa-solid fa-triangle-exclamation fs-3"></i>
+                        </div>
                     </div>
-                    <i class="fa-solid fa-screws-tilting fs-1 opacity-50"></i>
                 </div>
             </div>
-        </div>
-    </div>
 
-    <!-- Pulsanti Azione Rapida Magazzino -->
-    <div class="d-flex justify-content-between align-items-center mb-3">
-        <h4 class="fw-bold mb-0">Inventario Articoli</h4>
-        <div class="btn-group">
-            <a href="{{ url_for('carico') }}" class="btn btn-success"><i class="fa-solid fa-plus me-1"></i> Carico</a>
-            <a href="{{ url_for('scarico') }}" class="btn btn-warning"><i class="fa-solid fa-minus me-1"></i> Scarico</a>
-            <a href="{{ url_for('scanner_globale') }}" class="btn btn-info text-white"><i class="fa-solid fa-qrcode me-1"></i> Scanner</a>
-            <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#modalAggiungiProdotto"><i class="fa-solid fa-plus-circle me-1"></i> Nuovo Articolo</button>
-        </div>
-    </div>
-
-    <!-- Tabella Inventario -->
-    <div class="card card-stat p-3 mb-4">
-        <div class="table-responsive">
-            <table class="table table-hover align-middle mb-0">
-                <thead class="table-light">
-                    <tr>
-                        <th>QR Code</th>
-                        <th>Nome Articolo</th>
-                        <th>SAP</th>
-                        <th>Quantità</th>
-                        <th>Posizione</th>
-                        <th>Azioni</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for p in prodotti %}
-                    <tr>
-                        <td><code>{{ p.qr_code }}</code></td>
-                        <td><strong>{{ p.nome }}</strong></td>
-                        <td>{{ p.sap or '-' }}</td>
-                        <td>
-                            <span class="badge {% if p.quantita <= p.soglia_minima %}badge-soglia{% else %}bg-success{% endif %}">
-                                {{ p.quantita }} pz
-                            </span>
-                        </td>
-                        <td>{{ p.posizione or '-' }}</td>
-                        <td>
-                            <a href="{{ url_for('gestisci_prodotto', qr_code=p.qr_code) }}" class="btn btn-sm btn-outline-primary">
-                                <i class="fa-solid fa-gear"></i> Gestisci
-                            </a>
-                        </td>
-                    </tr>
-                    {% else %}
-                    <tr>
-                        <td colspan="6" class="text-center py-4 text-muted">Nessun articolo presente nel magazzino principale.</td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
-        </div>
-    </div>
-</div>
-
-<!-- Modal Aggiungi Nuovo Prodotto -->
-<div class="modal fade" id="modalAggiungiProdotto" tabindex="-1">
-    <div class="modal-dialog">
-        <div class="modal-content">
-            <form action="{{ url_for('aggiungi_prodotto') }}" method="POST">
-                <div class="modal-header">
-                    <h5 class="modal-title fw-bold"><i class="fa-solid fa-box-archive me-2"></i>Nuovo Articolo Magazzino</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                </div>
-                <div class="modal-body">
-                    <div class="mb-3">
-                        <label class="form-label fw-semibold">QR Code *</label>
-                        <input type="text" name="qr_code" class="form-control" placeholder="Es. QR-1001" required>
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label fw-semibold">Nome Articolo *</label>
-                        <input type="text" name="nome" class="form-control" placeholder="Es. Cuscinetto a sfera 6205" required>
-                    </div>
-                    <div class="row g-2 mb-3">
-                        <div class="col-md-6">
-                            <label class="form-label fw-semibold">Codice SAP</label>
-                            <input type="text" name="sap" class="form-control" placeholder="Es. SAP-9988">
+            <!-- Interventi In Lavoro -->
+            <div class="col-6 col-md-3">
+                <div class="card card-stat p-3 bg-white">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <span class="text-muted small fw-semibold">In Lavorazione</span>
+                            <h2 class="fw-bold mb-0 text-info mt-1">2</h2>
                         </div>
-                        <div class="col-md-6">
-                            <label class="form-label fw-semibold">Peso</label>
-                            <input type="text" name="peso" class="form-control" placeholder="Es. 0.5 kg">
+                        <div class="bg-info bg-opacity-10 p-3 rounded-circle text-info">
+                            <i class="fa-solid fa-screws-tilting fs-3"></i>
                         </div>
-                    </div>
-                    <div class="row g-2 mb-3">
-                        <div class="col-md-6">
-                            <label class="form-label fw-semibold">Quantità Iniziale</label>
-                            <input type="number" name="quantita" class="form-control" value="1" min="0">
-                        </div>
-                        <div class="col-md-6">
-                            <label class="form-label fw-semibold">Soglia Minima Allarme</label>
-                            <input type="number" name="soglia_minima" class="form-control" value="3" min="0">
-                        </div>
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label fw-semibold">Posizione</label>
-                        <input type="text" name="posizione" class="form-control" placeholder="Es. Scaffale A2">
-                    </div>
-                    <div class="form-check">
-                        <input type="checkbox" name="magazzino_pesante" class="form-check-input" id="checkPesante">
-                        <label class="form-check-label" for="checkPesante">Destina a Magazzino Pesante</label>
                     </div>
                 </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annulla</button>
-                    <button type="submit" class="btn btn-primary"><i class="fa-solid fa-save me-1"></i> Salva Articolo</button>
-                </div>
-            </form>
-        </div>
-    </div>
-</div>
+            </div>
 
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+        </div>
+
+        <!-- Pulsanti Azione Rapida e Controlli Inventario -->
+        <div class="card card-table-container p-3 mb-4">
+            <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3">
+                
+                <div>
+                    <h4 class="fw-bold mb-0 text-dark"><i class="fa-solid fa-list-check me-2 text-primary"></i>Inventario Articoli Magazzino</h4>
+                    <p class="text-muted small mb-0">Gestisci entrate, uscite e scorte minime di magazzino</p>
+                </div>
+
+                <!-- Pulsanti Rapidi -->
+                <div class="btn-group flex-wrap">
+                    <button class="btn btn-success fw-semibold"><i class="fa-solid fa-plus me-1"></i> Carico</button>
+                    <button class="btn btn-warning fw-semibold text-dark"><i class="fa-solid fa-minus me-1"></i> Scarico</button>
+                    <button class="btn btn-info fw-semibold text-white"><i class="fa-solid fa-qrcode me-1"></i> Scanner QR</button>
+                    <button class="btn btn-dark-custom fw-semibold" data-bs-toggle="modal" data-bs-target="#modalNuovoArticolo"><i class="fa-solid fa-plus-circle me-1"></i> Nuovo Articolo</button>
+                </div>
+
+            </div>
+        </div>
+
+        <!-- Tabella Inventario -->
+        <div class="card card-table-container mb-4 overflow-hidden">
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0">
+                    <thead class="table-dark-header">
+                        <tr>
+                            <th>Codice QR</th>
+                            <th>Nome Articolo</th>
+                            <th>Codice SAP</th>
+                            <th>Quantità</th>
+                            <th>Posizione Armadio</th>
+                            <th class="text-end">Azioni Operative</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><code class="bg-light text-dark px-2 py-1 rounded border">QR-1002</code></td>
+                            <td><strong class="text-dark">Cuscinetto a sfera SKF 6205-2RSH</strong></td>
+                            <td><span class="text-muted">SAP-88391</span></td>
+                            <td><span class="badge badge-soglia">1 pz (Sotto Soglia)</span></td>
+                            <td><i class="fa-solid fa-box-archive me-1 text-secondary"></i> Armadio A2 - Ripiano 3</td>
+                            <td class="text-end">
+                                <button class="btn btn-sm btn-outline-dark-custom fw-semibold"><i class="fa-solid fa-gear me-1"></i> Gestisci</button>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td><code class="bg-light text-dark px-2 py-1 rounded border">QR-1003</code></td>
+                            <td><strong class="text-dark">Sensore di Prossimità Induttivo M12</strong></td>
+                            <td><span class="text-muted">SAP-44102</span></td>
+                            <td><span class="badge badge-ok">12 pz</span></td>
+                            <td><i class="fa-solid fa-box-archive me-1 text-secondary"></i> Armadio C1 - Cassetto 2</td>
+                            <td class="text-end">
+                                <button class="btn btn-sm btn-outline-dark-custom fw-semibold"><i class="fa-solid fa-gear me-1"></i> Gestisci</button>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td><code class="bg-light text-dark px-2 py-1 rounded border">QR-1004</code></td>
+                            <td><strong class="text-dark">Elettrovalvola Pneumatica 5/2 Bistabile 24V</strong></td>
+                            <td><span class="text-muted">SAP-11094</span></td>
+                            <td><span class="badge badge-ok">8 pz</span></td>
+                            <td><i class="fa-solid fa-box-archive me-1 text-secondary"></i> Armadio B4 - Ripiano 1</td>
+                            <td class="text-end">
+                                <button class="btn btn-sm btn-outline-dark-custom fw-semibold"><i class="fa-solid fa-gear me-1"></i> Gestisci</button>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- Bootstrap 5 JavaScript Bundle -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>
