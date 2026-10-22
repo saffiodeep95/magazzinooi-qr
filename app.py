@@ -1,5 +1,5 @@
 # ========================================================================
-# Gestionale OMG Application - System with Push Notifications & Ore Report
+# Gestionale OMG Application - Complete System
 # Copyright (c) 2026 Marco Pavan. All Rights Reserved.
 # ========================================================================
 
@@ -612,6 +612,16 @@ def manutenzioni():
     conn.close()
     return render_template("manutenzioni.html", prodotti=prodotti)
 
+@app.route("/storico_manutenzioni")
+def storico_manutenzioni():
+    conn = get_db_connection()
+    cur = conn.cursor()
+    cur.execute("SELECT * FROM storico_manutenzioni ORDER BY registrato_il DESC;")
+    storico = cur.fetchall()
+    cur.close()
+    conn.close()
+    return render_template("storico_manutenzioni.html", storico=storico)
+
 @app.route("/carico", methods=["GET", "POST"])
 def carico():
     if request.method == "POST" and request.form.get("qr_code"):
@@ -642,7 +652,8 @@ def scarico():
 
 @app.route("/scanner_globale", methods=["GET", "POST"])
 def scanner_globale():
-    ... # scanner logic
+    if request.method == "POST" and request.form.get("qr_code"):
+        return redirect(url_for("gestisci_prodotto", qr_code=request.form.get("qr_code").strip()))
     return render_template("scanner_globale.html")
 
 @app.route("/gestisci/<qr_code>")
