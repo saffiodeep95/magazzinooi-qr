@@ -1481,7 +1481,15 @@ def esporta_inventario():
     writer = csv.writer(output)
     writer.writerow(['QR Code', 'Nome Articolo', 'SAP', 'Quantita', 'Posizione', 'Peso', 'Magazzino Pesante'])
     for p in prodotti:
-        writer.writerow([p['qr_code'], p['nome'], p['sap'], p['quantita'], p['posizione'], p['peso'], 'Si' if p['magazzino_pesante'] else 'No'])
+        writer.writerow([
+            p.get('qr_code', ''), 
+            p.get('nome', ''), 
+            p.get('sap', ''), 
+            p.get('quantita', 0), 
+            p.get('posizione', ''), 
+            p.get('peso', ''), 
+            'Si' if p.get('magazzino_pesante') else 'No'
+        ])
     
     return Response(
         output.getvalue(),
@@ -1502,7 +1510,21 @@ def esporta_interventi():
     writer = csv.writer(output)
     writer.writerow(['ID', 'Titolo', 'Macchina', 'Priorità', 'Tipo Guasto', 'Stato', 'Assegnato A', 'Creato Da', 'Inizio', 'Fine', 'Minuti Lavorati', 'Note', 'Data Creazione'])
     for r in richieste:
-        writer.writerow([r['id'], r['titolo'], r['impianto_macchina'], r['priorita'], r['tipo_guasto'], r['stato'], r['assegnato_a'], r['creato_da'], r['inizio_lavoro'], r['fine_lavoro'], r['tempo_lavorato_minuti'], r['note_lavoro'], r['creato_il']])
+        writer.writerow([
+            r.get('id', ''), 
+            r.get('titolo', ''), 
+            r.get('impianto_macchina', ''), 
+            r.get('priorita', ''), 
+            r.get('tipo_guasto', ''), 
+            r.get('stato', ''), 
+            r.get('assegnato_a', ''), 
+            r.get('creato_da', ''), 
+            r.get('inizio_lavoro', ''), 
+            r.get('fine_lavoro', ''), 
+            r.get('tempo_lavorato_minuti', 0), 
+            r.get('note_lavoro', ''), 
+            r.get('creato_il', '')
+        ])
     
     return Response(
         output.getvalue(),
@@ -1584,7 +1606,6 @@ def stampa_singolo_qr(qr_code):
 
 @app.route("/magazzino_pesante")
 @app.route("/magazzino_pesante.html")
-@app.route("/esporta_pesante")
 def magazzino_pesante():
     if not (session.get('is_admin') or session.get('puo_vedere_pesante', 1)):
         flash("Accesso al Magazzino Pesante negato.", "error")
@@ -1605,6 +1626,40 @@ def magazzino_pesante():
     except Exception:
         pass
     return render_template("magazzino_pesante.html", prodotti=prodotti)
+
+@app.route("/esporta_pesante")
+def esporta_pesante():
+    if not (session.get('is_admin') or session.get('puo_vedere_pesante', 1)):
+        flash("Accesso negato.", "error")
+        return redirect(url_for('index'))
+    try:
+        conn = get_db_connection()
+        cur = conn.cursor()
+        cur.execute("SELECT qr_code, nome, sap, quantita, posizione, peso FROM prodotti WHERE magazzino_pesante IN (1, '1', true) ORDER BY nome ASC;")
+        prodotti = cur.fetchall()
+        cur.close()
+        conn.close()
+    except Exception:
+        prodotti = []
+
+    output = io.StringIO()
+    writer = csv.writer(output)
+    writer.writerow(['QR Code', 'Nome Articolo', 'SAP', 'Quantita', 'Posizione', 'Peso'])
+    for p in prodotti:
+        writer.writerow([
+            p.get('qr_code', ''), 
+            p.get('nome', ''), 
+            p.get('sap', ''), 
+            p.get('quantita', 0), 
+            p.get('posizione', ''), 
+            p.get('peso', '')
+        ])
+    
+    return Response(
+        output.getvalue(),
+        mimetype="text/csv",
+        headers={"Content-disposition": "attachment; filename=Magazzino_Pesante_OMG.csv"}
+    )
 
 @app.route("/manutenzioni")
 @app.route("/manutenzioni.html")
