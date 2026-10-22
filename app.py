@@ -325,6 +325,8 @@ def index():
     interventi_aperti_count = 0
     interventi_in_lavoro_count = 0
     interventi_attesa_count = 0
+    interventi_assegnati_count = 0
+    notifiche_attive = []
     
     username = session.get('username')
     is_admin = session.get('is_admin')
@@ -352,6 +354,23 @@ def index():
         cur.execute("SELECT COUNT(*) as count FROM richieste_manutenzione WHERE stato = 'Attesa Ricambio';")
         interventi_attesa_count = cur.fetchone()['count']
         
+        # Conteggio interventi assegnati specificamente all'utente loggato per il badge rosso
+        cur.execute("SELECT COUNT(*) as count FROM richieste_manutenzione WHERE stato != 'Completata' AND assegnato_a LIKE %s;", (f"%{username}%",))
+        res_int = cur.fetchone()
+        if res_int:
+            interventi_assegnati_count = res_int['count']
+
+        # Recupero notifiche non lette per il box in alto
+        cur.execute("SELECT * FROM notifiche WHERE destinatario = %s AND letta = FALSE ORDER BY creato_il DESC;", (username,))
+        notifiche_db = cur.fetchall()
+        for n in notifiche_db:
+            notifiche_attive.append({
+                'titolo': n['titolo'],
+                'messaggio': n['messaggio'],
+                'link': n['link'],
+                'data': n['creato_il'].strftime('%d/%m/%Y %H:%M') if n['creato_il'] else ''
+            })
+
         cur.close()
         conn.close()
         
@@ -372,7 +391,17 @@ def index():
                            promemoria_urgenti=promemoria_urgenti,
                            interventi_aperti_count=interventi_aperti_count,
                            interventi_in_lavoro_count=interventi_in_lavoro_count,
-                           interventi_attesa_count=interventi_attesa_count)
+                           interventi_attesa_count=interventi_attesa_count,
+                           interventi_assegnati_count=interventi_assegnati_count,
+                           notifiche_attive=notifiche_attive)
+
+@app.route("/cambi_serie")
+def cambi_serie():
+    if not (session.get('is_admin') or session.get('puo_vedere_manutenzione', 1)):
+        flash("Accesso non autorizzato.", "error")
+        return redirect(url_for('index'))
+    cambi = []
+    return render_template("cambi_serie.html", cambi=cambi)
 
 @app.route("/login", methods=["GET", "POST"])
 def login():
@@ -1412,6 +1441,13 @@ def elimina_file(file_id):
     return redirect(url_for("documenti"))
 
 # --- ALTRE ROTTE GESTIONALE ---
+@app.route("/esportazioni")
+def esportazioni():
+    if not (session.get('is_admin') or session.get('puo_vedere_magazzino', 1)):
+        flash("Accesso negato.", "error")
+        return redirect(url_for('index'))
+    return render_template("esportazioni.html")
+
 @app.route("/esporta_inventario")
 def esporta_inventario():
     conn = get_db_connection()
