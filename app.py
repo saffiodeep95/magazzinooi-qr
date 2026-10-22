@@ -430,6 +430,7 @@ def esportazioni():
 @app.route("/esporta_inventario")
 @app.route("/esporta_fornitori_csv")
 @app.route("/esporta_fornitori")
+@app.route("/esporta_fornitori_intelligente")
 def esporta_inventario():
     conn = get_db_connection()
     cur = conn.cursor()
@@ -497,17 +498,25 @@ def stampa_singolo_qr(qr_code):
     return render_template("stampa_singolo_qr.html", prodotto=prodotto)
 
 @app.route("/stampa_intervento/<int:intervento_id>")
-def stampa_intervento(intervento_id):
+@app.route("/stampa_interventi")
+def stampa_intervento(intervento_id=None):
     conn = get_db_connection()
     cur = conn.cursor()
-    cur.execute("SELECT * FROM richieste_manutenzione WHERE id = %s;", (intervento_id,))
-    intervento = cur.fetchone()
-    cur.close()
-    conn.close()
-    if not intervento:
-        flash("Intervento non trovato.", "error")
-        return redirect(url_for("richieste_manutenzione"))
-    return render_template("stampa_intervento.html", intervento=intervento)
+    if intervento_id:
+        cur.execute("SELECT * FROM richieste_manutenzione WHERE id = %s;", (intervento_id,))
+        intervento = cur.fetchone()
+        cur.close()
+        conn.close()
+        if not intervento:
+            flash("Intervento non trovato.", "error")
+            return redirect(url_for("richieste_manutenzione"))
+        return render_template("stampa_intervento.html", intervento=intervento)
+    else:
+        cur.execute("SELECT * FROM richieste_manutenzione ORDER BY creato_il DESC;")
+        interventi = cur.fetchall()
+        cur.close()
+        conn.close()
+        return render_template("stampa_intervento.html", interventi=interventi)
 
 # ================= CAMBI SERIE & ALIAS =================
 @app.route("/cambi_serie")
@@ -1265,6 +1274,7 @@ def gestisci_prodotto(qr_code):
     return render_template("gestisci.html", prodotto=prodotto)
 
 @app.route("/modifica/<qr_code>", methods=["POST"])
+@app.route("/aggiorna_prodotto/<qr_code>", methods=["POST"])
 def modifica_prodotto(qr_code):
     if not (session.get('is_admin') or session.get('puo_modificare_prodotti', 1)):
         flash("Permesso negato.", "error")
@@ -1303,6 +1313,7 @@ def elimina_prodotto(qr_code):
     return redirect(url_for("index"))
 
 @app.route("/aggiungi", methods=["POST"])
+@app.route("/aggiungi_prodotto", methods=["POST"])
 def aggiungi_prodotto():
     qr_code = request.form.get("qr_code")
     nome = request.form.get("nome")
