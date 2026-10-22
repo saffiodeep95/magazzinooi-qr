@@ -1308,6 +1308,7 @@ def importa_intelligente():
     return redirect(url_for("fornitori"))
 
 @app.route("/esporta_fornitori_intelligente")
+@app.route("/esporta_fornitori_csv")
 def esporta_fornitori_intelligente():
     return redirect(url_for("fornitori"))
 
@@ -1464,7 +1465,6 @@ def esportazioni():
 
 @app.route("/esporta_csv")
 @app.route("/esportazione_csv")
-@app.route("/esporta_fornitori")
 def esporta_csv():
     return redirect(url_for("esporta_inventario"))
 
