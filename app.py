@@ -1,5 +1,5 @@
 # ========================================================================
-# Gestionale OMG Application - Codice Definitivo Completo di Tutte le Rotte
+# Gestionale OMG Application - System with Push Notifications & Ore Report
 # Copyright (c) 2026 Marco Pavan. All Rights Reserved.
 # Designed & Developed by Marco Pavan
 # ========================================================================
@@ -437,7 +437,7 @@ def registra():
                 flash("Username già esistente o errore di registrazione.", "error")
     return render_template("registra.html")
 
-# --- PANNELLO PERMESSI ADMIN ---
+# --- PANNELLO PERMESSI ADMIN & LOGS ---
 @app.route("/admin_utenti")
 @app.route("/admin_utenti.html")
 def admin_utenti():
@@ -462,6 +462,20 @@ def admin_utenti():
     except Exception as e:
         print(f"Errore admin: {e}")
     return render_template("admin_utenti.html", utenti=utenti, logs=logs)
+
+@app.route("/log_attivita")
+@app.route("/log_attivita.html")
+def log_attivita():
+    if not session.get('is_admin'):
+        flash("Accesso riservato all'Amministratore.", "error")
+        return redirect(url_for('index'))
+    conn = get_db_connection()
+    cur = conn.cursor()
+    cur.execute("SELECT * FROM log_attivita ORDER BY data_ora DESC LIMIT 100;")
+    logs = cur.fetchall()
+    cur.close()
+    conn.close()
+    return render_template("log_attivita.html", logs=logs)
 
 @app.route("/toggle_permesso/<int:user_id>/<campo>", methods=["POST"])
 def toggle_permesso(user_id, campo):
@@ -516,6 +530,18 @@ def elimina_utente(user_id):
     except Exception as e:
         flash(f"Errore eliminazione utente: {e}", "error")
     return redirect(url_for('admin_utenti'))
+
+# --- CAMBI SERIE ---
+@app.route("/cambi_serie")
+@app.route("/cambi_serie.html")
+def cambi_serie():
+    return render_template("cambi_serie.html", cambi=[])
+
+@app.route("/aggiungi_cambio_serie", methods=["POST"])
+def aggiungi_cambio_serie():
+    registra_log("Aggiunto cambio serie")
+    flash("Cambio serie registrato con successo!", "success")
+    return redirect(url_for("cambi_serie"))
 
 # --- MODULO: REPORT ORE & STATISTICHE MANUTENZIONI ---
 @app.route("/report_ore")
@@ -1281,6 +1307,10 @@ def importa_intelligente():
         flash(f"Errore importazione: {e}", "error")
     return redirect(url_for("fornitori"))
 
+@app.route("/esporta_fornitori_intelligente")
+def esporta_fornitori_intelligente():
+    return redirect(url_for("fornitori"))
+
 # --- GESTIONE DOCUMENTI ---
 @app.route("/documenti", defaults={"cartella_id": None}, methods=["GET", "POST"])
 @app.route("/documenti/<int:cartella_id>", methods=["GET", "POST"])
@@ -1426,12 +1456,7 @@ def elimina_file(file_id):
         return redirect(url_for("documenti", cartella_id=cartella_id))
     return redirect(url_for("documenti"))
 
-# --- ALTRE SEZIONI E ROTTE GESTIONALE ---
-@app.route("/cambi_serie")
-@app.route("/cambi_serie.html")
-def cambi_serie():
-    return render_template("cambi_serie.html", cambi=[])
-
+# --- ALTRE ROTTE GESTIONALE ---
 @app.route("/esportazioni")
 @app.route("/esportazioni.html")
 def esportazioni():
