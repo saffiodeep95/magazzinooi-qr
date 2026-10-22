@@ -12,7 +12,7 @@
     <style>
         :root {
             --sidebar-width: 260px;
-            --sidebar-bg: #111827; /* Nero Notte / Antracite Scuro */
+            --sidebar-bg: #111827; /* Antracite / Scuro */
             --sidebar-color: #9ca3af;
             --sidebar-active: #3b82f6;
             --bg-main: #f3f4f6;
@@ -25,7 +25,7 @@
             color: #1f2937;
         }
 
-        /* Sidebar Desktop con scorrimento corretto per non tagliare il fondo */
+        /* Sidebar Desktop con scorrimento verticale per accedere all'Admin in fondo */
         .sidebar {
             width: var(--sidebar-width);
             height: 100vh;
@@ -37,7 +37,7 @@
             display: flex;
             flex-direction: column;
             justify-content: space-between;
-            overflow-y: auto; /* Permette di scrollare fino in fondo (Admin) */
+            overflow-y: auto; /* Permette lo scroll fino in fondo */
         }
 
         .sidebar-brand {
@@ -95,7 +95,6 @@
             margin-right: 0.6rem;
         }
 
-        /* Content Area */
         .main-wrapper {
             margin-left: var(--sidebar-width);
             min-height: 100vh;
@@ -103,7 +102,6 @@
             flex-direction: column;
         }
 
-        /* Top Navbar */
         .top-navbar {
             background-color: #ffffff;
             height: 64px;
@@ -117,7 +115,6 @@
             z-index: 999;
         }
 
-        /* Cards Design */
         .card-custom {
             background: #ffffff;
             border: 1px solid #e5e7eb;
@@ -142,14 +139,9 @@
             border-bottom: 1px solid #f3f4f6;
         }
 
-        /* Mobile Layout Adjustments */
         @media (max-width: 991.98px) {
-            .sidebar {
-                display: none;
-            }
-            .main-wrapper {
-                margin-left: 0;
-            }
+            .sidebar { display: none; }
+            .main-wrapper { margin-left: 0; }
         }
     </style>
 </head>
@@ -158,15 +150,14 @@
     <!-- ================= SIDEBAR DESKTOP ================= -->
     <aside class="sidebar">
         <div>
-            <!-- Brand Logo -->
+            <!-- Logo Brand -->
             <div class="sidebar-brand d-flex align-items-center">
                 <i class="fa-solid fa-boxes-packing text-primary me-2 fs-4"></i>
                 <span>Gestionale OMG</span>
             </div>
 
-            <!-- Sidebar Navigation -->
+            <!-- Menu della Sidebar -->
             <div class="sidebar-menu">
-                
                 <div class="sidebar-heading">Principale</div>
                 <a href="{{ url_for('index') }}" class="nav-link-custom active">
                     <i class="fa-solid fa-house"></i> Home & Magazzino
@@ -184,7 +175,7 @@
                 </a>
 
                 <div class="sidebar-heading">Officina & Produzione</div>
-                <!-- Richieste Intervento con Badge Notifiche -->
+                <!-- Richieste Intervento con Badge Rosso per nuove assegnazioni -->
                 <a href="{{ url_for('richieste_manutenzione') }}" class="nav-link-custom position-relative">
                     <i class="fa-solid fa-wrench"></i> Richieste Intervento
                     {% if interventi_assegnati_count and interventi_assegnati_count > 0 %}
@@ -202,7 +193,7 @@
                 <a href="{{ url_for('fornitori') }}" class="nav-link-custom">
                     <i class="fa-solid fa-building"></i> Fornitori & Tecnici
                 </a>
-                <!-- Promemoria con Badge Notifiche -->
+                <!-- Promemoria con Badge Rosso -->
                 <a href="{{ url_for('promemoria') }}" class="nav-link-custom position-relative">
                     <i class="fa-solid fa-bell"></i> Promemoria
                     {% if promemoria_urgenti and promemoria_urgenti > 0 %}
@@ -219,11 +210,10 @@
                     <i class="fa-solid fa-user-gear"></i> Pannello Admin
                 </a>
                 {% endif %}
-
             </div>
         </div>
 
-        <!-- Sidebar Footer Utente -->
+        <!-- Footer Sidebar con info utente -->
         <div class="p-3 border-top border-secondary border-opacity-25 d-flex align-items-center justify-content-between bg-dark">
             <div class="d-flex align-items-center">
                 <div class="bg-primary text-white rounded-circle d-flex align-items-center justify-content-center me-2" style="width: 36px; height: 36px; font-weight: 600;">
@@ -243,17 +233,15 @@
     <!-- ================= WRAPPER CONTENUTO PRINCIPALE ================= -->
     <div class="main-wrapper">
         
-        <!-- TOP NAVBAR -->
+        <!-- Header Superiore -->
         <header class="top-navbar">
             <div class="d-flex align-items-center gap-2">
-                <!-- Pulsante Menu Mobile -->
                 <button class="btn btn-light d-lg-none border" type="button" data-bs-toggle="offcanvas" data-bs-target="#offcanvasSidebar">
                     <i class="fa-solid fa-bars"></i>
                 </button>
                 <h5 class="fw-bold mb-0 text-dark">Dashboard Magazzino</h5>
             </div>
 
-            <!-- Pulsante Export CSV Destra -->
             <div class="d-flex align-items-center gap-3">
                 <a href="{{ url_for('esportazioni') }}" class="btn btn-success btn-sm fw-semibold d-flex align-items-center gap-1">
                     <i class="fa-solid fa-file-csv fs-6"></i>
@@ -262,9 +250,9 @@
             </div>
         </header>
 
-        <!-- AREA CONTENUTO -->
         <main class="p-4">
 
+            <!-- Messaggi Flash -->
             {% with messages = get_flashed_messages(with_categories=true) %}
               {% if messages %}
                 {% for category, message in messages %}
@@ -275,6 +263,32 @@
                 {% endfor %}
               {% endif %}
             {% endwith %}
+
+            <!-- ================= BOX NOTIFICHE IN EVIDENZA ================= -->
+            {% if notifiche_attive and notifiche_attive|length > 0 %}
+            <div class="card border-warning mb-4 shadow-sm bg-light">
+                <div class="card-header bg-warning text-dark fw-bold d-flex justify-content-between align-items-center">
+                    <span><i class="fa-solid fa-triangle-exclamation me-2"></i> Nuove Assegnazioni e Avvisi In Sospeso</span>
+                    <span class="badge bg-dark">{{ notifiche_attive|length }} Nuove</span>
+                </div>
+                <div class="card-body py-2">
+                    <ul class="list-group list-group-flush bg-transparent">
+                        {% for notif in notifiche_attive %}
+                        <li class="list-group-item bg-transparent d-flex justify-content-between align-items-center py-2 border-bottom">
+                            <div>
+                                <strong class="text-primary">{{ notif.titolo }}</strong>: 
+                                <span class="text-dark">{{ notif.messaggio }}</span>
+                                <small class="text-muted ms-2"><i class="fa-regular fa-clock me-1"></i>{{ notif.data }}</small>
+                            </div>
+                            <a href="{{ notif.link or url_for('richieste_manutenzione') }}" class="btn btn-sm btn-outline-dark fw-semibold">
+                                Visualizza <i class="fa-solid fa-arrow-right ms-1"></i>
+                            </a>
+                        </li>
+                        {% endfor %}
+                    </ul>
+                </div>
+            </div>
+            {% endif %}
 
             <!-- METRICHE STATISTICHE -->
             <div class="row g-3 mb-4">
@@ -327,7 +341,7 @@
                 </div>
             </div>
 
-            <!-- INVENTARIO & PULSANTI AZIONE -->
+            <!-- CONTROLLI INVENTARIO E PULSANTI AZIONE -->
             <div class="card-custom p-3 mb-4">
                 <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3">
                     <div>
@@ -344,7 +358,7 @@
                 </div>
             </div>
 
-            <!-- TABELLA ARTICOLI -->
+            <!-- TABELLA INVENTARIO ARTICOLI -->
             <div class="card-custom overflow-hidden">
                 <div class="table-responsive">
                     <table class="table table-custom align-middle mb-0">
@@ -389,21 +403,13 @@
         </main>
     </div>
 
-    <!-- ================= OFFCANVAS SIDEBAR MOBILE ================= -->
+    <!-- OFFCANVAS SIDEBAR PER CELLULARE -->
     <div class="offcanvas offcanvas-start bg-dark text-white" tabindex="-1" id="offcanvasSidebar">
         <div class="offcanvas-header border-bottom border-secondary">
             <h5 class="offcanvas-title fw-bold"><i class="fa-solid fa-boxes-packing text-primary me-2"></i>Gestionale OMG</h5>
             <button type="button" class="btn-close btn-close-white" data-bs-dismiss="offcanvas"></button>
         </div>
         <div class="offcanvas-body p-3">
-            <div class="d-flex align-items-center mb-3 pb-3 border-bottom border-secondary">
-                <i class="fa-solid fa-circle-user fs-2 text-primary me-2"></i>
-                <div>
-                    <div class="fw-bold">{{ session.username }}</div>
-                    <small class="text-muted">Utente Connesso</small>
-                </div>
-            </div>
-
             <div class="sidebar-menu">
                 <a href="{{ url_for('index') }}" class="nav-link-custom active mb-2"><i class="fa-solid fa-house"></i> Home Dashboard</a>
                 <a href="{{ url_for('magazzino_pesante') }}" class="nav-link-custom mb-2"><i class="fa-solid fa-weight-hanging"></i> Magazzino Pesante</a>
