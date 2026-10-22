@@ -25,7 +25,7 @@
             color: #1f2937;
         }
 
-        /* Sidebar Desktop con scorrimento corretto per non tagliare il fondo */
+        /* Sidebar Desktop con scorrimento corretto */
         .sidebar {
             width: var(--sidebar-width);
             height: 100vh;
@@ -37,7 +37,7 @@
             display: flex;
             flex-direction: column;
             justify-content: space-between;
-            overflow-y: auto; /* <-- RISOLTO: Permette di scrollare la sidebar fino in fondo */
+            overflow-y: auto;
         }
 
         .sidebar-brand {
@@ -53,7 +53,7 @@
         }
 
         .sidebar-menu {
-            padding: 1rem 0.75rem 3rem 0.75rem; /* Spazio extra in fondo per mostrare tutto */
+            padding: 1rem 0.75rem 3rem 0.75rem;
             flex-grow: 1;
         }
 
@@ -503,7 +503,7 @@
                     container.innerHTML = '';
                     
                     if (data.length === 0) {
-                        container.innerHTML = '<li><span class="dropdown-item text-muted text-center small">Nessuna notifica</span></li>';
+                        container.innerHTML = '<li><span class="dropdown-item text-muted text-center small py-2">Nessuna notifica</span></li>';
                         badge.style.display = 'none';
                         return;
                     }
@@ -513,10 +513,23 @@
                         if (!n.letta) nonLette++;
                         let item = document.createElement('li');
                         let bgClass = n.letta ? '' : 'bg-light fw-bold';
+                        
+                        // Gestione Orario e Data a destra
+                        let timestampVal = n.data || n.orario || '';
+                        let dataOraTesto = '';
+                        if (timestampVal) {
+                            let displayTime = timestampVal.includes(' ') ? timestampVal.split(' ')[1].substring(0, 5) : timestampVal;
+                            let displayDate = timestampVal.includes(' ') ? timestampVal.split(' ')[0] : '';
+                            dataOraTesto = <small class="text-muted float-end" style="font-size: 0.70rem;"><i class="fa-regular fa-clock me-1"></i>${displayTime} <span class="opacity-75">${displayDate}</span></small>;
+                        }
+
                         item.innerHTML = `
                             <a class="dropdown-item py-2 border-bottom ${bgClass}" href="${n.link || '#'}">
-                                <div class="small text-primary mb-1">${n.titolo}</div>
-                                <div class="text-wrap text-muted" style="font-size: 0.85rem;">${n.messaggio}</div>
+                                <div class="d-flex justify-content-between align-items-center mb-1">
+                                    <span class="small text-primary fw-bold">${n.titolo}</span>
+                                    ${dataOraTesto}
+                                </div>
+                                <div class="text-wrap text-muted fw-normal" style="font-size: 0.85rem;">${n.messaggio}</div>
                             </a>
                         `;
                         container.appendChild(item);
@@ -531,7 +544,7 @@
 
                     fetch('/api/notifiche/segna_lette', { method: 'POST' });
                 })
-                .catch(err => console.error("Errore notifiche:", err));
+                .catch(err => console.error("Errore caricamento notifiche:", err));
         }
 
         document.addEventListener("DOMContentLoaded", function() {
