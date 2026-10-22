@@ -126,12 +126,12 @@
 </head>
 <body>
 
-    <!-- Header Navbar con dettagli Neri e Menu a Tendina per Cellulare (Bootstrap Collapse) -->
+    <!-- Header Navbar con dettagli Neri e Hamburger Menu per Cellulari -->
     <nav class="navbar navbar-expand-lg navbar-dark navbar-custom py-2 mb-4">
         <div class="container-fluid px-4">
             
             <!-- Logo / Nome App -->
-            <a class="navbar-brand d-flex align-items-center me-3" href="#">
+            <a class="navbar-brand d-flex align-items-center me-3" href="{{ url_for('index') }}">
                 <i class="fa-solid fa-boxes-packing text-primary fs-3 me-2"></i>
                 <span class="navbar-brand-title fs-4">Gestionale OMG</span>
             </a>
@@ -146,94 +146,85 @@
                 
                 <!-- Info Utente su Mobile -->
                 <div class="d-lg-none mb-3 pb-2 border-bottom border-secondary text-light">
-                    <i class="fa-solid fa-circle-user me-1 text-primary"></i> Utente: <strong>Marco Pavan</strong>
+                    <i class="fa-solid fa-circle-user me-1 text-primary"></i> Utente: <strong>{{ session.username }}</strong>
                 </div>
 
                 <!-- Lista Menu e Pulsanti -->
                 <div class="ms-auto nav-buttons-container">
                     
                     <!-- Hub CSV Export -->
-                    <a href="#" class="btn btn-success btn-sm w-100 w-lg-auto my-1 my-lg-0 fw-semibold">
+                    <a href="{{ url_for('esportazioni') }}" class="btn btn-success btn-sm w-100 w-lg-auto my-1 my-lg-0 fw-semibold">
                         <i class="fa-solid fa-file-csv me-1"></i> Esporta Dati CSV
                     </a>
 
                     <!-- Officina & Manutenzioni -->
-                    <a href="#" class="btn btn-outline-light btn-sm w-100 w-lg-auto my-1 my-lg-0">
+                    <a href="{{ url_for('richieste_manutenzione') }}" class="btn btn-outline-light btn-sm w-100 w-lg-auto my-1 my-lg-0">
                         <i class="fa-solid fa-wrench me-1 text-warning"></i> Officina
                     </a>
 
                     <!-- Cambi Serie -->
-                    <a href="#" class="btn btn-outline-light btn-sm w-100 w-lg-auto my-1 my-lg-0">
+                    <a href="{{ url_for('cambi_serie') }}" class="btn btn-outline-light btn-sm w-100 w-lg-auto my-1 my-lg-0">
                         <i class="fa-solid fa-rotate me-1 text-info"></i> Cambi Serie
                     </a>
 
                     <!-- Magazzino Pesante -->
-                    <a href="#" class="btn btn-outline-light btn-sm w-100 w-lg-auto my-1 my-lg-0">
+                    <a href="{{ url_for('magazzino_pesante') }}" class="btn btn-outline-light btn-sm w-100 w-lg-auto my-1 my-lg-0">
                         <i class="fa-solid fa-weight-hanging me-1"></i> Magazzino Pesante
                     </a>
 
                     <!-- Manutenzioni Esterne -->
-                    <a href="#" class="btn btn-outline-light btn-sm w-100 w-lg-auto my-1 my-lg-0">
+                    <a href="{{ url_for('manutenzioni') }}" class="btn btn-outline-light btn-sm w-100 w-lg-auto my-1 my-lg-0">
                         <i class="fa-solid fa-truck-ramp-box me-1"></i> Manutenzioni Esterne
                     </a>
 
+                    <!-- Storico Manutenzioni -->
+                    <a href="{{ url_for('storico_manutenzioni') }}" class="btn btn-outline-light btn-sm w-100 w-lg-auto my-1 my-lg-0">
+                        <i class="fa-solid fa-clock-rotate-left me-1"></i> Storico
+                    </a>
+
                     <!-- Report Ore -->
-                    <a href="#" class="btn btn-outline-light btn-sm w-100 w-lg-auto my-1 my-lg-0">
+                    <a href="{{ url_for('report_ore') }}" class="btn btn-outline-light btn-sm w-100 w-lg-auto my-1 my-lg-0">
                         <i class="fa-solid fa-user-clock me-1"></i> Report Ore
                     </a>
 
                     <!-- Fornitori -->
-                    <a href="#" class="btn btn-outline-light btn-sm w-100 w-lg-auto my-1 my-lg-0">
+                    <a href="{{ url_for('fornitori') }}" class="btn btn-outline-light btn-sm w-100 w-lg-auto my-1 my-lg-0">
                         <i class="fa-solid fa-truck-field me-1"></i> Fornitori
                     </a>
 
                     <!-- Promemoria -->
-                    <a href="#" class="btn btn-outline-warning btn-sm w-100 w-lg-auto my-1 my-lg-0 position-relative">
+                    <a href="{{ url_for('promemoria') }}" class="btn btn-outline-warning btn-sm w-100 w-lg-auto my-1 my-lg-0 position-relative">
                         <i class="fa-solid fa-bell me-1"></i> Promemoria
-                        <span class="badge rounded-pill bg-danger ms-1">2</span>
+                        {% if promemoria_urgenti > 0 %}
+                        <span class="badge rounded-pill bg-danger ms-1">{{ promemoria_urgenti }}</span>
+                        {% endif %}
                     </a>
 
                     <!-- Documenti -->
-                    <a href="#" class="btn btn-outline-light btn-sm w-100 w-lg-auto my-1 my-lg-0">
+                    <a href="{{ url_for('documenti') }}" class="btn btn-outline-light btn-sm w-100 w-lg-auto my-1 my-lg-0">
                         <i class="fa-solid fa-folder-open me-1"></i> Documenti
                     </a>
 
                     <!-- Campanella Notifiche Dropdown -->
                     <div class="dropdown d-inline-block w-100 w-lg-auto my-1 my-lg-0">
-                        <button class="btn btn-outline-light btn-sm w-100 position-relative dropdown-toggle" type="button" id="dropdownNotifiche" data-bs-toggle="dropdown" aria-expanded="false">
-                            <i class="fa-solid fa-bell text-warning"></i> Notifiche
-                            <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger d-none d-lg-inline-block">3</span>
+                        <button class="btn btn-outline-light btn-sm w-100 position-relative dropdown-toggle" type="button" id="dropdownNotifiche" data-bs-toggle="dropdown" aria-expanded="false" onclick="caricaNotifiche()">
+                            <i class="fa-solid fa-bell text-warning me-1"></i> Notifiche
+                            <span id="badgeNotificheCount" class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger" style="display: none;">0</span>
                         </button>
-                        <ul class="dropdown-menu dropdown-menu-end p-2 shadow-lg" aria-labelledby="dropdownNotifiche" style="min-width: 290px;">
-                            <li><h6 class="dropdown-header text-dark fw-bold border-bottom pb-2">Notifiche In Tempo Reale</h6></li>
-                            <li>
-                                <a class="dropdown-item py-2 border-bottom" href="#">
-                                    <div class="small fw-bold text-primary"><i class="fa-solid fa-wrench me-1"></i> Nuova Manutenzione</div>
-                                    <div class="small text-muted">Assegnato intervento su Linea 11</div>
-                                </a>
-                            </li>
-                            <li>
-                                <a class="dropdown-item py-2 border-bottom" href="#">
-                                    <div class="small fw-bold text-danger"><i class="fa-solid fa-triangle-exclamation me-1"></i> Scorta Minima</div>
-                                    <div class="small text-muted">Cuscinetto SKF sotto soglia (1 pz)</div>
-                                </a>
-                            </li>
-                            <li>
-                                <a class="dropdown-item py-2" href="#">
-                                    <div class="small fw-bold text-success"><i class="fa-solid fa-truck me-1"></i> Fornitore Esterno</div>
-                                    <div class="small text-muted">Materiale spedito da Rossi Meccanica</div>
-                                </a>
-                            </li>
+                        <ul class="dropdown-menu dropdown-menu-end p-2 shadow-lg" aria-labelledby="dropdownNotifiche" style="min-width: 300px; max-height: 400px; overflow-y: auto;" id="listaNotificheDropdown">
+                            <li class="text-center text-muted small py-2">Caricamento notifiche...</li>
                         </ul>
                     </div>
 
-                    <!-- Admin (Solo se admin) -->
-                    <a href="#" class="btn btn-secondary btn-sm w-100 w-lg-auto my-1 my-lg-0">
+                    {% if session.is_admin %}
+                    <!-- Admin -->
+                    <a href="{{ url_for('admin_utenti') }}" class="btn btn-secondary btn-sm w-100 w-lg-auto my-1 my-lg-0">
                         <i class="fa-solid fa-user-gear me-1"></i> Admin
                     </a>
+                    {% endif %}
 
                     <!-- Logout -->
-                    <a href="#" class="btn btn-outline-danger btn-sm w-100 w-lg-auto my-1 my-lg-0 ms-lg-2">
+                    <a href="{{ url_for('logout') }}" class="btn btn-outline-danger btn-sm w-100 w-lg-auto my-1 my-lg-0 ms-lg-2">
                         <i class="fa-solid fa-right-from-bracket"></i>
                     </a>
 
@@ -242,7 +233,7 @@
 
             <!-- User Pill Visibile Solo su PC -->
             <div class="d-none d-lg-flex align-items-center ms-3 border-start border-secondary ps-3">
-                <span class="user-pill"><i class="fa-solid fa-circle-user me-1 text-primary"></i> Marco Pavan</span>
+                <span class="user-pill"><i class="fa-solid fa-circle-user me-1 text-primary"></i> {{ session.username }}</span>
             </div>
 
         </div>
@@ -250,6 +241,17 @@
 
     <!-- Main Container -->
     <div class="container-fluid px-4">
+
+        {% with messages = get_flashed_messages(with_categories=true) %}
+          {% if messages %}
+            {% for category, message in messages %}
+              <div class="alert alert-{{ 'danger' if category == 'error' else category }} alert-dismissible fade show mb-4" role="alert">
+                {{ message }}
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+              </div>
+            {% endfor %}
+          {% endif %}
+        {% endwith %}
 
         <!-- Carte Statistiche con dettagli neri e contatori -->
         <div class="row g-3 mb-4">
@@ -260,7 +262,7 @@
                     <div class="d-flex justify-content-between align-items-center">
                         <div>
                             <span class="text-white-50 small fw-semibold">Pezzi Magazzino</span>
-                            <h2 class="fw-bold mb-0 text-white mt-1">1,240</h2>
+                            <h2 class="fw-bold mb-0 text-white mt-1">{{ totale_pezzi_principale }}</h2>
                         </div>
                         <div class="bg-primary bg-opacity-25 p-3 rounded-circle text-primary">
                             <i class="fa-solid fa-boxes-stacked fs-3"></i>
@@ -275,7 +277,7 @@
                     <div class="d-flex justify-content-between align-items-center">
                         <div>
                             <span class="text-muted small fw-semibold">Magazzino Pesante</span>
-                            <h2 class="fw-bold mb-0 text-dark mt-1">380</h2>
+                            <h2 class="fw-bold mb-0 text-dark mt-1">{{ totale_pezzi_pesante }}</h2>
                         </div>
                         <div class="bg-secondary bg-opacity-10 p-3 rounded-circle text-secondary">
                             <i class="fa-solid fa-weight-hanging fs-3"></i>
@@ -290,7 +292,7 @@
                     <div class="d-flex justify-content-between align-items-center">
                         <div>
                             <span class="text-muted small fw-semibold">Interventi Aperti</span>
-                            <h2 class="fw-bold mb-0 text-danger mt-1">4</h2>
+                            <h2 class="fw-bold mb-0 text-danger mt-1">{{ interventi_aperti_count }}</h2>
                         </div>
                         <div class="bg-danger bg-opacity-10 p-3 rounded-circle text-danger">
                             <i class="fa-solid fa-triangle-exclamation fs-3"></i>
@@ -305,7 +307,7 @@
                     <div class="d-flex justify-content-between align-items-center">
                         <div>
                             <span class="text-muted small fw-semibold">In Lavorazione</span>
-                            <h2 class="fw-bold mb-0 text-info mt-1">2</h2>
+                            <h2 class="fw-bold mb-0 text-info mt-1">{{ interventi_in_lavoro_count }}</h2>
                         </div>
                         <div class="bg-info bg-opacity-10 p-3 rounded-circle text-info">
                             <i class="fa-solid fa-screws-tilting fs-3"></i>
@@ -327,10 +329,10 @@
 
                 <!-- Pulsanti Rapidi -->
                 <div class="btn-group flex-wrap">
-                    <button class="btn btn-success fw-semibold"><i class="fa-solid fa-plus me-1"></i> Carico</button>
-                    <button class="btn btn-warning fw-semibold text-dark"><i class="fa-solid fa-minus me-1"></i> Scarico</button>
-                    <button class="btn btn-info fw-semibold text-white"><i class="fa-solid fa-qrcode me-1"></i> Scanner QR</button>
-                    <button class="btn btn-dark-custom fw-semibold" data-bs-toggle="modal" data-bs-target="#modalNuovoArticolo"><i class="fa-solid fa-plus-circle me-1"></i> Nuovo Articolo</button>
+                    <a href="{{ url_for('carico') }}" class="btn btn-success fw-semibold"><i class="fa-solid fa-plus me-1"></i> Carico</a>
+                    <a href="{{ url_for('scarico') }}" class="btn btn-warning fw-semibold text-dark"><i class="fa-solid fa-minus me-1"></i> Scarico</a>
+                    <a href="{{ url_for('scanner_globale') }}" class="btn btn-info fw-semibold text-white"><i class="fa-solid fa-qrcode me-1"></i> Scanner QR</a>
+                    <button class="btn btn-dark-custom fw-semibold" data-bs-toggle="modal" data-bs-target="#modalAggiungiProdotto"><i class="fa-solid fa-plus-circle me-1"></i> Nuovo Articolo</button>
                 </div>
 
             </div>
@@ -351,36 +353,28 @@
                         </tr>
                     </thead>
                     <tbody>
+                        {% for p in prodotti %}
                         <tr>
-                            <td><code class="bg-light text-dark px-2 py-1 rounded border">QR-1002</code></td>
-                            <td><strong class="text-dark">Cuscinetto a sfera SKF 6205-2RSH</strong></td>
-                            <td><span class="text-muted">SAP-88391</span></td>
-                            <td><span class="badge badge-soglia">1 pz (Sotto Soglia)</span></td>
-                            <td><i class="fa-solid fa-box-archive me-1 text-secondary"></i> Armadio A2 - Ripiano 3</td>
+                            <td><code class="bg-light text-dark px-2 py-1 rounded border">{{ p.qr_code }}</code></td>
+                            <td><strong class="text-dark">{{ p.nome }}</strong></td>
+                            <td><span class="text-muted">{{ p.sap or '-' }}</span></td>
+                            <td>
+                                <span class="badge {% if p.quantita <= p.soglia_minima %}badge-soglia{% else %}badge-ok{% endif %}">
+                                    {{ p.quantita }} pz
+                                </span>
+                            </td>
+                            <td><i class="fa-solid fa-box-archive me-1 text-secondary"></i> {{ p.posizione or '-' }}</td>
                             <td class="text-end">
-                                <button class="btn btn-sm btn-outline-dark-custom fw-semibold"><i class="fa-solid fa-gear me-1"></i> Gestisci</button>
+                                <a href="{{ url_for('gestisci_prodotto', qr_code=p.qr_code) }}" class="btn btn-sm btn-outline-dark-custom fw-semibold">
+                                    <i class="fa-solid fa-gear me-1"></i> Gestisci
+                                </a>
                             </td>
                         </tr>
+                        {% else %}
                         <tr>
-                            <td><code class="bg-light text-dark px-2 py-1 rounded border">QR-1003</code></td>
-                            <td><strong class="text-dark">Sensore di Prossimità Induttivo M12</strong></td>
-                            <td><span class="text-muted">SAP-44102</span></td>
-                            <td><span class="badge badge-ok">12 pz</span></td>
-                            <td><i class="fa-solid fa-box-archive me-1 text-secondary"></i> Armadio C1 - Cassetto 2</td>
-                            <td class="text-end">
-                                <button class="btn btn-sm btn-outline-dark-custom fw-semibold"><i class="fa-solid fa-gear me-1"></i> Gestisci</button>
-                            </td>
+                            <td colspan="6" class="text-center py-4 text-muted">Nessun articolo presente nel magazzino principale.</td>
                         </tr>
-                        <tr>
-                            <td><code class="bg-light text-dark px-2 py-1 rounded border">QR-1004</code></td>
-                            <td><strong class="text-dark">Elettrovalvola Pneumatica 5/2 Bistabile 24V</strong></td>
-                            <td><span class="text-muted">SAP-11094</span></td>
-                            <td><span class="badge badge-ok">8 pz</span></td>
-                            <td><i class="fa-solid fa-box-archive me-1 text-secondary"></i> Armadio B4 - Ripiano 1</td>
-                            <td class="text-end">
-                                <button class="btn btn-sm btn-outline-dark-custom fw-semibold"><i class="fa-solid fa-gear me-1"></i> Gestisci</button>
-                            </td>
-                        </tr>
+                        {% endfor %}
                     </tbody>
                 </table>
             </div>
@@ -388,7 +382,118 @@
 
     </div>
 
+    <!-- Modal Aggiungi Nuovo Prodotto -->
+    <div class="modal fade" id="modalAggiungiProdotto" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <form action="{{ url_for('aggiungi_prodotto') }}" method="POST">
+                    <div class="modal-header bg-dark text-white">
+                        <h5 class="modal-title fw-bold"><i class="fa-solid fa-box-archive me-2"></i>Nuovo Articolo Magazzino</h5>
+                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body">
+                        <div class="mb-3">
+                            <label class="form-label fw-semibold">QR Code *</label>
+                            <input type="text" name="qr_code" class="form-control" placeholder="Es. QR-1001" required>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label fw-semibold">Nome Articolo *</label>
+                            <input type="text" name="nome" class="form-control" placeholder="Es. Cuscinetto a sfera 6205" required>
+                        </div>
+                        <div class="row g-2 mb-3">
+                            <div class="col-md-6">
+                                <label class="form-label fw-semibold">Codice SAP</label>
+                                <input type="text" name="sap" class="form-control" placeholder="Es. SAP-9988">
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label fw-semibold">Peso</label>
+                                <input type="text" name="peso" class="form-control" placeholder="Es. 0.5 kg">
+                            </div>
+                        </div>
+                        <div class="row g-2 mb-3">
+                            <div class="col-md-6">
+                                <label class="form-label fw-semibold">Quantità Iniziale</label>
+                                <input type="number" name="quantita" class="form-control" value="1" min="0">
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label fw-semibold">Soglia Minima Allarme</label>
+                                <input type="number" name="soglia_minima" class="form-control" value="3" min="0">
+                            </div>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label fw-semibold">Posizione</label>
+                            <input type="text" name="posizione" class="form-control" placeholder="Es. Scaffale A2">
+                        </div>
+                        <div class="form-check">
+                            <input type="checkbox" name="magazzino_pesante" class="form-check-input" id="checkPesante">
+                            <label class="form-check-label" for="checkPesante">Destina a Magazzino Pesante</label>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annulla</button>
+                        <button type="submit" class="btn btn-primary"><i class="fa-solid fa-save me-1"></i> Salva Articolo</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
     <!-- Bootstrap 5 JavaScript Bundle -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // Script AJAX Notifiche
+        function caricaNotifiche() {
+            fetch('/api/notifiche')
+                .then(response => response.json())
+                .then(data => {
+                    const container = document.getElementById('listaNotificheDropdown');
+                    const badge = document.getElementById('badgeNotificheCount');
+                    container.innerHTML = '';
+                    
+                    if (data.length === 0) {
+                        container.innerHTML = '<li><span class="dropdown-item text-muted text-center small">Nessuna notifica</span></li>';
+                        badge.style.display = 'none';
+                        return;
+                    }
+
+                    let nonLette = 0;
+                    data.forEach(n => {
+                        if (!n.letta) nonLette++;
+                        let item = document.createElement('li');
+                        let bgClass = n.letta ? '' : 'bg-light fw-bold';
+                        item.innerHTML = `
+                            <a class="dropdown-item py-2 border-bottom ${bgClass}" href="${n.link || '#'}">
+                                <div class="small text-primary mb-1">${n.titolo}</div>
+                                <div class="text-wrap text-muted" style="font-size: 0.85rem;">${n.messaggio}</div>
+                            </a>
+                        `;
+                        container.appendChild(item);
+                    });
+
+                    if (nonLette > 0) {
+                        badge.innerText = nonLette;
+                        badge.style.display = 'inline-block';
+                    } else {
+                        badge.style.display = 'none';
+                    }
+
+                    fetch('/api/notifiche/segna_lette', { method: 'POST' });
+                })
+                .catch(err => console.error("Errore notifiche:", err));
+        }
+
+        document.addEventListener("DOMContentLoaded", function() {
+            fetch('/api/notifiche')
+                .then(res => res.json())
+                .then(data => {
+                    const badge = document.getElementById('badgeNotificheCount');
+                    let nonLette = data.filter(n => !n.letta).length;
+                    if (nonLette > 0) {
+                        badge.innerText = nonLette;
+                        badge.style.display = 'inline-block';
+                    }
+                });
+        });
+    </script>
 </body>
 </html>
