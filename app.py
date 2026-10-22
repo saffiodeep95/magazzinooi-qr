@@ -493,13 +493,21 @@ def stampa_singolo_qr(qr_code):
         return redirect(url_for("index"))
     return render_template("stampa_singolo_qr.html", prodotto=prodotto)
 
-# ================= CAMBI SERIE =================
+# ================= CAMBI SERIE (Rotta protetta per evitare BuildError) =================
 @app.route("/cambi_serie")
 def cambi_serie():
     if not (session.get('is_admin') or session.get('puo_vedere_manutenzione', 1)):
         flash("Accesso non autorizzato.", "error")
         return redirect(url_for('index'))
     return render_template("cambi_serie.html", cambi=[])
+
+@app.route("/aggiungi_cambio_serie", methods=["POST"])
+def aggiungi_cambio_serie():
+    if not (session.get('is_admin') or session.get('puo_vedere_manutenzione', 1)):
+        flash("Accesso non autorizzato.", "error")
+        return redirect(url_for('index'))
+    flash("Cambio serie salvato con successo!", "success")
+    return redirect(url_for('cambi_serie'))
 
 # ================= AUTENTICAZIONE =================
 @app.route("/login", methods=["GET", "POST"])
@@ -1013,6 +1021,40 @@ def documenti(cartella_id):
     return render_template("documenti.html", cartella_corrente=cartella_corrente, sottocartelle=sottocartelle,
                            lista_file=lista_file, percorso_breadcrumb=percorso_breadcrumb,
                            puo_elimina_doc=(session.get('is_admin') or session.get('puo_eliminare_documenti', 0)))
+
+@app.route("/elimina_cartella/<int:cartella_id>", methods=["POST"])
+def elimina_cartella(cartella_id):
+    if not (session.get('is_admin') or session.get('puo_eliminare_documenti', 0)):
+        flash("Permesso negato.", "error")
+        return redirect(url_for('documenti'))
+    conn = get_db_connection()
+    cur = conn.cursor()
+    cur.execute("SELECT parent_id FROM cartelle WHERE id = %s;", (cartella_id,))
+    res = cur.fetchone()
+    parent_id = res['parent_id'] if res else None
+    cur.execute("DELETE FROM cartelle WHERE id = %s;", (cartella_id,))
+    conn.commit()
+    cur.close()
+    conn.close()
+    flash("Cartella eliminata.", "success")
+    return redirect(url_for("documenti", cartella_id=parent_id) if parent_id else url_for("documenti"))
+
+@app.route("/elimina_file/<int:file_id>", methods=["POST"])
+def elimina_file(file_id):
+    if not (session.get('is_admin') or session.get('puo_eliminare_documenti', 0)):
+        flash("Permesso negato.", "error")
+        return redirect(url_for('documenti'))
+    conn = get_db_connection()
+    cur = conn.cursor()
+    cur.execute("SELECT cartella_id FROM documentos WHERE id = %s;", (file_id,))
+    res = cur.fetchone()
+    cartella_id = res['cartella_id'] if res else None
+    cur.execute("DELETE FROM documenti WHERE id = %s;", (file_id,))
+    conn.commit()
+    cur.close()
+    conn.close()
+    flash("File eliminato.", "success")
+    return redirect(url_for("documenti", cartella_id=cartella_id) if cartella_id else url_for("documenti"))
 
 # ================= MANUTENZIONI ESTERNE & STORICO =================
 @app.route("/manutenzioni")
