@@ -1464,6 +1464,7 @@ def esportazioni():
 
 @app.route("/esporta_csv")
 @app.route("/esportazione_csv")
+@app.route("/esporta_fornitori")
 def esporta_csv():
     return redirect(url_for("esporta_inventario"))
 
@@ -1582,6 +1583,7 @@ def stampa_singolo_qr(qr_code):
 
 @app.route("/magazzino_pesante")
 @app.route("/magazzino_pesante.html")
+@app.route("/esporta_pesante")
 def magazzino_pesante():
     if not (session.get('is_admin') or session.get('puo_vedere_pesante', 1)):
         flash("Accesso al Magazzino Pesante negato.", "error")
