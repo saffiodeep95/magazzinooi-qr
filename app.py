@@ -1,5 +1,5 @@
 # ========================================================================
-# Gestionale OMG Application - Complete System
+# Gestionale OMG Application - Complete Routes System
 # Copyright (c) 2026 Marco Pavan. All Rights Reserved.
 # ========================================================================
 
@@ -238,6 +238,7 @@ def require_login():
     if request.endpoint and request.endpoint not in allowed_routes and 'username' not in session:
         return redirect(url_for('login'))
 
+# 1. Index / Home
 @app.route("/")
 @app.route("/index")
 def index():
@@ -312,6 +313,51 @@ def index():
                            interventi_assegnati_count=interventi_assegnati_count,
                            notifiche_attive=notifiche_attive)
 
+# 2. Autenticazione (login, logout, registra)
+@app.route("/login", methods=["GET", "POST"])
+def login():
+    if request.method == "POST":
+        username = request.form.get("username")
+        password = request.form.get("password")
+        conn = get_db_connection()
+        cur = conn.cursor()
+        cur.execute("SELECT * FROM utenti WHERE username = %s;", (username,))
+        user = cur.fetchone()
+        cur.close()
+        conn.close()
+        if user and check_password_hash(user['password'], password):
+            session['username'] = user['username']
+            session['is_admin'] = user['is_admin']
+            registra_log("Login effettuato")
+            return redirect(url_for('index'))
+        flash("Credenziali non valide", "error")
+    return render_template("login.html")
+
+@app.route("/logout")
+def logout():
+    session.clear()
+    return redirect(url_for('login'))
+
+@app.route("/registra", methods=["GET", "POST"])
+def registra():
+    if request.method == "POST":
+        username = request.form.get("username")
+        password = request.form.get("password")
+        if username and password:
+            conn = get_db_connection()
+            cur = conn.cursor()
+            try:
+                cur.execute("INSERT INTO utenti (username, password) VALUES (%s, %s);", (username, generate_password_hash(password)))
+                conn.commit()
+                flash("Registrazione completata", "success")
+                return redirect(url_for('login'))
+            except Exception:
+                flash("Utente già esistente", "error")
+            cur.close()
+            conn.close()
+    return render_template("registra.html")
+
+# 3. Magazzino Pesante e Gestione Prodotti
 @app.route("/magazzino_pesante")
 def magazzino_pesante():
     prodotti = []
@@ -328,6 +374,229 @@ def magazzino_pesante():
         pass
     return render_template("magazzino_pesante.html", prodotti=prodotti)
 
+@app.route("/gestisci/<qr_code>")
+def gestisci_prodotto(qr_code):
+    conn = get_db_connection()
+    cur = conn.cursor()
+    cur.execute("SELECT * FROM prodotti WHERE qr_code = %s;", (qr_code,))
+    prodotto = cur.fetchone()
+    cur.close()
+    conn.close()
+    if not prodotto:
+        flash("Prodotto non trovato", "error")
+        return redirect(url_for("index"))
+    return render_template("gestisci.html", prodotto=prodotto)
+
+@app.route("/aggiungi_prodotto", methods=["POST"])
+def aggiungi_prodotto():
+    qr = request.form.get("qr_code")
+    nome = request.form.get("nome")
+    flag = 1 if request.form.get("magazzino_pesante") else 0
+    if qr and nome:
+        conn = get_db_connection()
+        cur = conn.cursor()
+        cur.execute("INSERT INTO prodotti (qr_code, nome, sap, quantita, posizione, magazzino_pesante) VALUES (%s, %s, %s, %s, %s, %s) ON CONFLICT (qr_code) DO UPDATE SET quantita = prodotti.quantita + EXCLUDED.quantita;",
+                    (qr, nome, request.form.get("sap"), int(request.form.get("quantita", 0)), request.form.get("posizione"), flag))
+        conn.commit()
+        cur.close()
+        conn.close()
+    return redirect(url_for("magazzino_pesante") if flag == 1 else url_for("index"))
+
+@app.route("/aggiorna_prodotto/<qr_code>", methods=["POST"])
+def modifica_prodotto(qr_code):
+    conn = get_db_connection()
+    cur = conn.cursor()
+    cur.execute("UPDATE prodotti SET nome = %s, sap = %s, peso = %s, posizione = %s, soglia_minima = %s WHERE qr_code = %s;",
+                (request.form.get("nome"), request.form.get("sap"), request.form.get("peso"), request.form.get("posizione"), int(request.form.get("soglia_minima", 3)), qr_code))
+    conn.commit()
+    cur.close()
+    conn.close()
+    return redirect(url_for("gestisci_prodotto", qr_code=qr_code))
+
+@app.route("/elimina_prodotto/<qr_code>", methods=["POST"])
+def elimina_prodotto(qr_code):
+    conn = get_db_connection()
+    cur = conn.cursor()
+    cur.execute("DELETE FROM prodotti WHERE qr_code = %s;", (qr_code,))
+    conn.commit()
+    cur.close()
+    conn.close()
+    return redirect(url_for("index"))
+
+# 4. Carico, Scarico e Scanner Globale
+@app.route("/carico", methods=["GET", "POST"])
+def carico():
+    if request.method == "POST" and request.form.get("qr_code"):
+        conn = get_db_connection()
+        cur = conn.cursor()
+        cur.execute("UPDATE prodotti SET quantita = quantita + %s WHERE qr_code = %s;", (int(request.form.get("quantita", 1)), request.form.get("qr_code")))
+        conn.commit()
+        cur.close()
+        conn.close()
+        return redirect(url_for("gestisci_prodotto", qr_code=request.form.get("qr_code")))
+    return render_template("carico.html")
+
+@app.route("/scarico", methods=["GET", "POST"])
+def scarico():
+    if request.method == "POST" and request.form.get("qr_code"):
+        conn = get_db_connection()
+        cur = conn.cursor()
+        cur.execute("SELECT quantita FROM prodotti WHERE qr_code = %s;", (request.form.get("qr_code"),))
+        prod = cur.fetchone()
+        if prod:
+            nuova = max(0, prod['quantita'] - int(request.form.get("quantita", 1)))
+            cur.execute("UPDATE prodotti SET quantita = %s WHERE qr_code = %s;", (nuova, request.form.get("qr_code")))
+            conn.commit()
+        cur.close()
+        conn.close()
+        return redirect(url_for("gestisci_prodotto", qr_code=request.form.get("qr_code")))
+    return render_template("scarico.html")
+
+@app.route("/scanner_globale", methods=["GET", "POST"])
+def scanner_globale():
+    if request.method == "POST" and request.form.get("qr_code"):
+        return redirect(url_for("gestisci_prodotto", qr_code=request.form.get("qr_code").strip()))
+    return render_template("scanner_globale.html")
+
+# 5. Manutenzioni e Storico
+@app.route("/manutenzioni")
+def manutenzioni():
+    conn = get_db_connection()
+    cur = conn.cursor()
+    cur.execute("SELECT * FROM prodotti WHERE in_manutenzione = TRUE ORDER BY nome ASC;")
+    prodotti = cur.fetchall()
+    cur.close()
+    conn.close()
+    return render_template("manutenzioni.html", prodotti=prodotti)
+
+@app.route("/storico_manutenzioni")
+def storico_manutenzioni():
+    conn = get_db_connection()
+    cur = conn.cursor()
+    cur.execute("SELECT * FROM storico_manutenzioni ORDER BY registrato_il DESC;")
+    storico = cur.fetchall()
+    cur.close()
+    conn.close()
+    return render_template("storico_manutenzioni.html", storico=storico)
+
+@app.route("/richieste_manutenzione", methods=["GET", "POST"])
+def richieste_manutenzione():
+    conn = get_db_connection()
+    cur = conn.cursor()
+    if request.method == "POST":
+        titolo = request.form.get("titolo")
+        if titolo:
+            cur.execute("INSERT INTO richieste_manutenzione (titolo, impianto_macchina, descrizione, priorita, tipo_guasto, assegnato_a, creato_da, stato) VALUES (%s, %s, %s, %s, %s, %s, %s, 'Aperta');",
+                        (titolo, request.form.get("impianto_macchina"), request.form.get("descrizione"), request.form.get("priorita", "Media"), request.form.get("tipo_guasto", "Meccanico"), request.form.get("assegnato_a"), session.get('username')))
+            conn.commit()
+        return redirect(url_for("richieste_manutenzione"))
+    cur.execute("SELECT username FROM utenti ORDER BY username ASC;")
+    lista_utenti = cur.fetchall()
+    cur.execute("SELECT qr_code, nome, quantita FROM prodotti ORDER BY nome ASC;")
+    lista_prodotti = cur.fetchall()
+    cur.execute("SELECT * FROM richieste_manutenzione ORDER BY creato_il DESC;")
+    richieste = cur.fetchall()
+    cur.close()
+    conn.close()
+    return render_template("richieste_manutenzione.html", richieste=richieste, lista_utenti=lista_utenti, lista_prodotti=lista_prodotti, ricambi_per_intervento={})
+
+@app.route("/cambia_stato_intervento/<int:intervento_id>", methods=["POST"])
+def cambia_stato_intervento(intervento_id):
+    conn = get_db_connection()
+    cur = conn.cursor()
+    cur.execute("UPDATE richieste_manutenzione SET stato = %s, note_lavoro = %s WHERE id = %s;", (request.form.get("stato"), request.form.get("note_lavoro"), intervento_id))
+    conn.commit()
+    cur.close()
+    conn.close()
+    return redirect(url_for("richieste_manutenzione"))
+
+# 6. Fornitori
+@app.route("/fornitori", methods=["GET", "POST"])
+def fornitori():
+    conn = get_db_connection()
+    cur = conn.cursor()
+    if request.method == "POST" and request.form.get("nome_azienda"):
+        cur.execute("INSERT INTO fornitori (nome_azienda, settore_note, indirizzo, p_iva, telefono, email) VALUES (%s, %s, %s, %s, %s, %s) ON CONFLICT (nome_azienda) DO NOTHING;",
+                    (request.form.get("nome_azienda"), request.form.get("settore_note"), request.form.get("indirizzo"), request.form.get("p_iva"), request.form.get("telefono"), request.form.get("email")))
+        conn.commit()
+    cur.execute("SELECT * FROM fornitori ORDER BY nome_azienda ASC;")
+    lista = cur.fetchall()
+    cur.close()
+    conn.close()
+    return render_template("fornitori.html", fornitori=lista)
+
+@app.route("/fornitore/<int:forn_id>")
+def dettaglio_fornitore(forn_id):
+    conn = get_db_connection()
+    cur = conn.cursor()
+    cur.execute("SELECT * FROM fornitori WHERE id = %s;", (forn_id,))
+    fornitore = cur.fetchone()
+    cur.execute("SELECT * FROM contatti_tecnici WHERE fornitore_id = %s;", (forn_id,))
+    contatti = cur.fetchall()
+    cur.close()
+    conn.close()
+    return render_template("dettaglio_fornitore.html", fornitore=fornitore, contatti=contatti)
+
+# 7. Documenti e Upload
+@app.route("/documenti", defaults={"cartella_id": None}, methods=["GET", "POST"])
+@app.route("/documenti/<int:cartella_id>", methods=["GET", "POST"])
+def documenti(cartella_id):
+    conn = get_db_connection()
+    cur = conn.cursor()
+    if request.method == "POST":
+        if request.form.get("azione") == "crea_cartella":
+            cur.execute("INSERT INTO cartelle (nome, parent_id) VALUES (%s, %s);", (request.form.get("nome_cartella"), cartella_id))
+            conn.commit()
+        elif request.files.get("file_caricato"):
+            f = request.files.get("file_caricato")
+            cur.execute("INSERT INTO documenti (cartella_id, nome_file, tipo_file, dati_file) VALUES (%s, %s, %s, %s);", (cartella_id, f.filename, f.mimetype, f.read()))
+            conn.commit()
+    cur.execute("SELECT * FROM cartelle WHERE parent_id " + ("= %s" if cartella_id else "IS NULL"), (cartella_id,) if cartella_id else ())
+    sottocartelle = cur.fetchall()
+    cur.execute("SELECT id, nome_file FROM documenti WHERE cartella_id " + ("= %s" if cartella_id else "IS NULL"), (cartella_id,) if cartella_id else ())
+    lista_file = cur.fetchall()
+    cur.close()
+    conn.close()
+    return render_template("documenti.html", sottocartelle=sottocartelle, lista_file=lista_file, cartella_corrente=None, percorso_breadcrumb=[])
+
+@app.route("/upload", methods=["GET", "POST"])
+def upload():
+    return render_template("upload.html")
+
+# 8. Promemoria e Report Ore
+@app.route("/promemoria", methods=["GET", "POST"])
+def promemoria():
+    conn = get_db_connection()
+    cur = conn.cursor()
+    if request.method == "POST" and request.form.get("titolo"):
+        cur.execute("INSERT INTO promemoria (titolo, descrizione, data_scadenza, priorita, ricorrenza, assegnato_a) VALUES (%s, %s, %s, %s, %s, %s);",
+                    (request.form.get("titolo"), request.form.get("descrizione"), request.form.get("data_scadenza"), request.form.get("priorita"), request.form.get("ricorrenza"), request.form.get("assegnato_a")))
+        conn.commit()
+    cur.execute("SELECT * FROM promemoria ORDER BY completato ASC;")
+    lista_promemoria = cur.fetchall()
+    cur.execute("SELECT username FROM utenti ORDER BY username ASC;")
+    lista_utenti = cur.fetchall()
+    cur.close()
+    conn.close()
+    return render_template("promemoria.html", promemoria=lista_promemoria, lista_utenti=lista_utenti)
+
+@app.route("/report_ore")
+def report_ore():
+    conn = get_db_connection()
+    cur = conn.cursor()
+    cur.execute("SELECT username FROM utenti ORDER BY username ASC;")
+    utenti = cur.fetchall()
+    cur.execute("SELECT * FROM richieste_manutenzione ORDER BY creato_il DESC;")
+    interventi = cur.fetchall()
+    cur.close()
+    conn.close()
+    return render_template("report_ore.html", utenti=utenti, interventi=interventi, totale_ore_generale=0, totale_interventi=len(interventi))
+
+@app.route("/cambi_serie")
+def cambi_serie():
+    return render_template("cambi_serie.html", cambi=[])
+
+# 9. Esportazioni e Stampe QR / Interventi
 @app.route("/esportazioni")
 def esportazioni():
     return render_template("esportazioni.html")
@@ -402,53 +671,7 @@ def stampa_intervento(intervento_id):
     conn.close()
     return render_template("stampa_intervento.html", intervento=intervento)
 
-@app.route("/cambi_serie")
-def cambi_serie():
-    return render_template("cambi_serie.html", cambi=[])
-
-@app.route("/login", methods=["GET", "POST"])
-def login():
-    if request.method == "POST":
-        username = request.form.get("username")
-        password = request.form.get("password")
-        conn = get_db_connection()
-        cur = conn.cursor()
-        cur.execute("SELECT * FROM utenti WHERE username = %s;", (username,))
-        user = cur.fetchone()
-        cur.close()
-        conn.close()
-        if user and check_password_hash(user['password'], password):
-            session['username'] = user['username']
-            session['is_admin'] = user['is_admin']
-            registra_log("Login effettuato")
-            return redirect(url_for('index'))
-        flash("Credenziali non valide", "error")
-    return render_template("login.html")
-
-@app.route("/logout")
-def logout():
-    session.clear()
-    return redirect(url_for('login'))
-
-@app.route("/registra", methods=["GET", "POST"])
-def registra():
-    if request.method == "POST":
-        username = request.form.get("username")
-        password = request.form.get("password")
-        if username and password:
-            conn = get_db_connection()
-            cur = conn.cursor()
-            try:
-                cur.execute("INSERT INTO utenti (username, password) VALUES (%s, %s);", (username, generate_password_hash(password)))
-                conn.commit()
-                flash("Registrazione completata", "success")
-                return redirect(url_for('login'))
-            except Exception:
-                flash("Utente già esistente", "error")
-            cur.close()
-            conn.close()
-    return render_template("registra.html")
-
+# 10. Amministrazione Utenti e Log
 @app.route("/admin_utenti")
 def admin_utenti():
     if not session.get('is_admin'):
@@ -462,6 +685,18 @@ def admin_utenti():
     cur.close()
     conn.close()
     return render_template("admin_utenti.html", utenti=utenti, logs=logs)
+
+@app.route("/log_attivita")
+def log_attivita():
+    if not session.get('is_admin'):
+        return redirect(url_for('index'))
+    conn = get_db_connection()
+    cur = conn.cursor()
+    cur.execute("SELECT * FROM log_attivita ORDER BY data_ora DESC LIMIT 100;")
+    logs = cur.fetchall()
+    cur.close()
+    conn.close()
+    return render_template("log_attivita.html", logs=logs)
 
 @app.route("/toggle_permesso/<int:user_id>/<campo>", methods=["POST"])
 def toggle_permesso(user_id, campo):
@@ -495,202 +730,6 @@ def elimina_utente(user_id):
         cur.close()
         conn.close()
     return redirect(url_for('admin_utenti'))
-
-@app.route("/report_ore")
-def report_ore():
-    conn = get_db_connection()
-    cur = conn.cursor()
-    cur.execute("SELECT username FROM utenti ORDER BY username ASC;")
-    utenti = cur.fetchall()
-    cur.execute("SELECT * FROM richieste_manutenzione ORDER BY creato_il DESC;")
-    interventi = cur.fetchall()
-    cur.close()
-    conn.close()
-    return render_template("report_ore.html", utenti=utenti, interventi=interventi, totale_ore_generale=0, totale_interventi=len(interventi))
-
-@app.route("/richieste_manutenzione", methods=["GET", "POST"])
-def richieste_manutenzione():
-    conn = get_db_connection()
-    cur = conn.cursor()
-    if request.method == "POST":
-        titolo = request.form.get("titolo")
-        if titolo:
-            cur.execute("INSERT INTO richieste_manutenzione (titolo, impianto_macchina, descrizione, priorita, tipo_guasto, assegnato_a, creato_da, stato) VALUES (%s, %s, %s, %s, %s, %s, %s, 'Aperta');",
-                        (titolo, request.form.get("impianto_macchina"), request.form.get("descrizione"), request.form.get("priorita", "Media"), request.form.get("tipo_guasto", "Meccanico"), request.form.get("assegnato_a"), session.get('username')))
-            conn.commit()
-        return redirect(url_for("richieste_manutenzione"))
-    cur.execute("SELECT username FROM utenti ORDER BY username ASC;")
-    lista_utenti = cur.fetchall()
-    cur.execute("SELECT qr_code, nome, quantita FROM prodotti ORDER BY nome ASC;")
-    lista_prodotti = cur.fetchall()
-    cur.execute("SELECT * FROM richieste_manutenzione ORDER BY creato_il DESC;")
-    richieste = cur.fetchall()
-    cur.close()
-    conn.close()
-    return render_template("richieste_manutenzione.html", richieste=richieste, lista_utenti=lista_utenti, lista_prodotti=lista_prodotti, ricambi_per_intervento={})
-
-@app.route("/cambia_stato_intervento/<int:intervento_id>", methods=["POST"])
-def cambia_stato_intervento(intervento_id):
-    conn = get_db_connection()
-    cur = conn.cursor()
-    cur.execute("UPDATE richieste_manutenzione SET stato = %s, note_lavoro = %s WHERE id = %s;", (request.form.get("stato"), request.form.get("note_lavoro"), intervento_id))
-    conn.commit()
-    cur.close()
-    conn.close()
-    return redirect(url_for("richieste_manutenzione"))
-
-@app.route("/promemoria", methods=["GET", "POST"])
-def promemoria():
-    conn = get_db_connection()
-    cur = conn.cursor()
-    if request.method == "POST" and request.form.get("titolo"):
-        cur.execute("INSERT INTO promemoria (titolo, descrizione, data_scadenza, priorita, ricorrenza, assegnato_a) VALUES (%s, %s, %s, %s, %s, %s);",
-                    (request.form.get("titolo"), request.form.get("descrizione"), request.form.get("data_scadenza"), request.form.get("priorita"), request.form.get("ricorrenza"), request.form.get("assegnato_a")))
-        conn.commit()
-    cur.execute("SELECT * FROM promemoria ORDER BY completato ASC;")
-    lista_promemoria = cur.fetchall()
-    cur.execute("SELECT username FROM utenti ORDER BY username ASC;")
-    lista_utenti = cur.fetchall()
-    cur.close()
-    conn.close()
-    return render_template("promemoria.html", promemoria=lista_promemoria, lista_utenti=lista_utenti)
-
-@app.route("/fornitori", methods=["GET", "POST"])
-def fornitori():
-    conn = get_db_connection()
-    cur = conn.cursor()
-    if request.method == "POST" and request.form.get("nome_azienda"):
-        cur.execute("INSERT INTO fornitori (nome_azienda, settore_note, indirizzo, p_iva, telefono, email) VALUES (%s, %s, %s, %s, %s, %s) ON CONFLICT (nome_azienda) DO NOTHING;",
-                    (request.form.get("nome_azienda"), request.form.get("settore_note"), request.form.get("indirizzo"), request.form.get("p_iva"), request.form.get("telefono"), request.form.get("email")))
-        conn.commit()
-    cur.execute("SELECT * FROM fornitori ORDER BY nome_azienda ASC;")
-    lista = cur.fetchall()
-    cur.close()
-    conn.close()
-    return render_template("fornitori.html", fornitori=lista)
-
-@app.route("/fornitore/<int:forn_id>")
-def dettaglio_fornitore(forn_id):
-    conn = get_db_connection()
-    cur = conn.cursor()
-    cur.execute("SELECT * FROM fornitori WHERE id = %s;", (forn_id,))
-    fornitore = cur.fetchone()
-    cur.execute("SELECT * FROM contatti_tecnici WHERE fornitore_id = %s;", (forn_id,))
-    contatti = cur.fetchall()
-    cur.close()
-    conn.close()
-    return render_template("dettaglio_fornitore.html", fornitore=fornitore, contatti=contatti)
-
-@app.route("/documenti", defaults={"cartella_id": None}, methods=["GET", "POST"])
-@app.route("/documenti/<int:cartella_id>", methods=["GET", "POST"])
-def documenti(cartella_id):
-    conn = get_db_connection()
-    cur = conn.cursor()
-    if request.method == "POST":
-        if request.form.get("azione") == "crea_cartella":
-            cur.execute("INSERT INTO cartelle (nome, parent_id) VALUES (%s, %s);", (request.form.get("nome_cartella"), cartella_id))
-            conn.commit()
-        elif request.files.get("file_caricato"):
-            f = request.files.get("file_caricato")
-            cur.execute("INSERT INTO documenti (cartella_id, nome_file, tipo_file, dati_file) VALUES (%s, %s, %s, %s);", (cartella_id, f.filename, f.mimetype, f.read()))
-            conn.commit()
-    cur.execute("SELECT * FROM cartelle WHERE parent_id " + ("= %s" if cartella_id else "IS NULL"), (cartella_id,) if cartella_id else ())
-    sottocartelle = cur.fetchall()
-    cur.execute("SELECT id, nome_file FROM documenti WHERE cartella_id " + ("= %s" if cartella_id else "IS NULL"), (cartella_id,) if cartella_id else ())
-    lista_file = cur.fetchall()
-    cur.close()
-    conn.close()
-    return render_template("documenti.html", sottocartelle=sottocartelle, lista_file=lista_file, cartella_corrente=None, percorso_breadcrumb=[])
-
-@app.route("/manutenzioni")
-def manutenzioni():
-    conn = get_db_connection()
-    cur = conn.cursor()
-    cur.execute("SELECT * FROM prodotti WHERE in_manutenzione = TRUE ORDER BY nome ASC;")
-    prodotti = cur.fetchall()
-    cur.close()
-    conn.close()
-    return render_template("manutenzioni.html", prodotti=prodotti)
-
-@app.route("/storico_manutenzioni")
-def storico_manutenzioni():
-    conn = get_db_connection()
-    cur = conn.cursor()
-    cur.execute("SELECT * FROM storico_manutenzioni ORDER BY registrato_il DESC;")
-    storico = cur.fetchall()
-    cur.close()
-    conn.close()
-    return render_template("storico_manutenzioni.html", storico=storico)
-
-@app.route("/carico", methods=["GET", "POST"])
-def carico():
-    if request.method == "POST" and request.form.get("qr_code"):
-        conn = get_db_connection()
-        cur = conn.cursor()
-        cur.execute("UPDATE prodotti SET quantita = quantita + %s WHERE qr_code = %s;", (int(request.form.get("quantita", 1)), request.form.get("qr_code")))
-        conn.commit()
-        cur.close()
-        conn.close()
-        return redirect(url_for("gestisci_prodotto", qr_code=request.form.get("qr_code")))
-    return render_template("carico.html")
-
-@app.route("/scarico", methods=["GET", "POST"])
-def scarico():
-    if request.method == "POST" and request.form.get("qr_code"):
-        conn = get_db_connection()
-        cur = conn.cursor()
-        cur.execute("SELECT quantita FROM prodotti WHERE qr_code = %s;", (request.form.get("qr_code"),))
-        prod = cur.fetchone()
-        if prod:
-            nuova = max(0, prod['quantita'] - int(request.form.get("quantita", 1)))
-            cur.execute("UPDATE prodotti SET quantita = %s WHERE qr_code = %s;", (nuova, request.form.get("qr_code")))
-            conn.commit()
-        cur.close()
-        conn.close()
-        return redirect(url_for("gestisci_prodotto", qr_code=request.form.get("qr_code")))
-    return render_template("scarico.html")
-
-@app.route("/scanner_globale", methods=["GET", "POST"])
-def scanner_globale():
-    if request.method == "POST" and request.form.get("qr_code"):
-        return redirect(url_for("gestisci_prodotto", qr_code=request.form.get("qr_code").strip()))
-    return render_template("scanner_globale.html")
-
-@app.route("/gestisci/<qr_code>")
-def gestisci_prodotto(qr_code):
-    conn = get_db_connection()
-    cur = conn.cursor()
-    cur.execute("SELECT * FROM prodotti WHERE qr_code = %s;", (qr_code,))
-    prodotto = cur.fetchone()
-    cur.close()
-    conn.close()
-    return render_template("gestisci.html", prodotto=prodotto)
-
-@app.route("/aggiorna_prodotto/<qr_code>", methods=["POST"])
-def modifica_prodotto(qr_code):
-    conn = get_db_connection()
-    cur = conn.cursor()
-    cur.execute("UPDATE prodotti SET nome = %s, sap = %s, peso = %s, posizione = %s, soglia_minima = %s WHERE qr_code = %s;",
-                (request.form.get("nome"), request.form.get("sap"), request.form.get("peso"), request.form.get("posizione"), int(request.form.get("soglia_minima", 3)), qr_code))
-    conn.commit()
-    cur.close()
-    conn.close()
-    return redirect(url_for("gestisci_prodotto", qr_code=qr_code))
-
-@app.route("/aggiungi_prodotto", methods=["POST"])
-def aggiungi_prodotto():
-    qr = request.form.get("qr_code")
-    nome = request.form.get("nome")
-    flag = 1 if request.form.get("magazzino_pesante") else 0
-    if qr and nome:
-        conn = get_db_connection()
-        cur = conn.cursor()
-        cur.execute("INSERT INTO prodotti (qr_code, nome, sap, quantita, posizione, magazzino_pesante) VALUES (%s, %s, %s, %s, %s, %s) ON CONFLICT (qr_code) DO UPDATE SET quantita = prodotti.quantita + EXCLUDED.quantita;",
-                    (qr, nome, request.form.get("sap"), int(request.form.get("quantita", 0)), request.form.get("posizione"), flag))
-        conn.commit()
-        cur.close()
-        conn.close()
-    return redirect(url_for("magazzino_pesante") if flag == 1 else url_for("index"))
 
 if __name__ == "__main__":
     app.run(debug=True)
