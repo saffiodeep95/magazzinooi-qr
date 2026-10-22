@@ -278,7 +278,7 @@ def init_db():
         conn.commit()
         cur.close()
         conn.close()
-        print("Database e permessi inizializzati con successo.")
+        print("Database e permessi Gestionale OMG inizializzati con successo.")
     except Exception as e:
         print(f"Errore init_db: {e}")
 
