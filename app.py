@@ -429,6 +429,7 @@ def esportazioni():
 
 @app.route("/esporta_inventario")
 @app.route("/esporta_fornitori_csv")
+@app.route("/esporta_fornitori")
 def esporta_inventario():
     conn = get_db_connection()
     cur = conn.cursor()
@@ -494,6 +495,19 @@ def stampa_singolo_qr(qr_code):
         flash("Prodotto non trovato.", "error")
         return redirect(url_for("index"))
     return render_template("stampa_singolo_qr.html", prodotto=prodotto)
+
+@app.route("/stampa_intervento/<int:intervento_id>")
+def stampa_intervento(intervento_id):
+    conn = get_db_connection()
+    cur = conn.cursor()
+    cur.execute("SELECT * FROM richieste_manutenzione WHERE id = %s;", (intervento_id,))
+    intervento = cur.fetchone()
+    cur.close()
+    conn.close()
+    if not intervento:
+        flash("Intervento non trovato.", "error")
+        return redirect(url_for("richieste_manutenzione"))
+    return render_template("stampa_intervento.html", intervento=intervento)
 
 # ================= CAMBI SERIE & ALIAS =================
 @app.route("/cambi_serie")
@@ -947,7 +961,7 @@ def promemoria():
     conn.close()
     return render_template("promemoria.html", promemoria=lista_promemoria, lista_utenti=lista_utenti, puo_assegnare=(is_admin or puo_assegnare))
 
-# ================= FORNITORI & CONTATTI =================
+# ================= FORNITORI & CONTATTI TECNICI =================
 @app.route("/fornitori", methods=["GET", "POST"])
 def fornitori():
     if not (session.get('is_admin') or session.get('puo_gestire_fornitori', 1)):
@@ -976,6 +990,45 @@ def fornitori():
     cur.close()
     conn.close()
     return render_template("fornitori.html", fornitori=lista_fornitori)
+
+@app.route("/fornitore/<int:forn_id>")
+def dettaglio_fornitore(forn_id):
+    if not (session.get('is_admin') or session.get('puo_gestire_fornitori', 1)):
+        flash("Accesso non autorizzato.", "error")
+        return redirect(url_for('index'))
+    conn = get_db_connection()
+    cur = conn.cursor()
+    cur.execute("SELECT * FROM fornitori WHERE id = %s;", (forn_id,))
+    fornitore = cur.fetchone()
+    cur.execute("SELECT * FROM contatti_tecnici WHERE fornitore_id = %s;", (forn_id,))
+    contatti = cur.fetchall()
+    cur.close()
+    conn.close()
+    if not fornitore:
+        flash("Fornitore non trovato.", "error")
+        return redirect(url_for('fornitori'))
+    return render_template("dettaglio_fornitore.html", fornitore=fornitore, contatti=contatti)
+
+@app.route("/aggiungi_contatto_tecnico/<int:forn_id>", methods=["POST"])
+def aggiungi_contatto_tecnico(forn_id):
+    if not (session.get('is_admin') or session.get('puo_gestire_fornitori', 1)):
+        return redirect(url_for('index'))
+    nome = request.form.get("nome")
+    telefono = request.form.get("telefono")
+    mansione = request.form.get("mansione", "")
+    email = request.form.get("email", "")
+    if nome and telefono:
+        conn = get_db_connection()
+        cur = conn.cursor()
+        cur.execute("""
+            INSERT INTO contatti_tecnici (fornitore_id, nome, telefono, mansione, email)
+            VALUES (%s, %s, %s, %s, %s);
+        """, (forn_id, nome, telefono, mansione, email))
+        conn.commit()
+        cur.close()
+        conn.close()
+        flash("Contatto tecnico aggiunto!", "success")
+    return redirect(url_for('dettaglio_fornitore', forn_id=forn_id))
 
 # ================= DOCUMENTI & FILE =================
 @app.route("/documenti", defaults={"cartella_id": None}, methods=["GET", "POST"])
@@ -1018,7 +1071,7 @@ def documenti(cartella_id):
     
     cur.execute("SELECT * FROM cartelle WHERE parent_id " + ("= %s" if cartella_id else "IS NULL") + " ORDER BY nome ASC;", (cartella_id,) if cartella_id else ())
     sottocartelle = cur.fetchall()
-    cur.execute("SELECT id, nome_file, tipo_file, caricato_il FROM documentos WHERE cartella_id " + ("= %s" if cartella_id else "IS NULL") + " ORDER BY nome_file ASC;", (cartella_id,) if cartella_id else ())
+    cur.execute("SELECT id, nome_file, tipo_file, caricato_il FROM documenti WHERE cartella_id " + ("= %s" if cartella_id else "IS NULL") + " ORDER BY nome_file ASC;", (cartella_id,) if cartella_id else ())
     lista_file = cur.fetchall()
     cur.close()
     conn.close()
@@ -1050,10 +1103,10 @@ def elimina_file(file_id):
         return redirect(url_for('documenti'))
     conn = get_db_connection()
     cur = conn.cursor()
-    cur.execute("SELECT cartella_id FROM documentos WHERE id = %s;", (file_id,))
+    cur.execute("SELECT cartella_id FROM documenti WHERE id = %s;", (file_id,))
     res = cur.fetchone()
     cartella_id = res['cartella_id'] if res else None
-    cur.execute("DELETE FROM documentos WHERE id = %s;", (file_id,))
+    cur.execute("DELETE FROM documenti WHERE id = %s;", (file_id,))
     conn.commit()
     cur.close()
     conn.close()
@@ -1097,6 +1150,61 @@ def storico_manutenzioni():
     except Exception:
         pass
     return render_template("storico_manutenzioni.html", storico=storico)
+
+@app.route("/manda_in_manutenzione/<qr_code>", methods=["POST"])
+def manda_in_manutenzione(qr_code):
+    cliente = request.form.get("cliente_manutenzione")
+    qta = int(request.form.get("quantita_manutenzione", 1))
+    data_sp = request.form.get("data_spedizione", "")
+    vettore = request.form.get("vettore", "")
+    ordine_amm = True if request.form.get("ordine_amministrativo") else False
+    note = request.form.get("note_manutenzione", "")
+
+    conn = get_db_connection()
+    cur = conn.cursor()
+    cur.execute("SELECT * FROM prodotti WHERE qr_code = %s;", (qr_code,))
+    prod = cur.fetchone()
+    if prod:
+        nuova_qta = max(0, prod['quantita'] - qta)
+        cur.execute("""
+            UPDATE prodotti 
+            SET quantita = %s, in_manutenzione = TRUE, cliente_manutenzione = %s, 
+                quantita_manutenzione = %s, data_spedizione = %s, vettore = %s, 
+                ordine_amministrativo = %s, note_manutenzione = %s
+            WHERE qr_code = %s;
+        """, (nuova_qta, cliente, qta, data_sp, vettore, ordine_amm, note, qr_code))
+        conn.commit()
+        flash("Articolo inviato in manutenzione esterna!", "success")
+    cur.close()
+    conn.close()
+    return redirect(url_for("gestisci_prodotto", qr_code=qr_code))
+
+@app.route("/rientra_manutenzione/<qr_code>", methods=["POST"])
+def rientra_manutenzione(qr_code):
+    data_ric = request.form.get("data_riconsegna", "")
+    conn = get_db_connection()
+    cur = conn.cursor()
+    cur.execute("SELECT * FROM prodotti WHERE qr_code = %s;", (qr_code,))
+    prod = cur.fetchone()
+    if prod and prod['in_manutenzione']:
+        qta_rientro = prod['quantita_manutenzione'] or 0
+        cur.execute("""
+            UPDATE prodotti 
+            SET quantita = quantita + %s, in_manutenzione = FALSE, 
+                cliente_manutenzione = NULL, quantita_manutenzione = 0, 
+                data_riconsegna = %s
+            WHERE qr_code = %s;
+        """, (qta_rientro, data_ric, qr_code))
+        
+        cur.execute("""
+            INSERT INTO storico_manutenzioni (nome_prodotto, qr_code, sap, cliente, quantita, data_spedizione, data_riconsegna, vettore, ordine_amministrativo, note)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s);
+        """, (prod['nome'], prod['qr_code'], prod['sap'], prod['cliente_manutenzione'], qta_rientro, prod['data_spedizione'], data_ric, prod['vettore'], prod['ordine_amministrativo'], prod['note_manutenzione']))
+        conn.commit()
+        flash("Articolo rientrato dalla manutenzione e registrato nello storico!", "success")
+    cur.close()
+    conn.close()
+    return redirect(url_for("manutenzioni"))
 
 # ================= CARICO, SCARICO & SCANNER =================
 @app.route("/carico", methods=["GET", "POST"])
@@ -1155,6 +1263,44 @@ def gestisci_prodotto(qr_code):
         flash("Prodotto non trovato!", "error")
         return redirect(url_for("index"))
     return render_template("gestisci.html", prodotto=prodotto)
+
+@app.route("/modifica/<qr_code>", methods=["POST"])
+def modifica_prodotto(qr_code):
+    if not (session.get('is_admin') or session.get('puo_modificare_prodotti', 1)):
+        flash("Permesso negato.", "error")
+        return redirect(url_for("gestisci_prodotto", qr_code=qr_code))
+    nome = request.form.get("nome")
+    sap = request.form.get("sap", "")
+    peso = request.form.get("peso", "")
+    posizione = request.form.get("posizione", "")
+    soglia_minima = int(request.form.get("soglia_minima", 3))
+    
+    conn = get_db_connection()
+    cur = conn.cursor()
+    cur.execute("""
+        UPDATE prodotti 
+        SET nome = %s, sap = %s, peso = %s, posizione = %s, soglia_minima = %s 
+        WHERE qr_code = %s;
+    """, (nome, sap, peso, posizione, soglia_minima, qr_code))
+    conn.commit()
+    cur.close()
+    conn.close()
+    flash("Articolo aggiornato con successo!", "success")
+    return redirect(url_for("gestisci_prodotto", qr_code=qr_code))
+
+@app.route("/elimina/<qr_code>", methods=["POST"])
+def elimina_prodotto(qr_code):
+    if not (session.get('is_admin') or session.get('puo_eliminare', 0)):
+        flash("Non hai i permessi per eliminare gli articoli.", "error")
+        return redirect(url_for("gestisci_prodotto", qr_code=qr_code))
+    conn = get_db_connection()
+    cur = conn.cursor()
+    cur.execute("DELETE FROM prodotti WHERE qr_code = %s;", (qr_code,))
+    conn.commit()
+    cur.close()
+    conn.close()
+    flash("Articolo eliminato dal magazzino.", "success")
+    return redirect(url_for("index"))
 
 @app.route("/aggiungi", methods=["POST"])
 def aggiungi_prodotto():
