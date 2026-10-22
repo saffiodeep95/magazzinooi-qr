@@ -276,6 +276,21 @@ def index():
         if res_ia:
             interventi_attesa_count = res_ia['count']
 
+        if username:
+            cur.execute("SELECT COUNT(*) as count FROM richieste_manutenzione WHERE stato != 'Completata' AND assegnato_a LIKE %s;", (f"%{username}%",))
+            res_int = cur.fetchone()
+            if res_int:
+                interventi_assegnati_count = res_int['count']
+
+            cur.execute("SELECT * FROM notifiche WHERE destinatario = %s AND letta = FALSE ORDER BY creato_il DESC;", (username,))
+            for n in cur.fetchall():
+                notifiche_attive.append({
+                    'titolo': n['titolo'], 
+                    'messaggio': n['messaggio'], 
+                    'link': n['link'],
+                    'data': n['creato_il'].strftime('%d/%m/%Y %H:%M') if n['creato_il'] else ''
+                })
+
         cur.close()
         conn.close()
         
@@ -627,8 +642,7 @@ def scarico():
 
 @app.route("/scanner_globale", methods=["GET", "POST"])
 def scanner_globale():
-    if request.method == "POST" and request.form.get("qr_code"):
-        return redirect(url_for("gestisci_prodotto", qr_code=request.form.get("qr_code").strip()))
+    ... # scanner logic
     return render_template("scanner_globale.html")
 
 @app.route("/gestisci/<qr_code>")
