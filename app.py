@@ -1,5 +1,5 @@
 # ========================================================================
-# Gestionale OMG Application - Codice Completo Definitivo
+# Gestionale OMG Application - Codice Definitivo e Pulito
 # Copyright (c) 2026 Marco Pavan. All Rights Reserved.
 # ========================================================================
 
@@ -120,16 +120,6 @@ def init_db():
         """)
 
         cur.execute("""
-            CREATE TABLE IF NOT EXISTS intervento_ricambi (
-                id SERIAL PRIMARY KEY,
-                intervento_id INT REFERENCES richieste_manutenzione(id) ON DELETE CASCADE,
-                qr_code VARCHAR(255),
-                nome_ricambio VARCHAR(255),
-                quantita INT DEFAULT 1
-            );
-        """)
-
-        cur.execute("""
             CREATE TABLE IF NOT EXISTS utenti (
                 id SERIAL PRIMARY KEY,
                 username VARCHAR(255) UNIQUE NOT NULL,
@@ -238,10 +228,9 @@ def require_login():
     if request.endpoint and request.endpoint not in allowed_routes and 'username' not in session:
         return redirect(url_for('login'))
 
-# --- ROTTE PRINCIPALI E DASHBOARD ---
+# 1. Dashboard Principale
 @app.route("/")
 @app.route("/index")
-@app.route("/index.html")
 def index():
     prodotti, prodotti_sotto_soglia = [], []
     promemoria_urgenti = 0
@@ -307,9 +296,8 @@ def index():
                            interventi_assegnati_count=interventi_assegnati_count,
                            notifiche_attive=notifiche_attive)
 
-# --- AUTENTICAZIONE ---
+# 2. Login e Autenticazione
 @app.route("/login", methods=["GET", "POST"])
-@app.route("/login.html", methods=["GET", "POST"])
 def login():
     if request.method == "POST":
         username = request.form.get("username")
@@ -334,7 +322,6 @@ def logout():
     return redirect(url_for('login'))
 
 @app.route("/registra", methods=["GET", "POST"])
-@app.route("/registra.html", methods=["GET", "POST"])
 def registra():
     if request.method == "POST":
         username = request.form.get("username")
@@ -353,9 +340,8 @@ def registra():
             conn.close()
     return render_template("registra.html")
 
-# --- MAGAZZINO E PRODOTTI ---
+# 3. Magazzino Pesante e Gestione Articoli
 @app.route("/magazzino_pesante")
-@app.route("/magazzino_pesante.html")
 def magazzino_pesante():
     prodotti = []
     try:
@@ -372,7 +358,6 @@ def magazzino_pesante():
     return render_template("magazzino_pesante.html", prodotti=prodotti)
 
 @app.route("/gestisci/<qr_code>")
-@app.route("/gestisci.html/<qr_code>")
 def gestisci_prodotto(qr_code):
     conn = get_db_connection()
     cur = conn.cursor()
@@ -421,9 +406,8 @@ def elimina_prodotto(qr_code):
     conn.close()
     return redirect(url_for("index"))
 
-# --- CARICO, SCARICO E SCANNER ---
+# 4. Carico, Scarico e Scanner
 @app.route("/carico", methods=["GET", "POST"])
-@app.route("/carico.html", methods=["GET", "POST"])
 def carico():
     if request.method == "POST" and request.form.get("qr_code"):
         conn = get_db_connection()
@@ -436,7 +420,6 @@ def carico():
     return render_template("carico.html")
 
 @app.route("/scarico", methods=["GET", "POST"])
-@app.route("/scarico.html", methods=["GET", "POST"])
 def scarico():
     if request.method == "POST" and request.form.get("qr_code"):
         conn = get_db_connection()
@@ -453,15 +436,13 @@ def scarico():
     return render_template("scarico.html")
 
 @app.route("/scanner_globale", methods=["GET", "POST"])
-@app.route("/scanner_globale.html", methods=["GET", "POST"])
 def scanner_globale():
     if request.method == "POST" and request.form.get("qr_code"):
         return redirect(url_for("gestisci_prodotto", qr_code=request.form.get("qr_code").strip()))
     return render_template("scanner_globale.html")
 
-# --- MANUTENZIONI E INTERVENTI ---
+# 5. Manutenzioni e Storico
 @app.route("/manutenzioni")
-@app.route("/manutenzioni.html")
 def manutenzioni():
     conn = get_db_connection()
     cur = conn.cursor()
@@ -472,7 +453,6 @@ def manutenzioni():
     return render_template("manutenzioni.html", prodotti=prodotti)
 
 @app.route("/storico_manutenzioni")
-@app.route("/storico_manutenzioni.html")
 def storico_manutenzioni():
     conn = get_db_connection()
     cur = conn.cursor()
@@ -483,7 +463,6 @@ def storico_manutenzioni():
     return render_template("storico_manutenzioni.html", storico=storico)
 
 @app.route("/richieste_manutenzione", methods=["GET", "POST"])
-@app.route("/richieste_manutenzione.html", methods=["GET", "POST"])
 def richieste_manutenzione():
     conn = get_db_connection()
     cur = conn.cursor()
@@ -514,9 +493,8 @@ def cambia_stato_intervento(intervento_id):
     conn.close()
     return redirect(url_for("richieste_manutenzione"))
 
-# --- FORNITORI E IMPORTAZIONI ---
+# 6. Fornitori
 @app.route("/fornitori", methods=["GET", "POST"])
-@app.route("/fornitori.html", methods=["GET", "POST"])
 def fornitori():
     conn = get_db_connection()
     cur = conn.cursor()
@@ -531,7 +509,6 @@ def fornitori():
     return render_template("fornitori.html", fornitori=lista)
 
 @app.route("/fornitore/<int:forn_id>")
-@app.route("/dettaglio_fornitore.html/<int:forn_id>")
 def dettaglio_fornitore(forn_id):
     conn = get_db_connection()
     cur = conn.cursor()
@@ -543,18 +520,9 @@ def dettaglio_fornitore(forn_id):
     conn.close()
     return render_template("dettaglio_fornitore.html", fornitore=fornitore, contatti=contatti)
 
-@app.route("/importa_intelligente", methods=["GET", "POST"])
-def importa_intelligente():
-    return redirect(url_for("fornitori"))
-
-@app.route("/esporta_fornitori_intelligente")
-def esporta_fornitori_intelligente():
-    return redirect(url_for("fornitori"))
-
-# --- DOCUMENTI E UPLOAD ---
+# 7. Documenti e Upload
 @app.route("/documenti", defaults={"cartella_id": None}, methods=["GET", "POST"])
 @app.route("/documenti/<int:cartella_id>", methods=["GET", "POST"])
-@app.route("/documenti.html", defaults={"cartella_id": None}, methods=["GET", "POST"])
 def documenti(cartella_id):
     conn = get_db_connection()
     cur = conn.cursor()
@@ -575,13 +543,11 @@ def documenti(cartella_id):
     return render_template("documenti.html", sottocartelle=sottocartelle, lista_file=lista_file, cartella_corrente=None, percorso_breadcrumb=[])
 
 @app.route("/upload", methods=["GET", "POST"])
-@app.route("/upload.html", methods=["GET", "POST"])
 def upload():
     return render_template("upload.html")
 
-# --- PROMEMORIA, ORE E CAMBI SERIE ---
+# 8. Promemoria, Report Ore e Cambi Serie
 @app.route("/promemoria", methods=["GET", "POST"])
-@app.route("/promemoria.html", methods=["GET", "POST"])
 def promemoria():
     conn = get_db_connection()
     cur = conn.cursor()
@@ -598,7 +564,6 @@ def promemoria():
     return render_template("promemoria.html", promemoria=lista_promemoria, lista_utenti=lista_utenti)
 
 @app.route("/report_ore")
-@app.route("/report_ore.html")
 def report_ore():
     conn = get_db_connection()
     cur = conn.cursor()
@@ -611,13 +576,11 @@ def report_ore():
     return render_template("report_ore.html", utenti=utenti, interventi=interventi, totale_ore_generale=0, totale_interventi=len(interventi))
 
 @app.route("/cambi_serie")
-@app.route("/cambi_serie.html")
 def cambi_serie():
     return render_template("cambi_serie.html", cambi=[])
 
-# --- ESPORTAZIONI E STAMPE ---
+# 9. Esportazioni e Stampe QR
 @app.route("/esportazioni")
-@app.route("/esportazioni.html")
 def esportazioni():
     return render_template("esportazioni.html")
 
@@ -652,7 +615,6 @@ def esporta_interventi():
     return Response(output.getvalue(), mimetype="text/csv", headers={"Content-disposition": "attachment; filename=Report_Interventi.csv"})
 
 @app.route("/stampa_tutti_qr")
-@app.route("/stampa_tutti_qr.html")
 def stampa_tutti_qr():
     conn = get_db_connection()
     cur = conn.cursor()
@@ -663,7 +625,6 @@ def stampa_tutti_qr():
     return render_template("stampa_tutti_qr.html", prodotti=prodotti)
 
 @app.route("/stampa_multipla_qr")
-@app.route("/stampa_multipla_qr.html")
 def stampa_multipla_qr():
     conn = get_db_connection()
     cur = conn.cursor()
@@ -674,7 +635,6 @@ def stampa_multipla_qr():
     return render_template("stampa_multipla_qr.html", prodotti=prodotti)
 
 @app.route("/stampa_singolo_qr/<qr_code>")
-@app.route("/stampa_singolo_qr.html/<qr_code>")
 def stampa_singolo_qr(qr_code):
     conn = get_db_connection()
     cur = conn.cursor()
@@ -685,7 +645,6 @@ def stampa_singolo_qr(qr_code):
     return render_template("stampa_singolo_qr.html", prodotto=prodotto)
 
 @app.route("/stampa_intervento/<int:intervento_id>")
-@app.route("/stampa_intervento.html/<int:intervento_id>")
 def stampa_intervento(intervento_id):
     conn = get_db_connection()
     cur = conn.cursor()
@@ -695,9 +654,8 @@ def stampa_intervento(intervento_id):
     conn.close()
     return render_template("stampa_intervento.html", intervento=intervento)
 
-# --- AMMINISTRAZIONE UTENTI E LOG ---
+# 10. Amministrazione Utenti
 @app.route("/admin_utenti")
-@app.route("/admin_utenti.html")
 def admin_utenti():
     if not session.get('is_admin'):
         return redirect(url_for('index'))
@@ -710,19 +668,6 @@ def admin_utenti():
     cur.close()
     conn.close()
     return render_template("admin_utenti.html", utenti=utenti, logs=logs)
-
-@app.route("/log_attivita")
-@app.route("/log_attivita.html")
-def log_attivita():
-    if not session.get('is_admin'):
-        return redirect(url_for('index'))
-    conn = get_db_connection()
-    cur = conn.cursor()
-    cur.execute("SELECT * FROM log_attivita ORDER BY data_ora DESC LIMIT 100;")
-    logs = cur.fetchall()
-    cur.close()
-    conn.close()
-    return render_template("log_attivita.html", logs=logs)
 
 @app.route("/toggle_permesso/<int:user_id>/<campo>", methods=["POST"])
 def toggle_permesso(user_id, campo):
