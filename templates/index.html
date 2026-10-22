@@ -25,7 +25,7 @@
             color: #1f2937;
         }
 
-        /* Sidebar Desktop con scorrimento corretto */
+        /* Sidebar Desktop con scorrimento corretto per non tagliare il fondo */
         .sidebar {
             width: var(--sidebar-width);
             height: 100vh;
@@ -37,7 +37,7 @@
             display: flex;
             flex-direction: column;
             justify-content: space-between;
-            overflow-y: auto;
+            overflow-y: auto; /* Permette di scrollare fino in fondo (Admin) */
         }
 
         .sidebar-brand {
@@ -184,8 +184,12 @@
                 </a>
 
                 <div class="sidebar-heading">Officina & Produzione</div>
-                <a href="{{ url_for('richieste_manutenzione') }}" class="nav-link-custom">
+                <!-- Richieste Intervento con Badge Notifiche -->
+                <a href="{{ url_for('richieste_manutenzione') }}" class="nav-link-custom position-relative">
                     <i class="fa-solid fa-wrench"></i> Richieste Intervento
+                    {% if interventi_assegnati_count and interventi_assegnati_count > 0 %}
+                    <span class="badge bg-danger rounded-pill ms-auto">{{ interventi_assegnati_count }}</span>
+                    {% endif %}
                 </a>
                 <a href="{{ url_for('cambi_serie') }}" class="nav-link-custom">
                     <i class="fa-solid fa-industry"></i> Cambi Serie
@@ -198,9 +202,10 @@
                 <a href="{{ url_for('fornitori') }}" class="nav-link-custom">
                     <i class="fa-solid fa-building"></i> Fornitori & Tecnici
                 </a>
+                <!-- Promemoria con Badge Notifiche -->
                 <a href="{{ url_for('promemoria') }}" class="nav-link-custom position-relative">
                     <i class="fa-solid fa-bell"></i> Promemoria
-                    {% if promemoria_urgenti > 0 %}
+                    {% if promemoria_urgenti and promemoria_urgenti > 0 %}
                     <span class="badge bg-danger rounded-pill ms-auto">{{ promemoria_urgenti }}</span>
                     {% endif %}
                 </a>
@@ -248,26 +253,12 @@
                 <h5 class="fw-bold mb-0 text-dark">Dashboard Magazzino</h5>
             </div>
 
-            <!-- Pulsanti Azione Destra Navbar -->
+            <!-- Pulsante Export CSV Destra -->
             <div class="d-flex align-items-center gap-3">
-                
-                <!-- Campanella Notifiche Dropdown -->
-                <div class="dropdown">
-                    <button class="btn btn-light border position-relative rounded-circle" style="width: 40px; height: 40px;" type="button" id="dropNotifiche" data-bs-toggle="dropdown" aria-expanded="false" onclick="caricaNotifiche()">
-                        <i class="fa-solid fa-bell text-secondary"></i>
-                        <span id="badgeNotificheCount" class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger" style="display:none;">0</span>
-                    </button>
-                    <ul class="dropdown-menu dropdown-menu-end shadow border-0 p-2" aria-labelledby="dropNotifiche" style="width: 320px; max-height: 380px; overflow-y: auto;" id="listaNotificheDropdown">
-                        <li class="text-center text-muted small py-2">Caricamento notifiche...</li>
-                    </ul>
-                </div>
-
-                <!-- Export CSV Fast Access -->
                 <a href="{{ url_for('esportazioni') }}" class="btn btn-success btn-sm fw-semibold d-flex align-items-center gap-1">
                     <i class="fa-solid fa-file-csv fs-6"></i>
                     <span>Esporta Dati CSV</span>
                 </a>
-
             </div>
         </header>
 
@@ -287,7 +278,6 @@
 
             <!-- METRICHE STATISTICHE -->
             <div class="row g-3 mb-4">
-                
                 <div class="col-12 col-sm-6 col-xl-3">
                     <div class="card-custom p-3 d-flex align-items-center justify-content-between">
                         <div>
@@ -335,7 +325,6 @@
                         </div>
                     </div>
                 </div>
-
             </div>
 
             <!-- INVENTARIO & PULSANTI AZIONE -->
@@ -420,7 +409,7 @@
                 <a href="{{ url_for('magazzino_pesante') }}" class="nav-link-custom mb-2"><i class="fa-solid fa-weight-hanging"></i> Magazzino Pesante</a>
                 <a href="{{ url_for('manutenzioni') }}" class="nav-link-custom mb-2"><i class="fa-solid fa-truck-ramp-box"></i> Manutenzioni Esterne</a>
                 <a href="{{ url_for('storico_manutenzioni') }}" class="nav-link-custom mb-2"><i class="fa-solid fa-clock-rotate-left"></i> Storico Esterne</a>
-                <a href="{{ url_for('richieste_manutenzione') }}" class="nav-link-custom mb-2"><i class="fa-solid fa-wrench"></i> Richieste Officina</a>
+                <a href="{{ url_for('richieste_manutenzione') }}" class="nav-link-custom mb-2"><i class="fa-solid fa-wrench"></i> Richieste Intervento</a>
                 <a href="{{ url_for('cambi_serie') }}" class="nav-link-custom mb-2"><i class="fa-solid fa-industry"></i> Cambi Serie</a>
                 <a href="{{ url_for('report_ore') }}" class="nav-link-custom mb-2"><i class="fa-solid fa-user-clock"></i> Report Ore</a>
                 <a href="{{ url_for('fornitori') }}" class="nav-link-custom mb-2"><i class="fa-solid fa-building"></i> Fornitori</a>
@@ -493,72 +482,5 @@
 
     <!-- JS Bootstrap -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-    <script>
-        function caricaNotifiche() {
-            fetch('/api/notifiche')
-                .then(response => response.json())
-                .then(data => {
-                    const container = document.getElementById('listaNotificheDropdown');
-                    const badge = document.getElementById('badgeNotificheCount');
-                    container.innerHTML = '';
-                    
-                    if (data.length === 0) {
-                        container.innerHTML = '<li><span class="dropdown-item text-muted text-center small py-2">Nessuna notifica</span></li>';
-                        badge.style.display = 'none';
-                        return;
-                    }
-
-                    let nonLette = 0;
-                    data.forEach(n => {
-                        if (!n.letta) nonLette++;
-                        let item = document.createElement('li');
-                        let bgClass = n.letta ? '' : 'bg-light fw-bold';
-                        
-                        // Gestione Orario e Data a destra
-                        let timestampVal = n.data || n.orario || '';
-                        let dataOraTesto = '';
-                        if (timestampVal) {
-                            let displayTime = timestampVal.includes(' ') ? timestampVal.split(' ')[1].substring(0, 5) : timestampVal;
-                            let displayDate = timestampVal.includes(' ') ? timestampVal.split(' ')[0] : '';
-                            dataOraTesto = <small class="text-muted float-end" style="font-size: 0.70rem;"><i class="fa-regular fa-clock me-1"></i>${displayTime} <span class="opacity-75">${displayDate}</span></small>;
-                        }
-
-                        item.innerHTML = `
-                            <a class="dropdown-item py-2 border-bottom ${bgClass}" href="${n.link || '#'}">
-                                <div class="d-flex justify-content-between align-items-center mb-1">
-                                    <span class="small text-primary fw-bold">${n.titolo}</span>
-                                    ${dataOraTesto}
-                                </div>
-                                <div class="text-wrap text-muted fw-normal" style="font-size: 0.85rem;">${n.messaggio}</div>
-                            </a>
-                        `;
-                        container.appendChild(item);
-                    });
-
-                    if (nonLette > 0) {
-                        badge.innerText = nonLette;
-                        badge.style.display = 'inline-block';
-                    } else {
-                        badge.style.display = 'none';
-                    }
-
-                    fetch('/api/notifiche/segna_lette', { method: 'POST' });
-                })
-                .catch(err => console.error("Errore caricamento notifiche:", err));
-        }
-
-        document.addEventListener("DOMContentLoaded", function() {
-            fetch('/api/notifiche')
-                .then(res => res.json())
-                .then(data => {
-                    const badge = document.getElementById('badgeNotificheCount');
-                    let nonLette = data.filter(n => !n.letta).length;
-                    if (nonLette > 0) {
-                        badge.innerText = nonLette;
-                        badge.style.display = 'inline-block';
-                    }
-                });
-        });
-    </script>
 </body>
 </html>
