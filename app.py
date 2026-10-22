@@ -1456,11 +1456,16 @@ def elimina_file(file_id):
         return redirect(url_for("documenti", cartella_id=cartella_id))
     return redirect(url_for("documenti"))
 
-# --- ALTRE ROTTE GESTIONALE ---
+# --- ALTRE ROTTE GESTIONALE E ESPORTAZIONI CSV ---
 @app.route("/esportazioni")
 @app.route("/esportazioni.html")
 def esportazioni():
     return render_template("esportazioni.html")
+
+@app.route("/esporta_csv")
+@app.route("/esportazione_csv")
+def esporta_csv():
+    return redirect(url_for("esporta_inventario"))
 
 @app.route("/esporta_inventario")
 def esporta_inventario():
@@ -1590,7 +1595,9 @@ def magazzino_pesante():
         cur.close()
         conn.close()
         for p in tutti:
-            if p.get('magazzino_pesante') in [1, '1', True, 1.0]:
+            val_pesante = p.get('magazzino_pesante')
+            is_pesante = (val_pesante == 1 or val_pesante == '1' or val_pesante is True or val_pesante == 1.0)
+            if is_pesante:
                 prodotti.append(p)
     except Exception:
         pass
@@ -1751,6 +1758,7 @@ def gestisci_prodotto(qr_code):
     return render_template("gestisci.html", prodotto=prodotto, fornitori=lista_fornitori)
 
 @app.route("/aggiorna/<qr_code>", methods=["POST"])
+@app.route("/aggiorna_prodotto/<qr_code>", methods=["POST"])
 def aggiorna_prodotto(qr_code):
     if not (session.get('is_admin') or session.get('puo_modificare_prodotti', 1)):
         flash("Permesso negato per modificare gli articoli.", "error")
@@ -1780,6 +1788,7 @@ def aggiorna_prodotto(qr_code):
     return redirect(url_for("gestisci_prodotto", qr_code=qr_code))
 
 @app.route("/aggiungi", methods=["POST"])
+@app.route("/aggiungi_prodotto", methods=["POST"])
 def aggiungi_prodotto():
     if not (session.get('is_admin') or session.get('puo_aggiungere_prodotti', 1)):
         flash("Permesso negato per inserire nuovi prodotti.", "error")
@@ -1899,12 +1908,15 @@ def ripristina_magazzino(qr_code):
     return redirect(url_for("gestisci_prodotto", qr_code=qr_code))
 
 @app.route("/elimina", methods=["POST"])
-def elimina_prodotto():
+@app.route("/elimina_prodotto/<qr_code>", methods=["POST"])
+def elimina_prodotto(qr_code=None):
     if not (session.get('is_admin') or session.get('puo_eliminare', 0)):
         flash("Permesso negato per eliminare prodotti.", "error")
         return redirect(url_for("index"))
 
-    qr_code = request.form.get("qr_code")
+    if not qr_code:
+        qr_code = request.form.get("qr_code")
+
     if qr_code:
         try:
             conn = get_db_connection()
