@@ -1,5 +1,5 @@
 # ========================================================================
-# Gestionale OMG Application - Complete Routes System
+# Gestionale OMG Application - All Templates & Routes Mapped
 # Copyright (c) 2026 Marco Pavan. All Rights Reserved.
 # ========================================================================
 
@@ -238,9 +238,10 @@ def require_login():
     if request.endpoint and request.endpoint not in allowed_routes and 'username' not in session:
         return redirect(url_for('login'))
 
-# 1. Index / Home
+# 1. index.html
 @app.route("/")
 @app.route("/index")
+@app.route("/index.html")
 def index():
     prodotti, prodotti_sotto_soglia = [], []
     promemoria_urgenti = 0
@@ -259,36 +260,29 @@ def index():
         
         cur.execute("SELECT COUNT(*) as count FROM promemoria WHERE completato = FALSE;")
         res_p = cur.fetchone()
-        if res_p:
-            promemoria_urgenti = res_p['count']
+        if res_p: promemoria_urgenti = res_p['count']
             
         cur.execute("SELECT COUNT(*) as count FROM richieste_manutenzione WHERE stato = 'Aperta';")
         res_io = cur.fetchone()
-        if res_io:
-            interventi_aperti_count = res_io['count']
+        if res_io: interventi_aperti_count = res_io['count']
 
         cur.execute("SELECT COUNT(*) as count FROM richieste_manutenzione WHERE stato IN ('In Lavoro', 'In Pausa');")
         res_il = cur.fetchone()
-        if res_il:
-            interventi_in_lavoro_count = res_il['count']
+        if res_il: interventi_in_lavoro_count = res_il['count']
 
         cur.execute("SELECT COUNT(*) as count FROM richieste_manutenzione WHERE stato = 'Attesa Ricambio';")
         res_ia = cur.fetchone()
-        if res_ia:
-            interventi_attesa_count = res_ia['count']
+        if res_ia: interventi_attesa_count = res_ia['count']
 
         if username:
             cur.execute("SELECT COUNT(*) as count FROM richieste_manutenzione WHERE stato != 'Completata' AND assegnato_a LIKE %s;", (f"%{username}%",))
             res_int = cur.fetchone()
-            if res_int:
-                interventi_assegnati_count = res_int['count']
+            if res_int: interventi_assegnati_count = res_int['count']
 
             cur.execute("SELECT * FROM notifiche WHERE destinatario = %s AND letta = FALSE ORDER BY creato_il DESC;", (username,))
             for n in cur.fetchall():
                 notifiche_attive.append({
-                    'titolo': n['titolo'], 
-                    'messaggio': n['messaggio'], 
-                    'link': n['link'],
+                    'titolo': n['titolo'], 'messaggio': n['messaggio'], 'link': n['link'],
                     'data': n['creato_il'].strftime('%d/%m/%Y %H:%M') if n['creato_il'] else ''
                 })
 
@@ -313,8 +307,9 @@ def index():
                            interventi_assegnati_count=interventi_assegnati_count,
                            notifiche_attive=notifiche_attive)
 
-# 2. Autenticazione (login, logout, registra)
+# 2. login.html
 @app.route("/login", methods=["GET", "POST"])
+@app.route("/login.html", methods=["GET", "POST"])
 def login():
     if request.method == "POST":
         username = request.form.get("username")
@@ -338,7 +333,9 @@ def logout():
     session.clear()
     return redirect(url_for('login'))
 
+# 3. registra.html
 @app.route("/registra", methods=["GET", "POST"])
+@app.route("/registra.html", methods=["GET", "POST"])
 def registra():
     if request.method == "POST":
         username = request.form.get("username")
@@ -357,8 +354,9 @@ def registra():
             conn.close()
     return render_template("registra.html")
 
-# 3. Magazzino Pesante e Gestione Prodotti
+# 4. magazzino_pesante.html
 @app.route("/magazzino_pesante")
+@app.route("/magazzino_pesante.html")
 def magazzino_pesante():
     prodotti = []
     try:
@@ -374,7 +372,9 @@ def magazzino_pesante():
         pass
     return render_template("magazzino_pesante.html", prodotti=prodotti)
 
+# 5. gestisci.html
 @app.route("/gestisci/<qr_code>")
+@app.route("/gestisci.html/<qr_code>")
 def gestisci_prodotto(qr_code):
     conn = get_db_connection()
     cur = conn.cursor()
@@ -423,8 +423,9 @@ def elimina_prodotto(qr_code):
     conn.close()
     return redirect(url_for("index"))
 
-# 4. Carico, Scarico e Scanner Globale
+# 6. carico.html
 @app.route("/carico", methods=["GET", "POST"])
+@app.route("/carico.html", methods=["GET", "POST"])
 def carico():
     if request.method == "POST" and request.form.get("qr_code"):
         conn = get_db_connection()
@@ -436,7 +437,9 @@ def carico():
         return redirect(url_for("gestisci_prodotto", qr_code=request.form.get("qr_code")))
     return render_template("carico.html")
 
+# 7. scarico.html (mappato anche come rotta se richiamata)
 @app.route("/scarico", methods=["GET", "POST"])
+@app.route("/scarico.html", methods=["GET", "POST"])
 def scarico():
     if request.method == "POST" and request.form.get("qr_code"):
         conn = get_db_connection()
@@ -452,14 +455,17 @@ def scarico():
         return redirect(url_for("gestisci_prodotto", qr_code=request.form.get("qr_code")))
     return render_template("scarico.html")
 
+# 8. scanner_globale.html
 @app.route("/scanner_globale", methods=["GET", "POST"])
+@app.route("/scanner_globale.html", methods=["GET", "POST"])
 def scanner_globale():
     if request.method == "POST" and request.form.get("qr_code"):
         return redirect(url_for("gestisci_prodotto", qr_code=request.form.get("qr_code").strip()))
     return render_template("scanner_globale.html")
 
-# 5. Manutenzioni e Storico
+# 9. manutenzioni.html
 @app.route("/manutenzioni")
+@app.route("/manutenzioni.html")
 def manutenzioni():
     conn = get_db_connection()
     cur = conn.cursor()
@@ -469,7 +475,9 @@ def manutenzioni():
     conn.close()
     return render_template("manutenzioni.html", prodotti=prodotti)
 
+# 10. storico_manutenzioni.html
 @app.route("/storico_manutenzioni")
+@app.route("/storico_manutenzioni.html")
 def storico_manutenzioni():
     conn = get_db_connection()
     cur = conn.cursor()
@@ -479,7 +487,9 @@ def storico_manutenzioni():
     conn.close()
     return render_template("storico_manutenzioni.html", storico=storico)
 
+# 11. richieste_manutenzione.html
 @app.route("/richieste_manutenzione", methods=["GET", "POST"])
+@app.route("/richieste_manutenzione.html", methods=["GET", "POST"])
 def richieste_manutenzione():
     conn = get_db_connection()
     cur = conn.cursor()
@@ -510,8 +520,9 @@ def cambia_stato_intervento(intervento_id):
     conn.close()
     return redirect(url_for("richieste_manutenzione"))
 
-# 6. Fornitori
+# 12. fornitori.html
 @app.route("/fornitori", methods=["GET", "POST"])
+@app.route("/fornitori.html", methods=["GET", "POST"])
 def fornitori():
     conn = get_db_connection()
     cur = conn.cursor()
@@ -525,7 +536,9 @@ def fornitori():
     conn.close()
     return render_template("fornitori.html", fornitori=lista)
 
+# 13. dettaglio_fornitore.html
 @app.route("/fornitore/<int:forn_id>")
+@app.route("/dettaglio_fornitore.html/<int:forn_id>")
 def dettaglio_fornitore(forn_id):
     conn = get_db_connection()
     cur = conn.cursor()
@@ -537,9 +550,19 @@ def dettaglio_fornitore(forn_id):
     conn.close()
     return render_template("dettaglio_fornitore.html", fornitore=fornitore, contatti=contatti)
 
-# 7. Documenti e Upload
+# Alias richiesto dai log precedenti
+@app.route("/importa_intelligente", methods=["GET", "POST"])
+def importa_intelligente():
+    return redirect(url_for("fornitori"))
+
+@app.route("/esporta_fornitori_intelligente")
+def esporta_fornitori_intelligente():
+    return redirect(url_for("fornitori"))
+
+# 14. documenti.html
 @app.route("/documenti", defaults={"cartella_id": None}, methods=["GET", "POST"])
 @app.route("/documenti/<int:cartella_id>", methods=["GET", "POST"])
+@app.route("/documenti.html", defaults={"cartella_id": None}, methods=["GET", "POST"])
 def documenti(cartella_id):
     conn = get_db_connection()
     cur = conn.cursor()
@@ -559,12 +582,15 @@ def documenti(cartella_id):
     conn.close()
     return render_template("documenti.html", sottocartelle=sottocartelle, lista_file=lista_file, cartella_corrente=None, percorso_breadcrumb=[])
 
+# 15. upload.html
 @app.route("/upload", methods=["GET", "POST"])
+@app.route("/upload.html", methods=["GET", "POST"])
 def upload():
     return render_template("upload.html")
 
-# 8. Promemoria e Report Ore
+# 16. promemoria.html
 @app.route("/promemoria", methods=["GET", "POST"])
+@app.route("/promemoria.html", methods=["GET", "POST"])
 def promemoria():
     conn = get_db_connection()
     cur = conn.cursor()
@@ -580,7 +606,9 @@ def promemoria():
     conn.close()
     return render_template("promemoria.html", promemoria=lista_promemoria, lista_utenti=lista_utenti)
 
+# 17. report_ore.html
 @app.route("/report_ore")
+@app.route("/report_ore.html")
 def report_ore():
     conn = get_db_connection()
     cur = conn.cursor()
@@ -592,12 +620,15 @@ def report_ore():
     conn.close()
     return render_template("report_ore.html", utenti=utenti, interventi=interventi, totale_ore_generale=0, totale_interventi=len(interventi))
 
+# 18. cambi_serie.html
 @app.route("/cambi_serie")
+@app.route("/cambi_serie.html")
 def cambi_serie():
     return render_template("cambi_serie.html", cambi=[])
 
-# 9. Esportazioni e Stampe QR / Interventi
+# 19. esportazioni.html
 @app.route("/esportazioni")
+@app.route("/esportazioni.html")
 def esportazioni():
     return render_template("esportazioni.html")
 
@@ -631,7 +662,9 @@ def esporta_interventi():
         writer.writerow([r['id'], r['titolo'], r['impianto_macchina'], r['priorita'], r['tipo_guasto'], r['stato'], r['assegnato_a'], r['creato_da'], r['inizio_lavoro'], r['fine_lavoro'], r['tempo_lavorato_minuti'], r['note_lavoro']])
     return Response(output.getvalue(), mimetype="text/csv", headers={"Content-disposition": "attachment; filename=Report_Interventi.csv"})
 
+# 20. stampa_tutti_qr.html
 @app.route("/stampa_tutti_qr")
+@app.route("/stampa_tutti_qr.html")
 def stampa_tutti_qr():
     conn = get_db_connection()
     cur = conn.cursor()
@@ -641,7 +674,9 @@ def stampa_tutti_qr():
     conn.close()
     return render_template("stampa_tutti_qr.html", prodotti=prodotti)
 
+# 21. stampa_multipla_qr.html
 @app.route("/stampa_multipla_qr")
+@app.route("/stampa_multipla_qr.html")
 def stampa_multipla_qr():
     conn = get_db_connection()
     cur = conn.cursor()
@@ -651,7 +686,9 @@ def stampa_multipla_qr():
     conn.close()
     return render_template("stampa_multipla_qr.html", prodotti=prodotti)
 
+# 22. stampa_singolo_qr.html
 @app.route("/stampa_singolo_qr/<qr_code>")
+@app.route("/stampa_singolo_qr.html/<qr_code>")
 def stampa_singolo_qr(qr_code):
     conn = get_db_connection()
     cur = conn.cursor()
@@ -661,7 +698,9 @@ def stampa_singolo_qr(qr_code):
     conn.close()
     return render_template("stampa_singolo_qr.html", prodotto=prodotto)
 
+# 23. stampa_intervento.html
 @app.route("/stampa_intervento/<int:intervento_id>")
+@app.route("/stampa_intervento.html/<int:intervento_id>")
 def stampa_intervento(intervento_id):
     conn = get_db_connection()
     cur = conn.cursor()
@@ -671,8 +710,9 @@ def stampa_intervento(intervento_id):
     conn.close()
     return render_template("stampa_intervento.html", intervento=intervento)
 
-# 10. Amministrazione Utenti e Log
+# 24. admin_utenti.html e log_attivita.html
 @app.route("/admin_utenti")
+@app.route("/admin_utenti.html")
 def admin_utenti():
     if not session.get('is_admin'):
         return redirect(url_for('index'))
@@ -687,6 +727,7 @@ def admin_utenti():
     return render_template("admin_utenti.html", utenti=utenti, logs=logs)
 
 @app.route("/log_attivita")
+@app.route("/log_attivita.html")
 def log_attivita():
     if not session.get('is_admin'):
         return redirect(url_for('index'))
