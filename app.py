@@ -242,13 +242,43 @@ def require_login():
 @app.route("/index")
 def index():
     prodotti, prodotti_sotto_soglia = [], []
+    promemoria_urgenti = 0
+    interventi_aperti_count = 0
+    interventi_in_lavoro_count = 0
+    interventi_attesa_count = 0
+    interventi_assegnati_count = 0
+    notifiche_attive = []
+    
+    username = session.get('username')
     try:
         conn = get_db_connection()
         cur = conn.cursor()
         cur.execute("SELECT * FROM prodotti ORDER BY nome ASC;")
         tutti = cur.fetchall()
+        
+        cur.execute("SELECT COUNT(*) as count FROM promemoria WHERE completato = FALSE;")
+        res_p = cur.fetchone()
+        if res_p:
+            promemoria_urgenti = res_p['count']
+            
+        cur.execute("SELECT COUNT(*) as count FROM richieste_manutenzione WHERE stato = 'Aperta';")
+        res_io = cur.fetchone()
+        if res_io:
+            interventi_aperti_count = res_io['count']
+
+        cur.execute("SELECT COUNT(*) as count FROM richieste_manutenzione WHERE stato IN ('In Lavoro', 'In Pausa');")
+        res_il = cur.fetchone()
+        if res_il:
+            interventi_in_lavoro_count = res_il['count']
+
+        cur.execute("SELECT COUNT(*) as count FROM richieste_manutenzione WHERE stato = 'Attesa Ricambio';")
+        res_ia = cur.fetchone()
+        if res_ia:
+            interventi_attesa_count = res_ia['count']
+
         cur.close()
         conn.close()
+        
         for p in tutti:
             if not p.get('magazzino_pesante'):
                 prodotti.append(p)
@@ -256,7 +286,16 @@ def index():
                 prodotti_sotto_soglia.append(p)
     except Exception as e:
         print(f"Errore index: {e}")
-    return render_template("index.html", prodotti=prodotti, prodotti_sotto_soglia=prodotti_sotto_soglia)
+        
+    return render_template("index.html", 
+                           prodotti=prodotti, 
+                           prodotti_sotto_soglia=prodotti_sotto_soglia,
+                           promemoria_urgenti=promemoria_urgenti,
+                           interventi_aperti_count=interventi_aperti_count,
+                           interventi_in_lavoro_count=interventi_in_lavoro_count,
+                           interventi_attesa_count=interventi_attesa_count,
+                           interventi_assegnati_count=interventi_assegnati_count,
+                           notifiche_attive=notifiche_attive)
 
 @app.route("/magazzino_pesante")
 def magazzino_pesante():
@@ -366,6 +405,7 @@ def login():
         if user and check_password_hash(user['password'], password):
             session['username'] = user['username']
             session['is_admin'] = user['is_admin']
+            registra_log("Login effettuato")
             return redirect(url_for('index'))
         flash("Credenziali non valide", "error")
     return render_template("login.html")
