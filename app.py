@@ -1558,6 +1558,7 @@ def stampa_tutti_qr():
 
 @app.route("/stampa_multipla_qr")
 @app.route("/stampa_multipla_qr.html")
+@app.route("/stampa_qr_multipli")
 def stampa_multipla_qr():
     conn = get_db_connection()
     cur = conn.cursor()
