@@ -419,7 +419,7 @@ def magazzino_pesante():
         print(f"Errore magazzino pesante: {e}")
     return render_template("magazzino_pesante.html", prodotti=prodotti)
 
-# ================= ESPORTAZIONI CSV =================
+# ================= ESPORTAZIONI CSV & ALIAS =================
 @app.route("/esportazioni")
 def esportazioni():
     if not (session.get('is_admin') or session.get('puo_vedere_magazzino', 1)):
@@ -428,6 +428,7 @@ def esportazioni():
     return render_template("esportazioni.html")
 
 @app.route("/esporta_inventario")
+@app.route("/esporta_fornitori_csv")
 def esporta_inventario():
     conn = get_db_connection()
     cur = conn.cursor()
@@ -469,8 +470,9 @@ def esporta_interventi():
         headers={"Content-disposition": "attachment; filename=Report_Interventi_Gestionale_OMG.csv"}
     )
 
-# ================= STAMPA QR CODE =================
+# ================= STAMPA QR CODE & ALIAS =================
 @app.route("/stampa_tutti_qr")
+@app.route("/stampa_qr_multipli")
 def stampa_tutti_qr():
     conn = get_db_connection()
     cur = conn.cursor()
@@ -493,8 +495,9 @@ def stampa_singolo_qr(qr_code):
         return redirect(url_for("index"))
     return render_template("stampa_singolo_qr.html", prodotto=prodotto)
 
-# ================= CAMBI SERIE (Rotta protetta per evitare BuildError) =================
+# ================= CAMBI SERIE & ALIAS =================
 @app.route("/cambi_serie")
+@app.route("/cambia_serie")
 def cambi_serie():
     if not (session.get('is_admin') or session.get('puo_vedere_manutenzione', 1)):
         flash("Accesso non autorizzato.", "error")
@@ -901,8 +904,9 @@ def cambia_stato_intervento(intervento_id):
     conn.close()
     return redirect(url_for("richieste_manutenzione"))
 
-# ================= PROMEMORIA =================
+# ================= PROMEMORIA & ALIAS =================
 @app.route("/promemoria", methods=["GET", "POST"])
+@app.route("/completa_promemoria", methods=["GET", "POST"])
 def promemoria():
     if not (session.get('is_admin') or session.get('puo_vedere_promemoria', 1)):
         flash("Accesso non autorizzato.", "error")
@@ -1014,7 +1018,7 @@ def documenti(cartella_id):
     
     cur.execute("SELECT * FROM cartelle WHERE parent_id " + ("= %s" if cartella_id else "IS NULL") + " ORDER BY nome ASC;", (cartella_id,) if cartella_id else ())
     sottocartelle = cur.fetchall()
-    cur.execute("SELECT id, nome_file, tipo_file, caricato_il FROM documenti WHERE cartella_id " + ("= %s" if cartella_id else "IS NULL") + " ORDER BY nome_file ASC;", (cartella_id,) if cartella_id else ())
+    cur.execute("SELECT id, nome_file, tipo_file, caricato_il FROM documentos WHERE cartella_id " + ("= %s" if cartella_id else "IS NULL") + " ORDER BY nome_file ASC;", (cartella_id,) if cartella_id else ())
     lista_file = cur.fetchall()
     cur.close()
     conn.close()
@@ -1049,7 +1053,7 @@ def elimina_file(file_id):
     cur.execute("SELECT cartella_id FROM documentos WHERE id = %s;", (file_id,))
     res = cur.fetchone()
     cartella_id = res['cartella_id'] if res else None
-    cur.execute("DELETE FROM documenti WHERE id = %s;", (file_id,))
+    cur.execute("DELETE FROM documentos WHERE id = %s;", (file_id,))
     conn.commit()
     cur.close()
     conn.close()
