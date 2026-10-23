@@ -277,8 +277,8 @@ def index():
         conn = get_db_connection()
         cur = conn.cursor()
         
-        cur.execute("SELECT * FROM prodotti ORDER BY nome ASC;")
-        tutti = cur.fetchall()
+        cur.execute("SELECT * FROM prodotti WHERE COALESCE(magazzino_pesante, 0) != 1 ORDER BY nome ASC;")
+        prodotti = cur.fetchall()
         
         cur.execute("SELECT COUNT(*) as count FROM promemoria WHERE completato = FALSE;")
         res_p = cur.fetchone()
@@ -288,17 +288,11 @@ def index():
         cur.execute("SELECT COUNT(*) as count FROM richieste_manutenzione WHERE stato = 'Aperta';")
         interventi_aperti_count = cur.fetchone()['count']
         
+        cur.execute("SELECT * FROM prodotti WHERE quantita <= COALESCE(soglia_minima, 3);")
+        prodotti_sotto_soglia = cur.fetchall()
+        
         cur.close()
         conn.close()
-        
-        for p in tutti:
-            val_pesante = p.get('magazzino_pesante')
-            is_pesante = (val_pesante == 1 or val_pesante == '1' or val_pesante is True or val_pesante == 1.0)
-            if not is_pesante:
-                prodotti.append(p)
-            soglia = p.get('soglia_minima', 3) or 3
-            if p.get('quantita', 0) <= soglia:
-                prodotti_sotto_soglia.append(p)
     except Exception as e:
         print(f"Errore index: {e}")
         
@@ -527,13 +521,14 @@ def richieste_manutenzione():
         descrizione = request.form.get("descrizione", "")
         priorita = request.form.get("priorita", "Media")
         tipo_guasto = request.form.get("tipo_guasto", "Meccanico")
+        assegnato_a = request.form.get("assegnato_a", "")
         creato_da = session.get('username')
         
         if titolo:
             cur.execute("""
-                INSERT INTO richieste_manutenzione (titolo, impianto_macchina, descrizione, priorita, tipo_guasto, creato_da, stato)
-                VALUES (%s, %s, %s, %s, %s, %s, 'Aperta');
-            """, (titolo, impianto_macchina, descrizione, priorita, tipo_guasto, creato_da))
+                INSERT INTO richieste_manutenzione (titolo, impianto_macchina, descrizione, priorita, tipo_guasto, assegnato_a, creato_da, stato)
+                VALUES (%s, %s, %s, %s, %s, %s, %s, 'Aperta');
+            """, (titolo, impianto_macchina, descrizione, priorita, tipo_guasto, assegnato_a, creato_da))
             conn.commit()
             registra_log(f"Creata richiesta intervento: {titolo}")
             flash("Richiesta di intervento creata con successo!", "success")
@@ -543,9 +538,34 @@ def richieste_manutenzione():
 
     cur.execute("SELECT * FROM richieste_manutenzione ORDER BY id DESC;")
     richieste = cur.fetchall()
+    
+    cur.execute("SELECT username FROM utenti ORDER BY username ASC;")
+    utenti = cur.fetchall()
+    
     cur.close()
     conn.close()
-    return render_template("richieste_manutenzione.html", richieste=richieste)
+    return render_template("richieste_manutenzione.html", richieste=richieste, utenti=utenti)
+
+@app.route("/gestisci_intervento/<int:id>", methods=["POST"])
+def gestisci_intervento(id):
+    if not session.get('username'):
+        return redirect(url_for('login'))
+    stato = request.form.get("stato")
+    assegnato_a = request.form.get("assegnato_a")
+    note_lavoro = request.form.get("note_lavoro", "")
+    
+    conn = get_db_connection()
+    cur = conn.cursor()
+    cur.execute("""
+        UPDATE richieste_manutenzione 
+        SET stato = COALESCE(%s, stato), assegnato_a = COALESCE(%s, assegnato_a), note_lavoro = COALESCE(%s, note_lavoro)
+        WHERE id = %s;
+    """, (stato, assegnato_a, note_lavoro, id))
+    conn.commit()
+    cur.close()
+    conn.close()
+    flash("Intervento aggiornato con successo!", "success")
+    return redirect(url_for('richieste_manutenzione'))
 
 @app.route("/stampa_intervento/<int:id>")
 def stampa_intervento(id):
@@ -881,7 +901,7 @@ def aggiungi_prodotto():
         cur.execute("""
             INSERT INTO prodotti (qr_code, nome, sap, peso, quantita, posizione, magazzino_pesante, soglia_minima)
             VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
-            ON CONFLICT (qr_code) DO UPDATE SET quantita = prodotti.quantita + EXCLUDED.quantita, nome = EXCLUDED.nome;
+            ON CONFLICT (qr_code) DO UPDATE SET quantita = prodotti.quantita + EXCLUDED.quantita, nome = EXCLUDED.nome, magazzino_pesante = EXCLUDED.magazzino_pesante;
         """, (qr, nome, sap, peso, qta, pos, pesante, soglia))
         conn.commit()
         cur.close()
@@ -892,12 +912,11 @@ def aggiungi_prodotto():
 @app.route("/magazzino_pesante")
 def magazzino_pesante():
     conn = get_db_connection()
-    cur = conn.cursor()
-    cur.execute("SELECT * FROM prodotti ORDER BY nome ASC;")
-    tutti = cur.fetchall()
+    cur = conn.cluster if hasattr(conn, 'cluster') else conn.cursor() # safe fallback
+    cur.execute("SELECT * FROM prodotti WHERE magazzino_pesante = 1 ORDER BY nome ASC;")
+    prodotti = cur.fetchall()
     cur.close()
     conn.close()
-    prodotti = [p for p in tutti if p.get('magazzino_pesante') in [1, '1', True, 1.0]]
     return render_template("magazzino_pesante.html", prodotti=prodotti)
 
 @app.route("/manutenzioni")
