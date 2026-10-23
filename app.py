@@ -494,6 +494,138 @@ def admin_elimina_utente(user_id):
     conn.close()
     return redirect(url_for('admin_utenti'))
 
+# --- MODULO OFFICINA / RICHIESTE MANUTENZIONE ---
+@app.route("/richieste_manutenzione", methods=["GET", "POST"])
+def richieste_manutenzione():
+    if not (session.get('is_admin') or session.get('puo_vedere_manutenzione', 1)):
+        flash("Accesso non autorizzato.", "error")
+        return redirect(url_for('index'))
+
+    username_corrente = session.get('username')
+    is_admin = session.get('is_admin')
+    puo_aprire = is_admin or session.get('puo_aprire_manutenzioni', 1)
+    puo_assegnare = is_admin or session.get('puo_assegnare_manutenzioni', 1)
+    puo_gestire = is_admin or session.get('puo_gestire_interventi', 1)
+    puo_elimina_int = is_admin or session.get('puo_eliminare_interventi', 0)
+    
+    conn = get_db_connection()
+    cur = conn.cursor()
+    
+    if request.method == "POST":
+        if not puo_aprire:
+            flash("Non hai i permessi per aprire nuove richieste di intervento.", "error")
+            return redirect(url_for("richieste_manutenzione"))
+
+        titolo = request.form.get("titolo")
+        impianto_macchina = request.form.get("impianto_macchina", "")
+        descrizione = request.form.get("descrizione", "")
+        priorita = request.form.get("priorita", "Media")
+        tipo_guasto = request.form.get("tipo_guasto", "Meccanico")
+        
+        tecnici_selezionati = []
+        if puo_assegnare:
+            tecnici_selezionati = request.form.getlist("assegnato_a[]")
+            assegnato_a = ", ".join(tecnici_selezionati) if tecnici_selezionati else ""
+        else:
+            assegnato_a = username_corrente
+            tecnici_selezionati = [username_corrente]
+        
+        if titolo:
+            cur.execute("""
+                INSERT INTO richieste_manutenzione (titolo, impianto_macchina, descrizione, priorita, tipo_guasto, assegnato_a, creato_da, stato)
+                VALUES (%s, %s, %s, %s, %s, %s, %s, 'Aperta');
+            """, (titolo, impianto_macchina, descrizione, priorita, tipo_guasto, assegnato_a, username_corrente))
+            conn.commit()
+            
+            for tec in tecnici_selezionati:
+                tec_clean = tec.strip()
+                if tec_clean:
+                    crea_notifica(
+                        destinatario=tec_clean,
+                        titolo="🛠️ Nuova Manutenzione Assegnata",
+                        messaggio=f"Ti è stato assegnato un intervento su {impianto_macchina}: {titolo}",
+                        link="/richieste_manutenzione"
+                    )
+
+            registra_log(f"Creata richiesta intervento: {titolo} su {impianto_macchina}")
+            flash("Richiesta di intervento creata e notifiche inviate!", "success")
+        return redirect(url_for("richieste_manutenzione"))
+
+    cur.execute("SELECT username FROM utenti ORDER BY username ASC;")
+    lista_utenti = cur.fetchall()
+
+    cur.execute("SELECT qr_code, nome, quantita FROM prodotti ORDER BY nome ASC;")
+    lista_prodotti = cur.fetchall()
+
+    cur.execute("""
+        SELECT id, titolo, impianto_macchina, descrizione, priorita, stato, tipo_guasto, 
+               assegnato_a, creato_da, inizio_lavoro, fine_lavoro, 
+               COALESCE(tempo_lavorato_minuti, 0) AS tempo_lavorato_minuti, 
+               note_lavoro, creato_il 
+        FROM richieste_manutenzione 
+        ORDER BY CASE WHEN stato = 'Completata' THEN 2 ELSE 1 END, creato_il DESC;
+    """)
+    richieste = cur.fetchall()
+
+    cur.close()
+    conn.close()
+    
+    return render_template("richieste_manutenzione.html", 
+                           richieste=richieste, 
+                           lista_utenti=lista_utenti, 
+                           lista_prodotti=lista_prodotti,
+                           puo_aprire=puo_aprire,
+                           puo_assegnare=puo_assegnare,
+                           puo_gestire=puo_gestire,
+                           puo_elimina_int=puo_elimina_int)
+
+@app.route("/cambia_stato_intervento/<int:intervento_id>", methods=["POST"])
+def cambia_stato_intervento(intervento_id):
+    username_corrente = session.get('username')
+    nuovo_stato = request.form.get("stato")
+    note_lavoro = request.form.get("note_lavoro", "")
+    
+    conn = get_db_connection()
+    cur = conn.cursor()
+    cur.execute("SELECT * FROM richieste_manutenzione WHERE id = %s;", (intervento_id,))
+    req = cur.fetchone()
+    
+    if req:
+        now = datetime.now()
+        if nuovo_stato == 'In Lavoro':
+            if not req.get('inizio_lavoro'):
+                cur.execute("""
+                    UPDATE richieste_manutenzione 
+                    SET stato = %s, assegnato_a = COALESCE(NULLIF(assegnato_a, ''), %s), inizio_lavoro = %s
+                    WHERE id = %s;
+                """, (nuovo_stato, username_corrente, now, intervento_id))
+            else:
+                cur.execute("UPDATE richieste_manutenzione SET stato = %s WHERE id = %s;", (nuovo_stato, intervento_id))
+            flash("Intervento avviato!", "success")
+        elif nuovo_stato == 'In Pausa':
+            inizio = req.get('inizio_lavoro')
+            minuti_aggiunti = int((now - inizio).total_seconds() / 60) if (inizio and req.get('stato') == 'In Lavoro') else 0
+            cur.execute("""
+                UPDATE richieste_manutenzione 
+                SET stato = %s, tempo_lavorato_minuti = COALESCE(tempo_lavorato_minuti, 0) + %s, inizio_lavoro = NULL
+                WHERE id = %s;
+            """, (nuovo_stato, minuti_aggiunti, intervento_id))
+            flash("Intervento in pausa.", "warning")
+        elif nuovo_stato == 'Completata':
+            inizio = req.get('inizio_lavoro')
+            minuti_aggiunti = int((now - inizio).total_seconds() / 60) if (inizio and req.get('stato') == 'In Lavoro') else 0
+            tempo_totale = req.get('tempo_lavorato_minuti', 0) + minuti_aggiunti
+            cur.execute("""
+                UPDATE richieste_manutenzione 
+                SET stato = %s, fine_lavoro = %s, tempo_lavorato_minuti = %s, note_lavoro = COALESCE(NULLIF(%s, ''), note_lavoro) 
+                WHERE id = %s;
+            """, (nuovo_stato, now, tempo_totale, note_lavoro, intervento_id))
+            flash("Intervento completato!", "success")
+        conn.commit()
+    cur.close()
+    conn.close()
+    return redirect(url_for("richieste_manutenzione"))
+
 # --- MODULO FORNITORI ---
 @app.route("/fornitori", methods=["GET", "POST"])
 def fornitori():
