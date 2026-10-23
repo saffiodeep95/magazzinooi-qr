@@ -135,7 +135,7 @@
                             </div>
                             <div class="col-md-4 mb-3">
                                 <label class="form-label fw-bold">Forno *</label>
-                                <select class="form-select" id="selectForno" required onchange="aggiornaMacchine()">
+                                <select class="form-select" id="selectForno" required>
                                     <option value="" disabled selected>Seleziona Forno...</option>
                                     <option value="Forno 1">Forno 1</option>
                                     <option value="Forno 3">Forno 3</option>
@@ -186,37 +186,52 @@
         </div>
     </div>
 
-    <!-- Script Bootstrap & Logica Dinamica -->
+    <!-- Script Bootstrap & Logica Dinamica Robusta -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script>
-        // Mappatura esatta delle macchine per ogni forno
-        const macchinePerForno = {
-            "Forno 1": ["Forno 1 - Macchina 11", "Forno 1 - Macchina 12", "Forno 1 - Macchina 13"],
-            "Forno 3": ["Forno 3 - Macchina 31", "Forno 3 - Macchina 32", "Forno 3 - Macchina 34", "Forno 3 - Macchina 35"],
-            "Forno 4": ["Forno 4 - Macchina 41", "Forno 4 - Macchina 42"]
-        };
+        document.addEventListener("DOMContentLoaded", () => {
+            // Imposta la data odierna di default
+            const d = document.querySelector('input[name="data_cambio"]');
+            if (d && !d.value) {
+                d.value = new Date().toISOString().split('T')[0];
+            }
 
-        function aggiornaMacchine() {
+            // Mappatura forni e macchine
+            const macchinePerForno = {
+                "Forno 1": ["Forno 1 - Macchina 11", "Forno 1 - Macchina 12", "Forno 1 - Macchina 13"],
+                "Forno 3": ["Forno 3 - Macchina 31", "Forno 3 - Macchina 32", "Forno 3 - Macchina 34", "Forno 3 - Macchina 35"],
+                "Forno 4": ["Forno 4 - Macchina 41", "Forno 4 - Macchina 42"]
+            };
+
             const selectForno = document.getElementById("selectForno");
             const selectMacchina = document.getElementById("selectMacchina");
-            const fornoSelezionato = selectForno.value;
 
-            // Pulisce e resetta la select delle macchine
-            selectMacchina.innerHTML = '<option value="" disabled selected>Seleziona Macchina...</option>';
+            if (selectForno && selectMacchina) {
+                selectForno.addEventListener("change", function() {
+                    const fornoSelezionato = this.value;
+                    
+                    // Pulisce le opzioni precedenti
+                    selectMacchina.innerHTML = '<option value="" disabled selected>Seleziona Macchina...</option>';
 
-            if (fornoSelezionato && macchinePerForno[fornoSelezionato]) {
-                selectMacchina.disabled = false;
-                macchinePerForno[fornoSelezionato].forEach(macchina => {
-                    const opt = document.createElement("option");
-                    opt.value = macchina;
-                    opt.textContent = macchina;
-                    selectMacchina.appendChild(opt);
+                    if (fornoSelezionato && macchinePerForno[fornoSelezionato]) {
+                        // Sblocca la select rimuovendo l'attributo disabled
+                        selectMacchina.removeAttribute("disabled");
+                        
+                        // Popola con le macchine del forno scelto
+                        macchinePerForno[fornoSelezionato].forEach(macchina => {
+                            const opt = document.createElement("option");
+                            opt.value = macchina;
+                            opt.textContent = macchina;
+                            selectMacchina.appendChild(opt);
+                        });
+                    } else {
+                        selectMacchina.setAttribute("disabled", "true");
+                    }
                 });
-            } else {
-                selectMacchina.disabled = true;
             }
-        }
+        });
 
+        // Funzioni per il filtro settimanale
         function getWeekNumber(d) {
             d = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
             d.setUTCDate(d.getUTCDate() + 4 - (d.getUTCDay() || 7));
@@ -243,13 +258,6 @@
             document.getElementById("labelSettimanaAttiva").textContent = "Tutti i cambi";
             document.querySelectorAll("#tabellaCambi tbody tr").forEach(tr => tr.style.display = "");
         }
-
-        document.addEventListener("DOMContentLoaded", () => {
-            const d = document.querySelector('input[name="data_cambio"]');
-            if (d && !d.value) {
-                d.value = new Date().toISOString().split('T')[0];
-            }
-        });
     </script>
 </body>
 </html>
