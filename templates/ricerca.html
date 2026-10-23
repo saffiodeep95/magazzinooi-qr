@@ -25,7 +25,7 @@
     <div class="container my-4">
         <div class="card-custom p-4 mb-4">
             <h3 class="fw-bold mb-2"><i class="fa-solid fa-search me-2 text-primary"></i>Risultati Ricerca</h3>
-            <p class="text-muted mb-0">Parola chiave cercata: <strong class="text-dark">"{{ query_testo }}"</strong> (Trovati <strong>{{ risultati|length }}</strong> articoli in tutti i magazzini)</p>
+            <p class="text-muted mb-0">Parola chiave cercata: <strong class="text-dark">"{{ query_testo }}"</strong> (Trovati <strong>{{ risultati|length }}</strong> articoli)</p>
         </div>
 
         <div class="card-custom overflow-hidden">
@@ -43,27 +43,29 @@
                         </tr>
                     </thead>
                     <tbody>
-                        {% for p in risultati %}
-                        <tr>
-                            <td><code class="bg-light text-dark px-2 py-1 rounded border">{{ p.qr_code }}</code></td>
-                            <td><strong class="text-dark">{{ p.nome }}</strong></td>
-                            <td><span class="text-muted">{{ p.sap or '-' }}</span></td>
-                            <td>
-                                {% set is_pesante = (p.magazzino_pesante == 1 or p.magazzino_pesante == '1' or p.magazzino_pesante is True) %}
-                                {% if is_pesante %}
-                                <span class="badge bg-warning text-dark"><i class="fa-solid fa-weight-hanging me-1"></i> Pesante</span>
-                                {% else %}
-                                <span class="badge bg-primary"><i class="fa-solid fa-warehouse me-1"></i> Principale</span>
-                                {% endif %}
-                            </td>
-                            <td><span class="badge bg-success">{{ p.quantita }} pz</span></td>
-                            <td><i class="fa-solid fa-location-dot text-secondary me-1"></i> {{ p.posizione or '-' }}</td>
-                            <td class="text-end">
-                                <a href="{{ url_for('gestisci_prodotto', qr_code=p.qr_code) }}" class="btn btn-sm btn-outline-primary fw-medium">
-                                    <i class="fa-solid fa-gear me-1"></i> Gestisci
-                                </a>
-                            </td>
-                        </tr>
+                        {% if risultati %}
+                            {% for p in risultati %}
+                            <tr>
+                                <td><code class="bg-light text-dark px-2 py-1 rounded border">{{ p.qr_code }}</code></td>
+                                <td><strong class="text-dark">{{ p.nome }}</strong></td>
+                                <td><span class="text-muted">{{ p.sap or '-' }}</span></td>
+                                <td>
+                                    {% set is_pesante = (p.magazzino_pesante == 1 or p.magazzino_pesante == '1' or p.magazzino_pesante is True) %}
+                                    {% if is_pesante %}
+                                    <span class="badge bg-warning text-dark"><i class="fa-solid fa-weight-hanging me-1"></i> Pesante</span>
+                                    {% else %}
+                                    <span class="badge bg-primary"><i class="fa-solid fa-warehouse me-1"></i> Principale</span>
+                                    {% endif %}
+                                </td>
+                                <td><span class="badge bg-success">{{ p.quantita }} pz</span></td>
+                                <td><i class="fa-solid fa-location-dot text-secondary me-1"></i> {{ p.posizione or '-' }}</td>
+                                <td class="text-end">
+                                    <a href="{{ url_for('gestisci_prodotto', qr_code=p.qr_code) }}" class="btn btn-sm btn-outline-primary fw-medium">
+                                        <i class="fa-solid fa-gear me-1"></i> Gestisci
+                                    </a>
+                                </td>
+                            </tr>
+                            {% endfor %}
                         {% else %}
                         <tr>
                             <td colspan="7" class="text-center py-5 text-muted">
@@ -71,7 +73,7 @@
                                 Nessun articolo trovato corrispondente a "{{ query_testo }}".
                             </td>
                         </tr>
-                        {% endfor %}
+                        {% endif %}
                     </tbody>
                 </table>
             </div>
