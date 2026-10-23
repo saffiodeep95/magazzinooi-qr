@@ -1418,7 +1418,7 @@ def elimina_file(file_id):
         return redirect(url_for("documenti", cartella_id=cartella_id))
     return redirect(url_for("documenti"))
 
-# --- ALTRE ROTTE GESTIONALE ---
+# --- ALTRE ROTTE GESTIONALE E ESPORTAZIONI ---
 @app.route("/esporta_inventario")
 def esporta_inventario():
     conn = get_db_connection()
@@ -1438,6 +1438,30 @@ def esporta_inventario():
         output.getvalue(),
         mimetype="text/csv",
         headers={"Content-disposition": "attachment; filename=Inventario_Gestionale_OMG.csv"}
+    )
+
+@app.route("/esporta_pesante")
+def esporta_pesante():
+    conn = get_db_connection()
+    cur = conn.cursor()
+    cur.execute("SELECT qr_code, nome, sap, quantita, posizione, peso, magazzino_pesante FROM prodotti ORDER BY nome ASC;")
+    prodotti = cur.fetchall()
+    cur.close()
+    conn.close()
+    
+    output = io.StringIO()
+    writer = csv.writer(output)
+    writer.writerow(['QR Code', 'Nome Articolo', 'SAP', 'Quantita', 'Posizione', 'Peso', 'Magazzino Pesante'])
+    for p in prodotti:
+        val_pesante = p.get('magazzino_pesante')
+        is_pesante = (val_pesante == 1 or val_pesante == '1' or val_pesante is True or val_pesante == 1.0)
+        if is_pesante:
+            writer.writerow([p['qr_code'], p['nome'], p['sap'], p['quantita'], p['posizione'], p['peso'], 'Si'])
+    
+    return Response(
+        output.getvalue(),
+        mimetype="text/csv",
+        headers={"Content-disposition": "attachment; filename=Magazzino_Pesante_OMG.csv"}
     )
 
 @app.route("/esporta_interventi")
