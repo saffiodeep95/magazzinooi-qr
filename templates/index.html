@@ -10,12 +10,12 @@
 </head>
 <body class="bg-light">
 
-    <!-- NAVBAR PRINCIPALE -->
+    <!-- NAVBAR PRINCIPALE DEFINITIVA CON TUTTE LE VOCI E DROPDOWN -->
     <nav class="navbar navbar-expand-lg navbar-dark bg-dark shadow-sm mb-4">
         <a class="navbar-brand font-weight-bold" href="{{ url_for('index') }}">
             <i class="fas fa-boxes mr-2"></i>Gestionale OMG
         </a>
-        <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarNav">
+        <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
             <span class="navbar-toggler-icon"></span>
         </button>
         
@@ -24,39 +24,65 @@
                 <li class="nav-item active">
                     <a class="nav-link" href="{{ url_for('index') }}"><i class="fas fa-home mr-1"></i> Dashboard</a>
                 </li>
+                
                 {% if session.get('is_admin') or session.get('puo_vedere_pesante', 1) %}
                 <li class="nav-item">
                     <a class="nav-link" href="{{ url_for('magazzino_pesante') }}"><i class="fas fa-weight-hanging mr-1"></i> Pesante</a>
                 </li>
                 {% endif %}
+
                 <li class="nav-item">
                     <a class="nav-link" href="{{ url_for('cambi_serie') }}"><i class="fas fa-exchange-alt mr-1"></i> Cambi Serie</a>
                 </li>
+
                 {% if session.get('is_admin') or session.get('puo_vedere_manutenzione', 1) %}
                 <li class="nav-item">
                     <a class="nav-link" href="{{ url_for('richieste_manutenzione') }}"><i class="fas fa-tools mr-1"></i> Manutenzioni</a>
                 </li>
                 {% endif %}
+
                 {% if session.get('is_admin') or session.get('puo_vedere_promemoria', 1) %}
                 <li class="nav-item">
                     <a class="nav-link" href="{{ url_for('promemoria') }}"><i class="fas fa-sticky-note mr-1"></i> Promemoria</a>
                 </li>
                 {% endif %}
+
                 {% if session.get('is_admin') or session.get('puo_gestire_fornitori', 1) %}
                 <li class="nav-item">
                     <a class="nav-link" href="{{ url_for('fornitori') }}"><i class="fas fa-truck mr-1"></i> Fornitori</a>
                 </li>
                 {% endif %}
+
                 {% if session.get('is_admin') or session.get('puo_gestire_documenti', 1) %}
                 <li class="nav-item">
                     <a class="nav-link" href="{{ url_for('documenti') }}"><i class="fas fa-folder mr-1"></i> Documenti</a>
                 </li>
                 {% endif %}
+
                 {% if session.get('is_admin') or session.get('puo_vedere_report_ore', 1) %}
                 <li class="nav-item">
                     <a class="nav-link" href="{{ url_for('report_ore') }}"><i class="fas fa-clock mr-1"></i> Report Ore</a>
                 </li>
                 {% endif %}
+
+                <!-- MENU A TENDINA (DROPDOWN) PER ESPORTAZIONI E STAMPE QR -->
+                <li class="nav-item dropdown">
+                    <a class="nav-link dropdown-toggle text-info font-weight-bold" href="#" id="navbarDropdownEsportazioni" role="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                        <i class="fas fa-file-download mr-1"></i> Esportazioni CSV & Stampe
+                    </a>
+                    <div class="dropdown-menu shadow" aria-labelledby="navbarDropdownEsportazioni">
+                        <a class="dropdown-item" href="{{ url_for('esporta_inventario') }}"><i class="fas fa-file-csv mr-2 text-success"></i> Esporta Inventario Standard (CSV)</a>
+                        <a class="dropdown-item" href="{{ url_for('esporta_pesante') }}"><i class="fas fa-file-csv mr-2 text-success"></i> Esporta Magazzino Pesante (CSV)</a>
+                        <a class="dropdown-item" href="{{ url_for('esporta_storico_manutenzioni_csv') }}"><i class="fas fa-file-csv mr-2 text-warning"></i> Esporta Storico Manutenzioni (CSV)</a>
+                        <a class="dropdown-item" href="{{ url_for('esporta_interventi') }}"><i class="fas fa-file-csv mr-2 text-warning"></i> Esporta Report Interventi Officina (CSV)</a>
+                        <a class="dropdown-item" href="{{ url_for('esporta_fornitori_csv') }}"><i class="fas fa-file-csv mr-2 text-primary"></i> Esporta Fornitori (CSV)</a>
+                        <a class="dropdown-item" href="{{ url_for('esporta_cambi_serie_csv') }}"><i class="fas fa-file-csv mr-2 text-info"></i> Esporta Cambi Serie (CSV)</a>
+                        <div class="dropdown-divider"></div>
+                        <a class="dropdown-item" href="{{ url_for('stampa_tutti_qr') }}"><i class="fas fa-print mr-2 text-dark"></i> Stampa Tutti i QR Code</a>
+                        <a class="dropdown-item" href="{{ url_for('stampa_qr_armadi') }}"><i class="fas fa-qrcode mr-2 text-secondary"></i> Stampa QR Armadi / Postazioni</a>
+                    </div>
+                </li>
+
                 {% if session.get('is_admin') %}
                 <li class="nav-item">
                     <a class="nav-link text-warning" href="{{ url_for('admin_utenti') }}"><i class="fas fa-users-cog mr-1"></i> Utenti</a>
@@ -70,7 +96,7 @@
                     <span class="nav-link text-white"><i class="fas fa-user mr-1"></i> {{ session.get('username') }}</span>
                 </li>
                 <li class="nav-item">
-                    <a class="btn btn-outline-light btn-sm my-1" href="{{ url_for('logout') }}"><i class="fas fa-sign-out-alt mr-1"></i> Logout</a>
+                    <a class="btn btn-outline-light btn-sm my-1 ml-2" href="{{ url_for('logout') }}"><i class="fas fa-sign-out-alt mr-1"></i> Logout</a>
                 </li>
                 {% endif %}
             </ul>
@@ -93,38 +119,38 @@
         {% endwith %}
     </div>
 
-    <!-- CONTENUTO PRINCIPALE -->
+    <!-- CONTENUTO PRINCIPALE DASHBOARD -->
     <div class="container-fluid mt-4">
 
-        <!-- INTESTAZIONE E AZIONI RAPIDE -->
+        <!-- INTESTAZIONE E PULSANTI DI AZIONE RAPIDA -->
         <div class="row align-items-center mb-4">
-            <div class="col-md-6">
+            <div class="col-md-5">
                 <h2 class="font-weight-bold text-dark mb-1">
                     <i class="fas fa-chart-line text-primary mr-2"></i>Dashboard Gestionale OMG
                 </h2>
-                <p class="text-muted mb-0">Benvenuto, <strong>{{ session.get('username') }}</strong>! Panoramica generale e operazioni rapide.</p>
+                <p class="text-muted mb-0">Panoramica generale del magazzino e operazioni rapide.</p>
             </div>
-            <div class="col-md-6 text-md-right mt-3 mt-md-0">
-                <a href="{{ url_for('scanner_globale') }}" class="btn btn-dark shadow-sm font-weight-bold mr-1">
+            <div class="col-md-7 text-md-right mt-3 mt-md-0">
+                <a href="{{ url_for('scanner_globale') }}" class="btn btn-dark shadow-sm font-weight-bold mr-1 mb-1">
                     <i class="fas fa-qrcode mr-1"></i> Scanner QR
                 </a>
                 {% if session.get('is_admin') or session.get('puo_caricare_scaricare', 1) %}
-                <a href="{{ url_for('carico') }}" class="btn btn-success shadow-sm font-weight-bold mr-1">
+                <a href="{{ url_for('carico') }}" class="btn btn-success shadow-sm font-weight-bold mr-1 mb-1">
                     <i class="fas fa-plus-circle mr-1"></i> Carico Rapido
                 </a>
-                <a href="{{ url_for('scarico') }}" class="btn btn-warning shadow-sm font-weight-bold mr-1 text-dark">
+                <a href="{{ url_for('scarico') }}" class="btn btn-warning shadow-sm font-weight-bold mr-1 text-dark mb-1">
                     <i class="fas fa-minus-circle mr-1"></i> Scarico Rapido
                 </a>
                 {% endif %}
                 {% if session.get('is_admin') or session.get('puo_aggiungere_prodotti', 1) %}
-                <button class="btn btn-primary shadow-sm font-weight-bold" data-toggle="modal" data-target="#modalAggiungiProdotto">
+                <button class="btn btn-primary shadow-sm font-weight-bold mb-1" data-toggle="modal" data-target="#modalAggiungiProdotto">
                     <i class="fas fa-plus mr-1"></i> Nuovo Articolo
                 </button>
                 {% endif %}
             </div>
         </div>
 
-        <!-- CARD STATISTICHE E INDICATORI -->
+        <!-- CARD STATISTICHE RAPIDE -->
         <div class="row mb-4">
             <div class="col-xl-3 col-md-6 mb-3">
                 <div class="card border-left-warning shadow h-100 py-2">
@@ -229,14 +255,7 @@
         <div class="card shadow-sm mb-5">
             <div class="card-header bg-dark text-white d-flex justify-content-between align-items-center">
                 <h5 class="mb-0 font-weight-bold"><i class="fas fa-cubes mr-2"></i>Inventario Magazzino Standard</h5>
-                <div>
-                    <a href="{{ url_for('esporta_inventario') }}" class="btn btn-outline-light btn-sm font-weight-bold mr-1">
-                        <i class="fas fa-file-excel mr-1"></i> Esporta CSV
-                    </a>
-                    <a href="{{ url_for('stampa_tutti_qr') }}" class="btn btn-outline-light btn-sm font-weight-bold">
-                        <i class="fas fa-print mr-1"></i> Stampa QR
-                    </a>
-                </div>
+                <span class="badge badge-light p-2 font-weight-bold">Totale Articoli: {{ prodotti|length }}</span>
             </div>
             <div class="card-body">
                 <!-- Barra di Ricerca in Tempo Reale -->
@@ -279,8 +298,8 @@
                                     {% endif %}
                                 </td>
                                 <td class="align-middle text-center">
-                                    <a href="{{ url_for('gestisci_prodotto', qr_code=p.qr_code) }}" class="btn btn-sm btn-info" title="Dettagli e Modifica">
-                                        <i class="fas fa-edit"></i> Modifica
+                                    <a href="{{ url_for('gestisci_prodotto', qr_code=p.qr_code) }}" class="btn btn-sm btn-info font-weight-bold" title="Dettagli e Modifica">
+                                        <i class="fas fa-edit mr-1"></i> Modifica
                                     </a>
                                     <a href="{{ url_for('stampa_singolo_qr', qr_code=p.qr_code) }}" class="btn btn-sm btn-secondary" title="Stampa QR">
                                         <i class="fas fa-print"></i>
@@ -364,7 +383,7 @@
     </div>
     {% endif %}
 
-    <!-- SCRIPTS -->
+    <!-- SCRIPTS (jQuery & Bootstrap Bundle per far funzionare i dropdown) -->
     <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@4.6.2/dist/js/bootstrap.bundle.min.js"></script>
     <script>
