@@ -512,14 +512,26 @@ def elimina_utente(user_id):
         flash(f"Errore eliminazione utente: {e}", "error")
     return redirect(url_for('admin_utenti'))
 
-# --- NUOVO MODULO: CAMBI SERIE ---
+# --- MODULI E ROTTE AGGIUNTIVE (E ALIAS DI SICUREZZA) ---
 @app.route("/cambi_serie")
 def cambi_serie():
     if not session.get('username'):
         return redirect(url_for('login'))
     return render_template("cambi_serie.html")
 
-# --- NUOVO MODULO: REPORT ORE & STATISTICHE MANUTENZIONI ---
+@app.route("/stampa_qr")
+def stampa_qr():
+    return redirect(url_for("stampa_tutti_qr"))
+
+@app.route("/esporta")
+def esporta():
+    return redirect(url_for("esporta_inventario"))
+
+@app.route("/statistiche")
+def statistiche():
+    return redirect(url_for("report_ore"))
+
+# --- MODULO: REPORT ORE & STATISTICHE MANUTENZIONI ---
 @app.route("/report_ore")
 def report_ore():
     if not (session.get('is_admin') or session.get('puo_vedere_report_ore', 1)):
@@ -1295,7 +1307,7 @@ def documenti(cartella_id):
             percorso_breadcrumb.insert(0, curr)
             if curr['parent_id']:
                 cur.execute("SELECT * FROM cartelle WHERE id = %s;", (curr['parent_id'],))
-                curr = curr.fetchone()
+                curr = cur.fetchone()
             else:
                 curr = None
 
@@ -1418,7 +1430,7 @@ def elimina_file(file_id):
         return redirect(url_for("documenti", cartella_id=cartella_id))
     return redirect(url_for("documenti"))
 
-# --- ALTRE ROTTE GESTIONALE E ESPORTAZIONI ---
+# --- ESPORTAZIONI E ALTRE ROTTE ---
 @app.route("/esporta_inventario")
 def esporta_inventario():
     conn = get_db_connection()
