@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gestionale OMG - Risultati Ricerca</title>
+    <!-- Bootstrap 5 CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        body { font-family: 'Inter', sans-serif; background-color: #f3f4f6; color: #1f2937; }
+        .card-custom { background: #ffffff; border: 1px solid #e5e7eb; border-radius: 14px; box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
+    </style>
+</head>
+<body class="bg-light">
+
+    <nav class="navbar navbar-dark bg-dark shadow-sm">
+        <div class="container-fluid px-4">
+            <a class="navbar-brand fw-bold" href="{{ url_for('index') }}"><i class="fa-solid fa-boxes-packing me-2"></i>Gestionale OMG</a>
+            <a href="{{ url_for('index') }}" class="btn btn-outline-light btn-sm"><i class="fa-solid fa-arrow-left me-1"></i> Torna alla Dashboard</a>
+        </div>
+    </nav>
+
+    <div class="container my-4">
+        <div class="card-custom p-4 mb-4">
+            <h3 class="fw-bold mb-2"><i class="fa-solid fa-search me-2 text-primary"></i>Risultati Ricerca</h3>
+            <p class="text-muted mb-0">Parola chiave cercata: <strong class="text-dark">"{{ query_testo }}"</strong> (Trovati <strong>{{ risultati|length }}</strong> articoli in tutti i magazzini)</p>
+        </div>
+
+        <div class="card-custom overflow-hidden">
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th>QR Code</th>
+                            <th>Nome Articolo</th>
+                            <th>Codice SAP</th>
+                            <th>Magazzino</th>
+                            <th>Quantità</th>
+                            <th>Posizione</th>
+                            <th class="text-end">Azione</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for p in risultati %}
+                        <tr>
+                            <td><code class="bg-light text-dark px-2 py-1 rounded border">{{ p.qr_code }}</code></td>
+                            <td><strong class="text-dark">{{ p.nome }}</strong></td>
+                            <td><span class="text-muted">{{ p.sap or '-' }}</span></td>
+                            <td>
+                                {% set is_pesante = (p.magazzino_pesante == 1 or p.magazzino_pesante == '1' or p.magazzino_pesante is True) %}
+                                {% if is_pesante %}
+                                <span class="badge bg-warning text-dark"><i class="fa-solid fa-weight-hanging me-1"></i> Pesante</span>
+                                {% else %}
+                                <span class="badge bg-primary"><i class="fa-solid fa-warehouse me-1"></i> Principale</span>
+                                {% endif %}
+                            </td>
+                            <td><span class="badge bg-success">{{ p.quantita }} pz</span></td>
+                            <td><i class="fa-solid fa-location-dot text-secondary me-1"></i> {{ p.posizione or '-' }}</td>
+                            <td class="text-end">
+                                <a href="{{ url_for('gestisci_prodotto', qr_code=p.qr_code) }}" class="btn btn-sm btn-outline-primary fw-medium">
+                                    <i class="fa-solid fa-gear me-1"></i> Gestisci
+                                </a>
+                            </td>
+                        </tr>
+                        {% else %}
+                        <tr>
+                            <td colspan="7" class="text-center py-5 text-muted">
+                                <i class="fa-solid fa-box-open fs-2 mb-2 d-block text-secondary"></i>
+                                Nessun articolo trovato corrispondente a "{{ query_testo }}".
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>
