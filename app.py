@@ -151,6 +151,22 @@ def init_db():
         """)
 
         cur.execute("""
+            CREATE TABLE IF NOT EXISTS cambi_serie (
+                id SERIAL PRIMARY KEY,
+                forno VARCHAR(255),
+                linea VARCHAR(255),
+                data_cambio VARCHAR(255),
+                nome_bottiglia VARCHAR(255),
+                tempo_cambio VARCHAR(255),
+                altezza_paratie VARCHAR(255),
+                misura_piastrina VARCHAR(255),
+                num_bottiglie_tempera INT DEFAULT 0,
+                quantita_trattamento VARCHAR(255),
+                creato_il TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            );
+        """)
+
+        cur.execute("""
             CREATE TABLE IF NOT EXISTS utenti (
                 id SERIAL PRIMARY KEY,
                 username VARCHAR(255) UNIQUE NOT NULL,
@@ -317,7 +333,7 @@ def api_segna_lette():
         conn.close()
     return jsonify({"status": "ok"})
 
-# --- NUOVA ROTTA: RICERCA RAPIDA TRA I MAGAZZINI ---
+# --- ROTTA DI RICERCA GLOBALE (MAGAZZINI) ---
 @app.route("/ricerca")
 @app.route("/ricerca.html")
 def ricerca():
@@ -327,10 +343,12 @@ def ricerca():
         conn = get_db_connection()
         cur = conn.cursor()
         if query_testo:
-            pattern = f"%{query_testo}%"
+            pattern = f"%{query_testo.lower()}%"
             cur.execute("""
                 SELECT * FROM prodotti 
-                WHERE qr_code ILIKE %s OR nome ILIKE %s OR sap ILIKE %s 
+                WHERE LOWER(COALESCE(qr_code, '')) LIKE %s 
+                   OR LOWER(COALESCE(nome, '')) LIKE %s 
+                   OR LOWER(COALESCE(sap, '')) LIKE %s 
                 ORDER BY nome ASC;
             """, (pattern, pattern, pattern))
         else:
@@ -339,7 +357,8 @@ def ricerca():
         cur.close()
         conn.close()
     except Exception as e:
-        print(f"Errore ricerca: {e}")
+        print(f"Errore nella ricerca: {e}")
+        risultati = []
     return render_template("ricerca.html", risultati=risultati, query_testo=query_testo)
 
 @app.route("/")
@@ -583,19 +602,94 @@ def elimina_utente(user_id):
 @app.route("/cambi_serie")
 @app.route("/cambi_serie.html")
 def cambi_serie():
-    return render_template("cambi_serie.html", cambi=[])
+    forno_filtro = request.args.get("forno", "Tutti")
+    settimana_filtro = request.args.get("settimana", "")
+    try:
+        conn = get_db_connection()
+        cur = conn.cursor()
+        if forno_filtro != "Tutti":
+            cur.execute("SELECT * FROM cambi_serie WHERE forno = %s ORDER BY data_cambio DESC;", (forno_filtro,))
+        else:
+            cur.execute("SELECT * FROM cambi_serie ORDER BY data_cambio DESC;")
+        record_serie = cur.fetchall()
+        cur.close()
+        conn.close()
+    except Exception as e:
+        print(f"Errore cambi serie: {e}")
+        record_serie = []
+    return render_template("cambi_serie.html", record_serie=record_serie, forno_filtro=forno_filtro, settimana_filtro=settimana_filtro)
 
 @app.route("/aggiungi_cambio_serie", methods=["POST"])
 def aggiungi_cambio_serie():
-    registra_log("Aggiunto cambio serie")
-    flash("Cambio serie registrato con successo!", "success")
+    forno = request.form.get("forno")
+    linea = request.form.get("linea")
+    data_cambio = request.form.get("data_cambio")
+    nome_bottiglia = request.form.get("nome_bottiglia")
+    tempo_cambio = request.form.get("tempo_cambio", "")
+    altezza_paratie = request.form.get("altezza_paratie", "")
+    misura_piastrina = request.form.get("misura_piastrina", "")
+    num_bottiglie_tempera = int(request.form.get("num_bottiglie_tempera", 0) or 0)
+    quantita_trattamento = request.form.get("quantita_trattamento", "")
+    
+    try:
+        conn = get_db_connection()
+        cur = conn.cursor()
+        cur.execute("""
+            INSERT INTO cambi_serie (forno, linea, data_cambio, nome_bottiglia, tempo_cambio, altezza_paratie, misura_piastrina, num_bottiglie_tempera, quantita_trattamento)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s);
+        """, (forno, linea, data_cambio, nome_bottiglia, tempo_cambio, altezza_paratie, misura_piastrina, num_bottiglie_tempera, quantita_trattamento))
+        conn.commit()
+        cur.close()
+        conn.close()
+        registra_log(f"Registrato cambio serie per {forno} Linea {linea} - {nome_bottiglia}")
+        flash("Cambio serie registrato con successo!", "success")
+    except Exception as e:
+        flash(f"Errore registrazione cambio serie: {e}", "error")
+    return redirect(url_for("cambi_serie"))
+
+@app.route("/elimina_cambio_serie/<int:id_cambio>", methods=["POST"])
+def elimina_cambio_serie(id_cambio):
+    try:
+        conn = get_db_connection()
+        cur = conn.cursor()
+        cur.execute("DELETE FROM cambi_serie WHERE id = %s;", (id_cambio,))
+        conn.commit()
+        cur.close()
+        conn.close()
+        registra_log(f"Eliminato cambio serie ID {id_cambio}")
+        flash("Cambio serie eliminato.", "success")
+    except Exception as e:
+        flash(f"Errore eliminazione cambio serie: {e}", "error")
     return redirect(url_for("cambi_serie"))
 
 @app.route("/esporta_cambi_serie_csv", endpoint="esporta_cambi_serie_csv")
 def esporta_cambi_serie_csv():
+    try:
+        conn = get_db_connection()
+        cur = conn.cursor()
+        cur.execute("SELECT * FROM cambi_serie ORDER BY data_cambio DESC;")
+        record_serie = cur.fetchall()
+        cur.close()
+        conn.close()
+    except Exception:
+        record_serie = []
+
     output = io.StringIO()
     writer = csv.writer(output)
-    writer.writerow(['ID', 'Descrizione', 'Data'])
+    writer.writerow(['ID', 'Forno', 'Linea', 'Data', 'Bottiglia', 'Tempo', 'Altezza Paratie', 'Misura Piastrina', 'N° Tempera', 'Quantità Trattamento'])
+    for r in record_serie:
+        writer.writerow([
+            r.get('id', ''),
+            r.get('forno', ''),
+            r.get('linea', ''),
+            r.get('data_cambio', ''),
+            r.get('nome_bottiglia', ''),
+            r.get('tempo_cambio', ''),
+            r.get('altezza_paratie', ''),
+            r.get('misura_piastrina', ''),
+            r.get('num_bottiglie_tempera', 0),
+            r.get('quantita_trattamento', '')
+        ])
     return Response(
         output.getvalue(),
         mimetype="text/csv",
