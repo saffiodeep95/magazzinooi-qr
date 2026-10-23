@@ -13,7 +13,7 @@ from psycopg2.extras import RealDictCursor
 from flask import Flask, render_template, request, redirect, url_for, flash, session, Response, jsonify
 from werkzeug.security import generate_password_hash, check_password_hash
 
-app = Flask(__name__)
+app = Flask(_name_)
 app.secret_key = os.environ.get("SECRET_KEY", "chiave-segreta-gestionale")
 
 DATABASE_URL = os.environ.get("DATABASE_URL")
@@ -392,28 +392,61 @@ def registra():
                 flash("Username già esistente o errore di registrazione.", "error")
     return render_template("registra.html")
 
-@app.route("/admin_utenti")
+@app.route("/admin_utenti", methods=["GET", "POST"])
 def admin_utenti():
     if not session.get('is_admin'):
         flash("Accesso riservato all'Amministratore.", "error")
         return redirect(url_for('index'))
     
-    utenti = []
-    logs = []
     conn = None
     cur = None
     try:
         conn = get_db_connection()
         cur = conn.cursor()
+        
+        if request.method == "POST":
+            user_id = request.form.get("user_id")
+            is_admin_val = 1 if request.form.get("is_admin") else 0
+            
+            permessi_possibili = [
+                "puo_vedere_magazzino", "puo_aggiungere_prodotti", "puo_modificare_prodotti",
+                "puo_caricare_scaricare", "puo_eliminare", "puo_vedere_pesante",
+                "puo_vedere_manutenzione", "puo_aprire_manutenzioni", "puo_gestire_interventi",
+                "puo_assegnare_manutenzioni", "puo_eliminare_interventi", "puo_vedere_manutenzioni_esterne",
+                "puo_vedere_storico_manutenzioni", "puo_eliminare_storico", "puo_gestire_fornitori",
+                "puo_importare_fornitori", "puo_gestire_documenti", "puo_eliminare_documenti",
+                "puo_vedere_promemoria", "puo_assegnare_promemoria", "puo_vedere_report_ore"
+            ]
+            
+            set_clauses = ["is_admin = %s"]
+            values = [is_admin_val]
+            
+            for p in permessi_possibili:
+                val = 1 if request.form.get(p) else 0
+                set_clauses.append(f"{p} = %s")
+                values.append(val)
+                
+            values.append(user_id)
+            query = f"UPDATE utenti SET {', '.join(set_clauses)} WHERE id = %s;"
+            cur.execute(query, tuple(values))
+            conn.commit()
+            
+            registra_log(f"Aggiornati permessi per l'utente ID {user_id}")
+            flash("Permessi utente aggiornati con successo!", "success")
+            return redirect(url_for('admin_utenti'))
+
         cur.execute("SELECT * FROM utenti ORDER BY username ASC;")
         utenti = cur.fetchall()
+        
+        logs = []
         try:
             cur.execute("SELECT * FROM log_attivita ORDER BY data_ora DESC LIMIT 100;")
             logs = cur.fetchall()
         except Exception:
-            logs = []
             if conn:
                 conn.rollback()
+            logs = []
+            
         cur.close()
         conn.close()
     except Exception as e:
@@ -423,9 +456,63 @@ def admin_utenti():
         if conn:
             try: conn.rollback(); conn.close()
             except: pass
-        flash(f"Errore nel caricamento del pannello admin: {e}", "error")
-        
+        flash(f"Errore critico pannello admin: {e}", "error")
+        utenti = []
+        logs = []
+
     return render_template("admin_utenti.html", utenti=utenti, logs=logs)
+
+@app.route("/admin_reset_password/<int:user_id>", methods=["POST"])
+def admin_reset_password(user_id):
+    if not session.get('is_admin'):
+        flash("Accesso riservato all'Amministratore.", "error")
+        return redirect(url_for('index'))
+    
+    nuova_password = request.form.get("nuova_password")
+    if nuova_password:
+        try:
+            hashed_pw = generate_password_hash(nuova_password)
+            conn = get_db_connection()
+            cur = conn.cursor()
+            cur.execute("UPDATE utenti SET password = %s WHERE id = %s;", (hashed_pw, user_id))
+            conn.commit()
+            cur.close()
+            conn.close()
+            
+            registra_log(f"Password reimpostata per l'utente ID {user_id} dall'amministratore")
+            flash("Password reimpostata con successo!", "success")
+        except Exception as e:
+            flash(f"Errore durante il reset della password: {e}", "error")
+    else:
+        flash("La nuova password non può essere vuota.", "error")
+        
+    return redirect(url_for('admin_utenti'))
+
+@app.route("/admin_elimina_utente/<int:user_id>", methods=["POST"])
+def admin_elimina_utente(user_id):
+    if not session.get('is_admin'):
+        flash("Accesso riservato all'Amministratore.", "error")
+        return redirect(url_for('index'))
+    
+    conn = get_db_connection()
+    cur = conn.cursor()
+    
+    cur.execute("SELECT username FROM utenti WHERE id = %s;", (user_id,))
+    u = cur.fetchone()
+    
+    if u and u['username'] == 'admin':
+        flash("Non è possibile eliminare l'utente amministratore principale di sistema ('admin').", "error")
+    elif u and u['username'] == session.get('username'):
+        flash("Non puoi eliminare il tuo stesso account mentre sei loggato.", "error")
+    else:
+        cur.execute("DELETE FROM utenti WHERE id = %s;", (user_id,))
+        conn.commit()
+        registra_log(f"Eliminato utente ID {user_id} ({u['username'] if u else ''})")
+        flash("Utente eliminato con successo.", "success")
+        
+    cur.close()
+    conn.close()
+    return redirect(url_for('admin_utenti'))
 
 @app.route("/cambi_serie", methods=["GET", "POST"])
 def cambi_serie():
@@ -756,8 +843,6 @@ def cambia_stato_intervento(intervento_id):
                 WHERE id = %s;
             """, (nuovo_stato, minuti_aggiunti, intervento_id))
             flash("Intervento in pausa.", "warning")
-        elif nuvo_stato == 'Completata': # fixed spelling
-            pass
         elif nuovo_stato == 'Completata':
             inizio = req.get('inizio_lavoro')
             minuti_aggiunti = int((now - inizio).total_seconds() / 60) if (inizio and req.get('stato') == 'In Lavoro') else 0
@@ -1042,5 +1127,5 @@ def aggiungi_prodotto():
         flash("Salvato!", "success")
     return redirect(url_for("magazzino_pesante" if pesante == 1 else "index"))
 
-if __name__ == "_main_":
+if _name_ == "_main_":
     app.run(debug=True)
