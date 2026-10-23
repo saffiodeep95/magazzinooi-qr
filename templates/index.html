@@ -4,13 +4,12 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Dashboard - Gestionale OMG</title>
-    <!-- Bootstrap 4 CSS & FontAwesome -->
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@4.6.2/dist/css/bootstrap.min.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
 </head>
 <body class="bg-light">
 
-    <!-- NAVBAR PRINCIPALE CON TUTTE LE VOCI (FORNITORI INCLUSI) E DROPDOWN -->
+    <!-- NAVBAR PRINCIPALE COMPLETA & CENTRO NOTIFICHE -->
     <nav class="navbar navbar-expand-lg navbar-dark bg-dark shadow-sm mb-4">
         <a class="navbar-brand font-weight-bold" href="{{ url_for('index') }}">
             <i class="fas fa-boxes mr-2"></i>Gestionale OMG
@@ -65,7 +64,7 @@
                 </li>
                 {% endif %}
 
-                <!-- MENU A TENDINA (DROPDOWN) PER ESPORTAZIONI E STAMPE QR -->
+                <!-- MENU A TENDINA ESPORTAZIONI & STAMPE QR -->
                 <li class="nav-item dropdown">
                     <a class="nav-link dropdown-toggle text-info font-weight-bold" href="#" id="navbarDropdownEsportazioni" role="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
                         <i class="fas fa-file-download mr-1"></i> Esportazioni CSV & Stampe
@@ -91,6 +90,44 @@
             </ul>
             
             <ul class="navbar-nav ml-auto">
+                <!-- CENTRO NOTIFICHE (CAMPANELLA) -->
+                {% set tot_notifiche = (notifiche_promemoria|length if notifiche_promemoria else 0) + (notifiche_officina|length if notifiche_officina else 0) %}
+                <li class="nav-item dropdown mr-2">
+                    <a class="nav-link dropdown-toggle position-relative text-warning" href="#" id="navbarNotifiche" role="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                        <i class="fas fa-bell fa-lg"></i>
+                        {% if tot_notifiche > 0 %}
+                            <span class="badge badge-danger badge-counter position-absolute" style="top: 0; right: -5px; font-size: 0.7rem;">{{ tot_notifiche }}</span>
+                        {% endif %}
+                    </a>
+                    <div class="dropdown-menu dropdown-menu-right shadow p-3" aria-labelledby="navbarNotifiche" style="width: 340px; max-height: 420px; overflow-y: auto;">
+                        <h6 class="dropdown-header font-weight-bold text-uppercase border-bottom pb-2 mb-2 text-primary px-0">🔔 Centro Notifiche (Oggi)</h6>
+                        
+                        {% if notifiche_promemoria %}
+                            <div class="small font-weight-bold text-warning mb-1"><i class="fas fa-sticky-note mr-1"></i> Promemoria in Scadenza Oggi ({{ notifiche_promemoria|length }})</div>
+                            {% for p in notifiche_promemoria %}
+                            <a class="dropdown-item py-2 px-2 border rounded bg-light mb-2 text-wrap" href="{{ url_for('promemoria') }}">
+                                <div class="font-weight-bold text-dark"><i class="fas fa-circle text-warning" style="font-size: 6px;"></i> {{ p.titolo }}</div>
+                                <div class="small text-muted">Scadenza: {{ p.data_scadenza }}</div>
+                            </a>
+                            {% endfor %}
+                        {% endif %}
+
+                        {% if notifiche_officina %}
+                            <div class="small font-weight-bold text-danger mt-2 mb-1"><i class="fas fa-tools mr-1"></i> Interventi Officina ({{ notifiche_officina|length }})</div>
+                            {% for m in notifiche_officina %}
+                            <a class="dropdown-item py-2 px-2 border rounded bg-light mb-2 text-wrap" href="{{ url_for('richieste_manutenzione') }}">
+                                <div class="font-weight-bold text-dark"><i class="fas fa-circle text-danger" style="font-size: 6px;"></i> {{ m.titolo or m.descrizione or 'Intervento' }}</div>
+                                <div class="small text-muted">Stato: <span class="badge badge-danger">{{ m.stato }}</span></div>
+                            </a>
+                            {% endfor %}
+                        {% endif %}
+
+                        {% if tot_notifiche == 0 %}
+                            <div class="text-center text-muted py-3 small">Nessuna notifica per oggi.</div>
+                        {% endif %}
+                    </div>
+                </li>
+
                 {% if session.get('username') %}
                 <li class="nav-item">
                     <span class="nav-link text-white"><i class="fas fa-user mr-1"></i> {{ session.get('username') }}</span>
@@ -103,7 +140,7 @@
         </div>
     </nav>
 
-    <!-- NOTIFICHE FLASH SISTEMA -->
+    <!-- NOTIFICHE FLASH -->
     <div class="container-fluid">
         {% with messages = get_flashed_messages(with_categories=true) %}
           {% if messages %}
@@ -111,7 +148,7 @@
               <div class="alert alert-{% if category == 'error' %}danger{% else %}{{ category }}{% endif %} alert-dismissible fade show shadow-sm" role="alert">
                 {{ message }}
                 <button type="button" class="close" data-dismiss="alert" aria-label="Close">
-                  <span aria-label="Close">&times;</span>
+                  <span aria-hidden="true">&times;</span>
                 </button>
               </div>
             {% endfor %}
@@ -119,42 +156,8 @@
         {% endwith %}
     </div>
 
-    <!-- CONTENUTO PRINCIPALE DASHBOARD -->
+    <!-- CONTENUTO PRINCIPALE -->
     <div class="container-fluid mt-4">
-
-        <!-- BANNER NOTIFICHE PERSONALI: PROMEMORIA ASSEGNATI -->
-        {% if notifiche_promemoria %}
-        <div class="alert alert-warning alert-dismissible fade show shadow-sm mb-4" role="alert">
-            <div class="d-flex align-items-center">
-                <i class="fas fa-bell fa-2x mr-3 text-warning"></i>
-                <div>
-                    <h5 class="alert-heading font-weight-bold mb-1">Promemoria e Attività Assegnate!</h5>
-                    <p class="mb-0">Hai <strong>{{ notifiche_promemoria|length }}</strong> promemoria o attività da completare assegnati a te.</p>
-                </div>
-                <a href="{{ url_for('promemoria') }}" class="btn btn-warning font-weight-bold ml-auto shadow-sm">
-                    Vai ai Promemoria <i class="fas fa-arrow-right ml-1"></i>
-                </a>
-            </div>
-        </div>
-        {% endif %}
-
-        <!-- BANNER NOTIFICHE PERSONALI: MANSIONI OFFICINA / MANUTENZIONI -->
-        {% if notifiche_officina %}
-        <div class="alert alert-danger alert-dismissible fade show shadow-sm mb-4" role="alert">
-            <div class="d-flex align-items-center">
-                <i class="fas fa-tools fa-2x mr-3 text-danger"></i>
-                <div>
-                    <h5 class="alert-heading font-weight-bold mb-1">Interventi Officina e Manutenzioni da Gestire!</h5>
-                    <p class="mb-0">Ci sono <strong>{{ notifiche_officina|length }}</strong> interventi di manutenzione aperti o in corso di tua competenza.</p>
-                </div>
-                <a href="{{ url_for('richieste_manutenzione') }}" class="btn btn-danger font-weight-bold ml-auto shadow-sm">
-                    Gestisci Interventi <i class="fas fa-arrow-right ml-1"></i>
-                </a>
-            </div>
-        </div>
-        {% endif %}
-
-        <!-- INTESTAZIONE E PULSANTI DI AZIONE RAPIDA -->
         <div class="row align-items-center mb-4">
             <div class="col-md-5">
                 <h2 class="font-weight-bold text-dark mb-1">
@@ -182,9 +185,8 @@
             </div>
         </div>
 
-        <!-- CARD STATISTICHE RAPIDE -->
+        <!-- CARD STATISTICHE -->
         <div class="row mb-4">
-            <!-- Promemoria Aperti -->
             <div class="col-xl-4 col-md-6 mb-3">
                 <div class="card border-left-warning shadow h-100 py-2">
                     <div class="card-body">
@@ -200,7 +202,6 @@
                 </div>
             </div>
 
-            <!-- Pezzi in Riparazione / Assistenza -->
             <div class="col-xl-4 col-md-6 mb-3">
                 <div class="card border-left-danger shadow h-100 py-2">
                     <div class="card-body">
@@ -216,7 +217,6 @@
                 </div>
             </div>
 
-            <!-- Totale Prodotti Magazzini -->
             <div class="col-xl-4 col-md-12 mb-3">
                 <div class="card border-left-secondary shadow h-100 py-2">
                     <div class="card-body">
@@ -233,13 +233,12 @@
             </div>
         </div>
 
-        <!-- SEZIONE SOTTO SOGLIA MINIMA -->
+        <!-- SEZIONE SOTTO SOGLIA -->
         {% if prodotti_sotto_soglia %}
         <div class="alert alert-danger shadow-sm mb-4" role="alert">
             <h5 class="alert-heading font-weight-bold mb-2">
                 <i class="fas fa-exclamation-triangle mr-2"></i>Attenzione: Articoli Sotto Soglia Minima di Scorta!
             </h5>
-            <p class="mb-2">I seguenti articoli hanno una quantità disponibile uguale o inferiore alla soglia impostata:</p>
             <div class="table-responsive bg-white rounded p-2">
                 <table class="table table-sm table-borderless mb-0">
                     <thead>
@@ -259,9 +258,7 @@
                             <td><span class="badge badge-danger">{{ p.quantita }} pz</span></td>
                             <td>{{ p.soglia_minima or 3 }} pz</td>
                             <td>
-                                <a href="{{ url_for('gestisci_prodotto', qr_code=p.qr_code) }}" class="btn btn-xs btn-outline-danger font-weight-bold">
-                                    Ordina / Gestisci
-                                </a>
+                                <a href="{{ url_for('gestisci_prodotto', qr_code=p.qr_code) }}" class="btn btn-xs btn-outline-danger font-weight-bold">Ordina / Gestisci</a>
                             </td>
                         </tr>
                         {% endfor %}
@@ -271,20 +268,17 @@
         </div>
         {% endif %}
 
-        <!-- TABELLA INVENTARIO MAGAZZINO STANDARD -->
+        <!-- TABELLA INVENTARIO STANDARD -->
         <div class="card shadow-sm mb-5">
             <div class="card-header bg-dark text-white d-flex justify-content-between align-items-center">
                 <h5 class="mb-0 font-weight-bold"><i class="fas fa-cubes mr-2"></i>Inventario Magazzino Standard</h5>
                 <span class="badge badge-light p-2 font-weight-bold">Totale Articoli: {{ prodotti|length }}</span>
             </div>
             <div class="card-body">
-                <!-- Barra di Ricerca in Tempo Reale -->
                 <div class="row mb-3">
                     <div class="col-md-6">
                         <div class="input-group">
-                            <div class="input-group-prepend">
-                                <span class="input-group-text"><i class="fas fa-search"></i></span>
-                            </div>
+                            <div class="input-group-prepend"><span class="input-group-text"><i class="fas fa-search"></i></span></div>
                             <input type="text" id="cercaTabella" class="form-control" placeholder="Cerca per Nome, QR Code, SAP o Posizione...">
                         </div>
                     </div>
@@ -318,12 +312,8 @@
                                     {% endif %}
                                 </td>
                                 <td class="align-middle text-center">
-                                    <a href="{{ url_for('gestisci_prodotto', qr_code=p.qr_code) }}" class="btn btn-sm btn-info font-weight-bold" title="Dettagli e Modifica">
-                                        <i class="fas fa-edit mr-1"></i> Modifica
-                                    </a>
-                                    <a href="{{ url_for('stampa_singolo_qr', qr_code=p.qr_code) }}" class="btn btn-sm btn-secondary" title="Stampa QR">
-                                        <i class="fas fa-print"></i>
-                                    </a>
+                                    <a href="{{ url_for('gestisci_prodotto', qr_code=p.qr_code) }}" class="btn btn-sm btn-info font-weight-bold" title="Dettagli e Modifica"><i class="fas fa-edit mr-1"></i> Modifica</a>
+                                    <a href="{{ url_for('stampa_singolo_qr', qr_code=p.qr_code) }}" class="btn btn-sm btn-secondary" title="Stampa QR"><i class="fas fa-print"></i></a>
                                 </td>
                             </tr>
                             {% else %}
@@ -336,7 +326,6 @@
                 </div>
             </div>
         </div>
-
     </div>
 
     <!-- MODALE AGGIUNGI PRODOTTO -->
@@ -346,9 +335,7 @@
             <div class="modal-content">
                 <div class="modal-header bg-primary text-white">
                     <h5 class="modal-title font-weight-bold"><i class="fas fa-plus-circle mr-2"></i>Aggiungi Nuovo Articolo</h5>
-                    <button type="button" class="close text-white" data-dismiss="modal" aria-label="Close">
-                        <span aria-hidden="true">&times;</span>
-                    </button>
+                    <button type="button" class="close text-white" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
                 </div>
                 <form action="{{ url_for('aggiungi_prodotto') }}" method="POST">
                     <div class="modal-body">
@@ -388,9 +375,7 @@
                         </div>
                         <div class="form-group form-check mb-0 mt-2">
                             <input type="checkbox" name="magazzino_pesante" class="form-check-input" id="checkPesante">
-                            <label class="form-check-label font-weight-bold text-dark" for="checkPesante">
-                                Destina al Magazzino Pesante
-                            </label>
+                            <label class="form-check-label font-weight-bold text-dark" for="checkPesante">Destina al Magazzino Pesante</label>
                         </div>
                     </div>
                     <div class="modal-footer">
@@ -403,7 +388,6 @@
     </div>
     {% endif %}
 
-    <!-- SCRIPTS -->
     <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@4.6.2/dist/js/bootstrap.bundle.min.js"></script>
     <script>
@@ -412,14 +396,8 @@
         if (inputCerca) {
             inputCerca.addEventListener("keyup", function() {
                 const valore = this.value.toLowerCase();
-                const righe = document.querySelectorAll("#tabellaProdotti tbody tr");
-                righe.forEach(function(riga) {
-                    const testoRiga = riga.textContent.toLowerCase();
-                    if (testoRiga.indexOf(valore) > -1) {
-                        riga.style.display = "";
-                    } else {
-                        riga.style.display = "none";
-                    }
+                document.querySelectorAll("#tabellaProdotti tbody tr").forEach(riga => {
+                    riga.style.display = riga.textContent.toLowerCase().includes(valore) ? "" : "none";
                 });
             });
         }
