@@ -4,13 +4,12 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Promemoria - Gestionale OMG</title>
-    <!-- Bootstrap 4 CSS & FontAwesome -->
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@4.6.2/dist/css/bootstrap.min.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
 </head>
 <body class="bg-light">
 
-    <!-- NAVBAR PRINCIPALE -->
+    <!-- NAVBAR COMPLETA & CENTRO NOTIFICHE -->
     <nav class="navbar navbar-expand-lg navbar-dark bg-dark shadow-sm mb-4">
         <a class="navbar-brand font-weight-bold" href="{{ url_for('index') }}">
             <i class="fas fa-boxes mr-2"></i>Gestionale OMG
@@ -21,74 +20,94 @@
         
         <div class="collapse navbar-collapse" id="navbarNav">
             <ul class="navbar-nav mr-auto">
-                <li class="nav-item">
-                    <a class="nav-link" href="{{ url_for('index') }}"><i class="fas fa-home mr-1"></i> Dashboard</a>
-                </li>
+                <li class="nav-item"><a class="nav-link" href="{{ url_for('index') }}"><i class="fas fa-home mr-1"></i> Dashboard</a></li>
                 {% if session.get('is_admin') or session.get('puo_vedere_pesante', 1) %}
-                <li class="nav-item">
-                    <a class="nav-link" href="{{ url_for('magazzino_pesante') }}"><i class="fas fa-weight-hanging mr-1"></i> Pesante</a>
-                </li>
+                <li class="nav-item"><a class="nav-link" href="{{ url_for('magazzino_pesante') }}"><i class="fas fa-weight-hanging mr-1"></i> Pesante</a></li>
                 {% endif %}
+                <li class="nav-item"><a class="nav-link" href="{{ url_for('cambi_serie') }}"><i class="fas fa-exchange-alt mr-1"></i> Cambi Serie</a></li>
                 {% if session.get('is_admin') or session.get('puo_vedere_manutenzione', 1) %}
-                <li class="nav-item">
-                    <a class="nav-link" href="{{ url_for('richieste_manutenzione') }}"><i class="fas fa-tools mr-1"></i> Manutenzioni</a>
-                </li>
+                <li class="nav-item"><a class="nav-link" href="{{ url_for('richieste_manutenzione') }}"><i class="fas fa-tools mr-1"></i> Manutenzioni</a></li>
                 {% endif %}
-                {% if session.get('is_admin') or session.get('puo_vedere_promemoria', 1) %}
-                <li class="nav-item active">
-                    <a class="nav-link" href="{{ url_for('promemoria') }}"><i class="fas fa-sticky-note mr-1"></i> Promemoria</a>
-                </li>
-                {% endif %}
+                <li class="nav-item active"><a class="nav-link" href="{{ url_for('promemoria') }}"><i class="fas fa-sticky-note mr-1"></i> Promemoria</a></li>
                 {% if session.get('is_admin') or session.get('puo_gestire_fornitori', 1) %}
-                <li class="nav-item">
-                    <a class="nav-link" href="{{ url_for('fornitori') }}"><i class="fas fa-truck mr-1"></i> Fornitori</a>
-                </li>
+                <li class="nav-item"><a class="nav-link" href="{{ url_for('fornitori') }}"><i class="fas fa-truck mr-1"></i> Fornitori</a></li>
                 {% endif %}
                 {% if session.get('is_admin') or session.get('puo_gestire_documenti', 1) %}
-                <li class="nav-item">
-                    <a class="nav-link" href="{{ url_for('documenti') }}"><i class="fas fa-folder mr-1"></i> Documenti</a>
-                </li>
+                <li class="nav-item"><a class="nav-link" href="{{ url_for('documenti') }}"><i class="fas fa-folder mr-1"></i> Documenti</a></li>
                 {% endif %}
                 {% if session.get('is_admin') or session.get('puo_vedere_report_ore', 1) %}
-                <li class="nav-item">
-                    <a class="nav-link" href="{{ url_for('report_ore') }}"><i class="fas fa-clock mr-1"></i> Report Ore</a>
-                </li>
+                <li class="nav-item"><a class="nav-link" href="{{ url_for('report_ore') }}"><i class="fas fa-clock mr-1"></i> Report Ore</a></li>
                 {% endif %}
-                {% if session.get('is_admin') %}
-                <li class="nav-item">
-                    <a class="nav-link text-warning" href="{{ url_for('admin_utenti') }}"><i class="fas fa-users-cog mr-1"></i> Utenti</a>
+
+                <!-- MENU A TENDINA ESPORTAZIONI & STAMPE -->
+                <li class="nav-item dropdown">
+                    <a class="nav-link dropdown-toggle text-info font-weight-bold" href="#" id="navbarDropdownEsportazioni" role="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                        <i class="fas fa-file-download mr-1"></i> Esportazioni CSV & Stampe
+                    </a>
+                    <div class="dropdown-menu shadow" aria-labelledby="navbarDropdownEsportazioni">
+                        <a class="dropdown-item" href="{{ url_for('esporta_inventario') }}"><i class="fas fa-file-csv mr-2 text-success"></i> Esporta Inventario Standard (CSV)</a>
+                        <a class="dropdown-item" href="{{ url_for('esporta_pesante') }}"><i class="fas fa-file-csv mr-2 text-success"></i> Esporta Magazzino Pesante (CSV)</a>
+                        <a class="dropdown-item" href="{{ url_for('esporta_storico_manutenzioni_csv') }}"><i class="fas fa-file-csv mr-2 text-warning"></i> Esporta Storico Manutenzioni (CSV)</a>
+                        <a class="dropdown-item" href="{{ url_for('esporta_interventi') }}"><i class="fas fa-file-csv mr-2 text-warning"></i> Esporta Report Interventi Officina (CSV)</a>
+                        <a class="dropdown-item" href="{{ url_for('esporta_fornitori_csv') }}"><i class="fas fa-file-csv mr-2 text-primary"></i> Esporta Fornitori (CSV)</a>
+                        <a class="dropdown-item" href="{{ url_for('esporta_cambi_serie_csv') }}"><i class="fas fa-file-csv mr-2 text-info"></i> Esporta Cambi Serie (CSV)</a>
+                        <div class="dropdown-divider"></div>
+                        <a class="dropdown-item" href="{{ url_for('stampa_tutti_qr') }}"><i class="fas fa-print mr-2 text-dark"></i> Stampa Tutti i QR Code</a>
+                        <a class="dropdown-item" href="{{ url_for('stampa_multipla_qr') }}"><i class="fas fa-qrcode mr-2 text-secondary"></i> Stampa QR Armadi / Postazioni</a>
+                    </div>
                 </li>
+
+                {% if session.get('is_admin') %}
+                <li class="nav-item"><a class="nav-link text-warning" href="{{ url_for('admin_utenti') }}"><i class="fas fa-users-cog mr-1"></i> Utenti</a></li>
                 {% endif %}
             </ul>
             
             <ul class="navbar-nav ml-auto">
+                <!-- CENTRO NOTIFICHE (CAMPANELLA) -->
+                {% set tot_notifiche = (notifiche_promemoria|length if notifiche_promemoria else 0) + (notifiche_officina|length if notifiche_officina else 0) %}
+                <li class="nav-item dropdown mr-2">
+                    <a class="nav-link dropdown-toggle position-relative text-warning" href="#" id="navbarNotifiche" role="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                        <i class="fas fa-bell fa-lg"></i>
+                        {% if tot_notifiche > 0 %}
+                            <span class="badge badge-danger badge-counter position-absolute" style="top: 0; right: -5px; font-size: 0.7rem;">{{ tot_notifiche }}</span>
+                        {% endif %}
+                    </a>
+                    <div class="dropdown-menu dropdown-menu-right shadow p-3" aria-labelledby="navbarNotifiche" style="width: 340px; max-height: 420px; overflow-y: auto;">
+                        <h6 class="dropdown-header font-weight-bold text-uppercase border-bottom pb-2 mb-2 text-primary px-0">🔔 Centro Notifiche (Oggi)</h6>
+                        
+                        {% if notifiche_promemoria %}
+                            <div class="small font-weight-bold text-warning mb-1"><i class="fas fa-sticky-note mr-1"></i> Promemoria in Scadenza Oggi ({{ notifiche_promemoria|length }})</div>
+                            {% for p in notifiche_promemoria %}
+                            <a class="dropdown-item py-2 px-2 border rounded bg-light mb-2 text-wrap" href="{{ url_for('promemoria') }}">
+                                <div class="font-weight-bold text-dark"><i class="fas fa-circle text-warning" style="font-size: 6px;"></i> {{ p.titolo }}</div>
+                                <div class="small text-muted">Scadenza: {{ p.data_scadenza }}</div>
+                            </a>
+                            {% endfor %}
+                        {% endif %}
+
+                        {% if notifiche_officina %}
+                            <div class="small font-weight-bold text-danger mt-2 mb-1"><i class="fas fa-tools mr-1"></i> Interventi Officina ({{ notifiche_officina|length }})</div>
+                            {% for m in notifiche_officina %}
+                            <a class="dropdown-item py-2 px-2 border rounded bg-light mb-2 text-wrap" href="{{ url_for('richieste_manutenzione') }}">
+                                <div class="font-weight-bold text-dark"><i class="fas fa-circle text-danger" style="font-size: 6px;"></i> {{ m.titolo or m.descrizione or 'Intervento' }}</div>
+                                <div class="small text-muted">Stato: <span class="badge badge-danger">{{ m.stato }}</span></div>
+                            </a>
+                            {% endfor %}
+                        {% endif %}
+
+                        {% if tot_notifiche == 0 %}
+                            <div class="text-center text-muted py-3 small">Nessuna notifica per oggi.</div>
+                        {% endif %}
+                    </div>
+                </li>
+
                 {% if session.get('username') %}
-                <li class="nav-item">
-                    <span class="nav-link text-white"><i class="fas fa-user mr-1"></i> {{ session.get('username') }}</span>
-                </li>
-                <li class="nav-item">
-                    <a class="btn btn-outline-light btn-sm my-1" href="{{ url_for('logout') }}"><i class="fas fa-sign-out-alt mr-1"></i> Logout</a>
-                </li>
+                <li class="nav-item"><span class="nav-link text-white"><i class="fas fa-user mr-1"></i> {{ session.get('username') }}</span></li>
+                <li class="nav-item"><a class="btn btn-outline-light btn-sm my-1 ml-2" href="{{ url_for('logout') }}"><i class="fas fa-sign-out-alt mr-1"></i> Logout</a></li>
                 {% endif %}
             </ul>
         </div>
     </nav>
-
-    <!-- NOTIFICHE FLASH -->
-    <div class="container-fluid">
-        {% with messages = get_flashed_messages(with_categories=true) %}
-          {% if messages %}
-            {% for category, message in messages %}
-              <div class="alert alert-{% if category == 'error' %}danger{% else %}{{ category }}{% endif %} alert-dismissible fade show shadow-sm" role="alert">
-                {{ message }}
-                <button type="button" class="close" data-dismiss="alert" aria-label="Close">
-                  <span aria-label="Close">&times;</span>
-                </button>
-              </div>
-            {% endfor %}
-          {% endif %}
-        {% endwith %}
-    </div>
 
     <!-- CONTENUTO PROMEMORIA -->
     <div class="container-fluid mt-4">
@@ -96,11 +115,8 @@
             <h2>📌 Gestione Promemoria & Attività</h2>
         </div>
 
-        <!-- Modulo Aggiunta Promemoria -->
         <div class="card shadow-sm mb-4">
-            <div class="card-header bg-primary text-white font-weight-bold">
-                <i class="fas fa-plus-circle mr-2"></i>Aggiungi Nuovo Promemoria
-            </div>
+            <div class="card-header bg-primary text-white font-weight-bold"><i class="fas fa-plus-circle mr-2"></i>Aggiungi Nuovo Promemoria</div>
             <div class="card-body">
                 <form action="{{ url_for('promemoria') }}" method="POST">
                     <div class="row">
@@ -140,29 +156,24 @@
                         </div>
                         {% if puo_assegnare %}
                         <div class="col-md-3 mb-3">
-                            <label class="form-label font-weight-bold">Assegna a (Seleziona più utenti):</label>
+                            <label class="form-label font-weight-bold">Assegna a (Multi-selezione):</label>
                             <select name="assegnato_a[]" class="form-control" multiple style="height: 100px;">
                                 {% for u in lista_utenti %}
                                     <option value="{{ u.username }}">{{ u.username }}</option>
                                 {% endfor %}
                             </select>
-                            <small class="form-text text-muted">Tieni premuto <code>Ctrl</code> (o <code>Cmd</code> su Mac) per selezionare più persone.</small>
+                            <small class="form-text text-muted">Tieni premuto <code>Ctrl</code> per selezioni multiple.</small>
                         </div>
                         {% endif %}
                     </div>
 
-                    <button type="submit" class="btn btn-success font-weight-bold">
-                        <i class="fas fa-save mr-1"></i> Salva Promemoria
-                    </button>
+                    <button type="submit" class="btn btn-success font-weight-bold"><i class="fas fa-save mr-1"></i> Salva Promemoria</button>
                 </form>
             </div>
         </div>
 
-        <!-- Tabella Elenco Promemoria -->
         <div class="card shadow-sm mb-5">
-            <div class="card-header bg-dark text-white font-weight-bold">
-                <i class="fas fa-list mr-2"></i>Elenco Promemoria Attivi e Completati
-            </div>
+            <div class="card-header bg-dark text-white font-weight-bold"><i class="fas fa-list mr-2"></i>Elenco Promemoria Attivi e Completati</div>
             <div class="card-body p-0">
                 <div class="table-responsive">
                     <table class="table table-hover table-striped mb-0">
@@ -182,11 +193,7 @@
                             {% for p in promemoria %}
                             <tr class="{% if p.completato %}table-secondary text-muted{% endif %}">
                                 <td class="align-middle">
-                                    {% if p.completato %}
-                                        <span class="badge badge-success">Completato</span>
-                                    {% else %}
-                                        <span class="badge badge-warning">In Corso</span>
-                                    {% endif %}
+                                    {% if p.completato %}<span class="badge badge-success">Completato</span>{% else %}<span class="badge badge-warning">In Corso</span>{% endif %}
                                 </td>
                                 <td class="align-middle font-weight-bold">
                                     {% if p.completato %}<del>{{ p.titolo }}</del>{% else %}{{ p.titolo }}{% endif %}
@@ -194,30 +201,19 @@
                                 <td class="align-middle">{{ p.descrizione or '-' }}</td>
                                 <td class="align-middle">{{ p.data_scadenza or '-' }}</td>
                                 <td class="align-middle">
-                                    {% if p.priorita == 'Urgente' %}
-                                        <span class="badge badge-danger">Urgente</span>
-                                    {% elif p.priorita == 'Alta' %}
-                                        <span class="badge badge-warning">Alta</span>
-                                    {% elif p.priorita == 'Media' %}
-                                        <span class="badge badge-info">Media</span>
-                                    {% else %}
-                                        <span class="badge badge-light">Bassa</span>
-                                    {% endif %}
+                                    {% if p.priorita == 'Urgente' %}<span class="badge badge-danger">Urgente</span>
+                                    {% elif p.priorita == 'Alta' %}<span class="badge badge-warning">Alta</span>
+                                    {% elif p.priorita == 'Media' %}<span class="badge badge-info">Media</span>
+                                    {% else %}<span class="badge badge-light">Bassa</span>{% endif %}
                                 </td>
                                 <td class="align-middle">{{ p.ricorrenza }}</td>
-                                <td class="align-middle">
-                                    <span class="badge badge-dark">{{ p.assegnato_a or 'Tutti' }}</span>
-                                </td>
+                                <td class="align-middle"><span class="badge badge-dark">{{ p.assegnato_a or 'Tutti' }}</span></td>
                                 <td class="align-middle text-center">
                                     <form action="{{ url_for('completa_promemoria', promemoria_id=p.id) }}" method="POST" class="d-inline">
-                                        <button type="submit" class="btn btn-sm {% if p.completato %}btn-outline-secondary{% else %}btn-success{% endif %}" title="Cambia Stato">
-                                            <i class="fas {% if p.completato %}fa-undo{% else %}fa-check{% endif %}"></i>
-                                        </button>
+                                        <button type="submit" class="btn btn-sm {% if p.completato %}btn-outline-secondary{% else %}btn-success{% endif %}"><i class="fas {% if p.completato %}fa-undo{% else %}fa-check{% endif %}"></i></button>
                                     </form>
-                                    <form action="{{ url_for('elimina_promemoria', promemoria_id=p.id) }}" method="POST" class="d-inline" onsubmit="return confirm('Sei sicuro di voler eliminare questo promemoria?');">
-                                        <button type="submit" class="btn btn-sm btn-danger" title="Elimina">
-                                            <i class="fas fa-trash"></i>
-                                        </button>
+                                    <form action="{{ url_for('elimina_promemoria', promemoria_id=p.id) }}" method="POST" class="d-inline" onsubmit="return confirm('Eliminare questo promemoria?');">
+                                        <button type="submit" class="btn btn-sm btn-danger"><i class="fas fa-trash"></i></button>
                                     </form>
                                 </td>
                             </tr>
@@ -233,7 +229,6 @@
         </div>
     </div>
 
-    <!-- JS DEPENDENCIES -->
     <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@4.6.2/dist/js/bootstrap.bundle.min.js"></script>
 </body>
