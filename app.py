@@ -327,6 +327,7 @@ def index():
     interventi_aperti_count = 0
     interventi_in_lavoro_count = 0
     interventi_attesa_count = 0
+    notifiche_attive = [] #[span_8](start_span)[span_8](end_span)[span_9](start_span)[span_9](end_span) Inizializzazione della lista notifiche attive
     
     username = session.get('username')
     is_admin = session.get('is_admin')
@@ -338,6 +339,16 @@ def index():
         
         cur.execute("SELECT * FROM prodotti ORDER BY nome ASC;")
         tutti = cur.fetchall()
+        
+        # Recupero delle notifiche non lette destinate all'utente loggato[span_10](start_span)[span_10](end_span)[span_11](start_span)[span_11](end_span)
+        if username:
+            cur.execute("""
+                SELECT id, titolo, messaggio, link, to_char(creato_il, 'DD-MM-YYYY HH24:MI') as data 
+                FROM notifiche 
+                WHERE destinatario = %s AND letta = FALSE 
+                ORDER BY creato_il DESC;
+            """, (username,))
+            notifiche_attive = cur.fetchall()
         
         if is_admin or puo_assegnare:
             cur.execute("SELECT COUNT(*) as count FROM promemoria WHERE completato = FALSE;")
@@ -374,7 +385,8 @@ def index():
                            promemoria_urgenti=promemoria_urgenti,
                            interventi_aperti_count=interventi_aperti_count,
                            interventi_in_lavoro_count=interventi_in_lavoro_count,
-                           interventi_attesa_count=interventi_attesa_count)
+                           interventi_attesa_count=interventi_attesa_count,
+                           notifiche_attive=notifiche_attive) #[span_12](start_span)[span_12](end_span)[span_13](start_span)[span_13](end_span) Passaggio delle notifiche attive al template HTML
 
 @app.route("/login", methods=["GET", "POST"])
 @app.route("/login.html", methods=["GET", "POST"])
@@ -1368,7 +1380,7 @@ def documenti(cartella_id):
             percorso_breadcrumb.insert(0, curr)
             if curr['parent_id']:
                 cur.execute("SELECT * FROM cartelle WHERE id = %s;", (curr['parent_id'],))
-                curr = curr.fetchone()
+                curr = cur.fetchone()
             else:
                 curr = None
 
