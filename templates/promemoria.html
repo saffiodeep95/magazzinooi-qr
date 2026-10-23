@@ -69,6 +69,7 @@
                             <tr>
                                 <th class="ps-3">Titolo</th>
                                 <th>Scadenza</th>
+                                <th>Ricorrenza</th>
                                 <th>Priorità</th>
                                 <th>Assegnato A</th>
                                 <th>Stato</th>
@@ -81,6 +82,7 @@
                                 <tr class="{% if p.completato %}table-secondary opacity-75{% endif %}">
                                     <td class="ps-3 fw-bold">{{ p.titolo }}</td>
                                     <td>{{ p.data_scadenza or '-' }}</td>
+                                    <td><span class="badge bg-light text-dark border">{{ p.ricorrenza or 'Nessuna' }}</span></td>
                                     <td><span class="badge bg-{{ 'danger' if p.priorita == 'Alta' else 'info' }}">{{ p.priorita }}</span></td>
                                     <td><span class="badge bg-secondary">{{ p.assegnato_a or 'Tutti' }}</span></td>
                                     <td>
@@ -90,17 +92,17 @@
                                     </td>
                                     <td class="text-end pe-3">
                                         <form action="{{ url_for('completa_promemoria', promemoria_id=p.id) }}" method="POST" class="d-inline">
-                                            <button type="submit" class="btn btn-outline-success btn-sm"><i class="fa-solid fa-check"></i></button>
+                                            <button type="submit" class="btn btn-outline-success btn-sm" title="Completa / Avanza"><i class="fa-solid fa-check"></i></button>
                                         </form>
                                         <form action="{{ url_for('elimina_promemoria', promemoria_id=p.id) }}" method="POST" class="d-inline">
-                                            <button type="submit" class="btn btn-outline-danger btn-sm"><i class="fa-solid fa-trash"></i></button>
+                                            <button type="submit" class="btn btn-outline-danger btn-sm" title="Elimina"><i class="fa-solid fa-trash"></i></button>
                                         </form>
                                     </td>
                                 </tr>
                                 {% endfor %}
                             {% else %}
                                 <tr>
-                                    <td colspan="6" class="text-center py-5 text-muted">
+                                    <td colspan="7" class="text-center py-5 text-muted">
                                         <i class="fa-solid fa-bell-slash fa-3x mb-3 opacity-50"></i>
                                         <p class="mb-0">Nessun promemoria presente.</p>
                                     </td>
@@ -127,11 +129,25 @@
                             <label class="form-label fw-bold">Titolo *</label>
                             <input type="text" class="form-control" name="titolo" required>
                         </div>
+                        
                         <div class="row">
                             <div class="col-md-6 mb-3">
                                 <label class="form-label fw-bold">Data Scadenza</label>
                                 <input type="date" class="form-control" name="data_scadenza">
                             </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label fw-bold">Ricorrenza</label>
+                                <select class="form-select" name="ricorrenza">
+                                    <option value="Nessuna" selected>Nessuna</option>
+                                    <option value="Giorno">1 Giorno</option>
+                                    <option value="Settimana">1 Settimana</option>
+                                    <option value="Mese">1 Mese</option>
+                                    <option value="Anno">1 Anno</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="row">
                             <div class="col-md-6 mb-3">
                                 <label class="form-label fw-bold">Priorità</label>
                                 <select class="form-select" name="priorita">
@@ -140,22 +156,22 @@
                                     <option value="Alta">Alta</option>
                                 </select>
                             </div>
-                        </div>
-
-                        <!-- SELEZIONE UTENTE ASSEGNATARIO -->
-                        <div class="mb-3">
-                            <label class="form-label fw-bold"><i class="fa-solid fa-user-check me-1"></i> Assegna Promemoria a *</label>
-                            {% if puo_assegnare or session.get('is_admin') %}
-                                <select class="form-select" name="assegnato_a" required>
-                                    <option value="" disabled selected>Seleziona Utente...</option>
-                                    {% for u in lista_utenti %}
-                                        <option value="{{ u.username }}">{{ u.username }}</option>
-                                    {% endfor %}
-                                </select>
-                            {% else %}
-                                <input type="text" class="form-control" value="{{ session.get('username') }}" readonly>
-                                <input type="hidden" name="assegnato_a" value="{{ session.get('username') }}">
-                            {% endif %}
+                            
+                            <!-- SELEZIONE UTENTE ASSEGNATARIO -->
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label fw-bold">Assegna a *</label>
+                                {% if puo_assegnare or session.get('is_admin') %}
+                                    <select class="form-select" name="assegnato_a" required>
+                                        <option value="" disabled selected>Seleziona Utente...</option>
+                                        {% for u in lista_utenti %}
+                                            <option value="{{ u.username }}">{{ u.username }}</option>
+                                        {% endfor %}
+                                    </select>
+                                {% else %}
+                                    <input type="text" class="form-control" value="{{ session.get('username') }}" readonly>
+                                    <input type="hidden" name="assegnato_a" value="{{ session.get('username') }}">
+                                {% endif %}
+                            </div>
                         </div>
 
                         <div class="mb-3">
