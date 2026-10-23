@@ -198,6 +198,8 @@
 
         function aggiornaMacchine(fornoSelezionato) {
             const selectMacchina = document.getElementById("selectMacchina");
+            if (!selectMacchina) return;
+            
             selectMacchina.innerHTML = '<option value="" disabled selected>Seleziona Macchina...</option>';
 
             if (fornoSelezionato && macchinePerForno[fornoSelezionato]) {
