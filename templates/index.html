@@ -1,291 +1,384 @@
-{% extends "base.html" %}
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard - Gestionale OMG</title>
+    <!-- Bootstrap 4 CSS & FontAwesome -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@4.6.2/dist/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+</head>
+<body class="bg-light">
 
-{% block content %}
-<div class="container-fluid mt-4">
+    <!-- NAVBAR PRINCIPALE -->
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark shadow-sm mb-4">
+        <a class="navbar-brand font-weight-bold" href="{{ url_for('index') }}">
+            <i class="fas fa-boxes mr-2"></i>Gestionale OMG
+        </a>
+        <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarNav">
+            <span class="navbar-toggler-icon"></span>
+        </button>
+        
+        <div class="collapse navbar-collapse" id="navbarNav">
+            <ul class="navbar-nav mr-auto">
+                <li class="nav-item active">
+                    <a class="nav-link" href="{{ url_for('index') }}"><i class="fas fa-home mr-1"></i> Dashboard</a>
+                </li>
+                {% if session.get('is_admin') or session.get('puo_vedere_pesante', 1) %}
+                <li class="nav-item">
+                    <a class="nav-link" href="{{ url_for('magazzino_pesante') }}"><i class="fas fa-weight-hanging mr-1"></i> Pesante</a>
+                </li>
+                {% endif %}
+                {% if session.get('is_admin') or session.get('puo_vedere_manutenzione', 1) %}
+                <li class="nav-item">
+                    <a class="nav-link" href="{{ url_for('richieste_manutenzione') }}"><i class="fas fa-tools mr-1"></i> Manutenzioni</a>
+                </li>
+                {% endif %}
+                {% if session.get('is_admin') or session.get('puo_vedere_promemoria', 1) %}
+                <li class="nav-item">
+                    <a class="nav-link" href="{{ url_for('promemoria') }}"><i class="fas fa-sticky-note mr-1"></i> Promemoria</a>
+                </li>
+                {% endif %}
+                {% if session.get('is_admin') or session.get('puo_gestire_fornitori', 1) %}
+                <li class="nav-item">
+                    <a class="nav-link" href="{{ url_for('fornitori') }}"><i class="fas fa-truck mr-1"></i> Fornitori</a>
+                </li>
+                {% endif %}
+                {% if session.get('is_admin') or session.get('puo_gestire_documenti', 1) %}
+                <li class="nav-item">
+                    <a class="nav-link" href="{{ url_for('documenti') }}"><i class="fas fa-folder mr-1"></i> Documenti</a>
+                </li>
+                {% endif %}
+                {% if session.get('is_admin') or session.get('puo_vedere_report_ore', 1) %}
+                <li class="nav-item">
+                    <a class="nav-link" href="{{ url_for('report_ore') }}"><i class="fas fa-clock mr-1"></i> Report Ore</a>
+                </li>
+                {% endif %}
+                {% if session.get('is_admin') %}
+                <li class="nav-item">
+                    <a class="nav-link text-warning" href="{{ url_for('admin_utenti') }}"><i class="fas fa-users-cog mr-1"></i> Utenti</a>
+                </li>
+                {% endif %}
+            </ul>
+            
+            <ul class="navbar-nav ml-auto">
+                {% if session.get('username') %}
+                <li class="nav-item">
+                    <span class="nav-link text-white"><i class="fas fa-user mr-1"></i> {{ session.get('username') }}</span>
+                </li>
+                <li class="nav-item">
+                    <a class="btn btn-outline-light btn-sm my-1" href="{{ url_for('logout') }}"><i class="fas fa-sign-out-alt mr-1"></i> Logout</a>
+                </li>
+                {% endif %}
+            </ul>
+        </div>
+    </nav>
 
-    <!-- INTESTAZIONE E BENVENUTO -->
-    <div class="d-flex justify-content-between align-items-center mb-4">
-        <div>
-            <h2 class="font-weight-bold text-dark mb-1">
-                <i class="fas fa-chart-line text-primary mr-2"></i>Dashboard Gestionale OMG
-            </h2>
-            <p class="text-muted mb-0">Benvenuto, <strong>{{ session.get('username') }}</strong>! Panoramica generale del magazzino e delle attività.</p>
-        </div>
-        <div>
-            <a href="{{ url_for('scanner_globale') }}" class="btn btn-primary shadow-sm font-weight-bold">
-                <i class="fas fa-qrcode mr-1"></i> Scanner Globale QR
-            </a>
-        </div>
+    <!-- NOTIFICHE FLASH -->
+    <div class="container-fluid">
+        {% with messages = get_flashed_messages(with_categories=true) %}
+          {% if messages %}
+            {% for category, message in messages %}
+              <div class="alert alert-{% if category == 'error' %}danger{% else %}{{ category }}{% endif %} alert-dismissible fade show shadow-sm" role="alert">
+                {{ message }}
+                <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+                  <span aria-label="Close">&times;</span>
+                </button>
+              </div>
+            {% endfor %}
+          {% endif %}
+        {% endwith %}
     </div>
 
-    <!-- CARD INDICATORI RAPIDI (STATISTICHE) -->
-    <div class="row mb-4">
-        <!-- Promemoria Urgenti -->
-        <div class="col-xl-3 col-md-6 mb-3">
-            <div class="card border-left-warning shadow h-100 py-2">
-                <div class="card-body">
-                    <div class="row no-gutters align-items-center">
-                        <div class="col mr-2">
-                            <div class="text-xs font-weight-bold text-warning text-uppercase mb-1">Promemoria da Completare</div>
-                            <div class="h5 mb-0 font-weight-bold text-gray-800">{{ promemoria_urgenti }}</div>
-                        </div>
-                        <div class="col-auto">
-                            <i class="fas fa-bell fa-2x text-warning"></i>
-                        </div>
-                    </div>
-                    <a href="{{ url_for('promemoria') }}" class="btn btn-sm btn-link text-warning p-0 mt-2">Vedi promemoria &rarr;</a>
-                </div>
+    <!-- CONTENUTO DASHBOARD -->
+    <div class="container-fluid mt-4">
+
+        <!-- INTESTAZIONE E BENVENUTO -->
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <div>
+                <h2 class="font-weight-bold text-dark mb-1">
+                    <i class="fas fa-chart-line text-primary mr-2"></i>Dashboard Gestionale OMG
+                </h2>
+                <p class="text-muted mb-0">Benvenuto, <strong>{{ session.get('username') }}</strong>! Panoramica generale del magazzino e delle attività.</p>
+            </div>
+            <div>
+                <a href="{{ url_for('scanner_globale') }}" class="btn btn-primary shadow-sm font-weight-bold">
+                    <i class="fas fa-qrcode mr-1"></i> Scanner Globale QR
+                </a>
             </div>
         </div>
 
-        <!-- Interventi Aperti -->
-        <div class="col-xl-3 col-md-6 mb-3">
-            <div class="card border-left-danger shadow h-100 py-2">
-                <div class="card-body">
-                    <div class="row no-gutters align-items-center">
-                        <div class="col mr-2">
-                            <div class="text-xs font-weight-bold text-danger text-uppercase mb-1">Interventi Aperti</div>
-                            <div class="h5 mb-0 font-weight-bold text-gray-800">{{ interventi_aperti_count }}</div>
+        <!-- CARD INDICATORI RAPIDI (STATISTICHE) -->
+        <div class="row mb-4">
+            <!-- Promemoria Urgenti -->
+            <div class="col-xl-3 col-md-6 mb-3">
+                <div class="card border-left-warning shadow h-100 py-2">
+                    <div class="card-body">
+                        <div class="row no-gutters align-items-center">
+                            <div class="col mr-2">
+                                <div class="text-xs font-weight-bold text-warning text-uppercase mb-1">Promemoria da Completare</div>
+                                <div class="h5 mb-0 font-weight-bold text-gray-800">{{ promemoria_urgenti }}</div>
+                            </div>
+                            <div class="col-auto">
+                                <i class="fas fa-bell fa-2x text-warning"></i>
+                            </div>
                         </div>
-                        <div class="col-auto">
-                            <i class="fas fa-wrench fa-2x text-danger"></i>
-                        </div>
-                    </div>
-                    <a href="{{ url_for('richieste_manutenzione') }}" class="btn btn-sm btn-link text-danger p-0 mt-2">Gestisci manutenzioni &rarr;</a>
-                </div>
-            </div>
-        </div>
-
-        <!-- Interventi In Lavoro / Pausa -->
-        <div class="col-xl-3 col-md-6 mb-3">
-            <div class="card border-left-info shadow h-100 py-2">
-                <div class="card-body">
-                    <div class="row no-gutters align-items-center">
-                        <div class="col mr-2">
-                            <div class="text-xs font-weight-bold text-info text-uppercase mb-1">Interventi In Corso</div>
-                            <div class="h5 mb-0 font-weight-bold text-gray-800">{{ interventi_in_lavoro_count }}</div>
-                        </div>
-                        <div class="col-auto">
-                            <i class="fas fa-tools fa-2x text-info"></i>
-                        </div>
-                    </div>
-                    <a href="{{ url_for('richieste_manutenzione') }}" class="btn btn-sm btn-link text-info p-0 mt-2">Dettagli lavori &rarr;</a>
-                </div>
-            </div>
-        </div>
-
-        <!-- Attesa Ricambio -->
-        <div class="col-xl-3 col-md-6 mb-3">
-            <div class="card border-left-secondary shadow h-100 py-2">
-                <div class="card-body">
-                    <div class="row no-gutters align-items-center">
-                        <div class="col mr-2">
-                            <div class="text-xs font-weight-bold text-secondary text-uppercase mb-1">In Attesa Ricambio</div>
-                            <div class="h5 mb-0 font-weight-bold text-gray-800">{{ interventi_attesa_count }}</div>
-                        </div>
-                        <div class="col-auto">
-                            <i class="fas fa-boxes fa-2x text-secondary"></i>
-                        </div>
-                    </div>
-                    <a href="{{ url_for('richieste_manutenzione') }}" class="btn btn-sm btn-link text-secondary p-0 mt-2">Vedi lista &rarr;</a>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- SEZIONE SOTTO SOGLIA MINIMA (ALERT SCORTE LOW) -->
-    {% if prodotti_sotto_soglia %}
-    <div class="alert alert-danger shadow-sm mb-4" role="alert">
-        <h5 class="alert-heading font-weight-bold mb-2">
-            <i class="fas fa-exclamation-triangle mr-2"></i>Attenzione: Articoli Sotto Soglia Minima di Scorta!
-        </h5>
-        <p class="mb-2">I seguenti articoli hanno una quantità disponibile uguale o inferiore alla soglia impostata:</p>
-        <div class="table-responsive bg-white rounded p-2">
-            <table class="table table-sm table-borderless mb-0">
-                <thead>
-                    <tr class="border-bottom">
-                        <th>Articolo</th>
-                        <th>QR Code</th>
-                        <th>Giacenza Attuale</th>
-                        <th>Soglia Minima</th>
-                        <th>Azione</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for p in prodotti_sotto_soglia %}
-                    <tr>
-                        <td class="font-weight-bold">{{ p.nome }}</td>
-                        <td><code>{{ p.qr_code }}</code></td>
-                        <td><span class="badge badge-danger">{{ p.quantita }} pz</span></td>
-                        <td>{{ p.soglia_minima or 3 }} pz</td>
-                        <td>
-                            <a href="{{ url_for('gestisci_prodotto', qr_code=p.qr_code) }}" class="btn btn-xs btn-outline-danger font-weight-bold">
-                                Ordina / Gestisci
-                            </a>
-                        </td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
-        </div>
-    </div>
-    {% endif %}
-
-    <!-- RICERCA E SCORCIATOIE RAPIDE MAGAZZINO -->
-    <div class="card shadow-sm mb-4">
-        <div class="card-header bg-dark text-white d-flex justify-content-between align-items-center">
-            <h5 class="mb-0 font-weight-bold"><i class="fas fa-cubes mr-2"></i>Inventario Magazzino Standard</h5>
-            {% if session.get('is_admin') or session.get('puo_aggiungere_prodotti', 1) %}
-            <button class="btn btn-success btn-sm font-weight-bold" data-toggle="modal" data-target="#modalAggiungiProdotto">
-                <i class="fas fa-plus mr-1"></i> Nuovo Articolo
-            </button>
-            {% endif %}
-        </div>
-        <div class="card-body">
-            <!-- Barra Ricerca Veloce Tabella -->
-            <div class="row mb-3">
-                <div class="col-md-6">
-                    <div class="input-group">
-                        <div class="input-group-prepend">
-                            <span class="input-group-text"><i class="fas fa-search"></i></span>
-                        </div>
-                        <input type="text" id="cercaTabella" class="form-control" placeholder="Cerca per Nome, QR Code, SAP o Posizione...">
+                        <a href="{{ url_for('promemoria') }}" class="btn btn-sm btn-link text-warning p-0 mt-2">Vedi promemoria &rarr;</a>
                     </div>
                 </div>
             </div>
 
-            <!-- Tabella Prodotti Magazzino -->
-            <div class="table-responsive">
-                <table class="table table-hover table-striped" id="tabellaProdotti">
-                    <thead class="thead-light">
-                        <tr>
+            <!-- Interventi Aperti -->
+            <div class="col-xl-3 col-md-6 mb-3">
+                <div class="card border-left-danger shadow h-100 py-2">
+                    <div class="card-body">
+                        <div class="row no-gutters align-items-center">
+                            <div class="col mr-2">
+                                <div class="text-xs font-weight-bold text-danger text-uppercase mb-1">Interventi Aperti</div>
+                                <div class="h5 mb-0 font-weight-bold text-gray-800">{{ interventi_aperti_count }}</div>
+                            </div>
+                            <div class="col-auto">
+                                <i class="fas fa-wrench fa-2x text-danger"></i>
+                            </div>
+                        </div>
+                        <a href="{{ url_for('richieste_manutenzione') }}" class="btn btn-sm btn-link text-danger p-0 mt-2">Gestisci manutenzioni &rarr;</a>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Interventi In Lavoro / Pausa -->
+            <div class="col-xl-3 col-md-6 mb-3">
+                <div class="card border-left-info shadow h-100 py-2">
+                    <div class="card-body">
+                        <div class="row no-gutters align-items-center">
+                            <div class="col mr-2">
+                                <div class="text-xs font-weight-bold text-info text-uppercase mb-1">Interventi In Corso</div>
+                                <div class="h5 mb-0 font-weight-bold text-gray-800">{{ interventi_in_lavoro_count }}</div>
+                            </div>
+                            <div class="col-auto">
+                                <i class="fas fa-tools fa-2x text-info"></i>
+                            </div>
+                        </div>
+                        <a href="{{ url_for('richieste_manutenzione') }}" class="btn btn-sm btn-link text-info p-0 mt-2">Dettagli lavori &rarr;</a>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Attesa Ricambio -->
+            <div class="col-xl-3 col-md-6 mb-3">
+                <div class="card border-left-secondary shadow h-100 py-2">
+                    <div class="card-body">
+                        <div class="row no-gutters align-items-center">
+                            <div class="col mr-2">
+                                <div class="text-xs font-weight-bold text-secondary text-uppercase mb-1">In Attesa Ricambio</div>
+                                <div class="h5 mb-0 font-weight-bold text-gray-800">{{ interventi_attesa_count }}</div>
+                            </div>
+                            <div class="col-auto">
+                                <i class="fas fa-boxes fa-2x text-secondary"></i>
+                            </div>
+                        </div>
+                        <a href="{{ url_for('richieste_manutenzione') }}" class="btn btn-sm btn-link text-secondary p-0 mt-2">Vedi lista &rarr;</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- SEZIONE SOTTO SOGLIA MINIMA (ALERT SCORTE LOW) -->
+        {% if prodotti_sotto_soglia %}
+        <div class="alert alert-danger shadow-sm mb-4" role="alert">
+            <h5 class="alert-heading font-weight-bold mb-2">
+                <i class="fas fa-exclamation-triangle mr-2"></i>Attenzione: Articoli Sotto Soglia Minima di Scorta!
+            </h5>
+            <p class="mb-2">I seguenti articoli hanno una quantità disponibile uguale o inferiore alla soglia impostata:</p>
+            <div class="table-responsive bg-white rounded p-2">
+                <table class="table table-sm table-borderless mb-0">
+                    <thead>
+                        <tr class="border-bottom">
+                            <th>Articolo</th>
                             <th>QR Code</th>
-                            <th>Nome Articolo</th>
-                            <th>Codice SAP</th>
-                            <th>Posizione</th>
-                            <th>Giacenza</th>
-                            <th class="text-center">Azioni Fast</th>
+                            <th>Giacenza Attuale</th>
+                            <th>Soglia Minima</th>
+                            <th>Azione</th>
                         </tr>
                     </thead>
                     <tbody>
-                        {% for p in prodotti %}
+                        {% for p in prodotti_sotto_soglia %}
                         <tr>
-                            <td class="align-middle"><code>{{ p.qr_code }}</code></td>
-                            <td class="align-middle font-weight-bold">{{ p.nome }}</td>
-                            <td class="align-middle">{{ p.sap or '-' }}</td>
-                            <td class="align-middle">{{ p.posizione or '-' }}</td>
-                            <td class="align-middle">
-                                {% set soglia = p.soglia_minima or 3 %}
-                                {% if p.quantita <= soglia %}
-                                    <span class="badge badge-danger p-2">{{ p.quantita }} pz</span>
-                                {% else %}
-                                    <span class="badge badge-success p-2">{{ p.quantita }} pz</span>
-                                {% endif %}
-                            </td>
-                            <td class="align-middle text-center">
-                                <a href="{{ url_for('gestisci_prodotto', qr_code=p.qr_code) }}" class="btn btn-sm btn-info" title="Dettagli e Modifica">
-                                    <i class="fas fa-edit"></i>
-                                </a>
-                                <a href="{{ url_for('stampa_singolo_qr', qr_code=p.qr_code) }}" class="btn btn-sm btn-secondary" title="Stampa QR">
-                                    <i class="fas fa-print"></i>
+                            <td class="font-weight-bold">{{ p.nome }}</td>
+                            <td><code>{{ p.qr_code }}</code></td>
+                            <td><span class="badge badge-danger">{{ p.quantita }} pz</span></td>
+                            <td>{{ p.soglia_minima or 3 }} pz</td>
+                            <td>
+                                <a href="{{ url_for('gestisci_prodotto', qr_code=p.qr_code) }}" class="btn btn-xs btn-outline-danger font-weight-bold">
+                                    Ordina / Gestisci
                                 </a>
                             </td>
-                        </tr>
-                        {% else %}
-                        <tr>
-                            <td colspan="6" class="text-center text-muted py-4">Nessun articolo presente nel magazzino standard.</td>
                         </tr>
                         {% endfor %}
                     </tbody>
                 </table>
             </div>
         </div>
+        {% endif %}
+
+        <!-- RICERCA E SCORCIATOIE RAPIDE MAGAZZINO -->
+        <div class="card shadow-sm mb-5">
+            <div class="card-header bg-dark text-white d-flex justify-content-between align-items-center">
+                <h5 class="mb-0 font-weight-bold"><i class="fas fa-cubes mr-2"></i>Inventario Magazzino Standard</h5>
+                {% if session.get('is_admin') or session.get('puo_aggiungere_prodotti', 1) %}
+                <button class="btn btn-success btn-sm font-weight-bold" data-toggle="modal" data-target="#modalAggiungiProdotto">
+                    <i class="fas fa-plus mr-1"></i> Nuovo Articolo
+                </button>
+                {% endif %}
+            </div>
+            <div class="card-body">
+                <!-- Barra Ricerca Veloce Tabella -->
+                <div class="row mb-3">
+                    <div class="col-md-6">
+                        <div class="input-group">
+                            <div class="input-group-prepend">
+                                <span class="input-group-text"><i class="fas fa-search"></i></span>
+                            </div>
+                            <input type="text" id="cercaTabella" class="form-control" placeholder="Cerca per Nome, QR Code, SAP o Posizione...">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Tabella Prodotti Magazzino -->
+                <div class="table-responsive">
+                    <table class="table table-hover table-striped" id="tabellaProdotti">
+                        <thead class="thead-light">
+                            <tr>
+                                <th>QR Code</th>
+                                <th>Nome Articolo</th>
+                                <th>Codice SAP</th>
+                                <th>Posizione</th>
+                                <th>Giacenza</th>
+                                <th class="text-center">Azioni Fast</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for p in prodotti %}
+                            <tr>
+                                <td class="align-middle"><code>{{ p.qr_code }}</code></td>
+                                <td class="align-middle font-weight-bold">{{ p.nome }}</td>
+                                <td class="align-middle">{{ p.sap or '-' }}</td>
+                                <td class="align-middle">{{ p.posizione or '-' }}</td>
+                                <td class="align-middle">
+                                    {% set soglia = p.soglia_minima or 3 %}
+                                    {% if p.quantita <= soglia %}
+                                        <span class="badge badge-danger p-2">{{ p.quantita }} pz</span>
+                                    {% else %}
+                                        <span class="badge badge-success p-2">{{ p.quantita }} pz</span>
+                                    {% endif %}
+                                </td>
+                                <td class="align-middle text-center">
+                                    <a href="{{ url_for('gestisci_prodotto', qr_code=p.qr_code) }}" class="btn btn-sm btn-info" title="Dettagli e Modifica">
+                                        <i class="fas fa-edit"></i>
+                                    </a>
+                                    <a href="{{ url_for('stampa_singolo_qr', qr_code=p.qr_code) }}" class="btn btn-sm btn-secondary" title="Stampa QR">
+                                        <i class="fas fa-print"></i>
+                                    </a>
+                                </td>
+                            </tr>
+                            {% else %}
+                            <tr>
+                                <td colspan="6" class="text-center text-muted py-4">Nessun articolo presente nel magazzino standard.</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
     </div>
 
-</div>
-
-<!-- MODALE AGGIUNGI NUOVO PRODOTTO -->
-{% if session.get('is_admin') or session.get('puo_aggiungere_prodotti', 1) %}
-<div class="modal fade" id="modalAggiungiProdotto" tabindex="-1" role="dialog" aria-hidden="true">
-    <div class="modal-dialog modal-lg" role="document">
-        <div class="modal-content">
-            <div class="modal-header bg-primary text-white">
-                <h5 class="modal-title font-weight-bold"><i class="fas fa-plus-circle mr-2"></i>Aggiungi Nuovo Articolo</h5>
-                <button type="button" class="close text-white" data-dismiss="modal" aria-label="Close">
-                    <span aria-hidden="true">&times;</span>
-                </button>
+    <!-- MODALE AGGIUNGI NUOVO PRODOTTO -->
+    {% if session.get('is_admin') or session.get('puo_aggiungere_prodotti', 1) %}
+    <div class="modal fade" id="modalAggiungiProdotto" tabindex="-1" role="dialog" aria-hidden="true">
+        <div class="modal-dialog modal-lg" role="document">
+            <div class="modal-content">
+                <div class="modal-header bg-primary text-white">
+                    <h5 class="modal-title font-weight-bold"><i class="fas fa-plus-circle mr-2"></i>Aggiungi Nuovo Articolo</h5>
+                    <button type="button" class="close text-white" data-dismiss="modal" aria-label="Close">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+                </div>
+                <form action="{{ url_for('aggiungi_prodotto') }}" method="POST">
+                    <div class="modal-body">
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label font-weight-bold">QR Code / Codice Univoco *</label>
+                                <input type="text" name="qr_code" class="form-control" placeholder="Es. QR-10023" required>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label font-weight-bold">Nome Articolo *</label>
+                                <input type="text" name="nome" class="form-control" placeholder="Es. Cuscinetto SKF 6204" required>
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-4 mb-3">
+                                <label class="form-label font-weight-bold">Codice SAP</label>
+                                <input type="text" name="sap" class="form-control" placeholder="Es. SAP-88392">
+                            </div>
+                            <div class="col-md-4 mb-3">
+                                <label class="form-label font-weight-bold">Quantità Iniziale</label>
+                                <input type="number" name="quantita" class="form-control" value="1" min="0">
+                            </div>
+                            <div class="col-md-4 mb-3">
+                                <label class="form-label font-weight-bold">Soglia Minima Alert</label>
+                                <input type="number" name="soglia_minima" class="form-control" value="3" min="1">
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label font-weight-bold">Posizione in Magazzino</label>
+                                <input type="text" name="posizione" class="form-control" placeholder="Es. Corsia A - Scaffale 3">
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label font-weight-bold">Peso / Specifiche</label>
+                                <input type="text" name="peso" class="form-control" placeholder="Es. 1.2 Kg o M12">
+                            </div>
+                        </div>
+                        <div class="form-group form-check mb-0 mt-2">
+                            <input type="checkbox" name="magazzino_pesante" class="form-check-input" id="checkPesante">
+                            <label class="form-check-label font-weight-bold text-dark" for="checkPesante">
+                                Destina al Magazzino Pesante
+                            </label>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-dismiss="modal">Annulla</button>
+                        <button type="submit" class="btn btn-primary font-weight-bold"><i class="fas fa-save mr-1"></i> Salva Articolo</button>
+                    </div>
+                </form>
             </div>
-            <form action="{{ url_for('aggiungi_prodotto') }}" method="POST">
-                <div class="modal-body">
-                    <div class="row">
-                        <div class="col-md-6 mb-3">
-                            <label class="form-label font-weight-bold">QR Code / Codice Univoco *</label>
-                            <input type="text" name="qr_code" class="form-control" placeholder="Es. QR-10023" required>
-                        </div>
-                        <div class="col-md-6 mb-3">
-                            <label class="form-label font-weight-bold">Nome Articolo *</label>
-                            <input type="text" name="nome" class="form-control" placeholder="Es. Cuscinetto SKF 6204" required>
-                        </div>
-                    </div>
-                    <div class="row">
-                        <div class="col-md-4 mb-3">
-                            <label class="form-label font-weight-bold">Codice SAP</label>
-                            <input type="text" name="sap" class="form-control" placeholder="Es. SAP-88392">
-                        </div>
-                        <div class="col-md-4 mb-3">
-                            <label class="form-label font-weight-bold">Quantità Iniziale</label>
-                            <input type="number" name="quantita" class="form-control" value="1" min="0">
-                        </div>
-                        <div class="col-md-4 mb-3">
-                            <label class="form-label font-weight-bold">Soglia Minima Alert</label>
-                            <input type="number" name="soglia_minima" class="form-control" value="3" min="1">
-                        </div>
-                    </div>
-                    <div class="row">
-                        <div class="col-md-6 mb-3">
-                            <label class="form-label font-weight-bold">Posizione in Magazzino</label>
-                            <input type="text" name="posizione" class="form-control" placeholder="Es. Corsia A - Scaffale 3">
-                        </div>
-                        <div class="col-md-6 mb-3">
-                            <label class="form-label font-weight-bold">Peso / Specifiche</label>
-                            <input type="text" name="peso" class="form-control" placeholder="Es. 1.2 Kg o M12">
-                        </div>
-                    </div>
-                    <div class="form-group form-check mb-0 mt-2">
-                        <input type="checkbox" name="magazzino_pesante" class="form-check-input" id="checkPesante">
-                        <label class="form-check-label font-weight-bold text-dark" for="checkPesante">
-                            Destina al Magazzino Pesante
-                        </label>
-                    </div>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Annulla</button>
-                    <button type="submit" class="btn btn-primary font-weight-bold"><i class="fas fa-save mr-1"></i> Salva Articolo</button>
-                </div>
-            </form>
         </div>
     </div>
-</div>
-{% endif %}
+    {% endif %}
 
-<!-- SCRIPT PER RICERCA IN TEMPO REALE -->
-<script>
-document.addEventListener("DOMContentLoaded", function() {
-    const inputCerca = document.getElementById("cercaTabella");
-    if (inputCerca) {
-        inputCerca.addEventListener("keyup", function() {
-            const valore = this.value.toLowerCase();
-            const righe = document.querySelectorAll("#tabellaProdotti tbody tr");
-            righe.forEach(function(riga) {
-                const testoRiga = riga.textContent.toLowerCase();
-                if (testoRiga.indexOf(valore) > -1) {
-                    riga.style.display = "";
-                } else {
-                    riga.style.display = "none";
-                }
+    <!-- JS DEPENDENCIES E SCRIPT PER RICERCA -->
+    <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@4.6.2/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+    document.addEventListener("DOMContentLoaded", function() {
+        const inputCerca = document.getElementById("cercaTabella");
+        if (inputCerca) {
+            inputCerca.addEventListener("keyup", function() {
+                const valore = this.value.toLowerCase();
+                const righe = document.querySelectorAll("#tabellaProdotti tbody tr");
+                righe.forEach(function(riga) {
+                    const testoRiga = riga.textContent.toLowerCase();
+                    if (testoRiga.indexOf(valore) > -1) {
+                        riga.style.display = "";
+                    } else {
+                        riga.style.display = "none";
+                    }
+                });
             });
-        });
-    }
-});
-</script>
-{% endblock %}
+        }
+    });
+    </script>
+</body>
+</html>
