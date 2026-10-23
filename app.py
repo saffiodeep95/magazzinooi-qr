@@ -60,7 +60,7 @@ def init_db():
         conn = get_db_connection()
         cur = conn.cursor()
         
-        # 1. Creazione tabelle di base se non esistono
+        # 1. Tabelle di base
         cur.execute("""
             CREATE TABLE IF NOT EXISTS prodotti (
                 id SERIAL PRIMARY KEY,
@@ -165,7 +165,7 @@ def init_db():
             );
         """)
 
-        # 2. Aggiornamento automatico di tutte le colonne (schema migration sicura)
+        # 2. Migrazione colonne sicura
         colonne_prodotti = [
             ("sap", "VARCHAR(255)"), ("peso", "VARCHAR(255)"), ("quantita", "INT DEFAULT 0"),
             ("posizione", "VARCHAR(255)"), ("magazzino_pesante", "INT DEFAULT 0"),
@@ -237,7 +237,6 @@ def init_db():
         for p_col, p_type in permessi_lista:
             cur.execute(f"ALTER TABLE utenti ADD COLUMN IF NOT EXISTS {p_col} {p_type};")
         
-        # 3. Creazione utente admin predefinito se non esiste
         cur.execute("SELECT * FROM utenti WHERE username = 'admin';")
         if not cur.fetchone():
             hashed_pw = generate_password_hash("admin")
@@ -249,7 +248,7 @@ def init_db():
         conn.commit()
         cur.close()
         conn.close()
-        print("Database e migrazione colonne completati con successo.")
+        print("Database e migrazione completati.")
     except Exception as e:
         print(f"Errore init_db: {e}")
 
@@ -432,6 +431,10 @@ def admin_utenti():
         print(f"Errore admin: {e}")
     return render_template("admin_utenti.html", utenti=utenti, logs=logs)
 
+@app.route("/log_attivita")
+def log_attivita():
+    return redirect(url_for("admin_utenti"))
+
 @app.route("/toggle_permesso/<int:user_id>/<campo>", methods=["POST"])
 def toggle_permesso(user_id, campo):
     if not session.get('is_admin'):
@@ -495,6 +498,10 @@ def cambi_serie():
 
 @app.route("/stampa_qr")
 def stampa_qr():
+    return redirect(url_for("stampa_tutti_qr"))
+
+@app.route("/stampa_multipla_qr")
+def stampa_multipla_qr():
     return redirect(url_for("stampa_tutti_qr"))
 
 @app.route("/esporta")
@@ -1281,7 +1288,7 @@ def documenti(cartella_id):
             percorso_breadcrumb.insert(0, curr)
             if curr['parent_id']:
                 cur.execute("SELECT * FROM cartelle WHERE id = %s;", (curr['parent_id'],))
-                curr = curr.fetchone()
+                curr = cur.fetchone()
             else:
                 curr = None
 
