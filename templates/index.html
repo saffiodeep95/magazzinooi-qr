@@ -239,6 +239,14 @@
                 <h5 class="fw-bold mb-0 text-dark">Dashboard Magazzino</h5>
             </div>
 
+            <!-- BARRA DI RICERCA RAPIDA TRA I MAGAZZINI -->
+            <div class="mx-auto flex-grow-1 px-3 d-none d-md-block" style="max-width: 450px;">
+                <form action="{{ url_for('ricerca') }}" method="GET" class="input-group input-group-sm">
+                    <input type="text" name="q" class="form-control" placeholder="🔍 Cerca articolo, QR code o SAP tra tutti i magazzini..." required>
+                    <button class="btn btn-primary" type="submit"><i class="fa-solid fa-search me-1"></i> Cerca</button>
+                </form>
+            </div>
+
             <div class="d-flex align-items-center gap-3">
                 <a href="{{ url_for('esportazioni') }}" class="btn btn-success btn-sm fw-semibold d-flex align-items-center gap-1">
                     <i class="fa-solid fa-file-csv fs-6"></i>
@@ -259,6 +267,14 @@
                 {% endfor %}
               {% endif %}
             {% endwith %}
+
+            <!-- BARRA DI RICERCA PER CELLULARE -->
+            <div class="d-md-none mb-4">
+                <form action="{{ url_for('ricerca') }}" method="GET" class="input-group">
+                    <input type="text" name="q" class="form-control" placeholder="🔍 Cerca articolo, QR, SAP..." required>
+                    <button class="btn btn-primary" type="submit"><i class="fa-solid fa-search"></i></button>
+                </form>
+            </div>
 
             <!-- ================= BOX NOTIFICHE IN EVIDENZA CON CANCELLAZIONE ================= -->
             {% if notifiche_attive and notifiche_attive|length > 0 %}
