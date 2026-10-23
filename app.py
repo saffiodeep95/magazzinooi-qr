@@ -36,20 +36,6 @@ def registra_log(descrizione):
     except Exception as e:
         print(f"Errore registrazione log: {e}")
 
-def crea_notifica(destinatario, titolo, messaggio, link=""):
-    try:
-        conn = get_db_connection()
-        cur = conn.cursor()
-        cur.execute("""
-            INSERT INTO notifiche (destinatario, titolo, messaggio, link)
-            VALUES (%s, %s, %s, %s);
-        """, (destinatario, titolo, messaggio, link))
-        conn.commit()
-        cur.close()
-        conn.close()
-    except Exception as e:
-        print(f"Errore inserimento notifica: {e}")
-
 def init_db():
     if not DATABASE_URL:
         print("DATABASE_URL non impostata!")
@@ -487,12 +473,56 @@ def elimina_promemoria(id):
     flash("Promemoria eliminato.", "success")
     return redirect(url_for('promemoria'))
 
-# --- MODULO REPORT ORE ---
+# --- MODULO REPORT ORE (Corretto con dati di fallback per i grafici) ---
 @app.route("/report_ore")
 def report_ore():
     if not session.get('username'):
         return redirect(url_for('login'))
-    return render_template("report_ore.html")
+    
+    # Dati predefiniti per evitare errori nei grafici di Chart.js nel template
+    chart_tecnici_labels = []
+    chart_tecnici_data = []
+    chart_impianti_labels = []
+    chart_impianti_data = []
+    
+    try:
+        conn = get_db_connection()
+        cur = conn.cursor()
+        
+        # Recupero dati ore per tecnici da richieste completate
+        cur.execute("""
+            SELECT COALESCE(assegnato_a, 'Non assegnato') as tecnico, 
+                   SUM(COALESCE(tempo_lavorato_minuti, 0)) / 60.0 as ore 
+            FROM richieste_manutenzione 
+            GROUP BY assegnato_a;
+        """)
+        res_tec = cur.fetchall()
+        for r in res_tec:
+            chart_tecnici_labels.append(r['tecnico'])
+            chart_tecnici_data.append(float(r['ore']))
+            
+        # Recupero dati ore per impianti/macchine
+        cur.execute("""
+            SELECT COALESCE(impianto_macchina, 'Generale') as impianto, 
+                   SUM(COALESCE(tempo_lavorato_minuti, 0)) / 60.0 as ore 
+            FROM richieste_manutenzione 
+            GROUP BY impianto_macchina;
+        """)
+        res_imp = cur.fetchall()
+        for r in res_imp:
+            chart_impianti_labels.append(r['impianto'])
+            chart_impianti_data.append(float(r['ore']))
+            
+        cur.close()
+        conn.close()
+    except Exception as e:
+        print(f"Errore report_ore DB: {e}")
+
+    return render_template("report_ore.html",
+                           chart_tecnici_labels=chart_tecnici_labels,
+                           chart_tecnici_data=chart_tecnici_data,
+                           chart_impianti_labels=chart_impianti_labels,
+                           chart_impianti_data=chart_impianti_data)
 
 # --- MODULO STORICO MANUTENZIONI ---
 @app.route("/storico_manutenzioni")
