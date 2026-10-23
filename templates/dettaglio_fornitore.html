@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Contatti Tecnici - {{ fornitore.nome_azienda }}</title>
+    
+    <link rel="manifest" href="{{ url_for('static', filename='manifest.json') }}">
+    <link rel="icon" type="image/png" href="{{ url_for('static', filename='icon.png') }}">
+    <link rel="apple-touch-icon" href="{{ url_for('static', filename='icon.png') }}">
+    <meta name="theme-color" content="#4f46e5">
+
+    <style>
+        body { font-family: sans-serif; max-width: 900px; margin: 0 auto; padding: 15px; background: #f8fafc; color: #1e293b; box-sizing: border-box; }
+        .card { background: white; padding: 20px; border-radius: 12px; border: 1px solid #e2e8f0; margin-bottom: 20px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
+        .btn { background: #0284c7; color: white !important; padding: 8px 14px; border: none; border-radius: 6px; font-weight: bold; cursor: pointer; text-decoration: none; display: inline-block; font-size: 0.85rem; margin: 2px; }
+        .btn:hover { opacity: 0.9; }
+        table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 0.9rem; }
+        th, td { padding: 10px 12px; text-align: left; border-bottom: 1px solid #e2e8f0; vertical-align: middle; }
+        th { background: #f1f5f9; color: #475569; font-weight: 600; }
+        input { width: 100%; padding: 10px; margin-top: 5px; margin-bottom: 12px; border: 1px solid #cbd5e1; border-radius: 6px; box-sizing: border-box; font-size: 0.9rem; }
+        label { font-weight: bold; font-size: 0.85rem; color: #475569; display: block; }
+        footer { text-align: center; margin-top: 30px; padding: 15px 0; color: #64748b; font-size: 0.8rem; border-top: 1px solid #e2e8f0; }
+        .edit-box { display: none; background: #f1f5f9; padding: 15px; border-radius: 8px; margin-top: 10px; }
+    </style>
+</head>
+<body>
+
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+        <h1 style="font-size: 1.4rem; margin: 0;">🏢 {{ fornitore.nome_azienda }}</h1>
+        <a href="{{ url_for('fornitori') }}" class="btn" style="background: #475569; color: #ffffff !important;">← Torna ai Fornitori</a>
+    </div>
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+        {% for category, message in messages %}
+          <div style="background: {% if category == 'error' %}#fee2e2; color: #991b1b; border: 1px solid #fca5a5;{% else %}#dcfce7; color: #166534; border: 1px solid #bbf7d0;{% endif %} padding: 12px; border-radius: 8px; margin-bottom: 15px; font-size: 0.9rem;">
+            {{ message }}
+          </div>
+        {% endfor %}
+      {% endif %}
+    {% endwith %}
+
+    <div class="card" style="background: #f1f5f9;">
+        <h4 style="margin-top: 0; color: #334155;">Dati Centralino e Sede</h4>
+        <p style="margin: 4px 0; font-size: 0.9rem;"><strong>Settore/Servizio:</strong> {{ fornitore.settore_note or '-' }}</p>
+        <p style="margin: 4px 0; font-size: 0.9rem;"><strong>Indirizzo:</strong> {{ fornitore.indirizzo or '-' }}</p>
+        <p style="margin: 4px 0; font-size: 0.9rem;"><strong>P. IVA:</strong> {{ fornitore.p_iva or '-' }} | <strong>Tel:</strong> {{ fornitore.telefono or '-' }} | <strong>Email:</strong> {{ fornitore.email or '-' }}</p>
+    </div>
+
+    <!-- FORM AGGIUNTA TECNICO -->
+    <div class="card">
+        <h3 style="margin-top: 0; font-size: 1.1rem; color: #334155;">🛠️ Aggiungi Contatto Tecnico</h3>
+        <form action="{{ url_for('dettaglio_fornitore', fornitore_id=fornitore.id) }}" method="POST" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 10px; align-items: end;">
+            <div>
+                <label>Nome e Cognome Tecnico:</label>
+                <input type="text" name="nome" placeholder="Es. Mario Rossi" required>
+            </div>
+            <div>
+                <label>Telefono Diretto / Cellulare:</label>
+                <input type="text" name="telefono" placeholder="Es. 333 1234567" required>
+            </div>
+            <div>
+                <label>Mansione / Note:</label>
+                <input type="text" name="mansione" placeholder="Es. Assistenza PLC">
+            </div>
+            <div>
+                <label>Email Diretta:</label>
+                <input type="email" name="email" placeholder="tecnico@azienda.it">
+            </div>
+            <div>
+                <button type="submit" class="btn" style="background: #10b981; width: 100%; padding: 10px;">Salva Tecnico</button>
+            </div>
+        </form>
+    </div>
+
+    <!-- ELENCO TECNICI CON RICERCA -->
+    <div class="card">
+        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; margin-bottom: 10px;">
+            <h3 style="margin: 0; font-size: 1.1rem; color: #334155;">Rubrica Tecnici di Riferimento</h3>
+            <input type="text" id="filtroTecnici" placeholder="🔍 Cerca tecnico o mansione..." onkeyup="FiltraTecnici()" style="width: 250px; margin: 0; padding: 6px 10px;">
+        </div>
+
+        {% if contatti %}
+            <div style="overflow-x: auto;">
+                <table id="tabellaTecnici">
+                    <thead>
+                        <tr>
+                            <th>Nome Tecnico</th>
+                            <th>Telefono Diretto</th>
+                            <th>Mansione / Note</th>
+                            <th>Email</th>
+                            <th>Azioni</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for c in contatti %}
+                        <tr>
+                            <td><strong>{{ c.nome }}</strong></td>
+                            <td><a href="tel:{{ c.telefono }}" style="color: #0284c7; text-decoration: none; font-weight: bold;">📞 {{ c.telefono }}</a></td>
+                            <td>{{ c.mansione or '-' }}</td>
+                            <td>{{ c.email or '-' }}</td>
+                            <td style="white-space: nowrap;">
+                                <button type="button" onclick="toggleEdit('edit-c-{{ c.id }}')" class="btn" style="background: #f59e0b; padding: 4px 8px; font-size: 0.75rem;">✏️ Modifica</button>
+                                <form action="{{ url_for('elimina_contatto_tecnico', contatto_id=c.id, fornitore_id=fornitore.id) }}" method="POST" style="display: inline;" onsubmit="return confirm('Eliminare questo contatto tecnico?');">
+                                    <button type="submit" class="btn" style="background: #ef4444; padding: 4px 8px; font-size: 0.75rem;">🗑️ Elimina</button>
+                                </form>
+                            </td>
+                        </tr>
+                        <!-- MODULO MODIFICA TECNICO -->
+                        <tr id="edit-c-{{ c.id }}" class="edit-box">
+                            <td colspan="5">
+                                <form action="{{ url_for('modifica_contatto_tecnico', contatto_id=c.id, fornitore_id=fornitore.id) }}" method="POST" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 10px; align-items: end;">
+                                    <div>
+                                        <label>Nome e Cognome:</label>
+                                        <input type="text" name="nome" value="{{ c.nome }}" required>
+                                    </div>
+                                    <div>
+                                        <label>Telefono:</label>
+                                        <input type="text" name="telefono" value="{{ c.telefono }}" required>
+                                    </div>
+                                    <div>
+                                        <label>Mansione:</label>
+                                        <input type="text" name="mansione" value="{{ c.mansione or '' }}">
+                                    </div>
+                                    <div>
+                                        <label>Email:</label>
+                                        <input type="email" name="email" value="{{ c.email or '' }}">
+                                    </div>
+                                    <div>
+                                        <button type="submit" class="btn" style="background: #10b981; padding: 8px 12px;">💾 Salva</button>
+                                        <button type="button" onclick="toggleEdit('edit-c-{{ c.id }}')" class="btn" style="background: #64748b; padding: 8px 12px;">Annulla</button>
+                                    </div>
+                                </form>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        {% else %}
+            <p style="color: #64748b; text-align: center; padding: 15px 0;">Nessun contatto tecnico salvato per questo fornitore.</p>
+        {% endif %}
+    </div>
+
+    <footer>
+        <p style="margin: 0;">© 2026 <strong>Marco Pavan</strong> — Tutti i diritti riservati.</p>
+        <p style="margin: 3px 0 0 0; opacity: 0.75;">Sviluppato da Marco Pavan</p>
+    </footer>
+
+    <script>
+        function toggleEdit(id) {
+            let el = document.getElementById(id);
+            if (el.style.display === "table-row") {
+                el.style.display = "none";
+            } else {
+                el.style.display = "table-row";
+            }
+        }
+
+        function FiltraTecnici() {
+            let input = document.getElementById("filtroTecnici");
+            let filter = input.value.toUpperCase();
+            let table = document.getElementById("tabellaTecnici");
+            if (!table) return;
+            let tr = table.getElementsByTagName("tr");
+            
+            for (let i = 1; i < tr.length; i++) {
+                if (tr[i].classList.contains('edit-box')) continue;
+                let rowText = tr[i].textContent || tr[i].innerText;
+                if (rowText.toUpperCase().indexOf(filter) > -1) {
+                    tr[i].style.display = "";
+                } else {
+                    tr[i].style.display = "none";
+                }
+            }
+        }
+    </script>
+</body>
+</html>

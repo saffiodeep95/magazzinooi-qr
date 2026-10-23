@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <title>Gestionale OMG - Stampa QR Multipli</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: #f8f9fa;
+        }
+        .no-print {
+            margin-bottom: 20px;
+            display: flex;
+            gap: 15px;
+        }
+        .btn-stampa {
+            padding: 10px 20px;
+            font-size: 16px;
+            cursor: pointer;
+            background-color: #007bff;
+            color: white;
+            border: none;
+            border-radius: 4px;
+        }
+        .btn-dietro {
+            padding: 10px 20px;
+            font-size: 16px;
+            text-decoration: none;
+            background-color: #6c757d;
+            color: white;
+            border-radius: 4px;
+            display: inline-block;
+        }
+        .qr-grid {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 20px;
+        }
+        .qr-card {
+            border: 1px solid #ccc;
+            background: white;
+            padding: 15px;
+            width: 220px;
+            text-align: center;
+            border-radius: 6px;
+            page-break-inside: avoid;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .qr-card h3 {
+            margin-top: 0;
+            margin-bottom: 8px;
+            font-size: 16px;
+        }
+        .qr-card p {
+            margin: 4px 0;
+            font-size: 13px;
+        }
+        .qr-card img {
+            width: 120px;
+            height: 120px;
+            margin: 8px 0;
+        }
+        @media print {
+            .no-print {
+                display: none;
+            }
+            body {
+                background-color: white;
+            }
+            .qr-card {
+                box-shadow: none;
+                border: 1px solid #000;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Pulsanti di navigazione e stampa -->
+    <div class="no-print">
+        <button class="btn-stampa" onclick="window.print()">🖨️ Stampa</button>
+        <a class="btn-dietro" href="{{ url_for('index') }}">⬅️ Torna al Magazzino</a>
+    </div>
+
+    <!-- Griglia dei QR code selezionati -->
+    <div class="qr-grid">
+        {% for p in prodotti %}
+        <div class="qr-card">
+            <h3>{{ p.nome }}</h3>
+            <p><strong>SAP:</strong> {{ p.sap or '-' }}</p>
+            
+            <!-- Generazione automatica del QR Code tramite API Google Charts -->
+            <img src="https://api.qrserver.com/v1/create-qr-code/?size=150x150&data={{ p.qr_code }}" alt="QR Code">
+            
+            <p><strong>QR:</strong> <code>{{ p.qr_code }}</code></p>
+            <p><strong>Pezzi:</strong> {{ p.quantita }}</p>
+            <p><small>Posizione: {{ p.posizione or '-' }}</small></p>
+        </div>
+        {% else %}
+        <p>Nessun articolo selezionato o trovato per la stampa.</p>
+        {% endfor %}
+    </div>
+
+</body>
+</html>

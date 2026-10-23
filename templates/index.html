@@ -1,0 +1,514 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gestionale OMG - Dashboard</title>
+    <!-- Bootstrap 5 CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Google Fonts & FontAwesome -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        :root {
+            --sidebar-width: 260px;
+            --sidebar-bg: #111827; /* Antracite Scuro */
+            --sidebar-color: #9ca3af;
+            --sidebar-active: #3b82f6;
+            --bg-main: #f3f4f6;
+            --card-radius: 14px;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: var(--bg-main);
+            color: #1f2937;
+        }
+
+        /* Sidebar Desktop con scorrimento verticale */
+        .sidebar {
+            width: var(--sidebar-width);
+            height: 100vh;
+            position: fixed;
+            top: 0;
+            left: 0;
+            background-color: var(--sidebar-bg);
+            z-index: 1000;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            overflow-y: auto;
+        }
+
+        .sidebar-brand {
+            padding: 1.5rem 1.25rem;
+            color: #ffffff;
+            font-weight: 700;
+            font-size: 1.2rem;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+            background-color: var(--sidebar-bg);
+            position: sticky;
+            top: 0;
+            z-index: 10;
+        }
+
+        .sidebar-menu {
+            padding: 1rem 0.75rem 3rem 0.75rem;
+            flex-grow: 1;
+        }
+
+        .sidebar-heading {
+            font-size: 0.7rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: #6b7280;
+            font-weight: 700;
+            padding: 0.75rem 0.75rem 0.25rem 0.75rem;
+        }
+
+        .nav-link-custom {
+            display: flex;
+            align-items: center;
+            padding: 0.65rem 0.85rem;
+            color: var(--sidebar-color);
+            border-radius: 8px;
+            font-size: 0.9rem;
+            font-weight: 500;
+            text-decoration: none;
+            margin-bottom: 0.2rem;
+            transition: all 0.2s ease;
+        }
+
+        .nav-link-custom:hover {
+            color: #ffffff;
+            background-color: rgba(255, 255, 255, 0.06);
+        }
+
+        .nav-link-custom.active {
+            color: #ffffff;
+            background-color: var(--sidebar-active);
+        }
+
+        .nav-link-custom i {
+            width: 24px;
+            font-size: 1.1rem;
+            margin-right: 0.6rem;
+        }
+
+        .main-wrapper {
+            margin-left: var(--sidebar-width);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .top-navbar {
+            background-color: #ffffff;
+            height: 64px;
+            padding: 0 1.5rem;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            border-bottom: 1px solid #e5e7eb;
+            position: sticky;
+            top: 0;
+            z-index: 999;
+        }
+
+        .card-custom {
+            background: #ffffff;
+            border: 1px solid #e5e7eb;
+            border-radius: var(--card-radius);
+            box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+        }
+
+        .table-custom th {
+            background-color: #f9fafb;
+            color: #374151;
+            font-weight: 600;
+            font-size: 0.8rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            padding: 0.85rem 1rem;
+            border-bottom: 1px solid #e5e7eb;
+        }
+
+        .table-custom td {
+            padding: 0.85rem 1rem;
+            color: #1f2937;
+            border-bottom: 1px solid #f3f4f6;
+        }
+
+        @media (max-width: 991.98px) {
+            .sidebar { display: none; }
+            .main-wrapper { margin-left: 0; }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- ================= SIDEBAR DESKTOP ================= -->
+    <aside class="sidebar">
+        <div>
+            <!-- Logo Brand -->
+            <div class="sidebar-brand d-flex align-items-center">
+                <i class="fa-solid fa-boxes-packing text-primary me-2 fs-4"></i>
+                <span>Gestionale OMG</span>
+            </div>
+
+            <!-- Menu Navigation -->
+            <div class="sidebar-menu">
+                <div class="sidebar-heading">Principale</div>
+                <a href="{{ url_for('index') }}" class="nav-link-custom active">
+                    <i class="fa-solid fa-house"></i> Home & Magazzino
+                </a>
+
+                <div class="sidebar-heading">Gestione Scorte</div>
+                <a href="{{ url_for('magazzino_pesante') }}" class="nav-link-custom">
+                    <i class="fa-solid fa-weight-hanging"></i> Magazzino Pesante
+                </a>
+                <a href="{{ url_for('manutenzioni') }}" class="nav-link-custom">
+                    <i class="fa-solid fa-truck-ramp-box"></i> Manutenzioni Esterne
+                </a>
+                <a href="{{ url_for('storico_manutenzioni') }}" class="nav-link-custom">
+                    <i class="fa-solid fa-clock-rotate-left"></i> Storico Manutenzioni
+                </a>
+
+                <div class="sidebar-heading">Officina & Produzione</div>
+                <a href="{{ url_for('richieste_manutenzione') }}" class="nav-link-custom position-relative">
+                    <i class="fa-solid fa-wrench"></i> Richieste Intervento
+                    {% if interventi_assegnati_count and interventi_assegnati_count > 0 %}
+                    <span class="badge bg-danger rounded-pill ms-auto">{{ interventi_assegnati_count }}</span>
+                    {% endif %}
+                </a>
+                <a href="{{ url_for('cambi_serie') }}" class="nav-link-custom">
+                    <i class="fa-solid fa-industry"></i> Cambi Serie
+                </a>
+                <a href="{{ url_for('report_ore') }}" class="nav-link-custom">
+                    <i class="fa-solid fa-user-clock"></i> Report Ore
+                </a>
+
+                <div class="sidebar-heading">Anagrafiche & Risorse</div>
+                <a href="{{ url_for('fornitori') }}" class="nav-link-custom">
+                    <i class="fa-solid fa-building"></i> Fornitori & Tecnici
+                </a>
+                <a href="{{ url_for('promemoria') }}" class="nav-link-custom position-relative">
+                    <i class="fa-solid fa-bell"></i> Promemoria
+                    {% if promemoria_urgenti and promemoria_urgenti > 0 %}
+                    <span class="badge bg-danger rounded-pill ms-auto">{{ promemoria_urgenti }}</span>
+                    {% endif %}
+                </a>
+                <a href="{{ url_for('documenti') }}" class="nav-link-custom">
+                    <i class="fa-solid fa-folder-open"></i> Documenti & File
+                </a>
+
+                {% if session.is_admin %}
+                <div class="sidebar-heading">Amministrazione</div>
+                <a href="{{ url_for('admin_utenti') }}" class="nav-link-custom">
+                    <i class="fa-solid fa-user-gear"></i> Pannello Admin
+                </a>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Footer Sidebar -->
+        <div class="p-3 border-top border-secondary border-opacity-25 d-flex align-items-center justify-content-between bg-dark">
+            <div class="d-flex align-items-center">
+                <div class="bg-primary text-white rounded-circle d-flex align-items-center justify-content-center me-2" style="width: 36px; height: 36px; font-weight: 600;">
+                    {{ session.username[0]|upper }}
+                </div>
+                <div class="lh-1">
+                    <div class="text-white fw-semibold small">{{ session.username }}</div>
+                    <small class="text-muted" style="font-size: 0.75rem;">Online</small>
+                </div>
+            </div>
+            <a href="{{ url_for('logout') }}" class="text-danger fs-5" title="Disconnetti">
+                <i class="fa-solid fa-right-from-bracket"></i>
+            </a>
+        </div>
+    </aside>
+
+    <!-- ================= WRAPPER CONTENUTO PRINCIPALE ================= -->
+    <div class="main-wrapper">
+        
+        <header class="top-navbar">
+            <div class="d-flex align-items-center gap-2">
+                <button class="btn btn-light d-lg-none border" type="button" data-bs-toggle="offcanvas" data-bs-target="#offcanvasSidebar">
+                    <i class="fa-solid fa-bars"></i>
+                </button>
+                <h5 class="fw-bold mb-0 text-dark">Dashboard Magazzino</h5>
+            </div>
+
+            <div class="d-flex align-items-center gap-3">
+                <a href="{{ url_for('esportazioni') }}" class="btn btn-success btn-sm fw-semibold d-flex align-items-center gap-1">
+                    <i class="fa-solid fa-file-csv fs-6"></i>
+                    <span>Esporta Dati CSV</span>
+                </a>
+            </div>
+        </header>
+
+        <main class="p-4">
+
+            {% with messages = get_flashed_messages(with_categories=true) %}
+              {% if messages %}
+                {% for category, message in messages %}
+                  <div class="alert alert-{{ 'danger' if category == 'error' else category }} alert-dismissible fade show mb-4 shadow-sm" role="alert">
+                    {{ message }}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                  </div>
+                {% endfor %}
+              {% endif %}
+            {% endwith %}
+
+            <!-- ================= BOX NOTIFICHE IN EVIDENZA CON CANCELLAZIONE ================= -->
+            {% if notifiche_attive and notifiche_attive|length > 0 %}
+            <div id="boxNotificheEvidenza" class="card border-warning mb-4 shadow-sm bg-light">
+                <div class="card-header bg-warning text-dark fw-bold d-flex justify-content-between align-items-center">
+                    <span><i class="fa-solid fa-triangle-exclamation me-2"></i> Nuove Assegnazioni / Avvisi per te</span>
+                    <div>
+                        <button onclick="svuotaNotifiche()" class="btn btn-sm btn-dark me-2">
+                            <i class="fa-solid fa-check-double me-1"></i> Segna tutte come lette
+                        </button>
+                        <span class="badge bg-dark">{{ notifiche_attive|length }} Nuove</span>
+                    </div>
+                </div>
+                <div class="card-body py-2">
+                    <ul class="list-group list-group-flush bg-transparent">
+                        {% for notif in notifiche_attive %}
+                        <li class="list-group-item bg-transparent d-flex justify-content-between align-items-center py-2 border-bottom">
+                            <div>
+                                <strong class="text-primary">{{ notif.titolo }}</strong>: 
+                                <span class="text-dark">{{ notif.messaggio }}</span>
+                                <small class="text-muted ms-2"><i class="fa-regular fa-clock me-1"></i>{{ notif.data }}</small>
+                            </div>
+                            <a href="{{ notif.link or url_for('richieste_manutenzione') }}" class="btn btn-sm btn-outline-dark fw-semibold">
+                                Visualizza <i class="fa-solid fa-arrow-right ms-1"></i>
+                            </a>
+                        </li>
+                        {% endfor %}
+                    </ul>
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- METRICHE STATISTICHE -->
+            <div class="row g-3 mb-4">
+                <div class="col-12 col-sm-6 col-xl-3">
+                    <div class="card-custom p-3 d-flex align-items-center justify-content-between">
+                        <div>
+                            <span class="text-muted small fw-semibold">Pezzi Magazzino Principale</span>
+                            <h3 class="fw-bold mb-0 text-dark mt-1">{{ prodotti|length }}</h3>
+                        </div>
+                        <div class="bg-primary bg-opacity-10 text-primary p-3 rounded-3">
+                            <i class="fa-solid fa-box-open fs-3"></i>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-12 col-sm-6 col-xl-3">
+                    <div class="card-custom p-3 d-flex align-items-center justify-content-between">
+                        <div>
+                            <span class="text-muted small fw-semibold">Prodotti Sotto Soglia</span>
+                            <h3 class="fw-bold mb-0 text-danger mt-1">{{ prodotti_sotto_soglia|length }}</h3>
+                        </div>
+                        <div class="bg-danger bg-opacity-10 text-danger p-3 rounded-3">
+                            <i class="fa-solid fa-triangle-exclamation fs-3"></i>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-12 col-sm-6 col-xl-3">
+                    <div class="card-custom p-3 d-flex align-items-center justify-content-between">
+                        <div>
+                            <span class="text-muted small fw-semibold">Interventi Officina Aperti</span>
+                            <h3 class="fw-bold mb-0 text-warning mt-1">{{ interventi_aperti_count }}</h3>
+                        </div>
+                        <div class="bg-warning bg-opacity-10 text-warning p-3 rounded-3">
+                            <i class="fa-solid fa-wrench fs-3"></i>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-12 col-sm-6 col-xl-3">
+                    <div class="card-custom p-3 d-flex align-items-center justify-content-between">
+                        <div>
+                            <span class="text-muted small fw-semibold">Interventi In Lavoro</span>
+                            <h3 class="fw-bold mb-0 text-info mt-1">{{ interventi_in_lavoro_count }}</h3>
+                        </div>
+                        <div class="bg-info bg-opacity-10 text-info p-3 rounded-3">
+                            <i class="fa-solid fa-screws-tilting fs-3"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- INVENTARIO & PULSANTI AZIONE (Con Stampa QR Armadi) -->
+            <div class="card-custom p-3 mb-4">
+                <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3">
+                    <div>
+                        <h5 class="fw-bold mb-0">Inventario Articoli</h5>
+                        <small class="text-muted">Consulta e gestisci lo stato delle scorte in tempo reale</small>
+                    </div>
+
+                    <div class="btn-group flex-wrap gap-1">
+                        <a href="{{ url_for('carico') }}" class="btn btn-success fw-medium"><i class="fa-solid fa-plus me-1"></i> Carico</a>
+                        <a href="{{ url_for('scarico') }}" class="btn btn-warning fw-medium text-dark"><i class="fa-solid fa-minus me-1"></i> Scarico</a>
+                        <a href="{{ url_for('scanner_globale') }}" class="btn btn-info fw-medium text-white"><i class="fa-solid fa-qrcode me-1"></i> Scanner</a>
+                        
+                        <!-- PULSANTE RIPRISTINATO: STAMPA QR ARMADI -->
+                        <a href="{{ url_for('stampa_tutti_qr') }}" class="btn btn-secondary fw-medium" target="_blank">
+                            <i class="fa-solid fa-print me-1"></i> Stampa QR Armadi
+                        </a>
+
+                        <button class="btn btn-dark fw-medium" data-bs-toggle="modal" data-bs-target="#modalAggiungiProdotto">
+                            <i class="fa-solid fa-plus-circle me-1"></i> Nuovo Articolo
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- TABELLA ARTICOLI -->
+            <div class="card-custom overflow-hidden">
+                <div class="table-responsive">
+                    <table class="table table-custom align-middle mb-0">
+                        <thead>
+                            <tr>
+                                <th>Codice QR</th>
+                                <th>Nome Articolo</th>
+                                <th>Codice SAP</th>
+                                <th>Quantità</th>
+                                <th>Posizione</th>
+                                <th class="text-end">Azione</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for p in prodotti %}
+                            <tr>
+                                <td><code class="bg-light text-dark px-2 py-1 rounded border">{{ p.qr_code }}</code></td>
+                                <td><strong class="text-dark">{{ p.nome }}</strong></td>
+                                <td><span class="text-muted">{{ p.sap or '-' }}</span></td>
+                                <td>
+                                    <span class="badge {% if p.quantita <= p.soglia_minima %}bg-danger{% else %}bg-success{% endif %}">
+                                        {{ p.quantita }} pz
+                                    </span>
+                                </td>
+                                <td><i class="fa-solid fa-location-dot text-secondary me-1"></i> {{ p.posizione or '-' }}</td>
+                                <td class="text-end">
+                                    <a href="{{ url_for('gestisci_prodotto', qr_code=p.qr_code) }}" class="btn btn-sm btn-outline-primary fw-medium">
+                                        <i class="fa-solid fa-gear me-1"></i> Gestisci
+                                    </a>
+                                </td>
+                            </tr>
+                            {% else %}
+                            <tr>
+                                <td colspan="6" class="text-center py-4 text-muted">Nessun articolo presente nel magazzino principale.</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+        </main>
+    </div>
+
+    <!-- OFFCANVAS SIDEBAR PER CELLULARE -->
+    <div class="offcanvas offcanvas-start bg-dark text-white" tabindex="-1" id="offcanvasSidebar">
+        <div class="offcanvas-header border-bottom border-secondary">
+            <h5 class="offcanvas-title fw-bold"><i class="fa-solid fa-boxes-packing text-primary me-2"></i>Gestionale OMG</h5>
+            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="offcanvas"></button>
+        </div>
+        <div class="offcanvas-body p-3">
+            <div class="sidebar-menu">
+                <a href="{{ url_for('index') }}" class="nav-link-custom active mb-2"><i class="fa-solid fa-house"></i> Home Dashboard</a>
+                <a href="{{ url_for('magazzino_pesante') }}" class="nav-link-custom mb-2"><i class="fa-solid fa-weight-hanging"></i> Magazzino Pesante</a>
+                <a href="{{ url_for('manutenzioni') }}" class="nav-link-custom mb-2"><i class="fa-solid fa-truck-ramp-box"></i> Manutenzioni Esterne</a>
+                <a href="{{ url_for('storico_manutenzioni') }}" class="nav-link-custom mb-2"><i class="fa-solid fa-clock-rotate-left"></i> Storico Esterne</a>
+                <a href="{{ url_for('richieste_manutenzione') }}" class="nav-link-custom mb-2"><i class="fa-solid fa-wrench"></i> Richieste Intervento</a>
+                <a href="{{ url_for('cambi_serie') }}" class="nav-link-custom mb-2"><i class="fa-solid fa-industry"></i> Cambi Serie</a>
+                <a href="{{ url_for('report_ore') }}" class="nav-link-custom mb-2"><i class="fa-solid fa-user-clock"></i> Report Ore</a>
+                <a href="{{ url_for('fornitori') }}" class="nav-link-custom mb-2"><i class="fa-solid fa-building"></i> Fornitori</a>
+                <a href="{{ url_for('promemoria') }}" class="nav-link-custom mb-2"><i class="fa-solid fa-bell"></i> Promemoria</a>
+                <a href="{{ url_for('documenti') }}" class="nav-link-custom mb-2"><i class="fa-solid fa-folder-open"></i> Documenti</a>
+                <a href="{{ url_for('esportazioni') }}" class="nav-link-custom text-success mb-2"><i class="fa-solid fa-file-csv"></i> Esporta CSV</a>
+                {% if session.is_admin %}
+                <a href="{{ url_for('admin_utenti') }}" class="nav-link-custom mb-2"><i class="fa-solid fa-user-gear"></i> Admin</a>
+                {% endif %}
+                <a href="{{ url_for('logout') }}" class="nav-link-custom text-danger mt-4"><i class="fa-solid fa-right-from-bracket"></i> Logout</a>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL NUOVO ARTICOLO -->
+    <div class="modal fade" id="modalAggiungiProdotto" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <form action="{{ url_for('aggiungi_prodotto') }}" method="POST">
+                    <div class="modal-header bg-dark text-white">
+                        <h5 class="modal-title fw-bold"><i class="fa-solid fa-box-archive me-2"></i>Nuovo Articolo Magazzino</h5>
+                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body">
+                        <div class="mb-3">
+                            <label class="form-label fw-semibold">QR Code *</label>
+                            <input type="text" name="qr_code" class="form-control" placeholder="Es. QR-1001" required>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label fw-semibold">Nome Articolo *</label>
+                            <input type="text" name="nome" class="form-control" placeholder="Es. Cuscinetto a sfera 6205" required>
+                        </div>
+                        <div class="row g-2 mb-3">
+                            <div class="col-md-6">
+                                <label class="form-label fw-semibold">Codice SAP</label>
+                                <input type="text" name="sap" class="form-control" placeholder="Es. SAP-9988">
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label fw-semibold">Peso</label>
+                                <input type="text" name="peso" class="form-control" placeholder="Es. 0.5 kg">
+                            </div>
+                        </div>
+                        <div class="row g-2 mb-3">
+                            <div class="col-md-6">
+                                <label class="form-label fw-semibold">Quantità Iniziale</label>
+                                <input type="number" name="quantita" class="form-control" value="1" min="0">
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label fw-semibold">Soglia Minima Allarme</label>
+                                <input type="number" name="soglia_minima" class="form-control" value="3" min="0">
+                            </div>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label fw-semibold">Posizione</label>
+                            <input type="text" name="posizione" class="form-control" placeholder="Es. Scaffale A2">
+                        </div>
+                        <div class="form-check">
+                            <input type="checkbox" name="magazzino_pesante" class="form-check-input" id="checkPesante">
+                            <label class="form-check-label" for="checkPesante">Destina a Magazzino Pesante</label>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annulla</button>
+                        <button type="submit" class="btn btn-primary"><i class="fa-solid fa-save me-1"></i> Salva Articolo</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- JS Bootstrap & Script Cancellazione Notifiche -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        function svuotaNotifiche() {
+            fetch('/api/notifiche/segna_lette', { method: 'POST' })
+                .then(response => response.json())
+                .then(data => {
+                    const box = document.getElementById('boxNotificheEvidenza');
+                    if (box) {
+                        box.style.display = 'none'; // Nasconde immediatamente il box avvisi
+                    }
+                })
+                .catch(err => console.error("Errore durante la cancellazione delle notifiche:", err));
+        }
+    </script>
+</body>
+</html>
