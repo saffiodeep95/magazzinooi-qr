@@ -50,7 +50,7 @@
                                 <td><strong class="text-dark">{{ p.nome }}</strong></td>
                                 <td><span class="text-muted">{{ p.sap or '-' }}</span></td>
                                 <td>
-                                    {% set is_pesante = (p.magazzino_pesante == 1 or p.magazzino_pesante == '1' or p.magazzino_pesante is True) %}
+                                    {% set is_pesante = (p.magazzino_pesante == 1 or p.magazzino_pesante == '1' or p.magazzino_pesante is true) %}
                                     {% if is_pesante %}
                                     <span class="badge bg-warning text-dark"><i class="fa-solid fa-weight-hanging me-1"></i> Pesante</span>
                                     {% else %}
