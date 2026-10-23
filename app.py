@@ -473,13 +473,12 @@ def elimina_promemoria(id):
     flash("Promemoria eliminato.", "success")
     return redirect(url_for('promemoria'))
 
-# --- MODULO REPORT ORE (Corretto con dati di fallback per i grafici) ---
+# --- MODULO REPORT ORE ---
 @app.route("/report_ore")
 def report_ore():
     if not session.get('username'):
         return redirect(url_for('login'))
     
-    # Dati predefiniti per evitare errori nei grafici di Chart.js nel template
     chart_tecnici_labels = []
     chart_tecnici_data = []
     chart_impianti_labels = []
@@ -489,7 +488,6 @@ def report_ore():
         conn = get_db_connection()
         cur = conn.cursor()
         
-        # Recupero dati ore per tecnici da richieste completate
         cur.execute("""
             SELECT COALESCE(assegnato_a, 'Non assegnato') as tecnico, 
                    SUM(COALESCE(tempo_lavorato_minuti, 0)) / 60.0 as ore 
@@ -501,7 +499,6 @@ def report_ore():
             chart_tecnici_labels.append(r['tecnico'])
             chart_tecnici_data.append(float(r['ore']))
             
-        # Recupero dati ore per impianti/macchine
         cur.execute("""
             SELECT COALESCE(impianto_macchina, 'Generale') as impianto, 
                    SUM(COALESCE(tempo_lavorato_minuti, 0)) / 60.0 as ore 
