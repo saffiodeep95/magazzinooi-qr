@@ -323,6 +323,7 @@ def api_segna_lette():
 def index():
     prodotti = []
     prodotti_sotto_soglia = []
+    tutti_prodotti = []
     promemoria_urgenti = 0
     interventi_aperti_count = 0
     interventi_in_lavoro_count = 0
@@ -338,11 +339,16 @@ def index():
         
         cur.execute("SELECT * FROM prodotti ORDER BY nome ASC;")
         tutti = cur.fetchall()
+        tutti_prodotti = tutti
         
         if is_admin or puo_assegnare:
             cur.execute("SELECT COUNT(*) as count FROM promemoria WHERE completato = FALSE;")
         else:
-            cur.execute("SELECT COUNT(*) as count FROM promemoria WHERE completato = FALSE AND (assegnato_a = %s OR assegnato_a IS NULL OR assegnato_a = '');", (username,))
+            cur.execute("""
+                SELECT COUNT(*) as count FROM promemoria 
+                WHERE completato = FALSE 
+                  AND (assegnato_a LIKE %s OR assegnato_a IS NULL OR assegnato_a = '');
+            """, (f"%{username}%",))
         res_p = cur.fetchone()
         if res_p:
             promemoria_urgenti = res_p['count']
@@ -371,6 +377,7 @@ def index():
     return render_template("index.html", 
                            prodotti=prodotti, 
                            prodotti_sotto_soglia=prodotti_sotto_soglia,
+                           tutti_prodotti=tutti_prodotti,
                            promemoria_urgenti=promemoria_urgenti,
                            interventi_aperti_count=interventi_aperti_count,
                            interventi_in_lavoro_count=interventi_in_lavoro_count,
@@ -943,12 +950,13 @@ def promemoria():
         priorita = request.form.get("priorita", "Media")
         ricorrenza = request.form.get("ricorrenza", "Nessuna")
         
+        utenti_selezionati = []
         if is_admin or puo_assegnare:
-            assegnato_a = request.form.get("assegnato_a")
-            if not assegnato_a:
-                assegnato_a = username_corrente
+            utenti_selezionati = request.form.getlist("assegnato_a[]")
+            assegnato_a = ", ".join(utenti_selezionati) if utenti_selezionati else username_corrente
         else:
             assegnato_a = username_corrente
+            utenti_selezionati = [username_corrente]
         
         if titolo:
             cur.execute("""
@@ -957,15 +965,17 @@ def promemoria():
             """, (titolo, descrizione, data_scadenza, priorita, ricorrenza, assegnato_a))
             conn.commit()
             
-            if assegnato_a and assegnato_a != username_corrente:
-                crea_notifica(
-                    destinatario=assegnato_a,
-                    titolo="📌 Nuovo Promemoria Assegnato",
-                    messaggio=f"Ti è stato assegnato un promemoria: {titolo}",
-                    link="/promemoria"
-                )
+            for u_target in utenti_selezionati:
+                u_clean = u_target.strip()
+                if u_clean and u_clean != username_corrente:
+                    crea_notifica(
+                        destinatario=u_clean,
+                        titolo="📌 Nuovo Promemoria Assegnato",
+                        messaggio=f"Ti è stato assegnato un promemoria: {titolo}",
+                        link="/promemoria"
+                    )
                 
-            registra_log(f"Creato promemoria: {titolo} per utente {assegnato_a}")
+            registra_log(f"Creato promemoria: {titolo} per utenti ({assegnato_a})")
             flash("Promemoria aggiunto con successo!", "success")
         return redirect(url_for("promemoria"))
         
@@ -977,9 +987,9 @@ def promemoria():
     else:
         cur.execute("""
             SELECT * FROM promemoria 
-            WHERE assegnato_a = %s OR assegnato_a IS NULL OR assegnato_a = '' 
+            WHERE assegnato_a LIKE %s OR assegnato_a IS NULL OR assegnato_a = '' 
             ORDER BY completato ASC, data_scadenza ASC;
-        """, (username_corrente,))
+        """, (f"%{username_corrente}%",))
 
     lista_promemoria = cur.fetchall()
     cur.close()
@@ -1368,7 +1378,7 @@ def documenti(cartella_id):
             percorso_breadcrumb.insert(0, curr)
             if curr['parent_id']:
                 cur.execute("SELECT * FROM cartelle WHERE id = %s;", (curr['parent_id'],))
-                curr = curr.fetchone()
+                curr = cur.fetchone()
             else:
                 curr = None
 
