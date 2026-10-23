@@ -327,7 +327,10 @@ def index():
     interventi_aperti_count = 0
     interventi_in_lavoro_count = 0
     interventi_attesa_count = 0
-    notifiche_attive = [] #[span_8](start_span)[span_8](end_span)[span_9](start_span)[span_9](end_span) Inizializzazione della lista notifiche attive
+    notifiche_attive =[span_0](start_span)[span_0](end_span)[span_1](start_span)[span_1](end_span)
+    
+    pezzi_principale = 0
+    pezzi_pesante = 0
     
     username = session.get('username')
     is_admin = session.get('is_admin')
@@ -340,7 +343,6 @@ def index():
         cur.execute("SELECT * FROM prodotti ORDER BY nome ASC;")
         tutti = cur.fetchall()
         
-        # Recupero delle notifiche non lette destinate all'utente loggato[span_10](start_span)[span_10](end_span)[span_11](start_span)[span_11](end_span)
         if username:
             cur.execute("""
                 SELECT id, titolo, messaggio, link, to_char(creato_il, 'DD-MM-YYYY HH24:MI') as data 
@@ -371,13 +373,21 @@ def index():
         for p in tutti:
             val_pesante = p.get('magazzino_pesante')
             is_pesante = (val_pesante == 1 or val_pesante == '1' or val_pesante is True or val_pesante == 1.0)
+            qta = p.get('quantita', 0) or 0
+            
             if not is_pesante:
                 prodotti.append(p)
+                pezzi_principale += qta
+            else:
+                pezzi_pesante += qta
+                
             soglia = p.get('soglia_minima', 3) or 3
-            if p.get('quantita', 0) <= soglia:
+            if qta <= soglia:
                 prodotti_sotto_soglia.append(p)
     except Exception as e:
         print(f"Errore index: {e}")
+        
+    pezzi_totali = pezzi_principale + pezzi_pesante
         
     return render_template("index.html", 
                            prodotti=prodotti, 
@@ -386,7 +396,10 @@ def index():
                            interventi_aperti_count=interventi_aperti_count,
                            interventi_in_lavoro_count=interventi_in_lavoro_count,
                            interventi_attesa_count=interventi_attesa_count,
-                           notifiche_attive=notifiche_attive) #[span_12](start_span)[span_12](end_span)[span_13](start_span)[span_13](end_span) Passaggio delle notifiche attive al template HTML
+                           notifiche_attive=notifiche_attive,
+                           pezzi_principale=pezzi_principale,
+                           pezzi_pesante=pezzi_pesante,
+                           pezzi_totali=pezzi_totali)
 
 @app.route("/login", methods=["GET", "POST"])
 @app.route("/login.html", methods=["GET", "POST"])
@@ -449,7 +462,6 @@ def registra():
                 flash("Username già esistente o errore di registrazione.", "error")
     return render_template("registra.html")
 
-# --- PANNELLO PERMESSI ADMIN & LOGS ---
 @app.route("/admin_utenti")
 @app.route("/admin_utenti.html")
 def admin_utenti():
@@ -543,7 +555,6 @@ def elimina_utente(user_id):
         flash(f"Errore eliminazione utente: {e}", "error")
     return redirect(url_for('admin_utenti'))
 
-# --- CAMBI SERIE ---
 @app.route("/cambi_serie")
 @app.route("/cambi_serie.html")
 def cambi_serie():
@@ -566,7 +577,6 @@ def esporta_cambi_serie_csv():
         headers={"Content-disposition": "attachment; filename=Cambi_Serie_OMG.csv"}
     )
 
-# --- MODULO: REPORT ORE & STATISTICHE MANUTENZIONI ---
 @app.route("/report_ore")
 @app.route("/report_ore.html")
 def report_ore():
@@ -666,7 +676,6 @@ def report_ore():
                            chart_tipi_labels=chart_tipi_labels,
                            chart_tipi_values=chart_tipi_values)
 
-# --- RICHIESTE INTERVENTO MANUTENZIONE OFFICINA ---
 @app.route("/richieste_manutenzione", methods=["GET", "POST"])
 @app.route("/richieste_manutenzione.html", methods=["GET", "POST"])
 def richieste_manutenzione():
@@ -933,7 +942,6 @@ def elimina_intervento(intervento_id):
     flash("Intervento eliminato.", "success")
     return redirect(url_for("richieste_manutenzione"))
 
-# --- GESTIONE PROMEMORIA ---
 @app.route("/promemoria", methods=["GET", "POST"])
 @app.route("/promemoria.html", methods=["GET", "POST"])
 def promemoria():
@@ -1065,7 +1073,6 @@ def elimina_promemoria(promemoria_id):
     flash("Promemoria eliminato.", "success")
     return redirect(url_for("promemoria"))
 
-# --- GESTIONE FORNITORI E CONTATTI ---
 @app.route("/fornitori", methods=["GET", "POST"])
 @app.route("/fornitori.html", methods=["GET", "POST"])
 def fornitori():
@@ -1358,7 +1365,6 @@ def esporta_fornitori_csv():
         headers={"Content-disposition": "attachment; filename=Fornitori_Gestionale_OMG.csv"}
     )
 
-# --- GESTIONE DOCUMENTI ---
 @app.route("/documenti", defaults={"cartella_id": None}, methods=["GET", "POST"])
 @app.route("/documenti/<int:cartella_id>", methods=["GET", "POST"])
 @app.route("/documenti.html", defaults={"cartella_id": None}, methods=["GET", "POST"])
@@ -1503,7 +1509,6 @@ def elimina_file(file_id):
         return redirect(url_for("documenti", cartella_id=cartella_id))
     return redirect(url_for("documenti"))
 
-# --- ALTRE ROTTE GESTIONALE E ESPORTAZIONI CSV ---
 @app.route("/esportazioni")
 @app.route("/esportazioni.html")
 def esportazioni():
