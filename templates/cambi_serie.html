@@ -135,7 +135,6 @@
                             </div>
                             <div class="col-md-4 mb-3">
                                 <label class="form-label fw-bold">Forno *</label>
-                                <!-- ATTACCO ONCHANGE DIRETTO -->
                                 <select class="form-select" id="selectForno" required onchange="aggiornaMacchine(this.value)">
                                     <option value="" disabled selected>Seleziona Forno...</option>
                                     <option value="Forno 1">Forno 1</option>
@@ -145,7 +144,7 @@
                             </div>
                             <div class="col-md-4 mb-3">
                                 <label class="form-label fw-bold">Macchina *</label>
-                                <select class="form-select" id="selectMacchina" name="forno_macchina" required disabled>
+                                <select class="form-select" id="selectMacchina" name="forno_macchina" required>
                                     <option value="" disabled selected>Seleziona prima il Forno</option>
                                 </select>
                             </div>
@@ -187,24 +186,18 @@
         </div>
     </div>
 
-    <!-- Script Bootstrap & Funzione Globale Sblocco -->
+    <!-- Script JavaScript -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script>
-        // Mappatura globale dei forni e delle macchine
         const macchinePerForno = {
             "Forno 1": ["Forno 1 - Macchina 11", "Forno 1 - Macchina 12", "Forno 1 - Macchina 13"],
             "Forno 3": ["Forno 3 - Macchina 31", "Forno 3 - Macchina 32", "Forno 3 - Macchina 34", "Forno 3 - Macchina 35"],
             "Forno 4": ["Forno 4 - Macchina 41", "Forno 4 - Macchina 42"]
         };
 
-        // Funzione globale richiamata direttamente dall'onchange HTML
         function aggiornaMacchine(fornoSelezionato) {
             const selectMacchina = document.getElementById("selectMacchina");
-            
-            // Pulisce le opzioni e sblocca la select
             selectMacchina.innerHTML = '<option value="" disabled selected>Seleziona Macchina...</option>';
-            selectMacchina.disabled = false;
-            selectMacchina.removeAttribute("disabled");
 
             if (fornoSelezionato && macchinePerForno[fornoSelezionato]) {
                 macchinePerForno[fornoSelezionato].forEach(function(macchina) {
@@ -216,7 +209,6 @@
             }
         }
 
-        // Imposta la data odierna all'apertura
         document.addEventListener("DOMContentLoaded", () => {
             const d = document.querySelector('input[name="data_cambio"]');
             if (d && !d.value) {
@@ -224,7 +216,6 @@
             }
         });
 
-        // Funzioni per il filtro settimanale
         function getWeekNumber(d) {
             d = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
             d.setUTCDate(d.getUTCDate() + 4 - (d.getUTCDay() || 7));
