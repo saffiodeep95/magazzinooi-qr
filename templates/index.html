@@ -10,7 +10,7 @@
 </head>
 <body class="bg-light">
 
-    <!-- NAVBAR PRINCIPALE DEFINITIVA CON TUTTE LE VOCI E DROPDOWN -->
+    <!-- NAVBAR PRINCIPALE CON TUTTE LE VOCI (FORNITORI INCLUSI) E DROPDOWN -->
     <nav class="navbar navbar-expand-lg navbar-dark bg-dark shadow-sm mb-4">
         <a class="navbar-brand font-weight-bold" href="{{ url_for('index') }}">
             <i class="fas fa-boxes mr-2"></i>Gestionale OMG
@@ -103,7 +103,7 @@
         </div>
     </nav>
 
-    <!-- NOTIFICHE FLASH -->
+    <!-- NOTIFICHE FLASH SISTEMA -->
     <div class="container-fluid">
         {% with messages = get_flashed_messages(with_categories=true) %}
           {% if messages %}
@@ -121,6 +121,38 @@
 
     <!-- CONTENUTO PRINCIPALE DASHBOARD -->
     <div class="container-fluid mt-4">
+
+        <!-- BANNER NOTIFICHE PERSONALI: PROMEMORIA ASSEGNATI -->
+        {% if notifiche_promemoria %}
+        <div class="alert alert-warning alert-dismissible fade show shadow-sm mb-4" role="alert">
+            <div class="d-flex align-items-center">
+                <i class="fas fa-bell fa-2x mr-3 text-warning"></i>
+                <div>
+                    <h5 class="alert-heading font-weight-bold mb-1">Promemoria e Attività Assegnate!</h5>
+                    <p class="mb-0">Hai <strong>{{ notifiche_promemoria|length }}</strong> promemoria o attività da completare assegnati a te.</p>
+                </div>
+                <a href="{{ url_for('promemoria') }}" class="btn btn-warning font-weight-bold ml-auto shadow-sm">
+                    Vai ai Promemoria <i class="fas fa-arrow-right ml-1"></i>
+                </a>
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- BANNER NOTIFICHE PERSONALI: MANSIONI OFFICINA / MANUTENZIONI -->
+        {% if notifiche_officina %}
+        <div class="alert alert-danger alert-dismissible fade show shadow-sm mb-4" role="alert">
+            <div class="d-flex align-items-center">
+                <i class="fas fa-tools fa-2x mr-3 text-danger"></i>
+                <div>
+                    <h5 class="alert-heading font-weight-bold mb-1">Interventi Officina e Manutenzioni da Gestire!</h5>
+                    <p class="mb-0">Ci sono <strong>{{ notifiche_officina|length }}</strong> interventi di manutenzione aperti o in corso di tua competenza.</p>
+                </div>
+                <a href="{{ url_for('richieste_manutenzione') }}" class="btn btn-danger font-weight-bold ml-auto shadow-sm">
+                    Gestisci Interventi <i class="fas fa-arrow-right ml-1"></i>
+                </a>
+            </div>
+        </div>
+        {% endif %}
 
         <!-- INTESTAZIONE E PULSANTI DI AZIONE RAPIDA -->
         <div class="row align-items-center mb-4">
@@ -150,9 +182,10 @@
             </div>
         </div>
 
-        <!-- CARD STATISTICHE RAPIDE (Aggiornate con il Totale Prodotti Standard + Pesante) -->
+        <!-- CARD STATISTICHE RAPIDE -->
         <div class="row mb-4">
-            <div class="col-xl-3 col-md-6 mb-3">
+            <!-- Promemoria Aperti -->
+            <div class="col-xl-4 col-md-6 mb-3">
                 <div class="card border-left-warning shadow h-100 py-2">
                     <div class="card-body">
                         <div class="row no-gutters align-items-center">
@@ -167,38 +200,24 @@
                 </div>
             </div>
 
-            <div class="col-xl-3 col-md-6 mb-3">
+            <!-- Pezzi in Riparazione / Assistenza -->
+            <div class="col-xl-4 col-md-6 mb-3">
                 <div class="card border-left-danger shadow h-100 py-2">
                     <div class="card-body">
                         <div class="row no-gutters align-items-center">
                             <div class="col mr-2">
-                                <div class="text-xs font-weight-bold text-danger text-uppercase mb-1">Interventi Aperti</div>
-                                <div class="h5 mb-0 font-weight-bold text-gray-800">{{ interventi_aperti_count }}</div>
+                                <div class="text-xs font-weight-bold text-danger text-uppercase mb-1">In Riparazione / Assistenza</div>
+                                <div class="h5 mb-0 font-weight-bold text-gray-800">{{ prodotti_in_riparazione_count or 0 }}</div>
                             </div>
                             <div class="col-auto"><i class="fas fa-wrench fa-2x text-danger"></i></div>
                         </div>
-                        <a href="{{ url_for('richieste_manutenzione') }}" class="btn btn-sm btn-link text-danger p-0 mt-2">Gestisci manutenzioni &rarr;</a>
+                        <a href="{{ url_for('richieste_manutenzione') }}" class="btn btn-sm btn-link text-danger p-0 mt-2">Vedi dettagli riparazioni &rarr;</a>
                     </div>
                 </div>
             </div>
 
-            <div class="col-xl-3 col-md-6 mb-3">
-                <div class="card border-left-info shadow h-100 py-2">
-                    <div class="card-body">
-                        <div class="row no-gutters align-items-center">
-                            <div class="col mr-2">
-                                <div class="text-xs font-weight-bold text-info text-uppercase mb-1">Interventi In Corso</div>
-                                <div class="h5 mb-0 font-weight-bold text-gray-800">{{ interventi_in_lavoro_count }}</div>
-                            </div>
-                            <div class="col-auto"><i class="fas fa-tools fa-2x text-info"></i></div>
-                        </div>
-                        <a href="{{ url_for('richieste_manutenzione') }}" class="btn btn-sm btn-link text-info p-0 mt-2">Dettagli lavori &rarr;</a>
-                    </div>
-                </div>
-            </div>
-
-            <!-- TOTALE PRODOTTI TRA MAGAZZINO E MAGAZZINO PESANTE -->
-            <div class="col-xl-3 col-md-6 mb-3">
+            <!-- Totale Prodotti Magazzini -->
+            <div class="col-xl-4 col-md-12 mb-3">
                 <div class="card border-left-secondary shadow h-100 py-2">
                     <div class="card-body">
                         <div class="row no-gutters align-items-center">
@@ -384,7 +403,7 @@
     </div>
     {% endif %}
 
-    <!-- SCRIPTS (jQuery & Bootstrap Bundle per far funzionare i dropdown) -->
+    <!-- SCRIPTS -->
     <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@4.6.2/dist/js/bootstrap.bundle.min.js"></script>
     <script>
