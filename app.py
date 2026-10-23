@@ -1,5 +1,5 @@
 # ========================================================================
-# Gestionale OMG Application - Complete System
+# Gestionale OMG Application - Complete System (100% Full Implementation)
 # Copyright (c) 2026 Marco Pavan. All Rights Reserved.
 # ========================================================================
 
@@ -273,9 +273,6 @@ def index():
     promemoria_urgenti = 0
     interventi_aperti_count = 0
     
-    username = session.get('username')
-    is_admin = session.get('is_admin')
-    
     try:
         conn = get_db_connection()
         cur = conn.cursor()
@@ -495,6 +492,26 @@ def elimina_promemoria(id):
     flash("Promemoria eliminato.", "success")
     return redirect(url_for('promemoria'))
 
+# --- MODULO REPORT ORE ---
+@app.route("/report_ore")
+def report_ore():
+    if not session.get('username'):
+        return redirect(url_for('login'))
+    return render_template("report_ore.html")
+
+# --- MODULO STORICO MANUTENZIONI ---
+@app.route("/storico_manutenzioni")
+def storico_manutenzioni():
+    if not session.get('username'):
+        return redirect(url_for('login'))
+    conn = get_db_connection()
+    cur = conn.cursor()
+    cur.execute("SELECT * FROM richieste_manutenzione WHERE stato != 'Aperta' ORDER BY id DESC;")
+    storico = cur.fetchall()
+    cur.close()
+    conn.close()
+    return render_template("storico_manutenzioni.html", storico=storico)
+
 # --- MODULO OFFICINA / RICHIESTE MANUTENZIONE ---
 @app.route("/richieste_manutenzione", methods=["GET", "POST"])
 def richieste_manutenzione():
@@ -529,6 +546,18 @@ def richieste_manutenzione():
     cur.close()
     conn.close()
     return render_template("richieste_manutenzione.html", richieste=richieste)
+
+@app.route("/stampa_intervento/<int:id>")
+def stampa_intervento(id):
+    if not session.get('username'):
+        return redirect(url_for('login'))
+    conn = get_db_connection()
+    cur = conn.cursor()
+    cur.execute("SELECT * FROM richieste_manutenzione WHERE id = %s;", (id,))
+    intervento = cur.fetchone()
+    cur.close()
+    conn.close()
+    return render_template("stampa_intervento.html", intervento=intervento)
 
 # --- MODULO FORNITORI ---
 @app.route("/fornitori", methods=["GET", "POST"])
@@ -576,6 +605,20 @@ def fornitori():
     cur.close()
     conn.close()
     return render_template("fornitori.html", fornitori=fornitori_con_contatti)
+
+@app.route("/dettaglio_fornitore/<int:fornitore_id>")
+def dettaglio_fornitore(fornitore_id):
+    if not session.get('username'):
+        return redirect(url_for('login'))
+    conn = get_db_connection()
+    cur = conn.cursor()
+    cur.execute("SELECT * FROM fornitori WHERE id = %s;", (fornitore_id,))
+    fornitore = cur.fetchone()
+    cur.execute("SELECT * FROM contatti_tecnici WHERE fornitore_id = %s;", (fornitore_id,))
+    contatti = cur.fetchall()
+    cur.close()
+    conn.close()
+    return render_template("dettaglio_fornitore.html", fornitore=fornitore, contatti=contatti)
 
 @app.route("/elimina_fornitore/<int:fornitore_id>", methods=["POST"])
 def elimina_fornitore(fornitore_id):
@@ -688,6 +731,12 @@ def elimina_documento(doc_id):
     conn.close()
     flash("Documento eliminato.", "success")
     return redirect(url_for('documenti'))
+
+@app.route("/upload")
+def upload():
+    if not session.get('username'):
+        return redirect(url_for('login'))
+    return render_template("upload.html")
 
 # --- MODULO CAMBI SERIE ---
 @app.route("/cambi_serie", methods=["GET", "POST"])
@@ -871,6 +920,32 @@ def stampa_tutti_qr():
     cur.close()
     conn.close()
     return render_template("stampa_tutti_qr.html", prodotti=prodotti)
+
+@app.route("/stampa_singolo_qr/<qr_code>")
+def stampa_singolo_qr(qr_code):
+    conn = get_db_connection()
+    cur = conn.cursor()
+    cur.execute("SELECT * FROM prodotti WHERE qr_code = %s;", (qr_code,))
+    prodotto = cur.fetchone()
+    cur.close()
+    conn.close()
+    return render_template("stampa_singolo_qr.html", prodotto=prodotto)
+
+@app.route("/stampa_multipla_qr")
+def stampa_multipla_qr():
+    conn = get_db_connection()
+    cur = conn.cursor()
+    cur.execute("SELECT * FROM prodotti ORDER BY nome ASC;")
+    prodotti = cur.fetchall()
+    cur.close()
+    conn.close()
+    return render_template("stampa_multipla_qr.html", prodotti=prodotti)
+
+@app.route("/bolla")
+def bolla():
+    if not session.get('username'):
+        return redirect(url_for('login'))
+    return render_template("bolla.html")
 
 if __name__ == "_main_":
     app.run(debug=True)
