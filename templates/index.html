@@ -3,405 +3,99 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Dashboard - Gestionale OMG</title>
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@4.6.2/dist/css/bootstrap.min.css">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+    <title>Magazzino QR - Dashboard</title>
+    <!-- Bootstrap 5 CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </head>
 <body class="bg-light">
 
-    <!-- NAVBAR PRINCIPALE COMPLETA & CENTRO NOTIFICHE -->
-    <nav class="navbar navbar-expand-lg navbar-dark bg-dark shadow-sm mb-4">
-        <a class="navbar-brand font-weight-bold" href="{{ url_for('index') }}">
-            <i class="fas fa-boxes mr-2"></i>Gestionale OMG
-        </a>
-        <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
-            <span class="navbar-toggler-icon"></span>
-        </button>
-        
-        <div class="collapse navbar-collapse" id="navbarNav">
-            <ul class="navbar-nav mr-auto">
-                <li class="nav-item active">
-                    <a class="nav-link" href="{{ url_for('index') }}"><i class="fas fa-home mr-1"></i> Dashboard</a>
-                </li>
-                
-                {% if session.get('is_admin') or session.get('puo_vedere_pesante', 1) %}
-                <li class="nav-item">
-                    <a class="nav-link" href="{{ url_for('magazzino_pesante') }}"><i class="fas fa-weight-hanging mr-1"></i> Pesante</a>
-                </li>
-                {% endif %}
-
-                <li class="nav-item">
-                    <a class="nav-link" href="{{ url_for('cambi_serie') }}"><i class="fas fa-exchange-alt mr-1"></i> Cambi Serie</a>
-                </li>
-
-                {% if session.get('is_admin') or session.get('puo_vedere_manutenzione', 1) %}
-                <li class="nav-item">
-                    <a class="nav-link" href="{{ url_for('richieste_manutenzione') }}"><i class="fas fa-tools mr-1"></i> Manutenzioni</a>
-                </li>
-                {% endif %}
-
-                {% if session.get('is_admin') or session.get('puo_vedere_promemoria', 1) %}
-                <li class="nav-item">
-                    <a class="nav-link" href="{{ url_for('promemoria') }}"><i class="fas fa-sticky-note mr-1"></i> Promemoria</a>
-                </li>
-                {% endif %}
-
-                {% if session.get('is_admin') or session.get('puo_gestire_fornitori', 1) %}
-                <li class="nav-item">
-                    <a class="nav-link" href="{{ url_for('fornitori') }}"><i class="fas fa-truck mr-1"></i> Fornitori</a>
-                </li>
-                {% endif %}
-
-                {% if session.get('is_admin') or session.get('puo_gestire_documenti', 1) %}
-                <li class="nav-item">
-                    <a class="nav-link" href="{{ url_for('documenti') }}"><i class="fas fa-folder mr-1"></i> Documenti</a>
-                </li>
-                {% endif %}
-
-                {% if session.get('is_admin') or session.get('puo_vedere_report_ore', 1) %}
-                <li class="nav-item">
-                    <a class="nav-link" href="{{ url_for('report_ore') }}"><i class="fas fa-clock mr-1"></i> Report Ore</a>
-                </li>
-                {% endif %}
-
-                <!-- MENU A TENDINA ESPORTAZIONI & STAMPE QR -->
-                <li class="nav-item dropdown">
-                    <a class="nav-link dropdown-toggle text-info font-weight-bold" href="#" id="navbarDropdownEsportazioni" role="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
-                        <i class="fas fa-file-download mr-1"></i> Esportazioni CSV & Stampe
-                    </a>
-                    <div class="dropdown-menu shadow" aria-labelledby="navbarDropdownEsportazioni">
-                        <a class="dropdown-item" href="{{ url_for('esporta_inventario') }}"><i class="fas fa-file-csv mr-2 text-success"></i> Esporta Inventario Standard (CSV)</a>
-                        <a class="dropdown-item" href="{{ url_for('esporta_pesante') }}"><i class="fas fa-file-csv mr-2 text-success"></i> Esporta Magazzino Pesante (CSV)</a>
-                        <a class="dropdown-item" href="{{ url_for('esporta_storico_manutenzioni_csv') }}"><i class="fas fa-file-csv mr-2 text-warning"></i> Esporta Storico Manutenzioni (CSV)</a>
-                        <a class="dropdown-item" href="{{ url_for('esporta_interventi') }}"><i class="fas fa-file-csv mr-2 text-warning"></i> Esporta Report Interventi Officina (CSV)</a>
-                        <a class="dropdown-item" href="{{ url_for('esporta_fornitori_csv') }}"><i class="fas fa-file-csv mr-2 text-primary"></i> Esporta Fornitori (CSV)</a>
-                        <a class="dropdown-item" href="{{ url_for('esporta_cambi_serie_csv') }}"><i class="fas fa-file-csv mr-2 text-info"></i> Esporta Cambi Serie (CSV)</a>
-                        <div class="dropdown-divider"></div>
-                        <a class="dropdown-item" href="{{ url_for('stampa_tutti_qr') }}"><i class="fas fa-print mr-2 text-dark"></i> Stampa Tutti i QR Code</a>
-                        <a class="dropdown-item" href="{{ url_for('stampa_multipla_qr') }}"><i class="fas fa-qrcode mr-2 text-secondary"></i> Stampa QR Armadi / Postazioni</a>
-                    </div>
-                </li>
-
-                {% if session.get('is_admin') %}
-                <li class="nav-item">
-                    <a class="nav-link text-warning" href="{{ url_for('admin_utenti') }}"><i class="fas fa-users-cog mr-1"></i> Utenti</a>
-                </li>
-                {% endif %}
-            </ul>
-            
-            <ul class="navbar-nav ml-auto">
-                <!-- CENTRO NOTIFICHE (CAMPANELLA) -->
-                {% set tot_notifiche = (notifiche_promemoria|length if notifiche_promemoria else 0) + (notifiche_officina|length if notifiche_officina else 0) %}
-                <li class="nav-item dropdown mr-2">
-                    <a class="nav-link dropdown-toggle position-relative text-warning" href="#" id="navbarNotifiche" role="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
-                        <i class="fas fa-bell fa-lg"></i>
-                        {% if tot_notifiche > 0 %}
-                            <span class="badge badge-danger badge-counter position-absolute" style="top: 0; right: -5px; font-size: 0.7rem;">{{ tot_notifiche }}</span>
-                        {% endif %}
-                    </a>
-                    <div class="dropdown-menu dropdown-menu-right shadow p-3" aria-labelledby="navbarNotifiche" style="width: 340px; max-height: 420px; overflow-y: auto;">
-                        <h6 class="dropdown-header font-weight-bold text-uppercase border-bottom pb-2 mb-2 text-primary px-0">🔔 Centro Notifiche (Oggi)</h6>
-                        
-                        {% if notifiche_promemoria %}
-                            <div class="small font-weight-bold text-warning mb-1"><i class="fas fa-sticky-note mr-1"></i> Promemoria in Scadenza Oggi ({{ notifiche_promemoria|length }})</div>
-                            {% for p in notifiche_promemoria %}
-                            <a class="dropdown-item py-2 px-2 border rounded bg-light mb-2 text-wrap" href="{{ url_for('promemoria') }}">
-                                <div class="font-weight-bold text-dark"><i class="fas fa-circle text-warning" style="font-size: 6px;"></i> {{ p.titolo }}</div>
-                                <div class="small text-muted">Scadenza: {{ p.data_scadenza }}</div>
-                            </a>
-                            {% endfor %}
-                        {% endif %}
-
-                        {% if notifiche_officina %}
-                            <div class="small font-weight-bold text-danger mt-2 mb-1"><i class="fas fa-tools mr-1"></i> Interventi Officina ({{ notifiche_officina|length }})</div>
-                            {% for m in notifiche_officina %}
-                            <a class="dropdown-item py-2 px-2 border rounded bg-light mb-2 text-wrap" href="{{ url_for('richieste_manutenzione') }}">
-                                <div class="font-weight-bold text-dark"><i class="fas fa-circle text-danger" style="font-size: 6px;"></i> {{ m.titolo or m.descrizione or 'Intervento' }}</div>
-                                <div class="small text-muted">Stato: <span class="badge badge-danger">{{ m.stato }}</span></div>
-                            </a>
-                            {% endfor %}
-                        {% endif %}
-
-                        {% if tot_notifiche == 0 %}
-                            <div class="text-center text-muted py-3 small">Nessuna notifica per oggi.</div>
-                        {% endif %}
-                    </div>
-                </li>
-
-                {% if session.get('username') %}
-                <li class="nav-item">
-                    <span class="nav-link text-white"><i class="fas fa-user mr-1"></i> {{ session.get('username') }}</span>
-                </li>
-                <li class="nav-item">
-                    <a class="btn btn-outline-light btn-sm my-1 ml-2" href="{{ url_for('logout') }}"><i class="fas fa-sign-out-alt mr-1"></i> Logout</a>
-                </li>
-                {% endif %}
-            </ul>
+    <!-- Navbar -->
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark shadow-sm">
+        <div class="container-fluid">
+            <a class="navbar-brand" href="{{ url_for('index') }}">
+                <i class="fas fa-boxes me-2 text-warning"></i>Magazzino QR
+            </a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav ms-auto">
+                    <!-- Menu a tendina con il link corretto per l'esportazione -->
+                    <li class="nav-item dropdown">
+                        <a class="nav-link dropdown-toggle text-white" href="#" id="navbarDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                            <i class="fas fa-tools me-1"></i> Opzioni Manutenzioni
+                        </a>
+                        <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="navbarDropdown">
+                            <li>
+                                <!-- Endpoint corretto: storico_manutenzioni_csv -->
+                                <a class="dropdown-item" href="{{ url_for('storico_manutenzioni_csv') }}">
+                                    <i class="fas fa-file-csv me-2 text-warning"></i> Esporta Storico Manutenzioni (CSV)
+                                </a>
+                            </li>
+                        </ul>
+                    </li>
+                </ul>
+            </div>
         </div>
     </nav>
 
-    <!-- NOTIFICHE FLASH -->
-    <div class="container-fluid">
-        {% with messages = get_flashed_messages(with_categories=true) %}
-          {% if messages %}
-            {% for category, message in messages %}
-              <div class="alert alert-{% if category == 'error' %}danger{% else %}{{ category }}{% endif %} alert-dismissible fade show shadow-sm" role="alert">
-                {{ message }}
-                <button type="button" class="close" data-dismiss="alert" aria-label="Close">
-                  <span aria-hidden="true">&times;</span>
-                </button>
-              </div>
-            {% endfor %}
-          {% endif %}
-        {% endwith %}
-    </div>
-
-    <!-- CONTENUTO PRINCIPALE -->
-    <div class="container-fluid mt-4">
-        <div class="row align-items-center mb-4">
-            <div class="col-md-5">
-                <h2 class="font-weight-bold text-dark mb-1">
-                    <i class="fas fa-chart-line text-primary mr-2"></i>Dashboard Gestionale OMG
-                </h2>
-                <p class="text-muted mb-0">Panoramica generale del magazzino e operazioni rapide.</p>
-            </div>
-            <div class="col-md-7 text-md-right mt-3 mt-md-0">
-                <a href="{{ url_for('scanner_globale') }}" class="btn btn-dark shadow-sm font-weight-bold mr-1 mb-1">
-                    <i class="fas fa-qrcode mr-1"></i> Scanner QR
-                </a>
-                {% if session.get('is_admin') or session.get('puo_caricare_scaricare', 1) %}
-                <a href="{{ url_for('carico') }}" class="btn btn-success shadow-sm font-weight-bold mr-1 mb-1">
-                    <i class="fas fa-plus-circle mr-1"></i> Carico Rapido
-                </a>
-                <a href="{{ url_for('scarico') }}" class="btn btn-warning shadow-sm font-weight-bold mr-1 text-dark mb-1">
-                    <i class="fas fa-minus-circle mr-1"></i> Scarico Rapido
-                </a>
-                {% endif %}
-                {% if session.get('is_admin') or session.get('puo_aggiungere_prodotti', 1) %}
-                <button class="btn btn-primary shadow-sm font-weight-bold mb-1" data-toggle="modal" data-target="#modalAggiungiProdotto">
-                    <i class="fas fa-plus mr-1"></i> Nuovo Articolo
-                </button>
-                {% endif %}
-            </div>
-        </div>
-
-        <!-- CARD STATISTICHE -->
+    <!-- Contenuto principale -->
+    <div class="container my-5">
         <div class="row mb-4">
-            <div class="col-xl-4 col-md-6 mb-3">
-                <div class="card border-left-warning shadow h-100 py-2">
-                    <div class="card-body">
-                        <div class="row no-gutters align-items-center">
-                            <div class="col mr-2">
-                                <div class="text-xs font-weight-bold text-warning text-uppercase mb-1">Promemoria Aperti</div>
-                                <div class="h5 mb-0 font-weight-bold text-gray-800">{{ promemoria_urgenti }}</div>
-                            </div>
-                            <div class="col-auto"><i class="fas fa-bell fa-2x text-warning"></i></div>
-                        </div>
-                        <a href="{{ url_for('promemoria') }}" class="btn btn-sm btn-link text-warning p-0 mt-2">Vedi promemoria &rarr;</a>
-                    </div>
-                </div>
-            </div>
-
-            <div class="col-xl-4 col-md-6 mb-3">
-                <div class="card border-left-danger shadow h-100 py-2">
-                    <div class="card-body">
-                        <div class="row no-gutters align-items-center">
-                            <div class="col mr-2">
-                                <div class="text-xs font-weight-bold text-danger text-uppercase mb-1">In Riparazione / Assistenza</div>
-                                <div class="h5 mb-0 font-weight-bold text-gray-800">{{ prodotti_in_riparazione_count or 0 }}</div>
-                            </div>
-                            <div class="col-auto"><i class="fas fa-wrench fa-2x text-danger"></i></div>
-                        </div>
-                        <a href="{{ url_for('richieste_manutenzione') }}" class="btn btn-sm btn-link text-danger p-0 mt-2">Vedi dettagli riparazioni &rarr;</a>
-                    </div>
-                </div>
-            </div>
-
-            <div class="col-xl-4 col-md-12 mb-3">
-                <div class="card border-left-secondary shadow h-100 py-2">
-                    <div class="card-body">
-                        <div class="row no-gutters align-items-center">
-                            <div class="col mr-2">
-                                <div class="text-xs font-weight-bold text-secondary text-uppercase mb-1">Totale Prodotti (Magazzini)</div>
-                                <div class="h5 mb-0 font-weight-bold text-gray-800">{{ tutti_prodotti|length }}</div>
-                            </div>
-                            <div class="col-auto"><i class="fas fa-warehouse fa-2x text-secondary"></i></div>
-                        </div>
-                        <span class="text-muted small mt-2 d-block">Standard + Pesante</span>
-                    </div>
+            <div class="col-12">
+                <div class="p-4 bg-white rounded-3 shadow-sm border-start border-warning border-4">
+                    <h1 class="h3 mb-2 fw-bold text-dark">
+                        <i class="fas fa-tachometer-alt me-2 text-warning"></i>Dashboard Gestione Magazzino
+                    </h1>
+                    <p class="text-muted mb-0">Sistema di tracciamento QR e registro storico delle manutenzioni.</p>
                 </div>
             </div>
         </div>
 
-        <!-- SEZIONE SOTTO SOGLIA -->
-        {% if prodotti_sotto_soglia %}
-        <div class="alert alert-danger shadow-sm mb-4" role="alert">
-            <h5 class="alert-heading font-weight-bold mb-2">
-                <i class="fas fa-exclamation-triangle mr-2"></i>Attenzione: Articoli Sotto Soglia Minima di Scorta!
-            </h5>
-            <div class="table-responsive bg-white rounded p-2">
-                <table class="table table-sm table-borderless mb-0">
-                    <thead>
-                        <tr class="border-bottom">
-                            <th>Articolo</th>
-                            <th>QR Code</th>
-                            <th>Giacenza Attuale</th>
-                            <th>Soglia Minima</th>
-                            <th>Azione</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for p in prodotti_sotto_soglia %}
-                        <tr>
-                            <td class="font-weight-bold">{{ p.nome }}</td>
-                            <td><code>{{ p.qr_code }}</code></td>
-                            <td><span class="badge badge-danger">{{ p.quantita }} pz</span></td>
-                            <td>{{ p.soglia_minima or 3 }} pz</td>
-                            <td>
-                                <a href="{{ url_for('gestisci_prodotto', qr_code=p.qr_code) }}" class="btn btn-xs btn-outline-danger font-weight-bold">Ordina / Gestisci</a>
-                            </td>
-                        </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
-            </div>
-        </div>
-        {% endif %}
-
-        <!-- TABELLA INVENTARIO STANDARD -->
-        <div class="card shadow-sm mb-5">
-            <div class="card-header bg-dark text-white d-flex justify-content-between align-items-center">
-                <h5 class="mb-0 font-weight-bold"><i class="fas fa-cubes mr-2"></i>Inventario Magazzino Standard</h5>
-                <span class="badge badge-light p-2 font-weight-bold">Totale Articoli: {{ prodotti|length }}</span>
-            </div>
-            <div class="card-body">
-                <div class="row mb-3">
-                    <div class="col-md-6">
-                        <div class="input-group">
-                            <div class="input-group-prepend"><span class="input-group-text"><i class="fas fa-search"></i></span></div>
-                            <input type="text" id="cercaTabella" class="form-control" placeholder="Cerca per Nome, QR Code, SAP o Posizione...">
+        <!-- Sezione Tabella / Contenuti -->
+        <div class="row">
+            <div class="col-12">
+                <div class="card shadow-sm border-0">
+                    <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center">
+                        <h5 class="mb-0 fw-bold text-secondary">
+                            <i class="fas fa-clipboard-list me-2"></i>Attività recenti di magazzino
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="table-responsive">
+                            <table class="table table-hover align-middle">
+                                <thead class="table-dark">
+                                    <tr>
+                                        <th>#</th>
+                                        <th>Codice QR / Articolo</th>
+                                        <th>Descrizione Intervento</th>
+                                        <th>Data</th>
+                                        <th>Stato</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr>
+                                        <td colspan="5" class="text-center text-muted py-4">
+                                            <i class="fas fa-info-circle me-1"></i> Nessuna manutenzione recente registrata o dati caricati dinamicamente.
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
                         </div>
                     </div>
-                </div>
-
-                <div class="table-responsive">
-                    <table class="table table-hover table-striped" id="tabellaProdotti">
-                        <thead class="thead-light">
-                            <tr>
-                                <th>QR Code</th>
-                                <th>Nome Articolo</th>
-                                <th>Codice SAP</th>
-                                <th>Posizione</th>
-                                <th>Giacenza</th>
-                                <th class="text-center">Azioni Rapide</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {% for p in prodotti %}
-                            <tr>
-                                <td class="align-middle"><code>{{ p.qr_code }}</code></td>
-                                <td class="align-middle font-weight-bold">{{ p.nome }}</td>
-                                <td class="align-middle">{{ p.sap or '-' }}</td>
-                                <td class="align-middle">{{ p.posizione or '-' }}</td>
-                                <td class="align-middle">
-                                    {% set soglia = p.soglia_minima or 3 %}
-                                    {% if p.quantita <= soglia %}
-                                        <span class="badge badge-danger p-2">{{ p.quantita }} pz</span>
-                                    {% else %}
-                                        <span class="badge badge-success p-2">{{ p.quantita }} pz</span>
-                                    {% endif %}
-                                </td>
-                                <td class="align-middle text-center">
-                                    <a href="{{ url_for('gestisci_prodotto', qr_code=p.qr_code) }}" class="btn btn-sm btn-info font-weight-bold" title="Dettagli e Modifica"><i class="fas fa-edit mr-1"></i> Modifica</a>
-                                    <a href="{{ url_for('stampa_singolo_qr', qr_code=p.qr_code) }}" class="btn btn-sm btn-secondary" title="Stampa QR"><i class="fas fa-print"></i></a>
-                                </td>
-                            </tr>
-                            {% else %}
-                            <tr>
-                                <td colspan="6" class="text-center text-muted py-4">Nessun articolo presente nel magazzino standard.</td>
-                            </tr>
-                            {% endfor %}
-                        </tbody>
-                    </table>
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- MODALE AGGIUNGI PRODOTTO -->
-    {% if session.get('is_admin') or session.get('puo_aggiungere_prodotti', 1) %}
-    <div class="modal fade" id="modalAggiungiProdotto" tabindex="-1" role="dialog" aria-hidden="true">
-        <div class="modal-dialog modal-lg" role="document">
-            <div class="modal-content">
-                <div class="modal-header bg-primary text-white">
-                    <h5 class="modal-title font-weight-bold"><i class="fas fa-plus-circle mr-2"></i>Aggiungi Nuovo Articolo</h5>
-                    <button type="button" class="close text-white" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
-                </div>
-                <form action="{{ url_for('aggiungi_prodotto') }}" method="POST">
-                    <div class="modal-body">
-                        <div class="row">
-                            <div class="col-md-6 mb-3">
-                                <label class="form-label font-weight-bold">QR Code / Codice Univoco *</label>
-                                <input type="text" name="qr_code" class="form-control" placeholder="Es. QR-10023" required>
-                            </div>
-                            <div class="col-md-6 mb-3">
-                                <label class="form-label font-weight-bold">Nome Articolo *</label>
-                                <input type="text" name="nome" class="form-control" placeholder="Es. Cuscinetto SKF 6204" required>
-                            </div>
-                        </div>
-                        <div class="row">
-                            <div class="col-md-4 mb-3">
-                                <label class="form-label font-weight-bold">Codice SAP</label>
-                                <input type="text" name="sap" class="form-control" placeholder="Es. SAP-88392">
-                            </div>
-                            <div class="col-md-4 mb-3">
-                                <label class="form-label font-weight-bold">Quantità Iniziale</label>
-                                <input type="number" name="quantita" class="form-control" value="1" min="0">
-                            </div>
-                            <div class="col-md-4 mb-3">
-                                <label class="form-label font-weight-bold">Soglia Minima Alert</label>
-                                <input type="number" name="soglia_minima" class="form-control" value="3" min="1">
-                            </div>
-                        </div>
-                        <div class="row">
-                            <div class="col-md-6 mb-3">
-                                <label class="form-label font-weight-bold">Posizione in Magazzino</label>
-                                <input type="text" name="posizione" class="form-control" placeholder="Es. Corsia A - Scaffale 3">
-                            </div>
-                            <div class="col-md-6 mb-3">
-                                <label class="form-label font-weight-bold">Peso / Specifiche</label>
-                                <input type="text" name="peso" class="form-control" placeholder="Es. 1.2 Kg o M12">
-                            </div>
-                        </div>
-                        <div class="form-group form-check mb-0 mt-2">
-                            <input type="checkbox" name="magazzino_pesante" class="form-check-input" id="checkPesante">
-                            <label class="form-check-label font-weight-bold text-dark" for="checkPesante">Destina al Magazzino Pesante</label>
-                        </div>
-                    </div>
-                    <div class="modal-footer">
-                        <button type="button" class="btn btn-secondary" data-dismiss="modal">Annulla</button>
-                        <button type="submit" class="btn btn-primary font-weight-bold"><i class="fas fa-save mr-1"></i> Salva Articolo</button>
-                    </div>
-                </form>
-            </div>
-        </div>
-    </div>
-    {% endif %}
+    <!-- Footer -->
+    <footer class="text-center py-4 text-muted">
+        <p class="mb-0">&copy; 2026 Magazzino QR - Tutti i diritti riservati.</p>
+    </footer>
 
-    <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@4.6.2/dist/js/bootstrap.bundle.min.js"></script>
-    <script>
-    document.addEventListener("DOMContentLoaded", function() {
-        const inputCerca = document.getElementById("cercaTabella");
-        if (inputCerca) {
-            inputCerca.addEventListener("keyup", function() {
-                const valore = this.value.toLowerCase();
-                document.querySelectorAll("#tabellaProdotti tbody tr").forEach(riga => {
-                    riga.style.display = riga.textContent.toLowerCase().includes(valore) ? "" : "none";
-                });
-            });
-        }
-    });
-    </script>
+    <!-- Bootstrap 5 JS Bundle -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>
