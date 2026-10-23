@@ -1307,8 +1307,8 @@ def importa_intelligente():
         flash(f"Errore importazione: {e}", "error")
     return redirect(url_for("fornitori"))
 
-@app.route("/esporta_fornitori_intelligente")
-@app.route("/esporta_fornitori_csv")
+@app.route("/esporta_fornitori_intelligente", endpoint="esporta_fornitori_intelligente")
+@app.route("/esporta_fornitori_csv", endpoint="esporta_fornitori_csv")
 def esporta_fornitori_intelligente():
     return redirect(url_for("fornitori"))
 
@@ -1578,9 +1578,9 @@ def stampa_tutti_qr():
     conn.close()
     return render_template("stampa_tutti_qr.html", prodotti=prodotti)
 
-@app.route("/stampa_multipla_qr")
-@app.route("/stampa_multipla_qr.html")
-@app.route("/stampa_qr_multipli")
+@app.route("/stampa_multipla_qr", endpoint="stampa_multipla_qr")
+@app.route("/stampa_multipla_qr.html", endpoint="stampa_multipla_qr_html")
+@app.route("/stampa_qr_multipli", endpoint="stampa_qr_multipli")
 def stampa_multipla_qr():
     conn = get_db_connection()
     cur = conn.cursor()
