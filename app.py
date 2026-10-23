@@ -244,7 +244,8 @@ def api_notifiche():
     conn = get_db_connection()
     cur = conn.cursor()
     cur.execute("""
-        SELECT id, titolo, messaggio, link, letta, creato_il 
+        SELECT id, titolo, messaggio, link, letta, 
+               to_char(creato_il, 'YYYY-MM-DD HH24:MI:SS') as creato_il 
         FROM notifiche 
         WHERE destinatario = %s 
         ORDER BY creato_il DESC LIMIT 15;
@@ -546,6 +547,10 @@ def richieste_manutenzione():
     conn.close()
     return render_template("richieste_manutenzione.html", richieste=richieste, utenti=utenti)
 
+@app.route("/nuova_manutenzione", methods=["GET", "POST"])
+def nuova_manutenzione():
+    return redirect(url_for('richieste_manutenzione'))
+
 @app.route("/gestisci_intervento/<int:id>", methods=["POST"])
 def gestisci_intervento(id):
     if not session.get('username'):
@@ -752,6 +757,21 @@ def elimina_documento(doc_id):
     flash("Documento eliminato.", "success")
     return redirect(url_for('documenti'))
 
+@app.route("/elimina_cartella/<int:cartella_id>", methods=["POST"])
+@app.route("/elimina_cartella/<int:id>", methods=["POST"])
+def elimina_cartella(cartella_id=None, id=None):
+    cid = cartella_id if cartella_id is not None else id
+    if not session.get('username'):
+        return redirect(url_for('login'))
+    conn = get_db_connection()
+    cur = conn.cursor()
+    cur.execute("DELETE FROM cartelle WHERE id = %s;", (cid,))
+    conn.commit()
+    cur.close()
+    conn.close()
+    flash("Cartella eliminata.", "success")
+    return redirect(url_for('documenti'))
+
 @app.route("/upload")
 def upload():
     if not session.get('username'):
@@ -912,7 +932,7 @@ def aggiungi_prodotto():
 @app.route("/magazzino_pesante")
 def magazzino_pesante():
     conn = get_db_connection()
-    cur = conn.cluster if hasattr(conn, 'cluster') else conn.cursor() # safe fallback
+    cur = conn.cursor()
     cur.execute("SELECT * FROM prodotti WHERE magazzino_pesante = 1 ORDER BY nome ASC;")
     prodotti = cur.fetchall()
     cur.close()
