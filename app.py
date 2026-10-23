@@ -60,37 +60,19 @@ def init_db():
         conn = get_db_connection()
         cur = conn.cursor()
         
+        # 1. Creazione tabelle di base se non esistono
         cur.execute("""
             CREATE TABLE IF NOT EXISTS prodotti (
                 id SERIAL PRIMARY KEY,
                 qr_code VARCHAR(255) UNIQUE NOT NULL,
-                nome VARCHAR(255) NOT NULL,
-                sap VARCHAR(255),
-                peso VARCHAR(255),
-                quantita INT DEFAULT 0,
-                posizione VARCHAR(255),
-                magazzino_pesante INT DEFAULT 0,
-                in_manutenzione BOOLEAN DEFAULT FALSE,
-                cliente_manutenzione VARCHAR(255),
-                quantita_manutenzione INT DEFAULT 0,
-                data_spedizione VARCHAR(255),
-                data_riconsegna VARCHAR(255),
-                vettore VARCHAR(255),
-                ordine_amministrativo BOOLEAN DEFAULT FALSE,
-                note_manutenzione TEXT,
-                soglia_minima INT DEFAULT 3
+                nome VARCHAR(255) NOT NULL
             );
         """)
         
         cur.execute("""
             CREATE TABLE IF NOT EXISTS fornitori (
                 id SERIAL PRIMARY KEY,
-                nome_azienda VARCHAR(255) UNIQUE NOT NULL,
-                settore_note VARCHAR(255),
-                indirizzo VARCHAR(255),
-                p_iva VARCHAR(255),
-                telefono VARCHAR(255),
-                email VARCHAR(255)
+                nome_azienda VARCHAR(255) UNIQUE NOT NULL
             );
         """)
 
@@ -99,44 +81,21 @@ def init_db():
                 id SERIAL PRIMARY KEY,
                 fornitore_id INT REFERENCES fornitori(id) ON DELETE CASCADE,
                 nome VARCHAR(255) NOT NULL,
-                telefono VARCHAR(255) NOT NULL,
-                mansione VARCHAR(255),
-                email VARCHAR(255)
+                telefono VARCHAR(255) NOT NULL
             );
         """)
 
         cur.execute("""
             CREATE TABLE IF NOT EXISTS promemoria (
                 id SERIAL PRIMARY KEY,
-                titolo VARCHAR(255) NOT NULL,
-                descrizione TEXT,
-                data_scadenza VARCHAR(255),
-                priorita VARCHAR(50) DEFAULT 'Media',
-                ricorrenza VARCHAR(50) DEFAULT 'Nessuna',
-                assegnato_a VARCHAR(255),
-                completato BOOLEAN DEFAULT FALSE,
-                creato_il TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                titolo VARCHAR(255) NOT NULL
             );
         """)
 
         cur.execute("""
             CREATE TABLE IF NOT EXISTS richieste_manutenzione (
                 id SERIAL PRIMARY KEY,
-                titolo VARCHAR(255) NOT NULL,
-                impianto_macchina VARCHAR(255),
-                descrizione TEXT,
-                priorita VARCHAR(50) DEFAULT 'Media',
-                stato VARCHAR(50) DEFAULT 'Aperta',
-                tipo_guasto VARCHAR(50) DEFAULT 'Meccanico',
-                assegnato_a TEXT,
-                creato_da VARCHAR(255),
-                inizio_lavoro TIMESTAMP,
-                fine_lavoro TIMESTAMP,
-                tempo_lavorato_minuti INT DEFAULT 0,
-                note_lavoro TEXT,
-                allegato_nome VARCHAR(255),
-                allegato_dati BYTEA,
-                creato_il TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                titolo VARCHAR(255) NOT NULL
             );
         """)
 
@@ -154,29 +113,7 @@ def init_db():
             CREATE TABLE IF NOT EXISTS utenti (
                 id SERIAL PRIMARY KEY,
                 username VARCHAR(255) UNIQUE NOT NULL,
-                password VARCHAR(255) NOT NULL,
-                is_admin INT DEFAULT 0,
-                puo_vedere_magazzino INT DEFAULT 1,
-                puo_aggiungere_prodotti INT DEFAULT 1,
-                puo_modificare_prodotti INT DEFAULT 1,
-                puo_caricare_scaricare INT DEFAULT 1,
-                puo_eliminare INT DEFAULT 0,
-                puo_vedere_pesante INT DEFAULT 1,
-                puo_vedere_manutenzione INT DEFAULT 1,
-                puo_aprire_manutenzioni INT DEFAULT 1,
-                puo_gestire_interventi INT DEFAULT 1,
-                puo_assegnare_manutenzioni INT DEFAULT 1,
-                puo_eliminare_interventi INT DEFAULT 0,
-                puo_vedere_manutenzioni_esterne INT DEFAULT 1,
-                puo_vedere_storico_manutenzioni INT DEFAULT 1,
-                puo_eliminare_storico INT DEFAULT 0,
-                puo_gestire_fornitori INT DEFAULT 1,
-                puo_importare_fornitori INT DEFAULT 1,
-                puo_gestire_documenti INT DEFAULT 1,
-                puo_eliminare_documenti INT DEFAULT 0,
-                puo_vedere_promemoria INT DEFAULT 1,
-                puo_assegnare_promemoria INT DEFAULT 0,
-                puo_vedere_report_ore INT DEFAULT 1
+                password VARCHAR(255) NOT NULL
             );
         """)
 
@@ -184,16 +121,7 @@ def init_db():
             CREATE TABLE IF NOT EXISTS storico_manutenzioni (
                 id SERIAL PRIMARY KEY,
                 registrato_il TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                nome_prodotto VARCHAR(255),
-                qr_code VARCHAR(255),
-                sap VARCHAR(255),
-                cliente VARCHAR(255),
-                quantita INT,
-                data_spedizione VARCHAR(255),
-                data_riconsegna VARCHAR(255),
-                vettore VARCHAR(255),
-                ordine_amministrativo BOOLEAN DEFAULT FALSE,
-                note TEXT
+                nome_prodotto VARCHAR(255)
             );
         """)
 
@@ -236,34 +164,80 @@ def init_db():
                 creato_il TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             );
         """)
-        
+
+        # 2. Aggiornamento automatico di tutte le colonne (schema migration sicura)
+        colonne_prodotti = [
+            ("sap", "VARCHAR(255)"), ("peso", "VARCHAR(255)"), ("quantita", "INT DEFAULT 0"),
+            ("posizione", "VARCHAR(255)"), ("magazzino_pesante", "INT DEFAULT 0"),
+            ("in_manutenzione", "BOOLEAN DEFAULT FALSE"), ("cliente_manutenzione", "VARCHAR(255)"),
+            ("quantita_manutenzione", "INT DEFAULT 0"), ("data_spedizione", "VARCHAR(255)"),
+            ("data_riconsegna", "VARCHAR(255)"), ("vettore", "VARCHAR(255)"),
+            ("ordine_amministrativo", "BOOLEAN DEFAULT FALSE"), ("note_manutenzione", "TEXT"),
+            ("soglia_minima", "INT DEFAULT 3")
+        ]
+        for col, ctype in colonne_prodotti:
+            cur.execute(f"ALTER TABLE prodotti ADD COLUMN IF NOT EXISTS {col} {ctype};")
+
+        colonne_fornitori = [
+            ("settore_note", "VARCHAR(255)"), ("indirizzo", "VARCHAR(255)"),
+            ("p_iva", "VARCHAR(255)"), ("telefono", "VARCHAR(255)"), ("email", "VARCHAR(255)")
+        ]
+        for col, ctype in colonne_fornitori:
+            cur.execute(f"ALTER TABLE fornitori ADD COLUMN IF NOT EXISTS {col} {ctype};")
+
+        colonne_contatti = [
+            ("mansione", "VARCHAR(255)"), ("email", "VARCHAR(255)")
+        ]
+        for col, ctype in colonne_contatti:
+            cur.execute(f"ALTER TABLE contatti_tecnici ADD COLUMN IF NOT EXISTS {col} {ctype};")
+
+        colonne_promemoria = [
+            ("descrizione", "TEXT"), ("data_scadenza", "VARCHAR(255)"),
+            ("priorita", "VARCHAR(50) DEFAULT 'Media'"), ("ricorrenza", "VARCHAR(50) DEFAULT 'Nessuna'"),
+            ("assegnato_a", "VARCHAR(255)"), ("completato", "BOOLEAN DEFAULT FALSE"),
+            ("creato_il", "TIMESTAMP DEFAULT CURRENT_TIMESTAMP")
+        ]
+        for col, ctype in colonne_promemoria:
+            cur.execute(f"ALTER TABLE promemoria ADD COLUMN IF NOT EXISTS {col} {ctype};")
+
+        colonne_manutenzione = [
+            ("impianto_macchina", "VARCHAR(255)"), ("descrizione", "TEXT"),
+            ("priorita", "VARCHAR(50) DEFAULT 'Media'"), ("stato", "VARCHAR(50) DEFAULT 'Aperta'"),
+            ("tipo_guasto", "VARCHAR(50) DEFAULT 'Meccanico'"), ("assegnato_a", "TEXT"),
+            ("creato_da", "VARCHAR(255)"), ("inizio_lavoro", "TIMESTAMP"), ("fine_lavoro", "TIMESTAMP"),
+            ("tempo_lavorato_minuti", "INT DEFAULT 0"), ("note_lavoro", "TEXT"),
+            ("allegato_nome", "VARCHAR(255)"), ("allegato_dati", "BYTEA"),
+            ("creato_il", "TIMESTAMP DEFAULT CURRENT_TIMESTAMP")
+        ]
+        for col, ctype in colonne_manutenzione:
+            cur.execute(f"ALTER TABLE richieste_manutenzione ADD COLUMN IF NOT EXISTS {col} {ctype};")
+
+        colonne_storico = [
+            ("qr_code", "VARCHAR(255)"), ("sap", "VARCHAR(255)"), ("cliente", "VARCHAR(255)"),
+            ("quantita", "INT"), ("data_spedizione", "VARCHAR(255)"), ("data_riconsegna", "VARCHAR(255)"),
+            ("vettore", "VARCHAR(255)"), ("ordine_amministrativo", "BOOLEAN DEFAULT FALSE"), ("note", "TEXT")
+        ]
+        for col, ctype in colonne_storico:
+            cur.execute(f"ALTER TABLE storico_manutenzioni ADD COLUMN IF NOT EXISTS {col} {ctype};")
+
         permessi_lista = [
-            ("puo_vedere_magazzino", "INT DEFAULT 1"),
-            ("puo_aggiungere_prodotti", "INT DEFAULT 1"),
-            ("puo_modificare_prodotti", "INT DEFAULT 1"),
-            ("puo_caricare_scaricare", "INT DEFAULT 1"),
-            ("puo_eliminare", "INT DEFAULT 0"),
-            ("puo_vedere_pesante", "INT DEFAULT 1"),
-            ("puo_vedere_manutenzione", "INT DEFAULT 1"),
-            ("puo_aprire_manutenzioni", "INT DEFAULT 1"),
-            ("puo_gestire_interventi", "INT DEFAULT 1"),
-            ("puo_assegnare_manutenzioni", "INT DEFAULT 1"),
-            ("puo_eliminare_interventi", "INT DEFAULT 0"),
-            ("puo_vedere_manutenzioni_esterne", "INT DEFAULT 1"),
-            ("puo_vedere_storico_manutenzioni", "INT DEFAULT 1"),
-            ("puo_eliminare_storico", "INT DEFAULT 0"),
-            ("puo_gestire_fornitori", "INT DEFAULT 1"),
-            ("puo_importare_fornitori", "INT DEFAULT 1"),
-            ("puo_gestire_documenti", "INT DEFAULT 1"),
-            ("puo_eliminare_documenti", "INT DEFAULT 0"),
-            ("puo_vedere_promemoria", "INT DEFAULT 1"),
-            ("puo_assegnare_promemoria", "INT DEFAULT 0"),
+            ("is_admin", "INT DEFAULT 0"),
+            ("puo_vedere_magazzino", "INT DEFAULT 1"), ("puo_aggiungere_prodotti", "INT DEFAULT 1"),
+            ("puo_modificare_prodotti", "INT DEFAULT 1"), ("puo_caricare_scaricare", "INT DEFAULT 1"),
+            ("puo_eliminare", "INT DEFAULT 0"), ("puo_vedere_pesante", "INT DEFAULT 1"),
+            ("puo_vedere_manutenzione", "INT DEFAULT 1"), ("puo_aprire_manutenzioni", "INT DEFAULT 1"),
+            ("puo_gestire_interventi", "INT DEFAULT 1"), ("puo_assegnare_manutenzioni", "INT DEFAULT 1"),
+            ("puo_eliminare_interventi", "INT DEFAULT 0"), ("puo_vedere_manutenzioni_esterne", "INT DEFAULT 1"),
+            ("puo_vedere_storico_manutenzioni", "INT DEFAULT 1"), ("puo_eliminare_storico", "INT DEFAULT 0"),
+            ("puo_gestire_fornitori", "INT DEFAULT 1"), ("puo_importare_fornitori", "INT DEFAULT 1"),
+            ("puo_gestire_documenti", "INT DEFAULT 1"), ("puo_eliminare_documenti", "INT DEFAULT 0"),
+            ("puo_vedere_promemoria", "INT DEFAULT 1"), ("puo_assegnare_promemoria", "INT DEFAULT 0"),
             ("puo_vedere_report_ore", "INT DEFAULT 1")
         ]
-        
         for p_col, p_type in permessi_lista:
             cur.execute(f"ALTER TABLE utenti ADD COLUMN IF NOT EXISTS {p_col} {p_type};")
         
+        # 3. Creazione utente admin predefinito se non esiste
         cur.execute("SELECT * FROM utenti WHERE username = 'admin';")
         if not cur.fetchone():
             hashed_pw = generate_password_hash("admin")
@@ -275,7 +249,7 @@ def init_db():
         conn.commit()
         cur.close()
         conn.close()
-        print("Database e permessi Gestionale OMG inizializzati.")
+        print("Database e migrazione colonne completati con successo.")
     except Exception as e:
         print(f"Errore init_db: {e}")
 
@@ -512,7 +486,7 @@ def elimina_utente(user_id):
         flash(f"Errore eliminazione utente: {e}", "error")
     return redirect(url_for('admin_utenti'))
 
-# --- MODULI E ROTTE AGGIUNTIVE (E ALIAS DI SICUREZZA) ---
+# --- ROTTE E ALIAS DI SICUREZZA ---
 @app.route("/cambi_serie")
 def cambi_serie():
     if not session.get('username'):
@@ -1307,7 +1281,7 @@ def documenti(cartella_id):
             percorso_breadcrumb.insert(0, curr)
             if curr['parent_id']:
                 cur.execute("SELECT * FROM cartelle WHERE id = %s;", (curr['parent_id'],))
-                curr = cur.fetchone()
+                curr = curr.fetchone()
             else:
                 curr = None
 
