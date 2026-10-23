@@ -512,6 +512,13 @@ def elimina_utente(user_id):
         flash(f"Errore eliminazione utente: {e}", "error")
     return redirect(url_for('admin_utenti'))
 
+# --- NUOVO MODULO: CAMBI SERIE ---
+@app.route("/cambi_serie")
+def cambi_serie():
+    if not session.get('username'):
+        return redirect(url_for('login'))
+    return render_template("cambi_serie.html")
+
 # --- NUOVO MODULO: REPORT ORE & STATISTICHE MANUTENZIONI ---
 @app.route("/report_ore")
 def report_ore():
@@ -1288,7 +1295,7 @@ def documenti(cartella_id):
             percorso_breadcrumb.insert(0, curr)
             if curr['parent_id']:
                 cur.execute("SELECT * FROM cartelle WHERE id = %s;", (curr['parent_id'],))
-                curr = cur.fetchone()
+                curr = curr.fetchone()
             else:
                 curr = None
 
