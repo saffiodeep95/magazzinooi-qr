@@ -29,6 +29,9 @@
                     <a class="nav-link" href="{{ url_for('magazzino_pesante') }}"><i class="fas fa-weight-hanging mr-1"></i> Pesante</a>
                 </li>
                 {% endif %}
+                <li class="nav-item">
+                    <a class="nav-link" href="{{ url_for('cambi_serie') }}"><i class="fas fa-exchange-alt mr-1"></i> Cambi Serie</a>
+                </li>
                 {% if session.get('is_admin') or session.get('puo_vedere_manutenzione', 1) %}
                 <li class="nav-item">
                     <a class="nav-link" href="{{ url_for('richieste_manutenzione') }}"><i class="fas fa-tools mr-1"></i> Manutenzioni</a>
@@ -82,7 +85,7 @@
               <div class="alert alert-{% if category == 'error' %}danger{% else %}{{ category }}{% endif %} alert-dismissible fade show shadow-sm" role="alert">
                 {{ message }}
                 <button type="button" class="close" data-dismiss="alert" aria-label="Close">
-                  <span aria-label="Close">&times;</span>
+                  <span aria-hidden="true">&times;</span>
                 </button>
               </div>
             {% endfor %}
@@ -90,45 +93,54 @@
         {% endwith %}
     </div>
 
-    <!-- CONTENUTO DASHBOARD -->
+    <!-- CONTENUTO PRINCIPALE -->
     <div class="container-fluid mt-4">
 
-        <!-- INTESTAZIONE E BENVENUTO -->
-        <div class="d-flex justify-content-between align-items-center mb-4">
-            <div>
+        <!-- INTESTAZIONE E AZIONI RAPIDE -->
+        <div class="row align-items-center mb-4">
+            <div class="col-md-6">
                 <h2 class="font-weight-bold text-dark mb-1">
                     <i class="fas fa-chart-line text-primary mr-2"></i>Dashboard Gestionale OMG
                 </h2>
-                <p class="text-muted mb-0">Benvenuto, <strong>{{ session.get('username') }}</strong>! Panoramica generale del magazzino e delle attività.</p>
+                <p class="text-muted mb-0">Benvenuto, <strong>{{ session.get('username') }}</strong>! Panoramica generale e operazioni rapide.</p>
             </div>
-            <div>
-                <a href="{{ url_for('scanner_globale') }}" class="btn btn-primary shadow-sm font-weight-bold">
-                    <i class="fas fa-qrcode mr-1"></i> Scanner Globale QR
+            <div class="col-md-6 text-md-right mt-3 mt-md-0">
+                <a href="{{ url_for('scanner_globale') }}" class="btn btn-dark shadow-sm font-weight-bold mr-1">
+                    <i class="fas fa-qrcode mr-1"></i> Scanner QR
                 </a>
+                {% if session.get('is_admin') or session.get('puo_caricare_scaricare', 1) %}
+                <a href="{{ url_for('carico') }}" class="btn btn-success shadow-sm font-weight-bold mr-1">
+                    <i class="fas fa-plus-circle mr-1"></i> Carico Rapido
+                </a>
+                <a href="{{ url_for('scarico') }}" class="btn btn-warning shadow-sm font-weight-bold mr-1 text-dark">
+                    <i class="fas fa-minus-circle mr-1"></i> Scarico Rapido
+                </a>
+                {% endif %}
+                {% if session.get('is_admin') or session.get('puo_aggiungere_prodotti', 1) %}
+                <button class="btn btn-primary shadow-sm font-weight-bold" data-toggle="modal" data-target="#modalAggiungiProdotto">
+                    <i class="fas fa-plus mr-1"></i> Nuovo Articolo
+                </button>
+                {% endif %}
             </div>
         </div>
 
-        <!-- CARD INDICATORI RAPIDI (STATISTICHE) -->
+        <!-- CARD STATISTICHE E INDICATORI -->
         <div class="row mb-4">
-            <!-- Promemoria Urgenti -->
             <div class="col-xl-3 col-md-6 mb-3">
                 <div class="card border-left-warning shadow h-100 py-2">
                     <div class="card-body">
                         <div class="row no-gutters align-items-center">
                             <div class="col mr-2">
-                                <div class="text-xs font-weight-bold text-warning text-uppercase mb-1">Promemoria da Completare</div>
+                                <div class="text-xs font-weight-bold text-warning text-uppercase mb-1">Promemoria Aperti</div>
                                 <div class="h5 mb-0 font-weight-bold text-gray-800">{{ promemoria_urgenti }}</div>
                             </div>
-                            <div class="col-auto">
-                                <i class="fas fa-bell fa-2x text-warning"></i>
-                            </div>
+                            <div class="col-auto"><i class="fas fa-bell fa-2x text-warning"></i></div>
                         </div>
                         <a href="{{ url_for('promemoria') }}" class="btn btn-sm btn-link text-warning p-0 mt-2">Vedi promemoria &rarr;</a>
                     </div>
                 </div>
             </div>
 
-            <!-- Interventi Aperti -->
             <div class="col-xl-3 col-md-6 mb-3">
                 <div class="card border-left-danger shadow h-100 py-2">
                     <div class="card-body">
@@ -137,16 +149,13 @@
                                 <div class="text-xs font-weight-bold text-danger text-uppercase mb-1">Interventi Aperti</div>
                                 <div class="h5 mb-0 font-weight-bold text-gray-800">{{ interventi_aperti_count }}</div>
                             </div>
-                            <div class="col-auto">
-                                <i class="fas fa-wrench fa-2x text-danger"></i>
-                            </div>
+                            <div class="col-auto"><i class="fas fa-wrench fa-2x text-danger"></i></div>
                         </div>
                         <a href="{{ url_for('richieste_manutenzione') }}" class="btn btn-sm btn-link text-danger p-0 mt-2">Gestisci manutenzioni &rarr;</a>
                     </div>
                 </div>
             </div>
 
-            <!-- Interventi In Lavoro / Pausa -->
             <div class="col-xl-3 col-md-6 mb-3">
                 <div class="card border-left-info shadow h-100 py-2">
                     <div class="card-body">
@@ -155,16 +164,13 @@
                                 <div class="text-xs font-weight-bold text-info text-uppercase mb-1">Interventi In Corso</div>
                                 <div class="h5 mb-0 font-weight-bold text-gray-800">{{ interventi_in_lavoro_count }}</div>
                             </div>
-                            <div class="col-auto">
-                                <i class="fas fa-tools fa-2x text-info"></i>
-                            </div>
+                            <div class="col-auto"><i class="fas fa-tools fa-2x text-info"></i></div>
                         </div>
                         <a href="{{ url_for('richieste_manutenzione') }}" class="btn btn-sm btn-link text-info p-0 mt-2">Dettagli lavori &rarr;</a>
                     </div>
                 </div>
             </div>
 
-            <!-- Attesa Ricambio -->
             <div class="col-xl-3 col-md-6 mb-3">
                 <div class="card border-left-secondary shadow h-100 py-2">
                     <div class="card-body">
@@ -173,9 +179,7 @@
                                 <div class="text-xs font-weight-bold text-secondary text-uppercase mb-1">In Attesa Ricambio</div>
                                 <div class="h5 mb-0 font-weight-bold text-gray-800">{{ interventi_attesa_count }}</div>
                             </div>
-                            <div class="col-auto">
-                                <i class="fas fa-boxes fa-2x text-secondary"></i>
-                            </div>
+                            <div class="col-auto"><i class="fas fa-boxes fa-2x text-secondary"></i></div>
                         </div>
                         <a href="{{ url_for('richieste_manutenzione') }}" class="btn btn-sm btn-link text-secondary p-0 mt-2">Vedi lista &rarr;</a>
                     </div>
@@ -183,7 +187,7 @@
             </div>
         </div>
 
-        <!-- SEZIONE SOTTO SOGLIA MINIMA (ALERT SCORTE LOW) -->
+        <!-- SEZIONE SOTTO SOGLIA MINIMA -->
         {% if prodotti_sotto_soglia %}
         <div class="alert alert-danger shadow-sm mb-4" role="alert">
             <h5 class="alert-heading font-weight-bold mb-2">
@@ -221,18 +225,21 @@
         </div>
         {% endif %}
 
-        <!-- RICERCA E SCORCIATOIE RAPIDE MAGAZZINO -->
+        <!-- TABELLA INVENTARIO MAGAZZINO STANDARD -->
         <div class="card shadow-sm mb-5">
             <div class="card-header bg-dark text-white d-flex justify-content-between align-items-center">
                 <h5 class="mb-0 font-weight-bold"><i class="fas fa-cubes mr-2"></i>Inventario Magazzino Standard</h5>
-                {% if session.get('is_admin') or session.get('puo_aggiungere_prodotti', 1) %}
-                <button class="btn btn-success btn-sm font-weight-bold" data-toggle="modal" data-target="#modalAggiungiProdotto">
-                    <i class="fas fa-plus mr-1"></i> Nuovo Articolo
-                </button>
-                {% endif %}
+                <div>
+                    <a href="{{ url_for('esporta_inventario') }}" class="btn btn-outline-light btn-sm font-weight-bold mr-1">
+                        <i class="fas fa-file-excel mr-1"></i> Esporta CSV
+                    </a>
+                    <a href="{{ url_for('stampa_tutti_qr') }}" class="btn btn-outline-light btn-sm font-weight-bold">
+                        <i class="fas fa-print mr-1"></i> Stampa QR
+                    </a>
+                </div>
             </div>
             <div class="card-body">
-                <!-- Barra Ricerca Veloce Tabella -->
+                <!-- Barra di Ricerca in Tempo Reale -->
                 <div class="row mb-3">
                     <div class="col-md-6">
                         <div class="input-group">
@@ -244,7 +251,6 @@
                     </div>
                 </div>
 
-                <!-- Tabella Prodotti Magazzino -->
                 <div class="table-responsive">
                     <table class="table table-hover table-striped" id="tabellaProdotti">
                         <thead class="thead-light">
@@ -254,7 +260,7 @@
                                 <th>Codice SAP</th>
                                 <th>Posizione</th>
                                 <th>Giacenza</th>
-                                <th class="text-center">Azioni Fast</th>
+                                <th class="text-center">Azioni Rapide</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -274,7 +280,7 @@
                                 </td>
                                 <td class="align-middle text-center">
                                     <a href="{{ url_for('gestisci_prodotto', qr_code=p.qr_code) }}" class="btn btn-sm btn-info" title="Dettagli e Modifica">
-                                        <i class="fas fa-edit"></i>
+                                        <i class="fas fa-edit"></i> Modifica
                                     </a>
                                     <a href="{{ url_for('stampa_singolo_qr', qr_code=p.qr_code) }}" class="btn btn-sm btn-secondary" title="Stampa QR">
                                         <i class="fas fa-print"></i>
@@ -294,7 +300,7 @@
 
     </div>
 
-    <!-- MODALE AGGIUNGI NUOVO PRODOTTO -->
+    <!-- MODALE AGGIUNGI PRODOTTO -->
     {% if session.get('is_admin') or session.get('puo_aggiungere_prodotti', 1) %}
     <div class="modal fade" id="modalAggiungiProdotto" tabindex="-1" role="dialog" aria-hidden="true">
         <div class="modal-dialog modal-lg" role="document">
@@ -358,7 +364,7 @@
     </div>
     {% endif %}
 
-    <!-- JS DEPENDENCIES E SCRIPT PER RICERCA -->
+    <!-- SCRIPTS -->
     <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@4.6.2/dist/js/bootstrap.bundle.min.js"></script>
     <script>
