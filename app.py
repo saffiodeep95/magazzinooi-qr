@@ -317,6 +317,31 @@ def api_segna_lette():
         conn.close()
     return jsonify({"status": "ok"})
 
+# --- NUOVA ROTTA: RICERCA RAPIDA TRA I MAGAZZINI ---
+@app.route("/ricerca")
+@app.route("/ricerca.html")
+def ricerca():
+    query_testo = request.args.get("q", "").strip()
+    risultati = []
+    try:
+        conn = get_db_connection()
+        cur = conn.cursor()
+        if query_testo:
+            pattern = f"%{query_testo}%"
+            cur.execute("""
+                SELECT * FROM prodotti 
+                WHERE qr_code ILIKE %s OR nome ILIKE %s OR sap ILIKE %s 
+                ORDER BY nome ASC;
+            """, (pattern, pattern, pattern))
+        else:
+            cur.execute("SELECT * FROM prodotti ORDER BY nome ASC;")
+        risultati = cur.fetchall()
+        cur.close()
+        conn.close()
+    except Exception as e:
+        print(f"Errore ricerca: {e}")
+    return render_template("ricerca.html", risultati=risultati, query_testo=query_testo)
+
 @app.route("/")
 @app.route("/index")
 @app.route("/index.html")
