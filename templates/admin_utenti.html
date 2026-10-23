@@ -44,14 +44,14 @@
         <div class="row mb-4 align-items-center">
             <div class="col-md-8">
                 <h2 class="fw-bold text-dark mb-0"><i class="fa-solid fa-user-shield text-warning me-2"></i>Pannello Amministrazione</h2>
-                <p class="text-muted small mb-0">Gestione degli utenti, dei permessi di accesso e monitoraggio dei log di attività.</p>
+                <p class="text-muted small mb-0">Gestione degli utenti, permessi, reset password, eliminazioni e monitoraggio log.</p>
             </div>
         </div>
 
         <!-- Sezione Utenti e Permessi -->
         <div class="card shadow-sm border-0 rounded-3 mb-4 overflow-hidden">
             <div class="card-header bg-dark text-white py-3">
-                <h5 class="mb-0 fw-bold"><i class="fa-solid fa-users-gear me-2"></i>Gestione Utenti e Permessi</h5>
+                <h5 class="mb-0 fw-bold"><i class="fa-solid fa-users-gear me-2"></i>Gestione Utenti, Permessi e Password</h5>
             </div>
             <div class="card-body p-0">
                 <div class="table-responsive">
@@ -78,13 +78,26 @@
                                         </span>
                                     </td>
                                     <td class="text-end pe-3">
-                                        <button class="btn btn-outline-primary btn-sm fw-bold" data-bs-toggle="modal" data-bs-target="#modalPermessi{{ u.id }}">
-                                            <i class="fa-solid fa-key me-1"></i> Gestisci Permessi
-                                        </button>
+                                        <div class="btn-group" role="group">
+                                            <!-- Pulsante Gestisci Permessi -->
+                                            <button class="btn btn-outline-primary btn-sm fw-bold" data-bs-toggle="modal" data-bs-target="#modalPermessi{{ u.id }}" title="Gestisci Permessi">
+                                                <i class="fa-solid fa-key"></i> Permessi
+                                            </button>
+                                            <!-- Pulsante Reset Password -->
+                                            <button class="btn btn-outline-warning btn-sm text-dark fw-bold" data-bs-toggle="modal" data-bs-target="#modalResetPassword{{ u.id }}" title="Reimposta Password">
+                                                <i class="fa-solid fa-lock"></i> Password
+                                            </button>
+                                            <!-- Pulsante Elimina Utente -->
+                                            {% if u.username != 'admin' and u.username != session.get('username') %}
+                                            <button class="btn btn-outline-danger btn-sm" data-bs-toggle="modal" data-bs-target="#modalEliminaUtente{{ u.id }}" title="Elimina Utente">
+                                                <i class="fa-solid fa-trash"></i>
+                                            </button>
+                                            {% endif %}
+                                        </div>
                                     </td>
                                 </tr>
 
-                                <!-- Modale Modifica Permessi Singolo Utente -->
+                                <!-- Modale Modifica Permessi -->
                                 <div class="modal fade" id="modalPermessi{{ u.id }}" tabindex="-1">
                                     <div class="modal-dialog modal-lg">
                                         <div class="modal-content border-0 shadow">
@@ -151,6 +164,56 @@
                                         </div>
                                     </div>
                                 </div>
+
+                                <!-- Modale Reset Password -->
+                                <div class="modal fade" id="modalResetPassword{{ u.id }}" tabindex="-1">
+                                    <div class="modal-dialog">
+                                        <div class="modal-content border-0 shadow">
+                                            <form action="{{ url_for('admin_reset_password', user_id=u.id) }}" method="POST">
+                                                <div class="modal-header bg-warning text-dark">
+                                                    <h5 class="modal-title fw-bold"><i class="fa-solid fa-lock me-2"></i>Reimposta Password: {{ u.username }}</h5>
+                                                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                                                </div>
+                                                <div class="modal-body p-4 text-start">
+                                                    <div class="mb-3">
+                                                        <label class="form-label fw-bold">Nuova Password *</label>
+                                                        <input type="password" class="form-control" name="nuova_password" placeholder="Inserisci la nuova password..." required>
+                                                    </div>
+                                                    <small class="text-muted">La password verrà aggiornata istantaneamente e cifrata in modo sicuro.</small>
+                                                </div>
+                                                <div class="modal-footer bg-light">
+                                                    <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Annulla</button>
+                                                    <button type="submit" class="btn btn-warning btn-sm px-4 fw-bold text-dark">Conferma Reset</button>
+                                                </div>
+                                            </form>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Modale Conferma Eliminazione Utente -->
+                                {% if u.username != 'admin' and u.username != session.get('username') %}
+                                <div class="modal fade" id="modalEliminaUtente{{ u.id }}" tabindex="-1">
+                                    <div class="modal-dialog">
+                                        <div class="modal-content border-0 shadow">
+                                            <form action="{{ url_for('admin_elimina_utente', user_id=u.id) }}" method="POST">
+                                                <div class="modal-header bg-danger text-white">
+                                                    <h5 class="modal-title fw-bold"><i class="fa-solid fa-triangle-exclamation me-2"></i>Elimina Utente: {{ u.username }}</h5>
+                                                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                                                </div>
+                                                <div class="modal-body p-4 text-start">
+                                                    <p class="text-danger fw-semibold">Sei sicuro di voler eliminare definitivamente questo utente?</p>
+                                                    <p class="small text-muted mb-0">L'azione è irreversibile e l'utente perderà l'accesso al gestionale.</p>
+                                                </div>
+                                                <div class="modal-footer bg-light">
+                                                    <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Annulla</button>
+                                                    <button type="submit" class="btn btn-danger btn-sm px-4 fw-bold">Elimina Definitivamente</button>
+                                                </div>
+                                            </form>
+                                        </div>
+                                    </div>
+                                </div>
+                                {% endif %}
+
                                 {% endfor %}
                             {% else %}
                                 <tr><td colspan="4" class="text-center py-4 text-muted">Nessun utente registrato.</td></tr>
