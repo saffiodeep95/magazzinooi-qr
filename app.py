@@ -543,7 +543,7 @@ def aggiungi_cambio_serie():
     flash("Cambio serie registrato con successo!", "success")
     return redirect(url_for("cambi_serie"))
 
-@app.route("/esporta_cambi_serie_csv")
+@app.route("/esporta_cambi_serie_csv", endpoint="esporta_cambi_serie_csv")
 def esporta_cambi_serie_csv():
     output = io.StringIO()
     writer = csv.writer(output)
@@ -1320,8 +1320,31 @@ def importa_intelligente():
 
 @app.route("/esporta_fornitori_intelligente", endpoint="esporta_fornitori_intelligente")
 @app.route("/esporta_fornitori_csv", endpoint="esporta_fornitori_csv")
-def esporta_fornitori_intelligente():
-    return redirect(url_for("fornitori"))
+def esporta_fornitori_csv():
+    conn = get_db_connection()
+    cur = conn.cursor()
+    cur.execute("SELECT nome_azienda, settore_note, indirizzo, p_iva, telefono, email FROM fornitori ORDER BY nome_azienda ASC;")
+    fornitori_list = cur.fetchall()
+    cur.close()
+    conn.close()
+    
+    output = io.StringIO()
+    writer = csv.writer(output)
+    writer.writerow(['Nome Azienda', 'Settore / Note', 'Indirizzo', 'P.IVA', 'Telefono', 'Email'])
+    for f in fornitori_list:
+        writer.writerow([
+            f.get('nome_azienda', ''),
+            f.get('settore_note', ''),
+            f.get('indirizzo', ''),
+            f.get('p_iva', ''),
+            f.get('telefono', ''),
+            f.get('email', '')
+        ])
+    return Response(
+        output.getvalue(),
+        mimetype="text/csv",
+        headers={"Content-disposition": "attachment; filename=Fornitori_Gestionale_OMG.csv"}
+    )
 
 # --- GESTIONE DOCUMENTI ---
 @app.route("/documenti", defaults={"cartella_id": None}, methods=["GET", "POST"])
@@ -1638,7 +1661,7 @@ def magazzino_pesante():
         pass
     return render_template("magazzino_pesante.html", prodotti=prodotti)
 
-@app.route("/esporta_pesante")
+@app.route("/esporta_pesante", endpoint="esporta_pesante")
 def esporta_pesante():
     if not (session.get('is_admin') or session.get('puo_vedere_pesante', 1)):
         flash("Accesso negato.", "error")
