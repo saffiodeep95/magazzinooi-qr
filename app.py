@@ -1734,6 +1734,45 @@ def storico_manutenzioni():
         pass
     return render_template("storico_manutenzioni.html", storico=storico)
 
+@app.route("/esporta_storico_manutenzioni_csv", endpoint="esporta_storico_manutenzioni_csv")
+def esporta_storico_manutenzioni_csv():
+    if not (session.get('is_admin') or session.get('puo_vedere_storico_manutenzioni', 1)):
+        flash("Accesso negato.", "error")
+        return redirect(url_for('index'))
+    try:
+        conn = get_db_connection()
+        cur = conn.cursor()
+        cur.execute("SELECT * FROM storico_manutenzioni ORDER BY registrato_il DESC;")
+        storico = cur.fetchall()
+        cur.close()
+        conn.close()
+    except Exception:
+        storico = []
+
+    output = io.StringIO()
+    writer = csv.writer(output)
+    writer.writerow(['ID', 'Data Registrazione', 'Nome Prodotto', 'QR Code', 'SAP', 'Cliente', 'Quantita', 'Data Spedizione', 'Data Riconsegna', 'Vettore', 'Ordine Amministrativo', 'Note'])
+    for s in storico:
+        writer.writerow([
+            s.get('id', ''),
+            s.get('registrato_il', ''),
+            s.get('nome_prodotto', ''),
+            s.get('qr_code', ''),
+            s.get('sap', ''),
+            s.get('cliente', ''),
+            s.get('quantita', 0),
+            s.get('data_spedizione', ''),
+            s.get('data_riconsegna', ''),
+            s.get('vettore', ''),
+            'Si' if s.get('ordine_amministrativo') else 'No',
+            s.get('note', '')
+        ])
+    return Response(
+        output.getvalue(),
+        mimetype="text/csv",
+        headers={"Content-disposition": "attachment; filename=Storico_Manutenzioni_OMG.csv"}
+    )
+
 @app.route("/elimina_storico_manutenzione/<int:storico_id>", methods=["POST"])
 def elimina_storico_manutenzione(storico_id):
     if not (session.get('is_admin') or session.get('puo_eliminare_storico', 0)):
