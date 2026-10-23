@@ -327,7 +327,7 @@ def index():
     interventi_aperti_count = 0
     interventi_in_lavoro_count = 0
     interventi_attesa_count = 0
-    notifiche_attive =[span_0](start_span)[span_0](end_span)[span_1](start_span)[span_1](end_span)
+    notifiche_attive = []
     
     pezzi_principale = 0
     pezzi_pesante = 0
