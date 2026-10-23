@@ -543,6 +543,17 @@ def aggiungi_cambio_serie():
     flash("Cambio serie registrato con successo!", "success")
     return redirect(url_for("cambi_serie"))
 
+@app.route("/esporta_cambi_serie_csv")
+def esporta_cambi_serie_csv():
+    output = io.StringIO()
+    writer = csv.writer(output)
+    writer.writerow(['ID', 'Descrizione', 'Data'])
+    return Response(
+        output.getvalue(),
+        mimetype="text/csv",
+        headers={"Content-disposition": "attachment; filename=Cambi_Serie_OMG.csv"}
+    )
+
 # --- MODULO: REPORT ORE & STATISTICHE MANUTENZIONI ---
 @app.route("/report_ore")
 @app.route("/report_ore.html")
