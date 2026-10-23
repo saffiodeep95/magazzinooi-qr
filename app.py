@@ -13,7 +13,7 @@ from psycopg2.extras import RealDictCursor
 from flask import Flask, render_template, request, redirect, url_for, flash, session, Response, jsonify
 from werkzeug.security import generate_password_hash, check_password_hash
 
-app = Flask(__name__)
+app = Flask(_name_)
 app.secret_key = os.environ.get("SECRET_KEY", "chiave-segreta-gestionale")
 
 DATABASE_URL = os.environ.get("DATABASE_URL")
@@ -171,6 +171,16 @@ def init_db():
         ]
         for col, ctype in colonne_prodotti:
             cur.execute(f"ALTER TABLE prodotti ADD COLUMN IF NOT EXISTS {col} {ctype};")
+
+        # Colonne promemoria
+        colonne_promemoria = [
+            ("descrizione", "TEXT"), ("data_scadenza", "VARCHAR(255)"),
+            ("priorita", "VARCHAR(50) DEFAULT 'Media'"), ("ricorrenza", "VARCHAR(50) DEFAULT 'Nessuna'"),
+            ("assegnato_a", "VARCHAR(255)"), ("completato", "BOOLEAN DEFAULT FALSE"),
+            ("creato_il", "TIMESTAMP DEFAULT CURRENT_TIMESTAMP")
+        ]
+        for col, ctype in colonne_promemoria:
+            cur.execute(f"ALTER TABLE promemoria ADD COLUMN IF NOT EXISTS {col} {ctype};")
 
         # Colonne manutenzione
         colonne_manutenzione = [
@@ -419,6 +429,71 @@ def admin_elimina_utente(user_id):
     conn.close()
     flash("Utente eliminato.", "success")
     return redirect(url_for('admin_utenti'))
+
+# --- MODULO PROMEMORIA ---
+@app.route("/promemoria", methods=["GET", "POST"])
+def promemoria():
+    if not session.get('username'):
+        return redirect(url_for('login'))
+    
+    conn = get_db_connection()
+    cur = conn.cursor()
+    
+    if request.method == "POST":
+        titolo = request.form.get("titolo")
+        descrizione = request.form.get("descrizione", "")
+        data_scadenza = request.form.get("data_scadenza", "")
+        priorita = request.form.get("priorita", "Media")
+        ricorrenza = request.form.get("ricorrenza", "Nessuna")
+        assegnato_a = request.form.get("assegnato_a", session.get('username'))
+        
+        if titolo:
+            cur.execute("""
+                INSERT INTO promemoria (titolo, descrizione, data_scadenza, priorita, ricorrenza, assegnato_a, completato)
+                VALUES (%s, %s, %s, %s, %s, %s, FALSE);
+            """, (titolo, descrizione, data_scadenza, priorita, ricorrenza, assegnato_a))
+            conn.commit()
+            registra_log(f"Creato promemoria: {titolo}")
+            flash("Promemoria aggiunto con successo!", "success")
+        cur.close()
+        conn.close()
+        return redirect(url_for('promemoria'))
+        
+    cur.execute("SELECT * FROM promemoria ORDER BY completato ASC, id DESC;")
+    lista_promemoria = cur.fetchall()
+    
+    cur.execute("SELECT username FROM utenti ORDER BY username ASC;")
+    lista_utenti = cur.fetchall()
+    
+    cur.close()
+    conn.close()
+    return render_template("promemoria.html", promemoria=lista_promemoria, utenti=lista_utenti)
+
+@app.route("/completa_promemoria/<int:id>", methods=["POST"])
+def completa_promemoria(id):
+    if not session.get('username'):
+        return redirect(url_for('login'))
+    conn = get_db_connection()
+    cur = conn.cursor()
+    cur.execute("UPDATE promemoria SET completato = NOT COALESCE(completato, FALSE) WHERE id = %s;", (id,))
+    conn.commit()
+    cur.close()
+    conn.close()
+    flash("Stato promemoria aggiornato.", "success")
+    return redirect(url_for('promemoria'))
+
+@app.route("/elimina_promemoria/<int:id>", methods=["POST"])
+def elimina_promemoria(id):
+    if not session.get('username'):
+        return redirect(url_for('login'))
+    conn = get_db_connection()
+    cur = conn.cursor()
+    cur.execute("DELETE FROM promemoria WHERE id = %s;", (id,))
+    conn.commit()
+    cur.close()
+    conn.close()
+    flash("Promemoria eliminato.", "success")
+    return redirect(url_for('promemoria'))
 
 # --- MODULO OFFICINA / RICHIESTE MANUTENZIONE ---
 @app.route("/richieste_manutenzione", methods=["GET", "POST"])
@@ -797,5 +872,5 @@ def stampa_tutti_qr():
     conn.close()
     return render_template("stampa_tutti_qr.html", prodotti=prodotti)
 
-if __name__ == "_main_":
+if _name_ == "_main_":
     app.run(debug=True)
