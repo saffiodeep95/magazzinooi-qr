@@ -8,10 +8,33 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </head>
 <body class="bg-light">
+    <!-- Navbar -->
     <nav class="navbar navbar-expand-lg navbar-dark bg-dark shadow-sm">
         <div class="container-fluid">
             <a class="navbar-brand fw-bold" href="{{ url_for('index') }}"><i class="fa-solid fa-boxes-stacked me-2"></i>Gestionale OMG</a>
-            <a href="{{ url_for('index') }}" class="btn btn-outline-light btn-sm"><i class="fa-solid fa-arrow-left me-1"></i>Torna alla Home</a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav me-auto mb-2 mb-lg-0">
+                    <li class="nav-item"><a class="nav-link" href="{{ url_for('index') }}"><i class="fa-solid fa-house me-1"></i>Home</a></li>
+                    <li class="nav-item"><a class="nav-link" href="{{ url_for('magazzino_pesante') }}"><i class="fa-solid fa-weight-scale me-1"></i>Pesante</a></li>
+                    <li class="nav-item"><a class="nav-link" href="{{ url_for('manutenzioni') }}"><i class="fa-solid fa-screwdriver-wrench me-1"></i>Manut. Esterna</a></li>
+                    <li class="nav-item"><a class="nav-link" href="{{ url_for('richieste_manutenzione') }}"><i class="fa-solid fa-tools me-1"></i>Officina</a></li>
+                    <li class="nav-item"><a class="nav-link active" href="{{ url_for('promemoria') }}"><i class="fa-solid fa-bell me-1"></i>Promemoria</a></li>
+                    <li class="nav-item"><a class="nav-link" href="{{ url_for('fornitori') }}"><i class="fa-solid fa-address-book me-1"></i>Fornitori</a></li>
+                    <li class="nav-item"><a class="nav-link" href="{{ url_for('documenti') }}"><i class="fa-solid fa-folder-open me-1"></i>Documenti</a></li>
+                    <li class="nav-item"><a class="nav-link" href="{{ url_for('report_ore') }}"><i class="fa-solid fa-chart-bar me-1"></i>Report Ore</a></li>
+                    <li class="nav-item"><a class="nav-link" href="{{ url_for('cambi_serie') }}"><i class="fa-solid fa-exchange-alt me-1"></i>Cambi Serie</a></li>
+                    {% if session.get('is_admin') %}
+                    <li class="nav-item"><a class="nav-link text-warning fw-bold" href="{{ url_for('admin_utenti') }}"><i class="fa-solid fa-user-shield me-1"></i>Admin</a></li>
+                    {% endif %}
+                </ul>
+                <div class="d-flex align-items-center">
+                    <span class="text-white me-3"><i class="fa-solid fa-user me-1"></i>{{ session.get('username') }}</span>
+                    <a href="{{ url_for('logout') }}" class="btn btn-outline-danger btn-sm"><i class="fa-solid fa-right-from-bracket me-1"></i>Logout</a>
+                </div>
+            </div>
         </div>
     </nav>
 
@@ -21,7 +44,7 @@
                 {% for category, message in messages %}
                     <div class="alert alert-{{ 'danger' if category == 'error' else ('success' if category == 'success' else 'warning') }} alert-dismissible fade show" role="alert">
                         {{ message }}
-                        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
                     </div>
                 {% endfor %}
             {% endif %}
@@ -29,50 +52,47 @@
 
         <div class="row mb-4 align-items-center">
             <div class="col-md-6">
-                <h2 class="fw-bold mb-0 text-dark"><i class="fa-solid fa-bell me-2"></i>Gestione Promemoria</h2>
+                <h2 class="fw-bold mb-0"><i class="fa-solid fa-bell text-warning me-2"></i>Gestione Promemoria</h2>
             </div>
             <div class="col-md-6 text-md-end mt-3 mt-md-0">
-                <button class="btn btn-success btn-sm shadow-sm" data-bs-toggle="modal" data-bs-target="#modalNuovoPromemoria"><i class="fa-solid fa-plus me-1"></i>Nuovo Promemoria</button>
+                <button class="btn btn-warning text-dark shadow-sm fw-bold" data-bs-toggle="modal" data-bs-target="#modalNuovoPromemoria">
+                    <i class="fa-solid fa-plus me-1"></i> Nuovo Promemoria
+                </button>
             </div>
         </div>
 
-        <div class="card shadow-sm border-0">
+        <div class="card shadow-sm border-0 rounded-3 overflow-hidden">
             <div class="card-body p-0">
                 <div class="table-responsive">
                     <table class="table table-hover align-middle mb-0">
                         <thead class="table-dark">
                             <tr>
-                                <th>Stato</th>
-                                <th>Titolo</th>
+                                <th class="ps-3">Titolo</th>
                                 <th>Scadenza</th>
                                 <th>Priorità</th>
-                                <th>Ricorrenza</th>
                                 <th>Assegnato A</th>
-                                <th class="text-end">Azioni</th>
+                                <th>Stato</th>
+                                <th class="text-end pe-3">Azioni</th>
                             </tr>
                         </thead>
                         <tbody>
                             {% if promemoria %}
                                 {% for p in promemoria %}
-                                <tr class="{% if p.get('completato') %}table-secondary opacity-75{% endif %}">
+                                <tr class="{% if p.completato %}table-secondary opacity-75{% endif %}">
+                                    <td class="ps-3 fw-bold">{{ p.titolo }}</td>
+                                    <td>{{ p.data_scadenza or '-' }}</td>
+                                    <td><span class="badge bg-{{ 'danger' if p.priorita == 'Alta' else 'info' }}">{{ p.priorita }}</span></td>
+                                    <td><span class="badge bg-secondary">{{ p.assegnato_a or 'Tutti' }}</span></td>
                                     <td>
-                                        <form action="{{ url_for('completa_promemoria', promemoria_id=p.get('id')) }}" method="POST" class="d-inline">
-                                            <button type="submit" class="btn btn-sm btn-{{ 'success' if p.get('completato') else 'outline-secondary' }}">
-                                                <i class="fa-solid fa-{{ 'check-double' if p.get('completato') else 'check' }}"></i>
-                                            </button>
-                                        </form>
-                                    </td>
-                                    <td class="fw-bold {% if p.get('completato') %}text-decoration-line-through{% endif %}">{{ p.get('titolo') }}</td>
-                                    <td><i class="fa-regular fa-calendar me-1"></i>{{ p.get('data_scadenza') or 'Senza data' }}</td>
-                                    <td>
-                                        <span class="badge bg-{{ 'danger' if p.get('priorita') == 'Alta' else ('warning' if p.get('priorita') == 'Media' else 'info') }}">
-                                            {{ p.get('priorita') }}
+                                        <span class="badge bg-{{ 'success' if p.completato else 'warning text-dark' }}">
+                                            {{ 'Completato' if p.completato else 'In Sospeso' }}
                                         </span>
                                     </td>
-                                    <td><span class="badge bg-light text-dark border">{{ p.get('ricorrenza') or 'Nessuna' }}</span></td>
-                                    <td>{{ p.get('assegnato_a') or '-' }}</td>
-                                    <td class="text-end">
-                                        <form action="{{ url_for('elimina_promemoria', promemoria_id=p.get('id')) }}" method="POST" class="d-inline" onsubmit="return confirm('Eliminare questo promemoria?');">
+                                    <td class="text-end pe-3">
+                                        <form action="{{ url_for('completa_promemoria', promemoria_id=p.id) }}" method="POST" class="d-inline">
+                                            <button type="submit" class="btn btn-outline-success btn-sm"><i class="fa-solid fa-check"></i></button>
+                                        </form>
+                                        <form action="{{ url_for('elimina_promemoria', promemoria_id=p.id) }}" method="POST" class="d-inline">
                                             <button type="submit" class="btn btn-outline-danger btn-sm"><i class="fa-solid fa-trash"></i></button>
                                         </form>
                                     </td>
@@ -80,7 +100,10 @@
                                 {% endfor %}
                             {% else %}
                                 <tr>
-                                    <td colspan="7" class="text-center py-4 text-muted">Nessun promemoria attivo.</td>
+                                    <td colspan="6" class="text-center py-5 text-muted">
+                                        <i class="fa-solid fa-bell-slash fa-3x mb-3 opacity-50"></i>
+                                        <p class="mb-0">Nessun promemoria presente.</p>
+                                    </td>
                                 </tr>
                             {% endif %}
                         </tbody>
@@ -90,31 +113,27 @@
         </div>
     </div>
 
-    <!-- Modal Nuovo Promemoria -->
-    <div class="modal fade" id="modalNuovoPromemoria" tabindex="-1" aria-hidden="true">
+    <!-- Modale Nuovo Promemoria -->
+    <div class="modal fade" id="modalNuovoPromemoria" tabindex="-1">
         <div class="modal-dialog">
-            <div class="modal-content">
+            <div class="modal-content border-0 shadow">
                 <form action="{{ url_for('promemoria') }}" method="POST">
                     <div class="modal-header bg-dark text-white">
-                        <h5 class="modal-title fw-bold"><i class="fa-solid fa-plus me-2"></i>Nuovo Promemoria</h5>
+                        <h5 class="modal-title fw-bold"><i class="fa-solid fa-bell me-2"></i>Nuovo Promemoria</h5>
                         <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
                     </div>
-                    <div class="modal-body">
+                    <div class="modal-body p-4">
                         <div class="mb-3">
-                            <label class="form-label fw-bold">Titolo Promemoria *</label>
+                            <label class="form-label fw-bold">Titolo *</label>
                             <input type="text" class="form-control" name="titolo" required>
-                        </div>
-                        <div class="mb-3">
-                            <label class="form-label">Descrizione</label>
-                            <textarea class="form-control" name="descrizione" rows="2"></textarea>
                         </div>
                         <div class="row">
                             <div class="col-md-6 mb-3">
-                                <label class="form-label">Data Scadenza</label>
+                                <label class="form-label fw-bold">Data Scadenza</label>
                                 <input type="date" class="form-control" name="data_scadenza">
                             </div>
                             <div class="col-md-6 mb-3">
-                                <label class="form-label">Priorità</label>
+                                <label class="form-label fw-bold">Priorità</label>
                                 <select class="form-select" name="priorita">
                                     <option value="Bassa">Bassa</option>
                                     <option value="Media" selected>Media</option>
@@ -122,20 +141,31 @@
                                 </select>
                             </div>
                         </div>
+
+                        <!-- SELEZIONE UTENTE ASSEGNATARIO -->
                         <div class="mb-3">
-                            <label class="form-label">Ricorrenza Automatica</label>
-                            <select class="form-select" name="ricorrenza">
-                                <option value="Nessuna" selected>Nessuna</option>
-                                <option value="Giorno">Ogni Giorno</option>
-                                <option value="Settimana">Ogni Settimana</option>
-                                <option value="Mese">Ogni Mese</option>
-                                <option value="Anno">Ogni Anno</option>
-                            </select>
+                            <label class="form-label fw-bold"><i class="fa-solid fa-user-check me-1"></i> Assegna Promemoria a *</label>
+                            {% if puo_assegnare or session.get('is_admin') %}
+                                <select class="form-select" name="assegnato_a" required>
+                                    <option value="" disabled selected>Seleziona Utente...</option>
+                                    {% for u in lista_utenti %}
+                                        <option value="{{ u.username }}">{{ u.username }}</option>
+                                    {% endfor %}
+                                </select>
+                            {% else %}
+                                <input type="text" class="form-control" value="{{ session.get('username') }}" readonly>
+                                <input type="hidden" name="assegnato_a" value="{{ session.get('username') }}">
+                            {% endif %}
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label">Note / Descrizione</label>
+                            <textarea class="form-control" name="descrizione" rows="3"></textarea>
                         </div>
                     </div>
-                    <div class="modal-footer">
+                    <div class="modal-footer bg-light">
                         <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Annulla</button>
-                        <button type="submit" class="btn btn-success btn-sm">Salva Promemoria</button>
+                        <button type="submit" class="btn btn-warning btn-sm px-4 fw-bold">Salva Promemoria</button>
                     </div>
                 </form>
             </div>
