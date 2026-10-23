@@ -1,145 +1,240 @@
-{% extends "base.html" %}
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Promemoria - Gestionale OMG</title>
+    <!-- Bootstrap 4 CSS & FontAwesome -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@4.6.2/dist/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+</head>
+<body class="bg-light">
 
-{% block content %}
-<div class="container-fluid mt-4">
-    <div class="d-flex justify-content-between align-items-center mb-4">
-        <h2>📌 Gestione Promemoria & Attività</h2>
-    </div>
-
-    <!-- Modulo Aggiunta Promemoria -->
-    <div class="card shadow-sm mb-4">
-        <div class="card-header bg-primary text-white font-weight-bold">
-            <i class="fas fa-plus-circle mr-2"></i>Aggiungi Nuovo Promemoria
+    <!-- NAVBAR PRINCIPALE -->
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark shadow-sm mb-4">
+        <a class="navbar-brand font-weight-bold" href="{{ url_for('index') }}">
+            <i class="fas fa-boxes mr-2"></i>Gestionale OMG
+        </a>
+        <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarNav">
+            <span class="navbar-toggler-icon"></span>
+        </button>
+        
+        <div class="collapse navbar-collapse" id="navbarNav">
+            <ul class="navbar-nav mr-auto">
+                <li class="nav-item">
+                    <a class="nav-link" href="{{ url_for('index') }}"><i class="fas fa-home mr-1"></i> Dashboard</a>
+                </li>
+                {% if session.get('is_admin') or session.get('puo_vedere_pesante', 1) %}
+                <li class="nav-item">
+                    <a class="nav-link" href="{{ url_for('magazzino_pesante') }}"><i class="fas fa-weight-hanging mr-1"></i> Pesante</a>
+                </li>
+                {% endif %}
+                {% if session.get('is_admin') or session.get('puo_vedere_manutenzione', 1) %}
+                <li class="nav-item">
+                    <a class="nav-link" href="{{ url_for('richieste_manutenzione') }}"><i class="fas fa-tools mr-1"></i> Manutenzioni</a>
+                </li>
+                {% endif %}
+                {% if session.get('is_admin') or session.get('puo_vedere_promemoria', 1) %}
+                <li class="nav-item active">
+                    <a class="nav-link" href="{{ url_for('promemoria') }}"><i class="fas fa-sticky-note mr-1"></i> Promemoria</a>
+                </li>
+                {% endif %}
+                {% if session.get('is_admin') or session.get('puo_gestire_fornitori', 1) %}
+                <li class="nav-item">
+                    <a class="nav-link" href="{{ url_for('fornitori') }}"><i class="fas fa-truck mr-1"></i> Fornitori</a>
+                </li>
+                {% endif %}
+                {% if session.get('is_admin') or session.get('puo_gestire_documenti', 1) %}
+                <li class="nav-item">
+                    <a class="nav-link" href="{{ url_for('documenti') }}"><i class="fas fa-folder mr-1"></i> Documenti</a>
+                </li>
+                {% endif %}
+                {% if session.get('is_admin') or session.get('puo_vedere_report_ore', 1) %}
+                <li class="nav-item">
+                    <a class="nav-link" href="{{ url_for('report_ore') }}"><i class="fas fa-clock mr-1"></i> Report Ore</a>
+                </li>
+                {% endif %}
+                {% if session.get('is_admin') %}
+                <li class="nav-item">
+                    <a class="nav-link text-warning" href="{{ url_for('admin_utenti') }}"><i class="fas fa-users-cog mr-1"></i> Utenti</a>
+                </li>
+                {% endif %}
+            </ul>
+            
+            <ul class="navbar-nav ml-auto">
+                {% if session.get('username') %}
+                <li class="nav-item">
+                    <span class="nav-link text-white"><i class="fas fa-user mr-1"></i> {{ session.get('username') }}</span>
+                </li>
+                <li class="nav-item">
+                    <a class="btn btn-outline-light btn-sm my-1" href="{{ url_for('logout') }}"><i class="fas fa-sign-out-alt mr-1"></i> Logout</a>
+                </li>
+                {% endif %}
+            </ul>
         </div>
-        <div class="card-body">
-            <form action="{{ url_for('promemoria') }}" method="POST">
-                <div class="row">
-                    <div class="col-md-6 mb-3">
-                        <label class="form-label font-weight-bold">Titolo *</label>
-                        <input type="text" name="titolo" class="form-control" placeholder="Es. Controllo livello olio o scadenze" required>
-                    </div>
-                    <div class="col-md-3 mb-3">
-                        <label class="form-label font-weight-bold">Data Scadenza</label>
-                        <input type="date" name="data_scadenza" class="form-control">
-                    </div>
-                    <div class="col-md-3 mb-3">
-                        <label class="form-label font-weight-bold">Priorità</label>
-                        <select name="priorita" class="form-control">
-                            <option value="Bassa">Bassa</option>
-                            <option value="Media" selected>Media</option>
-                            <option value="Alta">Alta</option>
-                            <option value="Urgente">Urgente</option>
-                        </select>
-                    </div>
-                </div>
+    </nav>
 
-                <div class="row">
-                    <div class="col-md-6 mb-3">
-                        <label class="form-label font-weight-bold">Descrizione / Note</label>
-                        <textarea name="descrizione" class="form-control" rows="3" placeholder="Dettagli attività..."></textarea>
-                    </div>
-                    <div class="col-md-3 mb-3">
-                        <label class="form-label font-weight-bold">Ricorrenza</label>
-                        <select name="ricorrenza" class="form-control">
-                            <option value="Nessuna" selected>Nessuna</option>
-                            <option value="Giorno">Ogni Giorno</option>
-                            <option value="Settimana">Ogni Settimana</option>
-                            <option value="Mese">Ogni Mese</option>
-                            <option value="Anno">Ogni Anno</option>
-                        </select>
-                    </div>
-                    {% if puo_assegnare %}
-                    <div class="col-md-3 mb-3">
-                        <label class="form-label font-weight-bold">Assegna a (Seleziona più utenti):</label>
-                        <select name="assegnato_a[]" class="form-control" multiple style="height: 100px;">
-                            {% for u in lista_utenti %}
-                                <option value="{{ u.username }}">{{ u.username }}</option>
-                            {% endfor %}
-                        </select>
-                        <small class="form-text text-muted">Tieni premuto <code>Ctrl</code> (o <code>Cmd</code> su Mac) per selezionare più persone.</small>
-                    </div>
-                    {% endif %}
-                </div>
-
-                <button type="submit" class="btn btn-success font-weight-bold">
-                    <i class="fas fa-save mr-1"></i> Salva Promemoria
+    <!-- NOTIFICHE FLASH -->
+    <div class="container-fluid">
+        {% with messages = get_flashed_messages(with_categories=true) %}
+          {% if messages %}
+            {% for category, message in messages %}
+              <div class="alert alert-{% if category == 'error' %}danger{% else %}{{ category }}{% endif %} alert-dismissible fade show shadow-sm" role="alert">
+                {{ message }}
+                <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+                  <span aria-label="Close">&times;</span>
                 </button>
-            </form>
-        </div>
+              </div>
+            {% endfor %}
+          {% endif %}
+        {% endwith %}
     </div>
 
-    <!-- Tabella Elenco Promemoria -->
-    <div class="card shadow-sm">
-        <div class="card-header bg-dark text-white font-weight-bold">
-            <i class="fas fa-list mr-2"></i>Elenco Promemoria Attivi e Completati
+    <!-- CONTENUTO PROMEMORIA -->
+    <div class="container-fluid mt-4">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h2>📌 Gestione Promemoria & Attività</h2>
         </div>
-        <div class="card-body p-0">
-            <div class="table-responsive">
-                <table class="table table-hover table-striped mb-0">
-                    <thead class="thead-light">
-                        <tr>
-                            <th>Stato</th>
-                            <th>Titolo</th>
-                            <th>Descrizione</th>
-                            <th>Scadenza</th>
-                            <th>Priorità</th>
-                            <th>Ricorrenza</th>
-                            <th>Assegnato a</th>
-                            <th class="text-center">Azioni</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for p in promemoria %}
-                        <tr class="{% if p.completato %}table-secondary text-muted{% endif %}">
-                            <td class="align-middle">
-                                {% if p.completato %}
-                                    <span class="badge badge-success">Completato</span>
-                                {% else %}
-                                    <span class="badge badge-warning">In Corso</span>
-                                {% endif %}
-                            </td>
-                            <td class="align-middle font-weight-bold">
-                                {% if p.completato %}<del>{{ p.titolo }}</del>{% else %}{{ p.titolo }}{% endif %}
-                            </td>
-                            <td class="align-middle">{{ p.descrizione or '-' }}</td>
-                            <td class="align-middle">{{ p.data_scadenza or '-' }}</td>
-                            <td class="align-middle">
-                                {% if p.priorita == 'Urgente' %}
-                                    <span class="badge badge-danger">Urgente</span>
-                                {% elif p.priorita == 'Alta' %}
-                                    <span class="badge badge-warning">Alta</span>
-                                {% elif p.priorita == 'Media' %}
-                                    <span class="badge badge-info">Media</span>
-                                {% else %}
-                                    <span class="badge badge-light">Bassa</span>
-                                {% endif %}
-                            </td>
-                            <td class="align-middle">{{ p.ricorrenza }}</td>
-                            <td class="align-middle">
-                                <span class="badge badge-dark">{{ p.assegnato_a or 'Tutti' }}</span>
-                            </td>
-                            <td class="align-middle text-center">
-                                <form action="{{ url_for('completa_promemoria', promemoria_id=p.id) }}" method="POST" class="d-inline">
-                                    <button type="submit" class="btn btn-sm {% if p.completato %}btn-outline-secondary{% else %}btn-success{% endif %}" title="Cambia Stato">
-                                        <i class="fas {% if p.completato %}fa-undo{% else %}fa-check{% endif %}"></i>
-                                    </button>
-                                </form>
-                                <form action="{{ url_for('elimina_promemoria', promemoria_id=p.id) }}" method="POST" class="d-inline" onsubmit="return confirm('Sei sicuro di voler eliminare questo promemoria?');">
-                                    <button type="submit" class="btn btn-sm btn-danger" title="Elimina">
-                                        <i class="fas fa-trash"></i>
-                                    </button>
-                                </form>
-                            </td>
-                        </tr>
-                        {% else %}
-                        <tr>
-                            <td colspan="8" class="text-center text-muted py-4">Nessun promemoria presente.</td>
-                        </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
+
+        <!-- Modulo Aggiunta Promemoria -->
+        <div class="card shadow-sm mb-4">
+            <div class="card-header bg-primary text-white font-weight-bold">
+                <i class="fas fa-plus-circle mr-2"></i>Aggiungi Nuovo Promemoria
+            </div>
+            <div class="card-body">
+                <form action="{{ url_for('promemoria') }}" method="POST">
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label font-weight-bold">Titolo *</label>
+                            <input type="text" name="titolo" class="form-control" placeholder="Es. Controllo livello olio o scadenze" required>
+                        </div>
+                        <div class="col-md-3 mb-3">
+                            <label class="form-label font-weight-bold">Data Scadenza</label>
+                            <input type="date" name="data_scadenza" class="form-control">
+                        </div>
+                        <div class="col-md-3 mb-3">
+                            <label class="form-label font-weight-bold">Priorità</label>
+                            <select name="priorita" class="form-control">
+                                <option value="Bassa">Bassa</option>
+                                <option value="Media" selected>Media</option>
+                                <option value="Alta">Alta</option>
+                                <option value="Urgente">Urgente</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label font-weight-bold">Descrizione / Note</label>
+                            <textarea name="descrizione" class="form-control" rows="3" placeholder="Dettagli attività..."></textarea>
+                        </div>
+                        <div class="col-md-3 mb-3">
+                            <label class="form-label font-weight-bold">Ricorrenza</label>
+                            <select name="ricorrenza" class="form-control">
+                                <option value="Nessuna" selected>Nessuna</option>
+                                <option value="Giorno">Ogni Giorno</option>
+                                <option value="Settimana">Ogni Settimana</option>
+                                <option value="Mese">Ogni Mese</option>
+                                <option value="Anno">Ogni Anno</option>
+                            </select>
+                        </div>
+                        {% if puo_assegnare %}
+                        <div class="col-md-3 mb-3">
+                            <label class="form-label font-weight-bold">Assegna a (Seleziona più utenti):</label>
+                            <select name="assegnato_a[]" class="form-control" multiple style="height: 100px;">
+                                {% for u in lista_utenti %}
+                                    <option value="{{ u.username }}">{{ u.username }}</option>
+                                {% endfor %}
+                            </select>
+                            <small class="form-text text-muted">Tieni premuto <code>Ctrl</code> (o <code>Cmd</code> su Mac) per selezionare più persone.</small>
+                        </div>
+                        {% endif %}
+                    </div>
+
+                    <button type="submit" class="btn btn-success font-weight-bold">
+                        <i class="fas fa-save mr-1"></i> Salva Promemoria
+                    </button>
+                </form>
+            </div>
+        </div>
+
+        <!-- Tabella Elenco Promemoria -->
+        <div class="card shadow-sm mb-5">
+            <div class="card-header bg-dark text-white font-weight-bold">
+                <i class="fas fa-list mr-2"></i>Elenco Promemoria Attivi e Completati
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-hover table-striped mb-0">
+                        <thead class="thead-light">
+                            <tr>
+                                <th>Stato</th>
+                                <th>Titolo</th>
+                                <th>Descrizione</th>
+                                <th>Scadenza</th>
+                                <th>Priorità</th>
+                                <th>Ricorrenza</th>
+                                <th>Assegnato a</th>
+                                <th class="text-center">Azioni</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for p in promemoria %}
+                            <tr class="{% if p.completato %}table-secondary text-muted{% endif %}">
+                                <td class="align-middle">
+                                    {% if p.completato %}
+                                        <span class="badge badge-success">Completato</span>
+                                    {% else %}
+                                        <span class="badge badge-warning">In Corso</span>
+                                    {% endif %}
+                                </td>
+                                <td class="align-middle font-weight-bold">
+                                    {% if p.completato %}<del>{{ p.titolo }}</del>{% else %}{{ p.titolo }}{% endif %}
+                                </td>
+                                <td class="align-middle">{{ p.descrizione or '-' }}</td>
+                                <td class="align-middle">{{ p.data_scadenza or '-' }}</td>
+                                <td class="align-middle">
+                                    {% if p.priorita == 'Urgente' %}
+                                        <span class="badge badge-danger">Urgente</span>
+                                    {% elif p.priorita == 'Alta' %}
+                                        <span class="badge badge-warning">Alta</span>
+                                    {% elif p.priorita == 'Media' %}
+                                        <span class="badge badge-info">Media</span>
+                                    {% else %}
+                                        <span class="badge badge-light">Bassa</span>
+                                    {% endif %}
+                                </td>
+                                <td class="align-middle">{{ p.ricorrenza }}</td>
+                                <td class="align-middle">
+                                    <span class="badge badge-dark">{{ p.assegnato_a or 'Tutti' }}</span>
+                                </td>
+                                <td class="align-middle text-center">
+                                    <form action="{{ url_for('completa_promemoria', promemoria_id=p.id) }}" method="POST" class="d-inline">
+                                        <button type="submit" class="btn btn-sm {% if p.completato %}btn-outline-secondary{% else %}btn-success{% endif %}" title="Cambia Stato">
+                                            <i class="fas {% if p.completato %}fa-undo{% else %}fa-check{% endif %}"></i>
+                                        </button>
+                                    </form>
+                                    <form action="{{ url_for('elimina_promemoria', promemoria_id=p.id) }}" method="POST" class="d-inline" onsubmit="return confirm('Sei sicuro di voler eliminare questo promemoria?');">
+                                        <button type="submit" class="btn btn-sm btn-danger" title="Elimina">
+                                            <i class="fas fa-trash"></i>
+                                        </button>
+                                    </form>
+                                </td>
+                            </tr>
+                            {% else %}
+                            <tr>
+                                <td colspan="8" class="text-center text-muted py-4">Nessun promemoria presente.</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
             </div>
         </div>
     </div>
-</div>
-{% endblock %}
+
+    <!-- JS DEPENDENCIES -->
+    <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@4.6.2/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>
