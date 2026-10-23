@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <title>Rapportino Intervento #{{ r.id }}</title>
+    <style>
+        body { font-family: sans-serif; max-width: 800px; margin: 0 auto; padding: 20px; color: #1e293b; }
+        .header { text-align: center; border-bottom: 2px solid #0284c7; padding-bottom: 10px; margin-bottom: 20px; }
+        .box { border: 1px solid #cbd5e1; padding: 15px; border-radius: 8px; margin-bottom: 15px; }
+        .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+        label { font-weight: bold; font-size: 0.85rem; color: #475569; display: block; }
+        .val { font-size: 1rem; margin-top: 2px; }
+        .footer-sign { margin-top: 40px; display: flex; justify-content: space-between; }
+        .sign-box { border-top: 1px dashed #64748b; width: 250px; text-align: center; padding-top: 5px; font-size: 0.85rem; color: #475569; }
+        @media print {
+            .no-print { display: none; }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="no-print" style="margin-bottom: 20px;">
+        <button onclick="window.print()" style="background: #0284c7; color: white; border: none; padding: 10px 20px; font-size: 1rem; border-radius: 6px; cursor: pointer;">🖨️ Stampa Rapportino / PDF</button>
+    </div>
+
+    <div class="header">
+        <h1 style="margin: 0; color: #0284c7;">RAPPORTINO DI MANUTENZIONE / INTERVENTO</h1>
+        <p style="margin: 5px 0 0 0; color: #64748b;">Magazzino OMG — Scheda N° #{{ r.id }}</p>
+    </div>
+
+    <div class="box grid">
+        <div>
+            <label>MACCHINARIO / IMPIANTO:</label>
+            <div class="val"><strong>{{ r.impianto_macchina or 'Generico' }}</strong></div>
+        </div>
+        <div>
+            <label>TIPO GUASTO / PRIORITÀ:</label>
+            <div class="val"><strong>{{ r.tipo_guasto }}</strong> ({{ r.priorita }})</div>
+        </div>
+    </div>
+
+    <div class="box">
+        <label>TITOLO GUASTO / MOTIVO INTERVENTO:</label>
+        <div class="val"><strong>{{ r.titolo }}</strong></div>
+        {% if r.descrizione %}
+            <p style="margin: 8px 0 0 0; color: #475569; font-size: 0.9rem;">{{ r.descrizione }}</p>
+        {% endif %}
+    </div>
+
+    <div class="box grid">
+        <div>
+            <label>TECNICO ASSEGNATO:</label>
+            <div class="val">👤 {{ r.assegnato_a or r.creato_da or 'Non registrato' }}</div>
+        </div>
+        <div>
+            <label>TEMPO NETTO LAVORATO:</label>
+            <div class="val">⏱️ <strong>{{ r.tempo_lavorato_minuti or 0 }} minuti</strong></div>
+        </div>
+    </div>
+
+    <div class="box grid">
+        <div>
+            <label>DATA E ORA INIZIO:</label>
+            <div class="val">{{ r.inizio_lavoro.strftime('%d/%m/%Y %H:%M') if r.inizio_lavoro else '-' }}</div>
+        </div>
+        <div>
+            <label>DATA E ORA CHIUSURA:</label>
+            <div class="val">{{ r.fine_lavoro.strftime('%d/%m/%Y %H:%M') if r.fine_lavoro else '-' }}</div>
+        </div>
+    </div>
+
+    <div class="box">
+        <label>RICAMBI UTILIZZATI E SCARICATI:</label>
+        {% if ricambi %}
+            <ul style="margin: 5px 0 0 0; padding-left: 20px;">
+                {% for ric in ricambi %}
+                    <li><strong>{{ ric.nome_ricambio }}</strong> (Codice QR: <code>{{ ric.qr_code }}</code>) — Quantità: <strong>{{ ric.quantita }} pz</strong></li>
+                {% endfor %}
+            </ul>
+        {% else %}
+            <div class="val" style="color: #64748b;">Nessun ricambio di magazzino utilizzato.</div>
+        {% endif %}
+    </div>
+
+    <div class="box">
+        <label>NOTE DI RIPARAZIONE:</label>
+        <div class="val" style="min-height: 40px;">{{ r.note_lavoro or 'Nessuna nota registrata.' }}</div>
+    </div>
+
+    <div class="footer-sign">
+        <div class="sign-box">Firma Manutentore</div>
+        <div class="sign-box">Firma Responsabile / Capoturno</div>
+    </div>
+
+</body>
+</html>
