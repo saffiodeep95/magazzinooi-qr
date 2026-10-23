@@ -13,7 +13,7 @@ from psycopg2.extras import RealDictCursor
 from flask import Flask, render_template, request, redirect, url_for, flash, session, Response, jsonify
 from werkzeug.security import generate_password_hash, check_password_hash
 
-app = Flask(__name__)
+app = Flask(_name_)
 app.secret_key = os.environ.get("SECRET_KEY", "chiave-segreta-gestionale")
 
 DATABASE_URL = os.environ.get("DATABASE_URL")
@@ -159,7 +159,7 @@ def init_db():
             );
         """)
 
-        # Colonne aggiuntive per prodotti
+        # Colonne aggiuntive prodotti
         colonne_prodotti = [
             ("sap", "VARCHAR(255)"), ("peso", "VARCHAR(255)"), ("quantita", "INT DEFAULT 0"),
             ("posizione", "VARCHAR(255)"), ("magazzino_pesante", "INT DEFAULT 0"),
@@ -171,16 +171,6 @@ def init_db():
         ]
         for col, ctype in colonne_prodotti:
             cur.execute(f"ALTER TABLE prodotti ADD COLUMN IF NOT EXISTS {col} {ctype};")
-
-        # Colonne promemoria
-        colonne_promemoria = [
-            ("descrizione", "TEXT"), ("data_scadenza", "VARCHAR(255)"),
-            ("priorita", "VARCHAR(50) DEFAULT 'Media'"), ("ricorrenza", "VARCHAR(50) DEFAULT 'Nessuna'"),
-            ("assegnato_a", "VARCHAR(255)"), ("completato", "BOOLEAN DEFAULT FALSE"),
-            ("creato_il", "TIMESTAMP DEFAULT CURRENT_TIMESTAMP")
-        ]
-        for col, ctype in colonne_promemoria:
-            cur.execute(f"ALTER TABLE promemoria ADD COLUMN IF NOT EXISTS {col} {ctype};")
 
         # Colonne manutenzione
         colonne_manutenzione = [
@@ -275,7 +265,6 @@ def index():
     
     username = session.get('username')
     is_admin = session.get('is_admin')
-    puo_assegnare = session.get('puo_assegnare_promemoria')
     
     try:
         conn = get_db_connection()
@@ -284,10 +273,7 @@ def index():
         cur.execute("SELECT * FROM prodotti ORDER BY nome ASC;")
         tutti = cur.fetchall()
         
-        if is_admin or puo_assegnare:
-            cur.execute("SELECT COUNT(*) as count FROM promemoria WHERE completato = FALSE;")
-        else:
-            cur.execute("SELECT COUNT(*) as count FROM promemoria WHERE completato = FALSE AND (assegnato_a = %s OR assegnato_a IS NULL OR assegnato_a = '');", (username,))
+        cur.execute("SELECT COUNT(*) as count FROM promemoria WHERE completato = FALSE;")
         res_p = cur.fetchone()
         if res_p:
             promemoria_urgenti = res_p['count']
@@ -359,8 +345,8 @@ def registra():
                 cur = conn.cursor()
                 hashed_pw = generate_password_hash(password)
                 cur.execute("""
-                    INSERT INTO utenti (username, password, is_admin, puo_vedere_magazzino, puo_aggiungere_prodotti, puo_modificare_prodotti, puo_caricare_scaricare, puo_eliminare, puo_vedere_pesante, puo_vedere_manutenzione, puo_aprire_manutenzioni, puo_gestire_interventi, puo_assegnare_manutenzioni, puo_eliminare_interventi, puo_vedere_manutenzioni_esterne, puo_vedere_storico_manutenzioni, puo_eliminare_storico, puo_gestire_fornitori, puo_importare_fornitori, puo_gestire_documenti, puo_eliminare_documenti, puo_vedere_promemoria, puo_assegnare_promemoria, puo_vedere_report_ore)
-                    VALUES (%s, %s, 0, 1, 1, 1, 1, 0, 1, 1, 1, 1, 1, 0, 1, 1, 0, 1, 1, 1, 0, 1, 1, 1);
+                    INSERT INTO utenti (username, password, is_admin)
+                    VALUES (%s, %s, 0);
                 """, (username, hashed_pw))
                 conn.commit()
                 cur.close()
@@ -378,260 +364,103 @@ def admin_utenti():
         flash("Accesso riservato all'Amministratore.", "error")
         return redirect(url_for('index'))
     
-    conn = None
-    cur = None
+    conn = get_db_connection()
+    cur = conn.cursor()
+    
+    if request.method == "POST":
+        user_id = request.form.get("user_id")
+        is_admin_val = 1 if request.form.get("is_admin") else 0
+        cur.execute("UPDATE utenti SET is_admin = %s WHERE id = %s;", (is_admin_val, user_id))
+        conn.commit()
+        flash("Permessi admin aggiornati.", "success")
+        return redirect(url_for('admin_utenti'))
+
+    cur.execute("SELECT * FROM utenti ORDER BY username ASC;")
+    utenti = cur.fetchall()
+    
+    logs = []
     try:
-        conn = get_db_connection()
-        cur = conn.cursor()
-        
-        if request.method == "POST":
-            user_id = request.form.get("user_id")
-            is_admin_val = 1 if request.form.get("is_admin") else 0
-            
-            permessi_possibili = [
-                "puo_vedere_magazzino", "puo_aggiungere_prodotti", "puo_modificare_prodotti",
-                "puo_caricare_scaricare", "puo_eliminare", "puo_vedere_pesante",
-                "puo_vedere_manutenzione", "puo_aprire_manutenzioni", "puo_gestire_interventi",
-                "puo_assegnare_manutenzioni", "puo_eliminare_interventi", "puo_vedere_manutenzioni_esterne",
-                "puo_vedere_storico_manutenzioni", "puo_eliminare_storico", "puo_gestire_fornitori",
-                "puo_importare_fornitori", "puo_gestire_documenti", "puo_eliminare_documenti",
-                "puo_vedere_promemoria", "puo_assegnare_promemoria", "puo_vedere_report_ore"
-            ]
-            
-            set_clauses = ["is_admin = %s"]
-            values = [is_admin_val]
-            
-            for p in permessi_possibili:
-                val = 1 if request.form.get(p) else 0
-                set_clauses.append(f"{p} = %s")
-                values.append(val)
-                
-            values.append(user_id)
-            query = f"UPDATE utenti SET {', '.join(set_clauses)} WHERE id = %s;"
-            cur.execute(query, tuple(values))
-            conn.commit()
-            
-            registra_log(f"Aggiornati permessi per l'utente ID {user_id}")
-            flash("Permessi utente aggiornati con successo!", "success")
-            return redirect(url_for('admin_utenti'))
-
-        cur.execute("SELECT * FROM utenti ORDER BY username ASC;")
-        utenti = cur.fetchall()
-        
+        cur.execute("SELECT * FROM log_attivita ORDER BY data_ora DESC LIMIT 100;")
+        logs = cur.fetchall()
+    except:
         logs = []
-        try:
-            cur.execute("SELECT * FROM log_attivita ORDER BY data_ora DESC LIMIT 100;")
-            logs = cur.fetchall()
-        except Exception:
-            if conn:
-                conn.rollback()
-            logs = []
-            
-        cur.close()
-        conn.close()
-    except Exception as e:
-        if cur:
-            try: cur.close()
-            except: pass
-        if conn:
-            try: conn.rollback(); conn.close()
-            except: pass
-        flash(f"Errore critico pannello admin: {e}", "error")
-        utenti = []
-        logs = []
-
+        
+    cur.close()
+    conn.close()
     return render_template("admin_utenti.html", utenti=utenti, logs=logs)
 
 @app.route("/admin_reset_password/<int:user_id>", methods=["POST"])
 def admin_reset_password(user_id):
     if not session.get('is_admin'):
-        flash("Accesso riservato all'Amministratore.", "error")
+        flash("Accesso riservato.", "error")
         return redirect(url_for('index'))
-    
     nuova_password = request.form.get("nuova_password")
     if nuova_password:
-        try:
-            hashed_pw = generate_password_hash(nuova_password)
-            conn = get_db_connection()
-            cur = conn.cursor()
-            cur.execute("UPDATE utenti SET password = %s WHERE id = %s;", (hashed_pw, user_id))
-            conn.commit()
-            cur.close()
-            conn.close()
-            
-            registra_log(f"Password reimpostata per l'utente ID {user_id} dall'amministratore")
-            flash("Password reimpostata con successo!", "success")
-        except Exception as e:
-            flash(f"Errore durante il reset della password: {e}", "error")
-    else:
-        flash("La nuova password non può essere vuota.", "error")
-        
+        hashed_pw = generate_password_hash(nuova_password)
+        conn = get_db_connection()
+        cur = conn.cursor()
+        cur.execute("UPDATE utenti SET password = %s WHERE id = %s;", (hashed_pw, user_id))
+        conn.commit()
+        cur.close()
+        conn.close()
+        flash("Password reimpostata con successo!", "success")
     return redirect(url_for('admin_utenti'))
 
 @app.route("/admin_elimina_utente/<int:user_id>", methods=["POST"])
 def admin_elimina_utente(user_id):
     if not session.get('is_admin'):
-        flash("Accesso riservato all'Amministratore.", "error")
+        flash("Accesso riservato.", "error")
         return redirect(url_for('index'))
-    
     conn = get_db_connection()
     cur = conn.cursor()
-    
-    cur.execute("SELECT username FROM utenti WHERE id = %s;", (user_id,))
-    u = cur.fetchone()
-    
-    if u and u['username'] == 'admin':
-        flash("Non è possibile eliminare l'utente amministratore principale di sistema ('admin').", "error")
-    elif u and u['username'] == session.get('username'):
-        flash("Non puoi eliminare il tuo stesso account mentre sei loggato.", "error")
-    else:
-        cur.execute("DELETE FROM utenti WHERE id = %s;", (user_id,))
-        conn.commit()
-        registra_log(f"Eliminato utente ID {user_id} ({u['username'] if u else ''})")
-        flash("Utente eliminato con successo.", "success")
-        
+    cur.execute("DELETE FROM utenti WHERE id = %s;", (user_id,))
+    conn.commit()
     cur.close()
     conn.close()
+    flash("Utente eliminato.", "success")
     return redirect(url_for('admin_utenti'))
 
 # --- MODULO OFFICINA / RICHIESTE MANUTENZIONE ---
 @app.route("/richieste_manutenzione", methods=["GET", "POST"])
 def richieste_manutenzione():
-    if not (session.get('is_admin') or session.get('puo_vedere_manutenzione', 1)):
-        flash("Accesso non autorizzato.", "error")
-        return redirect(url_for('index'))
-
-    username_corrente = session.get('username')
-    is_admin = session.get('is_admin')
-    puo_aprire = is_admin or session.get('puo_aprire_manutenzioni', 1)
-    puo_assegnare = is_admin or session.get('puo_assegnare_manutenzioni', 1)
-    puo_gestire = is_admin or session.get('puo_gestire_interventi', 1)
-    puo_elimina_int = is_admin or session.get('puo_eliminare_interventi', 0)
+    if not session.get('username'):
+        return redirect(url_for('login'))
     
     conn = get_db_connection()
     cur = conn.cursor()
     
     if request.method == "POST":
-        if not puo_aprire:
-            flash("Non hai i permessi per aprire nuove richieste di intervento.", "error")
-            return redirect(url_for("richieste_manutenzione"))
-
         titolo = request.form.get("titolo")
         impianto_macchina = request.form.get("impianto_macchina", "")
         descrizione = request.form.get("descrizione", "")
         priorita = request.form.get("priorita", "Media")
         tipo_guasto = request.form.get("tipo_guasto", "Meccanico")
-        
-        tecnici_selezionati = []
-        if puo_assegnare:
-            tecnici_selezionati = request.form.getlist("assegnato_a[]")
-            assegnato_a = ", ".join(tecnici_selezionati) if tecnici_selezionati else ""
-        else:
-            assegnato_a = username_corrente
-            tecnici_selezionati = [username_corrente]
+        creato_da = session.get('username')
         
         if titolo:
             cur.execute("""
-                INSERT INTO richieste_manutenzione (titolo, impianto_macchina, descrizione, priorita, tipo_guasto, assegnato_a, creato_da, stato)
-                VALUES (%s, %s, %s, %s, %s, %s, %s, 'Aperta');
-            """, (titolo, impianto_macchina, descrizione, priorita, tipo_guasto, assegnato_a, username_corrente))
+                INSERT INTO richieste_manutenzione (titolo, impianto_macchina, descrizione, priorita, tipo_guasto, creato_da, stato)
+                VALUES (%s, %s, %s, %s, %s, %s, 'Aperta');
+            """, (titolo, impianto_macchina, descrizione, priorita, tipo_guasto, creato_da))
             conn.commit()
-            
-            for tec in tecnici_selezionati:
-                tec_clean = tec.strip()
-                if tec_clean:
-                    crea_notifica(
-                        destinatario=tec_clean,
-                        titolo="🛠️ Nuova Manutenzione Assegnata",
-                        messaggio=f"Ti è stato assegnato un intervento su {impianto_macchina}: {titolo}",
-                        link="/richieste_manutenzione"
-                    )
-
-            registra_log(f"Creata richiesta intervento: {titolo} su {impianto_macchina}")
-            flash("Richiesta di intervento creata e notifiche inviate!", "success")
+            registra_log(f"Creata richiesta intervento: {titolo}")
+            flash("Richiesta di intervento creata con successo!", "success")
+        cur.close()
+        conn.close()
         return redirect(url_for("richieste_manutenzione"))
 
-    cur.execute("SELECT username FROM utenti ORDER BY username ASC;")
-    lista_utenti = cur.fetchall()
-
-    cur.execute("SELECT qr_code, nome, quantita FROM prodotti ORDER BY nome ASC;")
-    lista_prodotti = cur.fetchall()
-
-    cur.execute("""
-        SELECT id, titolo, impianto_macchina, descrizione, priorita, stato, tipo_guasto, 
-               assegnato_a, creato_da, inizio_lavoro, fine_lavoro, 
-               COALESCE(tempo_lavorato_minuti, 0) AS tempo_lavorato_minuti, 
-               note_lavoro, creato_il 
-        FROM richieste_manutenzione 
-        ORDER BY CASE WHEN stato = 'Completata' THEN 2 ELSE 1 END, creato_il DESC;
-    """)
+    cur.execute("SELECT * FROM richieste_manutenzione ORDER BY id DESC;")
     richieste = cur.fetchall()
-
     cur.close()
     conn.close()
-    
-    return render_template("richieste_manutenzione.html", 
-                           richieste=richieste, 
-                           lista_utenti=lista_utenti, 
-                           lista_prodotti=lista_prodotti,
-                           puo_aprire=puo_aprire,
-                           puo_assegnare=puo_assegnare,
-                           puo_gestire=puo_gestire,
-                           puo_elimina_int=puo_elimina_int)
-
-@app.route("/cambia_stato_intervento/<int:intervento_id>", methods=["POST"])
-def cambia_stato_intervento(intervento_id):
-    username_corrente = session.get('username')
-    nuovo_stato = request.form.get("stato")
-    note_lavoro = request.form.get("note_lavoro", "")
-    
-    conn = get_db_connection()
-    cur = conn.cursor()
-    cur.execute("SELECT * FROM richieste_manutenzione WHERE id = %s;", (intervento_id,))
-    req = cur.fetchone()
-    
-    if req:
-        now = datetime.now()
-        if nuovo_stato == 'In Lavoro':
-            if not req.get('inizio_lavoro'):
-                cur.execute("""
-                    UPDATE richieste_manutenzione 
-                    SET stato = %s, assegnato_a = COALESCE(NULLIF(assegnato_a, ''), %s), inizio_lavoro = %s
-                    WHERE id = %s;
-                """, (nuovo_stato, username_corrente, now, intervento_id))
-            else:
-                cur.execute("UPDATE richieste_manutenzione SET stato = %s WHERE id = %s;", (nuovo_stato, intervento_id))
-            flash("Intervento avviato!", "success")
-        elif nuovo_stato == 'In Pausa':
-            inizio = req.get('inizio_lavoro')
-            minuti_aggiunti = int((now - inizio).total_seconds() / 60) if (inizio and req.get('stato') == 'In Lavoro') else 0
-            cur.execute("""
-                UPDATE richieste_manutenzione 
-                SET stato = %s, tempo_lavorato_minuti = COALESCE(tempo_lavorato_minuti, 0) + %s, inizio_lavoro = NULL
-                WHERE id = %s;
-            """, (nuovo_stato, minuti_aggiunti, intervento_id))
-            flash("Intervento in pausa.", "warning")
-        elif nuovo_stato == 'Completata':
-            inizio = req.get('inizio_lavoro')
-            minuti_aggiunti = int((now - inizio).total_seconds() / 60) if (inizio and req.get('stato') == 'In Lavoro') else 0
-            tempo_totale = req.get('tempo_lavorato_minuti', 0) + minuti_aggiunti
-            cur.execute("""
-                UPDATE richieste_manutenzione 
-                SET stato = %s, fine_lavoro = %s, tempo_lavorato_minuti = %s, note_lavoro = COALESCE(NULLIF(%s, ''), note_lavoro) 
-                WHERE id = %s;
-            """, (nuovo_stato, now, tempo_totale, note_lavoro, intervento_id))
-            flash("Intervento completato!", "success")
-        conn.commit()
-    cur.close()
-    conn.close()
-    return redirect(url_for("richieste_manutenzione"))
+    return render_template("richieste_manutenzione.html", richieste=richieste)
 
 # --- MODULO FORNITORI ---
 @app.route("/fornitori", methods=["GET", "POST"])
 def fornitori():
-    if not (session.get('is_admin') or session.get('puo_gestire_fornitori', 1)):
-        return redirect(url_for('index'))
-        
+    if not session.get('username'):
+        return redirect(url_for('login'))
+    
     conn = get_db_connection()
     cur = conn.cursor()
     
@@ -653,7 +482,7 @@ def fornitori():
                 flash("Fornitore aggiunto con successo!", "success")
             except Exception as e:
                 conn.rollback()
-                flash(f"Errore inserimento fornitore (possibile nome duplicato): {e}", "error")
+                flash(f"Errore inserimento fornitore: {e}", "error")
         cur.close()
         conn.close()
         return redirect(url_for('fornitori'))
@@ -690,8 +519,8 @@ def elimina_fornitore(fornitore_id):
 @app.route("/documenti", defaults={"cartella_id": None}, methods=["GET", "POST"])
 @app.route("/documenti/<int:cartella_id>", methods=["GET", "POST"])
 def documenti(cartella_id):
-    if not (session.get('is_admin') or session.get('puo_gestire_documenti', 1)):
-        return redirect(url_for('index'))
+    if not session.get('username'):
+        return redirect(url_for('login'))
         
     conn = get_db_connection()
     cur = conn.cursor()
@@ -785,23 +614,6 @@ def elimina_documento(doc_id):
     flash("Documento eliminato.", "success")
     return redirect(url_for('documenti'))
 
-@app.route("/elimina_cartella/<int:cartella_id>", methods=["POST"])
-def elimina_cartella(cartella_id):
-    conn = get_db_connection()
-    cur = conn.cursor()
-    cur.execute("SELECT parent_id FROM cartelle WHERE id = %s;", (cartella_id,))
-    c = cur.fetchone()
-    parent_id = c['parent_id'] if c else None
-    
-    cur.execute("DELETE FROM cartelle WHERE id = %s;", (cartella_id,))
-    conn.commit()
-    cur.close()
-    conn.close()
-    flash("Cartella eliminata.", "success")
-    if parent_id:
-        return redirect(url_for('documenti', cartella_id=parent_id))
-    return redirect(url_for('documenti'))
-
 # --- MODULO CAMBI SERIE ---
 @app.route("/cambi_serie", methods=["GET", "POST"])
 def cambi_serie():
@@ -826,7 +638,7 @@ def cambi_serie():
             VALUES (%s, %s, %s, %s, %s, %s, %s, %s);
         """, (data_cambio, forno_macchina, bottiglia_nuova, numero_bottiglie, numero_bottiglie_tempera, piastrina_stacker, operatore, note))
         conn.commit()
-        registra_log(f"Registrato cambio serie su {forno_macchina}: '{bottiglia_nuova}' ({numero_bottiglie} btg)")
+        registra_log(f"Registrato cambio serie su {forno_macchina}")
         flash("Cambio serie registrato con successo!", "success")
         cur.close()
         conn.close()
@@ -849,44 +661,13 @@ def elimina_cambio_serie(id):
     conn.commit()
     cur.close()
     conn.close()
-    registra_log(f"Eliminato cambio serie ID {id}")
     flash("Cambio serie eliminato.", "success")
     return redirect(url_for('cambi_serie'))
 
-# --- ALTRE ROTTE DI SUPPORTO ---
+# --- SUPPORTO MAGAZZINO E UTILITY ---
 @app.route("/esporta")
 def esporta():
     return render_template("esportazioni.html")
-
-@app.route("/esporta_inventario")
-def esporta_inventario():
-    conn = get_db_connection()
-    cur = conn.cursor()
-    cur.execute("SELECT qr_code, nome, sap, quantita, posizione, peso FROM prodotti WHERE COALESCE(magazzino_pesante, 0) = 0 ORDER BY nome ASC;")
-    prodotti = cur.fetchall()
-    cur.close()
-    conn.close()
-    output = io.StringIO()
-    writer = csv.writer(output)
-    writer.writerow(['QR Code', 'Nome Articolo', 'SAP', 'Quantita', 'Posizione', 'Peso'])
-    for p in prodotti:
-        writer.writerow([p['qr_code'], p['nome'], p['sap'], p['quantita'], p['posizione'], p['peso']])
-    return Response(output.getvalue(), mimetype="text/csv", headers={"Content-disposition": "attachment; filename=Inventario_Principale_OMG.csv"})
-
-@app.route("/esporta_pesante")
-def esporta_pesante():
-    conn = get_db_connection()
-    cur = conn.cursor()
-    cur.execute("SELECT qr_code, nome, sap, quantita, posizione, peso FROM prodotti WHERE magazzino_pesante = 1 OR magazzino_pesante = TRUE ORDER BY nome ASC;")
-    prodotti = cur.fetchall()
-    cur.close()
-    conn.close()
-    output = io.StringIO()
-    writer = csv.writer(output)
-    writer.writerow(['QR Code', 'Nome Articolo', 'SAP', 'Quantita', 'Posizione', 'Peso'])
-    for p in prodotti:
-        writer.writerow([p['qr_code'], p['nome'], p['sap'], p['quantita'], p['posizione'], p['peso']])
-    return Response(output.getvalue(), mimetype="text/csv", headers={"Content-disposition": "attachment; filename=Magazzino_Pesante_OMG.csv"})
 
 @app.route("/carico", methods=["GET", "POST"])
 def carico():
@@ -1016,5 +797,5 @@ def stampa_tutti_qr():
     conn.close()
     return render_template("stampa_tutti_qr.html", prodotti=prodotti)
 
-if __name__ == "_main_":
+if _name_ == "_main_":
     app.run(debug=True)
