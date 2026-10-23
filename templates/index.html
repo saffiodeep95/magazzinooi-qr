@@ -1,116 +1,189 @@
-[09:29, 23/10/2026] Marco Pavan: <!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="it">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Manutenzioni e Officina - Gestionale OMG</title>
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@4.6.2/dist/css/bootstrap.min.css">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
-</head>
-<body class="bg-light">
-
-    <!-- NAVBAR COMPLETA & CENTRO NOTIFICHE -->
-    <nav class="navbar navbar-expand-lg navbar-dark bg-dark shadow-sm mb-4">
-        <a class="navbar-brand font-weight-bold" href="{{ url_for('index') }}">
-            <i class="fas fa-boxes mr-2"></i>Gestionale OMG
-        </a>
-        <button class="navbar-toggler"…
-[09:59, 23/10/2026] Marco Pavan: <!DOCTYPE html>
-<html lang="it">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Magazzino QR - Dashboard</title>
+    <title>Gestionale OMG - Magazzino Principale</title>
     <!-- Bootstrap 5 CSS -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <!-- Font Awesome -->
+    <!-- FontAwesome -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </head>
 <body class="bg-light">
-
     <!-- Navbar -->
     <nav class="navbar navbar-expand-lg navbar-dark bg-dark shadow-sm">
         <div class="container-fluid">
-            <a class="navbar-brand" href="{{ url_for('index') }}">
-                <i class="fas fa-boxes me-2 text-warning"></i>Magazzino QR
-            </a>
-            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
+            <a class="navbar-brand fw-bold" href="{{ url_for('index') }}"><i class="fa-solid fa-boxes-stacked me-2"></i>Gestionale OMG</a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
                 <span class="navbar-toggler-icon"></span>
             </button>
             <div class="collapse navbar-collapse" id="navbarNav">
-                <ul class="navbar-nav ms-auto">
-                    <!-- Menu a tendina con il link corretto per l'esportazione -->
-                    <li class="nav-item dropdown">
-                        <a class="nav-link dropdown-toggle text-white" href="#" id="navbarDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
-                            <i class="fas fa-tools me-1"></i> Opzioni Manutenzioni
-                        </a>
-                        <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="navbarDropdown">
-                            <li>
-                                <!-- Endpoint corretto: storico_manutenzioni_csv -->
-                                <a class="dropdown-item" href="{{ url_for('storico_manutenzioni_csv') }}">
-                                    <i class="fas fa-file-csv me-2 text-warning"></i> Esporta Storico Manutenzioni (CSV)
-                                </a>
-                            </li>
-                        </ul>
-                    </li>
+                <ul class="navbar-nav me-auto mb-2 mb-lg-0">
+                    <li class="nav-item"><a class="nav-link active" href="{{ url_for('index') }}"><i class="fa-solid fa-house me-1"></i>Home</a></li>
+                    <li class="nav-item"><a class="nav-link" href="{{ url_for('carico') }}"><i class="fa-solid fa-plus-circle me-1"></i>Carico</a></li>
+                    <li class="nav-item"><a class="nav-link" href="{{ url_for('scarico') }}"><i class="fa-solid fa-minus-circle me-1"></i>Scarico</a></li>
+                    <li class="nav-item"><a class="nav-link" href="{{ url_for('scanner_globale') }}"><i class="fa-solid fa-qrcode me-1"></i>Scanner</a></li>
+                    <li class="nav-item"><a class="nav-link" href="{{ url_for('magazzino_pesante') }}"><i class="fa-solid fa-weight-scale me-1"></i>Pesante</a></li>
+                    <li class="nav-item"><a class="nav-link" href="{{ url_for('manutenzioni') }}"><i class="fa-solid fa-screwdriver-wrench me-1"></i>Manut. Esterna</a></li>
+                    <li class="nav-item"><a class="nav-link" href="{{ url_for('richieste_manutenzione') }}"><i class="fa-solid fa-tools me-1"></i>Officina <span class="badge bg-danger">{{ interventi_aperti_count }}</span></a></li>
+                    <li class="nav-item"><a class="nav-link" href="{{ url_for('promemoria') }}"><i class="fa-solid fa-bell me-1"></i>Promemoria <span class="badge bg-warning text-dark">{{ promemoria_urgenti }}</span></a></li>
+                    <li class="nav-item"><a class="nav-link" href="{{ url_for('fornitori') }}"><i class="fa-solid fa-address-book me-1"></i>Fornitori</a></li>
+                    <li class="nav-item"><a class="nav-link" href="{{ url_for('documenti') }}"><i class="fa-solid fa-folder-open me-1"></i>Documenti</a></li>
+                    <li class="nav-item"><a class="nav-link" href="{{ url_for('report_ore') }}"><i class="fa-solid fa-chart-bar me-1"></i>Report Ore</a></li>
+                    <li class="nav-item"><a class="nav-link" href="{{ url_for('cambi_serie') }}"><i class="fa-solid fa-exchange-alt me-1"></i>Cambi Serie</a></li>
+                    {% if session.get('is_admin') %}
+                    <li class="nav-item"><a class="nav-link text-warning" href="{{ url_for('admin_utenti') }}"><i class="fa-solid fa-user-shield me-1"></i>Admin</a></li>
+                    {% endif %}
                 </ul>
+                <div class="d-flex align-items-center">
+                    <span class="text-white me-3"><i class="fa-solid fa-user me-1"></i>{{ session.get('username') }}</span>
+                    <a href="{{ url_for('logout') }}" class="btn btn-outline-danger btn-sm"><i class="fa-solid fa-right-from-bracket me-1"></i>Logout</a>
+                </div>
             </div>
         </div>
     </nav>
 
-    <!-- Contenuto principale -->
-    <div class="container my-5">
-        <div class="row mb-4">
-            <div class="col-12">
-                <div class="p-4 bg-white rounded-3 shadow-sm border-start border-warning border-4">
-                    <h1 class="h3 mb-2 fw-bold text-dark">
-                        <i class="fas fa-tachometer-alt me-2 text-warning"></i>Dashboard Gestione Magazzino
-                    </h1>
-                    <p class="text-muted mb-0">Sistema di tracciamento QR e registro storico delle manutenzioni.</p>
-                </div>
+    <!-- Main Content -->
+    <div class="container my-4">
+        <!-- Flash Messages -->
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                    <div class="alert alert-{{ 'danger' if category == 'error' else ('success' if category == 'success' else 'warning') }} alert-dismissible fade show" role="alert">
+                        {{ message }}
+                        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                    </div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+
+        <!-- Sotto Soglia Alert -->
+        {% if prodotti_sotto_soglia %}
+        <div class="alert alert-warning shadow-sm mb-4" role="alert">
+            <h4 class="alert-heading fs-6 fw-bold mb-1"><i class="fa-solid fa-triangle-exclamation me-2"></i>Attenzione: Articoli Sotto Soglia Minima!</h4>
+            <p class="mb-0 small">Ci sono {{ prodotti_sotto_soglia|length }} articoli con quantità inferiore o uguale alla soglia minima impostata.</p>
+        </div>
+        {% endif %}
+
+        <!-- Header & Buttons -->
+        <div class="row mb-4 align-items-center">
+            <div class="col-md-6">
+                <h2 class="fw-bold mb-0">Inventario Magazzino Principale</h2>
+            </div>
+            <div class="col-md-6 text-md-end mt-3 mt-md-0">
+                <button class="btn btn-success btn-sm me-2" data-bs-toggle="modal" data-bs-target="#modalAggiungi"><i class="fa-solid fa-plus me-1"></i>Nuovo Articolo</button>
+                <a href="{{ url_for('stampa_tutti_qr') }}" class="btn btn-primary btn-sm me-2" target="_blank"><i class="fa-solid fa-print me-1"></i>Stampa QR</a>
+                <a href="{{ url_for('esporta_inventario') }}" class="btn btn-secondary btn-sm me-2"><i class="fa-solid fa-download me-1"></i>Esporta CSV</a>
+                <a href="{{ url_for('upload') }}" class="btn btn-info btn-sm text-white"><i class="fa-solid fa-file-arrow-up me-1"></i>Importa CSV</a>
             </div>
         </div>
 
-        <!-- Sezione Tabella / Contenuti -->
-        <div class="row">
-            <div class="col-12">
-                <div class="card shadow-sm border-0">
-                    <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center">
-                        <h5 class="mb-0 fw-bold text-secondary">
-                            <i class="fas fa-clipboard-list me-2"></i>Attività recenti di magazzino
-                        </h5>
-                    </div>
-                    <div class="card-body">
-                        <div class="table-responsive">
-                            <table class="table table-hover align-middle">
-                                <thead class="table-dark">
-                                    <tr>
-                                        <th>#</th>
-                                        <th>Codice QR / Articolo</th>
-                                        <th>Descrizione Intervento</th>
-                                        <th>Data</th>
-                                        <th>Stato</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    <tr>
-                                        <td colspan="5" class="text-center text-muted py-4">
-                                            <i class="fas fa-info-circle me-1"></i> Nessuna manutenzione recente registrata o dati caricati dinamicamente.
-                                        </td>
-                                    </tr>
-                                </tbody>
-                            </table>
-                        </div>
-                    </div>
+        <!-- Prodotti Table -->
+        <div class="card shadow-sm border-0">
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle mb-0">
+                        <thead class="table-dark">
+                            <tr>
+                                <th>QR Code</th>
+                                <th>Nome Articolo</th>
+                                <th>SAP</th>
+                                <th>Quantità</th>
+                                <th>Posizione</th>
+                                <th>Peso</th>
+                                <th class="text-end">Azioni</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% if prodotti %}
+                                {% for p in prodotti %}
+                                <tr class="{% if p.get('quantita', 0) <= (p.get('soglia_minima', 3) or 3) %}table-warning{% endif %}">
+                                    <td><code>{{ p.get('qr_code') }}</code></td>
+                                    <td class="fw-bold">{{ p.get('nome') }}</td>
+                                    <td>{{ p.get('sap', '-') }}</td>
+                                    <td>
+                                        <span class="badge bg-{{ 'danger' if p.get('quantita', 0) <= (p.get('soglia_minima', 3) or 3) else 'success' }} fs-6">
+                                            {{ p.get('quantita', 0) }}
+                                        </span>
+                                    </td>
+                                    <td>{{ p.get('posizione', '-') }}</td>
+                                    <td>{{ p.get('peso', '-') }}</td>
+                                    <td class="text-end">
+                                        <a href="{{ url_for('gestisci_prodotto', qr_code=p.get('qr_code')) }}" class="btn btn-outline-primary btn-sm"><i class="fa-solid fa-gear me-1"></i>Gestisci</a>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            {% else %}
+                                <tr>
+                                    <td colspan="7" class="text-center py-4 text-muted">Nessun articolo presente nel magazzino principale.</td>
+                                </tr>
+                            {% endif %}
+                        </tbody>
+                    </table>
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- Footer -->
-    <footer class="text-center py-4 text-muted">
-        <p class="mb-0">&copy; 2026 Magazzino QR - Tutti i diritti riservati.</p>
-    </footer>
+    <!-- Modal Aggiungi Prodotto -->
+    <div class="modal fade" id="modalAggiungi" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <form action="{{ url_for('aggiungi_prodotto') }}" method="POST">
+                    <div class="modal-header">
+                        <h5 class="modal-title fw-bold">Aggiungi Nuovo Articolo</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body">
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">QR Code / Codice a Barre *</label>
+                            <input type="text" class="form-control" name="qr_code" required>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">Nome Articolo *</label>
+                            <input type="text" class="form-control" name="nome" required>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">SAP</label>
+                                <input type="text" class="form-control" name="sap">
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Quantità Iniziale</label>
+                                <input type="number" class="form-control" name="quantita" value="0" min="0">
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Posizione</label>
+                                <input type="text" class="form-control" name="posizione">
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Peso</label>
+                                <input type="text" class="form-control" name="peso">
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Soglia Minima Avviso</label>
+                                <input type="number" class="form-control" name="soglia_minima" value="3" min="0">
+                            </div>
+                            <div class="col-md-6 mb-3 d-flex align-items-center">
+                                <div class="form-check mt-4">
+                                    <input class="form-check-input" type="checkbox" name="magazzino_pesante" value="1" id="checkPesante">
+                                    <label class="form-check-label fw-bold" for="checkPesante">Magazzino Pesante</label>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Annulla</button>
+                        <button type="submit" class="btn btn-success btn-sm">Salva Articolo</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
 
     <!-- Bootstrap 5 JS Bundle -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
