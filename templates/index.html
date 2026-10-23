@@ -68,7 +68,7 @@
             {% endif %}
         {% endwith %}
 
-        <!-- DASHBOARD PULSANTI RAPIDI (Grafica Migliorata) -->
+        <!-- DASHBOARD PULSANTI RAPIDI -->
         <div class="row g-3 mb-4">
             <div class="col-6 col-lg-3">
                 <a href="{{ url_for('carico') }}" class="card quick-card bg-success text-white text-center p-3 text-decoration-none shadow-sm">
@@ -126,7 +126,8 @@
                 <div class="d-flex flex-wrap gap-2 justify-content-start justify-content-md-end">
                     <button class="btn btn-success btn-sm shadow-sm px-3" data-bs-toggle="modal" data-bs-target="#modalAggiungi"><i class="fa-solid fa-plus me-1"></i>Nuovo</button>
                     <a href="{{ url_for('stampa_tutti_qr') }}" class="btn btn-primary btn-sm shadow-sm px-3" target="_blank"><i class="fa-solid fa-print me-1"></i>Stampa QR</a>
-                    <a href="{{ url_for('pagina_esporta') }}" class="btn btn-dark btn-sm shadow-sm px-3"><i class="fa-solid fa-file-export me-1"></i>Esporta/CSV</a>
+                    <!-- Pulsante Esporta che chiama la rotta /esporta (esportazioni.html) -->
+                    <a href="{{ url_for('esporta') }}" class="btn btn-dark btn-sm shadow-sm px-3"><i class="fa-solid fa-file-export me-1"></i>Esporta/CSV</a>
                     <a href="{{ url_for('upload') }}" class="btn btn-info btn-sm text-white shadow-sm px-3"><i class="fa-solid fa-file-arrow-up me-1"></i>Importa</a>
                 </div>
             </div>
