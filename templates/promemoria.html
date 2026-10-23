@@ -1,168 +1,145 @@
-<!DOCTYPE html>
-<html lang="it">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Magazzino OMG - Promemoria</title>
-    
-    <link rel="manifest" href="{{ url_for('static', filename='manifest.json') }}">
-    <link rel="icon" type="image/png" href="{{ url_for('static', filename='icon.png') }}">
-    <link rel="apple-touch-icon" href="{{ url_for('static', filename='icon.png') }}">
-    <meta name="theme-color" content="#4f46e5">
+{% extends "base.html" %}
 
-    <style>
-        body { font-family: sans-serif; max-width: 950px; margin: 0 auto; padding: 15px; background: #f8fafc; color: #1e293b; box-sizing: border-box; }
-        .card { background: white; padding: 20px; border-radius: 12px; border: 1px solid #e2e8f0; margin-bottom: 20px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
-        .btn { background: #0284c7; color: #ffffff !important; padding: 8px 14px; border: none; border-radius: 6px; font-weight: bold; cursor: pointer; text-decoration: none; display: inline-block; font-size: 0.85rem; margin: 2px; }
-        .btn:hover { opacity: 0.9; }
-        table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 0.9rem; }
-        th, td { padding: 10px 12px; text-align: left; border-bottom: 1px solid #e2e8f0; vertical-align: middle; }
-        th { background: #f1f5f9; color: #475569; font-weight: 600; }
-        input, select, textarea { width: 100%; padding: 10px; margin-top: 5px; margin-bottom: 12px; border: 1px solid #cbd5e1; border-radius: 6px; box-sizing: border-box; font-size: 0.9rem; }
-        label { font-weight: bold; font-size: 0.85rem; color: #475569; display: block; }
-        footer { text-align: center; margin-top: 30px; padding: 15px 0; color: #64748b; font-size: 0.8rem; border-top: 1px solid #e2e8f0; }
-        .badge-ricorrenza { background: #e0f2fe; color: #0369a1; padding: 3px 8px; border-radius: 12px; font-size: 0.75rem; font-weight: bold; display: inline-block; }
-        .badge-utente { background: #f1f5f9; color: #334155; padding: 3px 8px; border-radius: 6px; font-size: 0.8rem; font-weight: bold; }
-    </style>
-</head>
-<body>
-
-    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
-        <h1 style="font-size: 1.5rem; margin: 0;">⏰ Promemoria e Attività</h1>
-        <a href="{{ url_for('index') }}" class="btn" style="background: #475569;">← Home</a>
+{% block content %}
+<div class="container-fluid mt-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2>📌 Gestione Promemoria & Attività</h2>
     </div>
 
-    {% with messages = get_flashed_messages(with_categories=true) %}
-      {% if messages %}
-        {% for category, message in messages %}
-          <div style="background: {% if category == 'error' %}#fee2e2; color: #991b1b; border: 1px solid #fca5a5;{% else %}#dcfce7; color: #166534; border: 1px solid #bbf7d0;{% endif %} padding: 12px; border-radius: 8px; margin-bottom: 15px; font-size: 0.9rem;">
-            {{ message }}
-          </div>
-        {% endfor %}
-      {% endif %}
-    {% endwith %}
-
-    <!-- FORM CREAZIONE PROMEMORIA -->
-    <div class="card">
-        <h3 style="margin-top: 0; font-size: 1.1rem; color: #334155;">➕ Nuova Attività / Promemoria</h3>
-        <form action="{{ url_for('promemoria') }}" method="POST">
-            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 10px;">
-                <div>
-                    <label>Titolo / Attività:</label>
-                    <input type="text" name="titolo" placeholder="Es. Controllo livello olio, Pulizia filtri..." required>
-                </div>
-                <div>
-                    <label>Data / Scadenza Iniziale:</label>
-                    <input type="date" name="data_scadenza">
-                </div>
-                <div>
-                    <label>Priorità:</label>
-                    <select name="priorita">
-                        <option value="Bassa">🟢 Bassa</option>
-                        <option value="Media" selected>🟡 Media</option>
-                        <option value="Alta">🔴 Alta / Urgente</option>
-                    </select>
-                </div>
-                <div>
-                    <label>Ricorrenza Attività:</label>
-                    <select name="ricorrenza">
-                        <option value="Nessuna" selected>📌 Nessuna (Singolo)</option>
-                        <option value="Giorno">🔄 Ogni Giorno</option>
-                        <option value="Settimana">📅 Ogni Settimana</option>
-                        <option value="Mese">🗓️ Ogni Mese</option>
-                        <option value="Anno">📆 Ogni Anno</option>
-                    </select>
+    <!-- Modulo Aggiunta Promemoria -->
+    <div class="card shadow-sm mb-4">
+        <div class="card-header bg-primary text-white font-weight-bold">
+            <i class="fas fa-plus-circle mr-2"></i>Aggiungi Nuovo Promemoria
+        </div>
+        <div class="card-body">
+            <form action="{{ url_for('promemoria') }}" method="POST">
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label font-weight-bold">Titolo *</label>
+                        <input type="text" name="titolo" class="form-control" placeholder="Es. Controllo livello olio o scadenze" required>
+                    </div>
+                    <div class="col-md-3 mb-3">
+                        <label class="form-label font-weight-bold">Data Scadenza</label>
+                        <input type="date" name="data_scadenza" class="form-control">
+                    </div>
+                    <div class="col-md-3 mb-3">
+                        <label class="form-label font-weight-bold">Priorità</label>
+                        <select name="priorita" class="form-control">
+                            <option value="Bassa">Bassa</option>
+                            <option value="Media" selected>Media</option>
+                            <option value="Alta">Alta</option>
+                            <option value="Urgente">Urgente</option>
+                        </select>
+                    </div>
                 </div>
 
-                {% if puo_assegnare %}
-                <div>
-                    <label>👤 Assegna a Utente:</label>
-                    <select name="assegnato_a">
-                        {% for u in lista_utenti %}
-                            <option value="{{ u.username }}" {% if u.username == session.get('username') %}selected{% endif %}>{{ u.username }}</option>
-                        {% endfor %}
-                    </select>
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label font-weight-bold">Descrizione / Note</label>
+                        <textarea name="descrizione" class="form-control" rows="3" placeholder="Dettagli attività..."></textarea>
+                    </div>
+                    <div class="col-md-3 mb-3">
+                        <label class="form-label font-weight-bold">Ricorrenza</label>
+                        <select name="ricorrenza" class="form-control">
+                            <option value="Nessuna" selected>Nessuna</option>
+                            <option value="Giorno">Ogni Giorno</option>
+                            <option value="Settimana">Ogni Settimana</option>
+                            <option value="Mese">Ogni Mese</option>
+                            <option value="Anno">Ogni Anno</option>
+                        </select>
+                    </div>
+                    {% if puo_assegnare %}
+                    <div class="col-md-3 mb-3">
+                        <label class="form-label font-weight-bold">Assegna a (Seleziona più utenti):</label>
+                        <select name="assegnato_a[]" class="form-control" multiple style="height: 100px;">
+                            {% for u in lista_utenti %}
+                                <option value="{{ u.username }}">{{ u.username }}</option>
+                            {% endfor %}
+                        </select>
+                        <small class="form-text text-muted">Tieni premuto <code>Ctrl</code> (o <code>Cmd</code> su Mac) per selezionare più persone.</small>
+                    </div>
+                    {% endif %}
                 </div>
-                {% endif %}
-            </div>
-            <div>
-                <label>Note / Descrizione dettagliata:</label>
-                <textarea name="descrizione" rows="2" placeholder="Note aggiuntive o istruzioni per l'attività..."></textarea>
-            </div>
-            <button type="submit" class="btn" style="background: #d97706; padding: 10px 20px;">Salva Promemoria</button>
-        </form>
+
+                <button type="submit" class="btn btn-success font-weight-bold">
+                    <i class="fas fa-save mr-1"></i> Salva Promemoria
+                </button>
+            </form>
+        </div>
     </div>
 
-    <!-- ELENCO PROMEMORIA -->
-    <div class="card">
-        <h3 style="margin-top: 0; font-size: 1.1rem; color: #334155;">📋 Elenco Attività e Promemoria</h3>
-        {% if promemoria %}
-            <div style="overflow-x: auto;">
-                <table>
-                    <thead>
+    <!-- Tabella Elenco Promemoria -->
+    <div class="card shadow-sm">
+        <div class="card-header bg-dark text-white font-weight-bold">
+            <i class="fas fa-list mr-2"></i>Elenco Promemoria Attivi e Completati
+        </div>
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover table-striped mb-0">
+                    <thead class="thead-light">
                         <tr>
                             <th>Stato</th>
-                            <th>Titolo & Note</th>
-                            <th>Assegnato A</th>
+                            <th>Titolo</th>
+                            <th>Descrizione</th>
                             <th>Scadenza</th>
                             <th>Priorità</th>
                             <th>Ricorrenza</th>
-                            <th>Azioni</th>
+                            <th>Assegnato a</th>
+                            <th class="text-center">Azioni</th>
                         </tr>
                     </thead>
                     <tbody>
                         {% for p in promemoria %}
-                        <tr style="{% if p.completato %}opacity: 0.55; background: #f8fafc;{% endif %}">
-                            <td>
-                                <form action="{{ url_for('completa_promemoria', promemoria_id=p.id) }}" method="POST">
-                                    <button type="submit" class="btn" style="background: {% if p.completato %}#10b981{% else %}#cbd5e1; color: #334155 !important;{% endif %}; font-size: 0.75rem; padding: 4px 8px;">
-                                        {% if p.completato %}✓ Fatto{% else %}◯ Da fare{% endif %}
+                        <tr class="{% if p.completato %}table-secondary text-muted{% endif %}">
+                            <td class="align-middle">
+                                {% if p.completato %}
+                                    <span class="badge badge-success">Completato</span>
+                                {% else %}
+                                    <span class="badge badge-warning">In Corso</span>
+                                {% endif %}
+                            </td>
+                            <td class="align-middle font-weight-bold">
+                                {% if p.completato %}<del>{{ p.titolo }}</del>{% else %}{{ p.titolo }}{% endif %}
+                            </td>
+                            <td class="align-middle">{{ p.descrizione or '-' }}</td>
+                            <td class="align-middle">{{ p.data_scadenza or '-' }}</td>
+                            <td class="align-middle">
+                                {% if p.priorita == 'Urgente' %}
+                                    <span class="badge badge-danger">Urgente</span>
+                                {% elif p.priorita == 'Alta' %}
+                                    <span class="badge badge-warning">Alta</span>
+                                {% elif p.priorita == 'Media' %}
+                                    <span class="badge badge-info">Media</span>
+                                {% else %}
+                                    <span class="badge badge-light">Bassa</span>
+                                {% endif %}
+                            </td>
+                            <td class="align-middle">{{ p.ricorrenza }}</td>
+                            <td class="align-middle">
+                                <span class="badge badge-dark">{{ p.assegnato_a or 'Tutti' }}</span>
+                            </td>
+                            <td class="align-middle text-center">
+                                <form action="{{ url_for('completa_promemoria', promemoria_id=p.id) }}" method="POST" class="d-inline">
+                                    <button type="submit" class="btn btn-sm {% if p.completato %}btn-outline-secondary{% else %}btn-success{% endif %}" title="Cambia Stato">
+                                        <i class="fas {% if p.completato %}fa-undo{% else %}fa-check{% endif %}"></i>
+                                    </button>
+                                </form>
+                                <form action="{{ url_for('elimina_promemoria', promemoria_id=p.id) }}" method="POST" class="d-inline" onsubmit="return confirm('Sei sicuro di voler eliminare questo promemoria?');">
+                                    <button type="submit" class="btn btn-sm btn-danger" title="Elimina">
+                                        <i class="fas fa-trash"></i>
                                     </button>
                                 </form>
                             </td>
-                            <td>
-                                <strong style="{% if p.completato %}text-decoration: line-through;{% endif %}">{{ p.titolo }}</strong>
-                                {% if p.descrizione %}
-                                    <br><small style="color: #64748b;">{{ p.descrizione }}</small>
-                                {% endif %}
-                            </td>
-                            <td>
-                                <span class="badge-utente">👤 {{ p.assegnato_a or 'Tutti' }}</span>
-                            </td>
-                            <td>{{ p.data_scadenza or 'Nessuna' }}</td>
-                            <td>
-                                {% if p.priorita == 'Alta' %}
-                                    <span style="color: #ef4444; font-weight: bold;">🔴 Alta</span>
-                                {% elif p.priorita == 'Bassa' %}
-                                    <span style="color: #10b981; font-weight: bold;">🟢 Bassa</span>
-                                {% else %}
-                                    <span style="color: #f59e0b; font-weight: bold;">🟡 Media</span>
-                                {% endif %}
-                            </td>
-                            <td>
-                                {% if p.ricorrenza and p.ricorrenza != 'Nessuna' %}
-                                    <span class="badge-ricorrenza">🔄 Ogni {{ p.ricorrenza }}</span>
-                                {% else %}
-                                    <span style="color: #94a3b8; font-size: 0.8rem;">Singolo</span>
-                                {% endif %}
-                            </td>
-                            <td>
-                                <form action="{{ url_for('elimina_promemoria', promemoria_id=p.id) }}" method="POST" onsubmit="return confirm('Eliminare questo promemoria?');" style="display: inline;">
-                                    <button type="submit" class="btn" style="background: #ef4444; padding: 4px 8px; font-size: 0.75rem;">Elimina</button>
-                                </form>
-                            </td>
+                        </tr>
+                        {% else %}
+                        <tr>
+                            <td colspan="8" class="text-center text-muted py-4">Nessun promemoria presente.</td>
                         </tr>
                         {% endfor %}
                     </tbody>
                 </table>
             </div>
-        {% else %}
-            <p style="color: #64748b; text-align: center; padding: 20px 0;">Nessun promemoria presente per il tuo utente.</p>
-        {% endif %}
+        </div>
     </div>
-
-    <footer>
-        <p style="margin: 0;">© 2026 <strong>Marco Pavan</strong> — Tutti i diritti riservati.</p>
-    </footer>
-</body>
-</html>
+</div>
+{% endblock %}
