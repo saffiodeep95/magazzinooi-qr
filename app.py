@@ -297,7 +297,7 @@ def api_notifiche():
     cur.execute("""
         SELECT id, titolo, messaggio, link, letta, creato_il 
         FROM notifiche 
-        WHERE destinatario = %s 
+        WHERE LOWER(destinatario) = LOWER(%s) 
         ORDER BY creato_il DESC LIMIT 15;
     """, (username,))
     notifiche = cur.fetchall()
@@ -311,7 +311,7 @@ def api_segna_lette():
     if username:
         conn = get_db_connection()
         cur = conn.cursor()
-        cur.execute("UPDATE notifiche SET letta = TRUE WHERE destinatario = %s;", (username,))
+        cur.execute("UPDATE notifiche SET letta = TRUE WHERE LOWER(destinatario) = LOWER(%s);", (username,))
         conn.commit()
         cur.close()
         conn.close()
@@ -322,11 +322,16 @@ def api_segna_lette():
 @app.route("/index.html")
 def index():
     prodotti = []
+    prodotti_pesanti = []
     prodotti_sotto_soglia = []
     promemoria_urgenti = 0
     interventi_aperti_count = 0
     interventi_in_lavoro_count = 0
     interventi_attesa_count = 0
+    notifiche_attive = []
+    
+    totale_pezzi_standard = 0
+    totale_pezzi_pesante = 0
     
     username = session.get('username')
     is_admin = session.get('is_admin')
@@ -338,6 +343,14 @@ def index():
         
         cur.execute("SELECT * FROM prodotti ORDER BY nome ASC;")
         tutti = cur.fetchall()
+        
+        if username:
+            cur.execute("""
+                SELECT * FROM notifiche 
+                WHERE LOWER(destinatario) = LOWER(%s) AND letta = FALSE 
+                ORDER BY creato_il DESC;
+            """, (username,))
+            notifiche_attive = cur.fetchall()
         
         if is_admin or puo_assegnare:
             cur.execute("SELECT COUNT(*) as count FROM promemoria WHERE completato = FALSE;")
@@ -360,21 +373,32 @@ def index():
         for p in tutti:
             val_pesante = p.get('magazzino_pesante')
             is_pesante = (val_pesante == 1 or val_pesante == '1' or val_pesante is True or val_pesante == 1.0)
-            if not is_pesante:
+            qta = p.get('quantita', 0) or 0
+            
+            if is_pesante:
+                prodotti_pesanti.append(p)
+                totale_pezzi_pesante += qta
+            else:
                 prodotti.append(p)
+                totale_pezzi_standard += qta
+                
             soglia = p.get('soglia_minima', 3) or 3
-            if p.get('quantita', 0) <= soglia:
+            if qta <= soglia:
                 prodotti_sotto_soglia.append(p)
     except Exception as e:
         print(f"Errore index: {e}")
         
     return render_template("index.html", 
                            prodotti=prodotti, 
+                           prodotti_pesanti=prodotti_pesanti,
                            prodotti_sotto_soglia=prodotti_sotto_soglia,
                            promemoria_urgenti=promemoria_urgenti,
                            interventi_aperti_count=interventi_aperti_count,
                            interventi_in_lavoro_count=interventi_in_lavoro_count,
-                           interventi_attesa_count=interventi_attesa_count)
+                           interventi_attesa_count=interventi_attesa_count,
+                           totale_pezzi_standard=totale_pezzi_standard,
+                           totale_pezzi_pesante=totale_pezzi_pesante,
+                           notifiche_attive=notifiche_attive)
 
 @app.route("/login", methods=["GET", "POST"])
 @app.route("/login.html", methods=["GET", "POST"])
@@ -1967,7 +1991,7 @@ def aggiungi_prodotto():
         flash("Permesso negato per inserire nuovi prodotti.", "error")
         return redirect(url_for("index"))
 
-    qr_code = request.form.get("qr_code")
+    qr_code = request.form.get("qr_code", "").strip()
     nome = request.form.get("nome")
     sap = request.form.get("sap", "")
     peso = request.form.get("peso", "")
@@ -1976,13 +2000,28 @@ def aggiungi_prodotto():
     posizione = request.form.get("posizione", "")
     flag_sezione = 1 if request.form.get("magazzino_pesante") else 0
 
-    if not qr_code or not nome:
-        flash("QR Code e Nome sono obbligatori!", "error")
+    if not nome:
+        flash("Il Nome è obbligatorio!", "error")
         return redirect(url_for("index"))
 
     try:
         conn = get_db_connection()
         cur = conn.cursor()
+        
+        # Gestione progressivo QR automatico se non inserito
+        if not qr_code:
+            cur.execute("SELECT COUNT(*) as cnt FROM prodotti;")
+            cnt = cur.fetchone()['cnt'] + 1
+            qr_code = f"OMG-{cnt:03d}"
+            # Evita duplicati controllando se esiste già
+            while True:
+                cur.execute("SELECT id FROM prodotti WHERE qr_code = %s;", (qr_code,))
+                if cur.fetchone():
+                    cnt += 1
+                    qr_code = f"OMG-{cnt:03d}"
+                else:
+                    break
+
         cur.execute("""
             INSERT INTO prodotti (qr_code, nome, sap, peso, quantita, posizione, magazzino_pesante, soglia_minima)
             VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
@@ -2000,7 +2039,7 @@ def aggiungi_prodotto():
         cur.close()
         conn.close()
         registra_log(f"Aggiunto prodotto: {nome} (QR: {qr_code})")
-        flash("Prodotto salvato con successo!", "success")
+        flash(f"Articolo salvato con successo! (QR: {qr_code})", "success")
     except Exception as e:
         flash(f"Errore: {e}", "error")
 
