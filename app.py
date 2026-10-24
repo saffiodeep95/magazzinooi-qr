@@ -236,6 +236,18 @@ def init_db():
                 creato_il TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             );
         """)
+
+        cur.execute("""
+            CREATE TABLE IF NOT EXISTS cambi_serie (
+                id SERIAL PRIMARY KEY,
+                data_ora TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                impianto VARCHAR(255),
+                articolo_vecchio VARCHAR(255),
+                articolo_nuovo VARCHAR(255),
+                operatore VARCHAR(255),
+                note TEXT
+            );
+        """)
         
         permessi_lista = [
             ("puo_vedere_magazzino", "INT DEFAULT 1"),
@@ -559,19 +571,87 @@ def elimina_utente(user_id):
 @app.route("/cambi_serie")
 @app.route("/cambi_serie.html")
 def cambi_serie():
-    return render_template("cambi_serie.html", cambi=[])
+    cambi = []
+    try:
+        conn = get_db_connection()
+        cur = conn.cursor()
+        cur.execute("SELECT * FROM cambi_serie ORDER BY data_ora DESC;")
+        cambi = cur.fetchall()
+        cur.close()
+        conn.close()
+    except Exception as e:
+        print(f"Errore caricamento cambi serie: {e}")
+    return render_template("cambi_serie.html", cambi=cambi)
 
 @app.route("/aggiungi_cambio_serie", methods=["POST"])
 def aggiungi_cambio_serie():
-    registra_log("Aggiunto cambio serie")
-    flash("Cambio serie registrato con successo!", "success")
+    impianto = request.form.get("impianto", "").strip()
+    articolo_vecchio = request.form.get("articolo_vecchio", "").strip()
+    articolo_nuovo = request.form.get("articolo_nuovo", "").strip()
+    operatore = request.form.get("operatore", "").strip() or session.get('username', 'Utente')
+    note = request.form.get("note", "").strip()
+    
+    if not impianto:
+        flash("Il campo Impianto / Macchina è obbligatorio!", "error")
+        return redirect(url_for("cambi_serie"))
+
+    try:
+        conn = get_db_connection()
+        cur = conn.cursor()
+        cur.execute("""
+            INSERT INTO cambi_serie (impianto, articolo_vecchio, articolo_nuovo, operatore, note)
+            VALUES (%s, %s, %s, %s, %s);
+        """, (impianto, articolo_vecchio, articolo_nuovo, operatore, note))
+        conn.commit()
+        cur.close()
+        conn.close()
+        registra_log(f"Registrato cambio serie su impianto: {impianto}")
+        flash("Cambio serie registrato e salvato con successo!", "success")
+    except Exception as e:
+        flash(f"Errore durante il salvataggio del cambio serie: {e}", "error")
+        
+    return redirect(url_for("cambi_serie"))
+
+@app.route("/elimina_cambio_serie/<int:cambio_id>", methods=["POST"])
+def elimina_cambio_serie(cambio_id):
+    try:
+        conn = get_db_connection()
+        cur = conn.cursor()
+        cur.execute("DELETE FROM cambi_serie WHERE id = %s;", (cambio_id,))
+        conn.commit()
+        cur.close()
+        conn.close()
+        registra_log(f"Eliminato record cambio serie ID {cambio_id}")
+        flash("Cambio serie eliminato con successo.", "success")
+    except Exception as e:
+        flash(f"Errore eliminazione: {e}", "error")
     return redirect(url_for("cambi_serie"))
 
 @app.route("/esporta_cambi_serie_csv", endpoint="esporta_cambi_serie_csv")
 def esporta_cambi_serie_csv():
+    try:
+        conn = get_db_connection()
+        cur = conn.cursor()
+        cur.execute("SELECT * FROM cambi_serie ORDER BY data_ora DESC;")
+        cambi = cur.fetchall()
+        cur.close()
+        conn.close()
+    except Exception:
+        cambi = []
+
     output = io.StringIO()
     writer = csv.writer(output)
-    writer.writerow(['ID', 'Descrizione', 'Data'])
+    writer.writerow(['ID', 'Data / Ora', 'Impianto / Macchina', 'Articolo Precedente', 'Articolo Successivo', 'Operatore', 'Note'])
+    for c in cambi:
+        writer.writerow([
+            c.get('id', ''),
+            c.get('data_ora', ''),
+            c.get('impianto', ''),
+            c.get('articolo_vecchio', ''),
+            c.get('articolo_nuovo', ''),
+            c.get('operatore', ''),
+            c.get('note', '')
+        ])
     return Response(
         output.getvalue(),
         mimetype="text/csv",
@@ -2008,12 +2088,11 @@ def aggiungi_prodotto():
         conn = get_db_connection()
         cur = conn.cursor()
         
-        # Gestione progressivo QR automatico se non inserito
+        # Generazione automatica progressivo QR se vuoto
         if not qr_code:
             cur.execute("SELECT COUNT(*) as cnt FROM prodotti;")
             cnt = cur.fetchone()['cnt'] + 1
             qr_code = f"OMG-{cnt:03d}"
-            # Evita duplicati controllando se esiste già
             while True:
                 cur.execute("SELECT id FROM prodotti WHERE qr_code = %s;", (qr_code,))
                 if cur.fetchone():
