@@ -109,23 +109,35 @@
     <div id="content">
         <div class="container-fluid">
             
-            <!-- Flash Messages -->
-            with messages = get_flashed_messages(with_categories=true)
-            if messages
-                for category, message in messages
-                    <div class="alert alert-{{ 'danger' if category == 'error' else 'success' }} alert-dismissible fade show" role="alert">
-                        {{ message }}
-                        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-                    </div>
-                endfor
-            endif
+            <!-- Flash Messages (Corretti con la sintassi Jinja corretta) -->
+            {% with messages = get_flashed_messages(with_categories=true) %}
+                {% if messages %}
+                    {% for category, message in messages %}
+                        <div class="alert alert-{{ 'danger' if category == 'error' else 'success' }} alert-dismissible fade show shadow-sm" role="alert">
+                            {{ message }}
+                            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                        </div>
+                    {% endfor %}
+                {% endif %}
+            {% endwith %}
 
-            <!-- Top Header -->
-            <div class="d-flex justify-content-between align-items-center mb-4">
+            <!-- Top Header con i Tasti Rapidi Richiesti -->
+            <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-3">
                 <h2>Magazzino Standard</h2>
-                <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#modalAggiungi">
-                    <i class="fa-solid fa-plus me-2"></i> Nuovo Articolo (QR Automatico)
-                </button>
+                <div class="d-flex gap-2 flex-wrap">
+                    <a href="{{ url_for('scanner_globale') }}" class="btn btn-dark">
+                        <i class="fa-solid fa-qrcode me-1"></i> Scanner
+                    </a>
+                    <a href="{{ url_for('carico') }}" class="btn btn-success">
+                        <i class="fa-solid fa-arrow-down-long me-1"></i> Carico
+                    </a>
+                    <a href="{{ url_for('scarico') }}" class="btn btn-warning text-dark">
+                        <i class="fa-solid fa-arrow-up-long me-1"></i> Scarico
+                    </a>
+                    <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#modalAggiungi">
+                        <i class="fa-solid fa-plus me-1"></i> Nuovo Articolo
+                    </button>
+                </div>
             </div>
 
             <!-- Prodotti Sotto Soglia (Avvisi) -->
@@ -187,7 +199,7 @@
         </div>
     </div>
 
-    <!-- MODALE AGGIUNGI PRODOTTO (Senza campo QR manuale) -->
+    <!-- MODALE AGGIUNGI PRODOTTO (QR Automatico) -->
     <div class="modal fade" id="modalAggiungi" tabindex="-1" aria-labelledby="modalAggiungiLabel" aria-hidden="true">
         <div class="modal-dialog">
             <div class="modal-content">
