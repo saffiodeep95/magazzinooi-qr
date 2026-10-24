@@ -1,5 +1,5 @@
 # ========================================================================
-# Gestionale OMG Application - Complete System with Auto-QR & Notifications
+# Gestionale OMG Application - Full System with Auto-QR & Notifications
 # Copyright (c) 2026 Marco Pavan. All Rights Reserved.
 # Designed & Developed by Marco Pavan
 # ========================================================================
@@ -347,11 +347,9 @@ def index():
         cur.execute("SELECT * FROM prodotti ORDER BY nome ASC;")
         tutti = cur.fetchall()
         
-        # Totale pezzi e articoli uniti (Standard + Pesante)
         totale_articoli_tutti = len(tutti)
         totale_pezzi_tutti = sum(p.get('quantita', 0) for p in tutti)
         
-        # Recupero notifiche non lette per l'utente loggato
         if username:
             cur.execute("""
                 SELECT id, titolo, messaggio, link, to_char(creato_il, 'YYYY-MM-DD HH24:MI') as data 
@@ -457,36 +455,304 @@ def registra():
                 flash("Username già esistente o errore di registrazione.", "error")
     return render_template("registra.html")
 
+# --- PANNELLO ADMIN & UTENTI ---
 @app.route("/admin_utenti")
+@app.route("/admin_utenti.html")
 def admin_utenti():
     if not session.get('is_admin'):
-        flash("Accesso riservato.", "error")
+        flash("Accesso riservato all'Amministratore.", "error")
+        return redirect(url_for('index'))
+    utenti = []
+    logs = []
+    try:
+        conn = get_db_connection()
+        cur = conn.cursor()
+        cur.execute("SELECT * FROM utenti ORDER BY username ASC;")
+        utenti = cur.fetchall()
+        cur.execute("SELECT * FROM log_attivita ORDER BY data_ora DESC LIMIT 100;")
+        logs = cur.fetchall()
+        cur.close()
+        conn.close()
+    except Exception as e:
+        print(f"Errore admin: {e}")
+    return render_template("admin_utenti.html", utenti=utenti, logs=logs)
+
+@app.route("/toggle_permesso/<int:user_id>/<campo>", methods=["POST"])
+def toggle_permesso(user_id, campo):
+    if not session.get('is_admin'):
+        return redirect(url_for('index'))
+    try:
+        conn = get_db_connection()
+        cur = conn.cursor()
+        if campo.startswith("puo_"):
+            cur.execute(f"UPDATE utenti SET {campo} = 1 - COALESCE({campo}, 0) WHERE id = %s;", (user_id,))
+            conn.commit()
+            registra_log(f"Modificato permesso {campo} per utente ID {user_id}")
+        cur.close()
+        conn.close()
+    except Exception as e:
+        flash(f"Errore aggiornamento permesso: {e}", "error")
+    return redirect(url_for('admin_utenti'))
+
+@app.route("/reset_password/<int:user_id>", methods=["POST"])
+def reset_password(user_id):
+    if not session.get('is_admin'):
+        return redirect(url_for('index'))
+    nuova_password = request.form.get("nuova_password")
+    if nuova_password:
+        try:
+            conn = get_db_connection()
+            cur = conn.cursor()
+            hashed_pw = generate_password_hash(nuova_password)
+            cur.execute("UPDATE utenti SET password = %s WHERE id = %s;", (hashed_pw, user_id))
+            conn.commit()
+            cur.close()
+            conn.close()
+            registra_log(f"Reset password per utente ID {user_id}")
+            flash("Password aggiornata con successo!", "success")
+        except Exception as e:
+            flash(f"Errore reset password: {e}", "error")
+    return redirect(url_for('admin_utenti'))
+
+@app.route("/elimina_utente/<int:user_id>", methods=["POST"])
+def elimina_utente(user_id):
+    if not session.get('is_admin'):
+        return redirect(url_for('index'))
+    try:
+        conn = get_db_connection()
+        cur = conn.cursor()
+        cur.execute("DELETE FROM utenti WHERE id = %s AND username != 'admin';", (user_id,))
+        conn.commit()
+        cur.close()
+        conn.close()
+        registra_log(f"Eliminato utente ID {user_id}")
+        flash("Utente eliminato con successo.", "success")
+    except Exception as e:
+        flash(f"Errore eliminazione utente: {e}", "error")
+    return redirect(url_for('admin_utenti'))
+
+# --- CAMBI SERIE & REPORT ORE ---
+@app.route("/cambi_serie")
+@app.route("/cambi_serie.html")
+def cambi_serie():
+    return render_template("cambi_serie.html", cambi=[])
+
+@app.route("/report_ore")
+@app.route("/report_ore.html")
+def report_ore():
+    if not (session.get('is_admin') or session.get('puo_vedere_report_ore', 1)):
+        flash("Accesso non autorizzato.", "error")
+        return redirect(url_for('index'))
+    return render_template("report_ore.html", chart_tecnici_labels=[], chart_tecnici_values=[], chart_tipi_labels=[], chart_tipi_values=[], interventi=[], utenti=[])
+
+# --- GESTIONE FORNITORI & CONTATTI ---
+@app.route("/fornitori", methods=["GET", "POST"])
+@app.route("/fornitori.html", methods=["GET", "POST"])
+def fornitori():
+    if not (session.get('is_admin') or session.get('puo_gestire_fornitori', 1)):
+        flash("Accesso non autorizzato.", "error")
         return redirect(url_for('index'))
     conn = get_db_connection()
     cur = conn.cursor()
-    cur.execute("SELECT * FROM utenti ORDER BY username ASC;")
-    utenti = cur.fetchall()
-    cur.execute("SELECT * FROM log_attivita ORDER BY data_ora DESC LIMIT 100;")
-    logs = cur.fetchall()
+    if request.method == "POST":
+        nome_azienda = request.form.get("nome_azienda")
+        settore_note = request.form.get("settore_note", "")
+        indirizzo = request.form.get("indirizzo", "")
+        p_iva = request.form.get("p_iva", "")
+        telefono = request.form.get("telefono", "")
+        email = request.form.get("email", "")
+        if nome_azienda:
+            cur.execute("""
+                INSERT INTO fornitori (nome_azienda, settore_note, indirizzo, p_iva, telefono, email) 
+                VALUES (%s, %s, %s, %s, %s, %s)
+                ON CONFLICT (nome_azienda) DO UPDATE SET
+                    settore_note = EXCLUDED.settore_note,
+                    indirizzo = EXCLUDED.indirizzo,
+                    p_iva = EXCLUDED.p_iva,
+                    telefono = EXCLUDED.telefono,
+                    email = EXCLUDED.email;
+            """, (nome_azienda, settore_note, indirizzo, p_iva, telefono, email))
+            conn.commit()
+            registra_log(f"Aggiunto/Aggiornato fornitore: {nome_azienda}")
+            flash("Fornitore salvato con successo!", "success")
+        return redirect(url_for("fornitori"))
+    cur.execute("SELECT * FROM fornitori ORDER BY nome_azienda ASC;")
+    lista_fornitori = cur.fetchall()
     cur.close()
     conn.close()
-    return render_template("admin_utenti.html", utenti=utenti, logs=logs)
+    return render_template("fornitori.html", fornitori=lista_fornitori)
 
-@app.route("/esporta_inventario")
-def esporta_inventario():
+@app.route("/modifica_fornitore/<int:fornitore_id>", methods=["POST"])
+def modifica_fornitore(fornitore_id):
+    nome_azienda = request.form.get("nome_azienda")
+    settore_note = request.form.get("settore_note", "")
+    indirizzo = request.form.get("indirizzo", "")
+    p_iva = request.form.get("p_iva", "")
+    telefono = request.form.get("telefono", "")
+    email = request.form.get("email", "")
+    try:
+        conn = get_db_connection()
+        cur = conn.cursor()
+        cur.execute("""
+            UPDATE fornitori 
+            SET nome_azienda = %s, settore_note = %s, indirizzo = %s, p_iva = %s, telefono = %s, email = %s
+            WHERE id = %s;
+        """, (nome_azienda, settore_note, indirizzo, p_iva, telefono, email, fornitore_id))
+        conn.commit()
+        cur.close()
+        conn.close()
+        flash("Fornitore aggiornato!", "success")
+    except Exception as e:
+        flash(f"Errore: {e}", "error")
+    return redirect(url_for("fornitori"))
+
+@app.route("/fornitore/<int:fornitore_id>", methods=["GET", "POST"])
+@app.route("/dettaglio_fornitore.html/<int:fornitore_id>", methods=["GET", "POST"])
+def dettaglio_fornitore(fornitore_id):
     conn = get_db_connection()
     cur = conn.cursor()
-    cur.execute("SELECT qr_code, nome, sap, quantita, posizione, peso, magazzino_pesante FROM prodotti ORDER BY nome ASC;")
-    prodotti = cur.fetchall()
+    if request.method == "POST":
+        nome = request.form.get("nome")
+        telefono = request.form.get("telefono")
+        mansione = request.form.get("mansione", "")
+        email = request.form.get("email", "")
+        if nome and telefono:
+            cur.execute("""
+                INSERT INTO contatti_tecnici (fornitore_id, nome, telefono, mansione, email)
+                VALUES (%s, %s, %s, %s, %s);
+            """, (fornitore_id, nome, telefono, mansione, email))
+            conn.commit()
+            flash("Contatto tecnico aggiunto!", "success")
+        cur.close()
+        conn.close()
+        return redirect(url_for("dettaglio_fornitore", fornitore_id=fornitore_id))
+    cur.execute("SELECT * FROM fornitori WHERE id = %s;", (fornitore_id,))
+    fornitore = cur.fetchone()
+    cur.execute("SELECT * FROM contatti_tecnici WHERE fornitore_id = %s ORDER BY nome ASC;", (fornitore_id,))
+    contatti = cur.fetchall()
     cur.close()
     conn.close()
-    output = io.StringIO()
-    writer = csv.writer(output)
-    writer.writerow(['QR Code', 'Nome Articolo', 'SAP', 'Quantita', 'Posizione', 'Peso', 'Magazzino Pesante'])
-    for p in prodotti:
-        writer.writerow([p.get('qr_code', ''), p.get('nome', ''), p.get('sap', ''), p.get('quantita', 0), p.get('posizione', ''), p.get('peso', ''), 'Si' if p.get('magazzino_pesante') else 'No'])
-    return Response(output.getvalue(), mimetype="text/csv", headers={"Content-disposition": "attachment; filename=Inventario_Gestionale_OMG.csv"})
+    if not fornitore:
+        flash("Fornitore non trovato.", "error")
+        return redirect(url_for("fornitori"))
+    return render_template("dettaglio_fornitore.html", fornitore=fornitore, contatti=contatti)
 
+@app.route("/elimina_fornitore/<int:fornitore_id>", methods=["POST"])
+def elimina_fornitore(fornitore_id):
+    conn = get_db_connection()
+    cur = conn.cursor()
+    cur.execute("DELETE FROM fornitori WHERE id = %s;", (fornitore_id,))
+    conn.commit()
+    cur.close()
+    conn.close()
+    flash("Fornitore eliminato.", "success")
+    return redirect(url_for("fornitori"))
+
+# --- GESTIONE DOCUMENTI & FILE ---
+@app.route("/documenti", defaults={"cartella_id": None}, methods=["GET", "POST"])
+@app.route("/documenti/<int:cartella_id>", methods=["GET", "POST"])
+@app.route("/documenti.html", defaults={"cartella_id": None}, methods=["GET", "POST"])
+def documenti(cartella_id):
+    if not (session.get('is_admin') or session.get('puo_gestire_documenti', 1)):
+        flash("Accesso non autorizzato.", "error")
+        return redirect(url_for('index'))
+    conn = get_db_connection()
+    cur = conn.cursor()
+    cartella_corrente = None
+    percorso_breadcrumb = []
+    if cartella_id:
+        cur.execute("SELECT * FROM cartelle WHERE id = %s;", (cartella_id,))
+        cartella_corrente = cur.fetchone()
+    if request.method == "POST":
+        azione = request.form.get("azione")
+        if azione == "crea_cartella":
+            nome_c = request.form.get("nome_cartella")
+            if nome_c:
+                cur.execute("INSERT INTO cartelle (nome, parent_id) VALUES (%s, %s);", (nome_c, cartella_id))
+                conn.commit()
+                flash("Cartella creata!", "success")
+        elif azione == "carica_file":
+            f = request.files.get("file_caricato")
+            if f and f.filename:
+                cur.execute("INSERT INTO documenti (cartella_id, nome_file, tipo_file, dati_file) VALUES (%s, %s, %s, %s);",
+                            (cartella_id, f.filename, f.mimetype, f.read()))
+                conn.commit()
+                flash("File caricato!", "success")
+        cur.close()
+        conn.close()
+        return redirect(url_for("documenti", cartella_id=cartella_id) if cartella_id else url_for("documenti"))
+
+    cur.execute("SELECT * FROM cartelle WHERE parent_id " + ("= %s" if cartella_id else "IS NULL") + " ORDER BY nome ASC;", (cartella_id,) if cartella_id else ())
+    sottocartelle = cur.fetchall()
+    cur.execute("SELECT id, nome_file, tipo_file, caricato_il FROM documenti WHERE cartella_id " + ("= %s" if cartella_id else "IS NULL") + " ORDER BY nome_file ASC;", (cartella_id,) if cartella_id else ())
+    lista_file = cur.fetchall()
+    cur.close()
+    conn.close()
+    return render_template("documenti.html", cartella_corrente=cartella_corrente, sottocartelle=sottocartelle, lista_file=lista_file, percorso_breadcrumb=percorso_breadcrumb)
+
+@app.route("/scarica_file/<int:file_id>")
+def scarica_file(file_id):
+    conn = get_db_connection()
+    cur = conn.cursor()
+    cur.execute("SELECT nome_file, tipo_file, dati_file FROM documenti WHERE id = %s;", (file_id,))
+    f_data = cur.fetchone()
+    cur.close()
+    conn.close()
+    if f_data:
+        return send_file(io.BytesIO(f_data['dati_file']), mimetype=f_data['tipo_file'], as_attachment=True, download_name=f_data['nome_file'])
+    flash("File non trovato.", "error")
+    return redirect(url_for("documenti"))
+
+# --- PROMEMORIA ---
+@app.route("/promemoria", methods=["GET", "POST"])
+@app.route("/promemoria.html", methods=["GET", "POST"])
+def promemoria():
+    conn = get_db_connection()
+    cur = conn.cursor()
+    if request.method == "POST":
+        titolo = request.form.get("titolo")
+        descrizione = request.form.get("descrizione", "")
+        data_scadenza = request.form.get("data_scadenza", "")
+        priorita = request.form.get("priorita", "Media")
+        if titolo:
+            cur.execute("INSERT INTO promemoria (titolo, descrizione, data_scadenza, priorita, assegnato_a) VALUES (%s, %s, %s, %s, %s);",
+                        (titolo, descrizione, data_scadenza, priorita, session.get('username')))
+            conn.commit()
+            flash("Promemoria aggiunto!", "success")
+        cur.close()
+        conn.close()
+        return redirect(url_for("promemoria"))
+    cur.execute("SELECT * FROM promemoria ORDER BY completato ASC, data_scadenza ASC;")
+    lista = cur.fetchall()
+    cur.close()
+    conn.close()
+    return render_template("promemoria.html", promemoria=lista, lista_utenti=[])
+
+# --- MANUTENZIONI OFFICINA ---
+@app.route("/richieste_manutenzione", methods=["GET", "POST"])
+@app.route("/richieste_manutenzione.html", methods=["GET", "POST"])
+def richieste_manutenzione():
+    conn = get_db_connection()
+    cur = conn.cursor()
+    if request.method == "POST":
+        titolo = request.form.get("titolo")
+        impianto = request.form.get("impianto_macchina", "")
+        descrizione = request.form.get("descrizione", "")
+        if titolo:
+            cur.execute("INSERT INTO richieste_manutenzione (titolo, impianto_macchina, descrizione, creato_da, stato) VALUES (%s, %s, %s, %s, 'Aperta');",
+                        (titolo, impianto, descrizione, session.get('username')))
+            conn.commit()
+            flash("Intervento aperto!", "success")
+        cur.close()
+        conn.close()
+        return redirect(url_for("richieste_manutenzione"))
+    cur.execute("SELECT * FROM richieste_manutenzione ORDER BY id DESC;")
+    richieste = cur.fetchall()
+    cur.close()
+    conn.close()
+    return render_template("richieste_manutenzione.html", richieste=richieste, lista_utenti=[], lista_prodotti=[])
+
+# --- MAGAZZINO, CARICO, SCARICO & AGGIUNTA ---
 @app.route("/carico", methods=["GET", "POST"])
 def carico():
     if request.method == "POST":
@@ -541,6 +807,7 @@ def gestisci_prodotto(qr_code):
     return render_template("gestisci.html", prodotto=prodotto, fornitori=[])
 
 @app.route("/aggiungi", methods=["POST"])
+@app.route("/aggiungi_prodotto", methods=["POST"])
 def aggiungi_prodotto():
     if not (session.get('is_admin') or session.get('puo_aggiungere_prodotti', 1)):
         flash("Permesso negato.", "error")
@@ -562,7 +829,7 @@ def aggiungi_prodotto():
         conn = get_db_connection()
         cur = conn.cursor()
         
-        # 1. Inserimento temporaneo con QR 'TEMP' per risalire all'ID progressivo
+        # 1. Inserimento temporaneo con QR 'TEMP' per ricavare l'ID progressivo
         cur.execute("""
             INSERT INTO prodotti (qr_code, nome, sap, peso, quantita, posizione, magazzino_pesante, soglia_minima)
             VALUES ('TEMP', %s, %s, %s, %s, %s, %s, %s)
@@ -572,7 +839,7 @@ def aggiungi_prodotto():
         row = cur.fetchone()
         prodotto_id = row['id'] if isinstance(row, dict) else row[0]
         
-        # 2. Generazione del QR code progressivo (es. OMG-0001, OMG-0002...)
+        # 2. Generazione automatica del QR code progressivo (es. OMG-0001, OMG-0002...)
         qr_code_progressivo = f"OMG-{prodotto_id:04d}"
         
         # 3. Aggiornamento con il QR code definitivo
@@ -602,6 +869,26 @@ def magazzino_pesante():
     conn.close()
     return render_template("magazzino_pesante.html", prodotti=prodotti)
 
+@app.route("/manutenzioni")
+def manutenzioni():
+    conn = get_db_connection()
+    cur = conn.cursor()
+    cur.execute("SELECT * FROM prodotti WHERE in_manutenzione = TRUE ORDER BY nome ASC;")
+    prodotti = cur.fetchall()
+    cur.close()
+    conn.close()
+    return render_template("manutenzioni.html", prodotti=prodotti)
+
+@app.route("/storico_manutenzioni")
+def storico_manutenzioni():
+    conn = get_db_connection()
+    cur = conn.cursor()
+    cur.execute("SELECT * FROM storico_manutenzioni ORDER BY registrato_il DESC;")
+    storico = cur.fetchall()
+    cur.close()
+    conn.close()
+    return render_template("storico_manutenzioni.html", storico=storico)
+
 @app.route("/stampa_tutti_qr")
 def stampa_tutti_qr():
     conn = get_db_connection()
@@ -612,56 +899,24 @@ def stampa_tutti_qr():
     conn.close()
     return render_template("stampa_tutti_qr.html", prodotti=prodotti)
 
-@app.route("/richieste_manutenzione")
-def richieste_manutenzione():
-    conn = get_db_connection()
-    cur = conn.cursor()
-    cur.execute("SELECT * FROM richieste_manutenzione ORDER BY id DESC;")
-    richieste = cur.fetchall()
-    cur.close()
-    conn.close()
-    return render_template("richieste_manutenzione.html", richieste=richieste, lista_utenti=[], lista_prodotti=[])
-
-@app.route("/promemoria")
-def promemoria():
-    conn = get_db_connection()
-    cur = conn.cursor()
-    cur.execute("SELECT * FROM promemoria ORDER BY id DESC;")
-    lista = cur.fetchall()
-    cur.close()
-    conn.close()
-    return render_template("promemoria.html", promemoria=lista, lista_utenti=[])
-
-@app.route("/fornitori")
-def fornitori():
-    conn = get_db_connection()
-    cur = conn.cursor()
-    cur.execute("SELECT * FROM fornitori ORDER BY nome_azienda ASC;")
-    lista = cur.fetchall()
-    cur.close()
-    conn.close()
-    return render_template("fornitori.html", fornitori=lista)
-
-@app.route("/documenti", defaults={"cartella_id": None})
-@app.route("/documenti/<int:cartella_id>")
-def documenti(cartella_id=None):
-    return render_template("documenti.html", cartella_corrente=None, sottocartelle=[], lista_file=[], percorso_breadcrumb=[])
-
-@app.route("/cambi_serie")
-def cambi_serie():
-    return render_template("cambi_serie.html", cambi=[])
-
-@app.route("/report_ore")
-def report_ore():
-    return render_template("report_ore.html", chart_tecnici_labels=[], chart_tecnici_values=[], chart_tipi_labels=[], chart_tipi_values=[], interventi=[])
-
-@app.route("/storico_manutenzioni")
-def storico_manutenzioni():
-    return render_template("storico_manutenzioni.html", storico=[])
-
 @app.route("/esportazioni")
 def esportazioni():
     return render_template("esportazioni.html")
+
+@app.route("/esporta_inventario")
+def esporta_inventario():
+    conn = get_db_connection()
+    cur = conn.cursor()
+    cur.execute("SELECT qr_code, nome, sap, quantita, posizione, peso, magazzino_pesante FROM prodotti ORDER BY nome ASC;")
+    prodotti = cur.fetchall()
+    cur.close()
+    conn.close()
+    output = io.StringIO()
+    writer = csv.writer(output)
+    writer.writerow(['QR Code', 'Nome Articolo', 'SAP', 'Quantita', 'Posizione', 'Peso', 'Magazzino Pesante'])
+    for p in prodotti:
+        writer.writerow([p.get('qr_code', ''), p.get('nome', ''), p.get('sap', ''), p.get('quantita', 0), p.get('posizione', ''), p.get('peso', ''), 'Si' if p.get('magazzino_pesante') else 'No'])
+    return Response(output.getvalue(), mimetype="text/csv", headers={"Content-disposition": "attachment; filename=Inventario_Gestionale_OMG.csv"})
 
 if __name__ == "__main__":
     app.run(debug=True)
