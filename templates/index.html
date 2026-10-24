@@ -103,8 +103,8 @@
 
         .top-navbar {
             background-color: #ffffff;
-            height: 64px;
-            padding: 0 1.5rem;
+            min-height: 64px;
+            padding: 0.5rem 1rem;
             display: flex;
             align-items: center;
             justify-content: space-between;
@@ -130,7 +130,7 @@
 <body>
 
     <!-- ================= SIDEBAR DESKTOP ================= -->
-    <aside class="sidebar">
+    <aside class="sidebar d-none d-lg-flex">
         <div>
             <div class="sidebar-brand d-flex align-items-center">
                 <i class="fa-solid fa-boxes-packing text-primary me-2 fs-4"></i>
@@ -204,35 +204,132 @@
         </div>
     </aside>
 
+    <!-- ================= OFFCANVAS SIDEBAR (MOBILE) ================= -->
+    <div class="offcanvas offcanvas-start bg-dark text-white" tabindex="-1" id="offcanvasSidebar">
+        <div class="offcanvas-header border-bottom border-secondary border-opacity-25">
+            <h5 class="offcanvas-title fw-bold d-flex align-items-center">
+                <i class="fa-solid fa-boxes-packing text-primary me-2"></i> Gestionale OMG
+            </h5>
+            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="offcanvas"></button>
+        </div>
+        <div class="offcanvas-body p-0 d-flex flex-column justify-content-between">
+            <div class="sidebar-menu p-3">
+                <div class="sidebar-heading text-muted">Principale</div>
+                <a href="{{ url_for('index') }}" class="nav-link-custom active">
+                    <i class="fa-solid fa-house"></i> Home & Magazzino
+                </a>
+
+                <div class="sidebar-heading text-muted">Gestione Scorte</div>
+                <a href="{{ url_for('magazzino_pesante') }}" class="nav-link-custom">
+                    <i class="fa-solid fa-weight-hanging"></i> Magazzino Pesante
+                </a>
+                <a href="{{ url_for('manutenzioni') }}" class="nav-link-custom">
+                    <i class="fa-solid fa-truck-ramp-box"></i> Manutenzioni Esterne
+                </a>
+                <a href="{{ url_for('storico_manutenzioni') }}" class="nav-link-custom">
+                    <i class="fa-solid fa-clock-rotate-left"></i> Storico Manutenzioni
+                </a>
+
+                <div class="sidebar-heading text-muted">Officina & Produzione</div>
+                <a href="{{ url_for('richieste_manutenzione') }}" class="nav-link-custom">
+                    <i class="fa-solid fa-wrench"></i> Richieste Intervento
+                </a>
+                <a href="{{ url_for('cambi_serie') }}" class="nav-link-custom">
+                    <i class="fa-solid fa-industry"></i> Cambi Serie
+                </a>
+                <a href="{{ url_for('report_ore') }}" class="nav-link-custom">
+                    <i class="fa-solid fa-user-clock"></i> Report Ore
+                </a>
+
+                <div class="sidebar-heading text-muted">Anagrafiche & Risorse</div>
+                <a href="{{ url_for('fornitori') }}" class="nav-link-custom">
+                    <i class="fa-solid fa-building"></i> Fornitori & Tecnici
+                </a>
+                <a href="{{ url_for('promemoria') }}" class="nav-link-custom">
+                    <i class="fa-solid fa-bell"></i> Promemoria
+                </a>
+                <a href="{{ url_for('documenti') }}" class="nav-link-custom">
+                    <i class="fa-solid fa-folder-open"></i> Documenti & File
+                </a>
+                <a href="{{ url_for('esportazioni') }}" class="nav-link-custom">
+                    <i class="fa-solid fa-file-arrow-down"></i> Esportazioni & CSV
+                </a>
+
+                {% if session.is_admin %}
+                <div class="sidebar-heading text-muted">Amministrazione</div>
+                <a href="{{ url_for('admin_utenti') }}" class="nav-link-custom">
+                    <i class="fa-solid fa-user-gear"></i> Pannello Admin
+                </a>
+                {% endif %}
+            </div>
+            <div class="p-3 border-top border-secondary border-opacity-25 d-flex align-items-center justify-content-between bg-dark">
+                <div class="d-flex align-items-center">
+                    <div class="bg-primary text-white rounded-circle d-flex align-items-center justify-content-center me-2" style="width: 36px; height: 36px; font-weight: 600;">
+                        {{ session.get('username', 'U')[0]|upper }}
+                    </div>
+                    <div class="lh-1">
+                        <div class="text-white fw-semibold small">{{ session.get('username', 'Utente') }}</div>
+                        <small class="text-muted" style="font-size: 0.75rem;">Online</small>
+                    </div>
+                </div>
+                <a href="{{ url_for('logout') }}" class="text-danger fs-5" title="Disconnetti">
+                    <i class="fa-solid fa-right-from-bracket"></i>
+                </a>
+            </div>
+        </div>
+    </div>
+
     <!-- ================= CONTENUTO PRINCIPALE ================= -->
     <div class="main-wrapper">
         
         <header class="top-navbar">
             <div class="d-flex align-items-center gap-2">
-                <button class="btn btn-light d-lg-none border" type="button" data-bs-toggle="offcanvas" data-bs-target="#offcanvasSidebar">
+                <button class="btn btn-light border d-lg-none py-1 px-2" type="button" data-bs-toggle="offcanvas" data-bs-target="#offcanvasSidebar">
                     <i class="fa-solid fa-bars"></i>
                 </button>
-                <h5 class="fw-bold mb-0 text-dark">Dashboard & Magazzino Standard</h5>
+                <h5 class="fw-bold mb-0 text-dark fs-6 d-none d-sm-block">Magazzino Standard</h5>
             </div>
-            <div class="d-flex align-items-center gap-2">
-                <a href="{{ url_for('scanner_globale') }}" class="btn btn-sm btn-dark fw-semibold"><i class="fa-solid fa-barcode me-1"></i> Scanner</a>
-                <a href="{{ url_for('carico') }}" class="btn btn-sm btn-success fw-semibold"><i class="fa-solid fa-plus me-1"></i> Carico</a>
-                <a href="{{ url_for('scarico') }}" class="btn btn-sm btn-danger fw-semibold"><i class="fa-solid fa-minus me-1"></i> Scarico</a>
+            
+            <div class="d-flex align-items-center gap-1">
+                <a href="{{ url_for('scanner_globale') }}" class="btn btn-sm btn-dark text-nowrap"><i class="fa-solid fa-barcode me-1"></i> <span class="d-none d-md-inline">Scanner</span></a>
+                <a href="{{ url_for('carico') }}" class="btn btn-sm btn-success text-nowrap"><i class="fa-solid fa-plus me-1"></i> Carico</a>
+                <a href="{{ url_for('scarico') }}" class="btn btn-sm btn-danger text-nowrap"><i class="fa-solid fa-minus me-1"></i> Scarico</a>
             </div>
         </header>
 
-        <main class="p-4">
+        <main class="p-3 p-md-4">
 
             {% with messages = get_flashed_messages(with_categories=true) %}
               {% if messages %}
                 {% for category, message in messages %}
-                  <div class="alert alert-{{ 'danger' if category == 'error' else category }} alert-dismissible fade show mb-4 shadow-sm" role="alert">
+                  <div class="alert alert-{{ 'danger' if category == 'error' else category }} alert-dismissible fade show mb-3 shadow-sm" role="alert">
                     {{ message }}
                     <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
                   </div>
                 {% endfor %}
               {% endif %}
             {% endwith %}
+
+            <!-- ================= BANNER NOTIFICHE ATTIVE ================= -->
+            {% if notifiche_attive %}
+            <div class="mb-4">
+                <div class="d-flex justify-content-between align-items-center mb-2">
+                    <h6 class="fw-bold text-secondary mb-0"><i class="fa-solid fa-bell text-warning me-1"></i> Notifiche per te</h6>
+                    <button class="btn btn-outline-secondary btn-sm" onclick="segnaLetteBanners()" style="font-size: 0.75rem;">Segna tutte come lette</button>
+                </div>
+                {% for n in notifiche_attive %}
+                <div class="alert alert-info border-start border-primary border-4 shadow-sm d-flex justify-content-between align-items-center mb-2 p-3">
+                    <div>
+                        <strong class="text-dark">{{ n.titolo }}</strong>
+                        <p class="mb-0 text-muted small mt-1">{{ n.messaggio }}</p>
+                    </div>
+                    {% if n.link %}
+                    <a href="{{ n.link }}" class="btn btn-sm btn-primary text-nowrap ms-2">Apri</a>
+                    {% endif %}
+                </div>
+                {% endfor %}
+            </div>
+            {% endif %}
 
             <!-- ================= CARD RIEPILOGATIVE (SOMMA PEZZI) ================= -->
             <div class="row g-3 mb-4">
@@ -290,8 +387,8 @@
             </div>
 
             <!-- ================= TABELLA ARTICOLI STANDARD ================= -->
-            <div class="card-custom p-4">
-                <div class="d-flex justify-content-between align-items-center mb-4">
+            <div class="card-custom p-3 p-md-4">
+                <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
                     <h5 class="fw-bold mb-0"><i class="fa-solid fa-boxes-stacked me-2 text-primary"></i>Articoli in Magazzino Standard</h5>
                     <button class="btn btn-primary btn-sm fw-semibold" data-bs-toggle="modal" data-bs-target="#modalAggiungi">
                         <i class="fa-solid fa-plus me-1"></i> Nuovo Articolo
@@ -377,7 +474,6 @@
                             <label class="form-label fw-semibold">Posizione</label>
                             <input type="text" name="posizione" class="form-control">
                         </div>
-                        <!-- Checkbox Magazzino Pesante aggiunta qui -->
                         <div class="mb-3 form-check">
                             <input type="checkbox" class="form-check-input" id="magazzino_pesante" name="magazzino_pesante" value="1">
                             <label class="form-check-label fw-semibold" for="magazzino_pesante">Destina a Magazzino Pesante</label>
@@ -394,5 +490,13 @@
 
     <!-- JS Bootstrap -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        function segnaLetteBanners() {
+            fetch('/api/notifiche/segna_lette', { method: 'POST' })
+                .then(() => {
+                    location.reload();
+                });
+        }
+    </script>
 </body>
 </html>
