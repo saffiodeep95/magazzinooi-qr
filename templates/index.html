@@ -399,6 +399,7 @@
                     <table class="table table-hover align-middle mb-0">
                         <thead class="table-light">
                             <tr>
+                                <th style="width: 50px;">#</th>
                                 <th>QR Code</th>
                                 <th>Nome Articolo</th>
                                 <th>SAP</th>
@@ -410,6 +411,7 @@
                         <tbody>
                             {% for p in prodotti %}
                             <tr class="{% if p.quantita <= (p.soglia_minima or 3) %}table-danger{% endif %}">
+                                <td class="text-muted fw-semibold">{{ loop.index }}</td>
                                 <td><code>{{ p.qr_code }}</code></td>
                                 <td class="fw-semibold">{{ p.nome }}</td>
                                 <td>{{ p.sap or '-' }}</td>
@@ -427,7 +429,7 @@
                             </tr>
                             {% else %}
                             <tr>
-                                <td colspan="6" class="text-center py-4 text-muted">Nessun articolo presente nel magazzino standard.</td>
+                                <td colspan="7" class="text-center py-4 text-muted">Nessun articolo presente nel magazzino standard.</td>
                             </tr>
                             {% endfor %}
                         </tbody>
@@ -449,8 +451,8 @@
                     </div>
                     <div class="modal-body">
                         <div class="mb-3">
-                            <label class="form-label fw-semibold">QR Code *</label>
-                            <input type="text" name="qr_code" class="form-control" required>
+                            <label class="form-label fw-semibold">QR Code (Lascia vuoto per progressivo automatico)</label>
+                            <input type="text" name="qr_code" class="form-control" placeholder="es. OMG-001 o automatico">
                         </div>
                         <div class="mb-3">
                             <label class="form-label fw-semibold">Nome Articolo *</label>
