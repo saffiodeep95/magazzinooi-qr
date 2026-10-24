@@ -218,6 +218,33 @@
         </div>
     </aside>
 
+    <!-- ================= OFFCANVAS SIDEBAR MOBILE ================= -->
+    <div class="offcanvas offcanvas-start bg-dark text-white" tabindex="-1" id="offcanvasSidebar">
+        <div class="offcanvas-header border-bottom border-secondary">
+            <h5 class="offcanvas-title fw-bold"><i class="fa-solid fa-boxes-packing text-primary me-2"></i>Gestionale OMG</h5>
+            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="offcanvas"></button>
+        </div>
+        <div class="offcanvas-body p-3">
+            <div class="sidebar-menu">
+                <a href="{{ url_for('index') }}" class="nav-link-custom active mb-2"><i class="fa-solid fa-house"></i> Home Dashboard</a>
+                <a href="{{ url_for('magazzino_pesante') }}" class="nav-link-custom mb-2"><i class="fa-solid fa-weight-hanging"></i> Magazzino Pesante</a>
+                <a href="{{ url_for('manutenzioni') }}" class="nav-link-custom mb-2"><i class="fa-solid fa-truck-ramp-box"></i> Manutenzioni Esterne</a>
+                <a href="{{ url_for('storico_manutenzioni') }}" class="nav-link-custom mb-2"><i class="fa-solid fa-clock-rotate-left"></i> Storico Esterne</a>
+                <a href="{{ url_for('richieste_manutenzione') }}" class="nav-link-custom mb-2"><i class="fa-solid fa-wrench"></i> Richieste Intervento</a>
+                <a href="{{ url_for('cambi_serie') }}" class="nav-link-custom mb-2"><i class="fa-solid fa-industry"></i> Cambi Serie</a>
+                <a href="{{ url_for('report_ore') }}" class="nav-link-custom mb-2"><i class="fa-solid fa-user-clock"></i> Report Ore</a>
+                <a href="{{ url_for('fornitori') }}" class="nav-link-custom mb-2"><i class="fa-solid fa-building"></i> Fornitori</a>
+                <a href="{{ url_for('promemoria') }}" class="nav-link-custom mb-2"><i class="fa-solid fa-bell"></i> Promemoria</a>
+                <a href="{{ url_for('documenti') }}" class="nav-link-custom mb-2"><i class="fa-solid fa-folder-open"></i> Documenti</a>
+                <a href="{{ url_for('esporta_inventario') }}" class="nav-link-custom text-success mb-2"><i class="fa-solid fa-file-csv"></i> Esporta CSV</a>
+                {% if session.is_admin %}
+                <a href="{{ url_for('admin_utenti') }}" class="nav-link-custom mb-2"><i class="fa-solid fa-user-gear"></i> Admin</a>
+                {% endif %}
+                <a href="{{ url_for('logout') }}" class="nav-link-custom text-danger mt-4"><i class="fa-solid fa-right-from-bracket"></i> Logout</a>
+            </div>
+        </div>
+    </div>
+
     <!-- ================= CONTENUTO PRINCIPALE ================= -->
     <div class="main-wrapper">
         
