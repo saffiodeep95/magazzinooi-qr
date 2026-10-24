@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Gestionale OMG - Home & Magazzino</title>
+    <title>Gestionale OMG - Cambi Serie</title>
     <!-- Bootstrap 5 CSS -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <!-- Google Fonts & FontAwesome -->
@@ -139,7 +139,7 @@
 
             <div class="sidebar-menu">
                 <div class="sidebar-heading">Principale</div>
-                <a href="{{ url_for('index') }}" class="nav-link-custom active">
+                <a href="{{ url_for('index') }}" class="nav-link-custom">
                     <i class="fa-solid fa-house"></i> Home & Magazzino
                 </a>
 
@@ -158,7 +158,7 @@
                 <a href="{{ url_for('richieste_manutenzione') }}" class="nav-link-custom">
                     <i class="fa-solid fa-wrench"></i> Richieste Intervento
                 </a>
-                <a href="{{ url_for('cambi_serie') }}" class="nav-link-custom">
+                <a href="{{ url_for('cambi_serie') }}" class="nav-link-custom active">
                     <i class="fa-solid fa-industry"></i> Cambi Serie
                 </a>
                 <a href="{{ url_for('report_ore') }}" class="nav-link-custom">
@@ -215,7 +215,7 @@
         <div class="offcanvas-body p-0 d-flex flex-column justify-content-between">
             <div class="sidebar-menu p-3">
                 <div class="sidebar-heading text-muted">Principale</div>
-                <a href="{{ url_for('index') }}" class="nav-link-custom active">
+                <a href="{{ url_for('index') }}" class="nav-link-custom">
                     <i class="fa-solid fa-house"></i> Home & Magazzino
                 </a>
 
@@ -234,7 +234,7 @@
                 <a href="{{ url_for('richieste_manutenzione') }}" class="nav-link-custom">
                     <i class="fa-solid fa-wrench"></i> Richieste Intervento
                 </a>
-                <a href="{{ url_for('cambi_serie') }}" class="nav-link-custom">
+                <a href="{{ url_for('cambi_serie') }}" class="nav-link-custom active">
                     <i class="fa-solid fa-industry"></i> Cambi Serie
                 </a>
                 <a href="{{ url_for('report_ore') }}" class="nav-link-custom">
@@ -287,13 +287,15 @@
                 <button class="btn btn-light border d-lg-none py-1 px-2" type="button" data-bs-toggle="offcanvas" data-bs-target="#offcanvasSidebar">
                     <i class="fa-solid fa-bars"></i>
                 </button>
-                <h5 class="fw-bold mb-0 text-dark fs-6 d-none d-sm-block">Magazzino Standard</h5>
+                <h5 class="fw-bold mb-0 text-dark fs-6">Registro Cambi Serie</h5>
             </div>
-            
-            <div class="d-flex align-items-center gap-1">
-                <a href="{{ url_for('scanner_globale') }}" class="btn btn-sm btn-dark text-nowrap"><i class="fa-solid fa-barcode me-1"></i> <span class="d-none d-md-inline">Scanner</span></a>
-                <a href="{{ url_for('carico') }}" class="btn btn-sm btn-success text-nowrap"><i class="fa-solid fa-plus me-1"></i> Carico</a>
-                <a href="{{ url_for('scarico') }}" class="btn btn-sm btn-danger text-nowrap"><i class="fa-solid fa-minus me-1"></i> Scarico</a>
+            <div class="d-flex align-items-center gap-2">
+                <a href="{{ url_for('esporta_cambi_serie_csv') }}" class="btn btn-sm btn-outline-secondary">
+                    <i class="fa-solid fa-file-arrow-down me-1"></i> Esporta CSV
+                </a>
+                <button class="btn btn-sm btn-primary fw-semibold" data-bs-toggle="modal" data-bs-target="#modalAggiungiCambio">
+                    <i class="fa-solid fa-plus me-1"></i> Nuovo Cambio Serie
+                </button>
             </div>
         </header>
 
@@ -310,126 +312,42 @@
               {% endif %}
             {% endwith %}
 
-            <!-- ================= BANNER NOTIFICHE ATTIVE ================= -->
-            {% if notifiche_attive %}
-            <div class="mb-4">
-                <div class="d-flex justify-content-between align-items-center mb-2">
-                    <h6 class="fw-bold text-secondary mb-0"><i class="fa-solid fa-bell text-warning me-1"></i> Notifiche per te</h6>
-                    <button class="btn btn-outline-secondary btn-sm" onclick="segnaLetteBanners()" style="font-size: 0.75rem;">Segna tutte come lette</button>
-                </div>
-                {% for n in notifiche_attive %}
-                <div class="alert alert-info border-start border-primary border-4 shadow-sm d-flex justify-content-between align-items-center mb-2 p-3">
-                    <div>
-                        <strong class="text-dark">{{ n.titolo }}</strong>
-                        <p class="mb-0 text-muted small mt-1">{{ n.messaggio }}</p>
-                    </div>
-                    {% if n.link %}
-                    <a href="{{ n.link }}" class="btn btn-sm btn-primary text-nowrap ms-2">Apri</a>
-                    {% endif %}
-                </div>
-                {% endfor %}
-            </div>
-            {% endif %}
-
-            <!-- ================= CARD RIEPILOGATIVE (SOMMA PEZZI) ================= -->
-            <div class="row g-3 mb-4">
-                <!-- Magazzino Standard -->
-                <div class="col-12 col-md-6 col-xl-3">
-                    <div class="card-custom p-3 border-start border-primary border-4">
-                        <div class="text-muted small fw-semibold text-uppercase">Magazzino Standard</div>
-                        <div class="d-flex align-items-baseline justify-content-between mt-2">
-                            <h3 class="fw-bold mb-0 text-primary">{{ totale_pezzi_standard }} <span class="fs-6 text-muted fw-normal">pezzi totali</span></h3>
-                            <i class="fa-solid fa-box fs-3 text-primary opacity-50"></i>
-                        </div>
-                        <div class="mt-2 text-muted small">{{ prodotti|length }} articoli codificati</div>
-                    </div>
-                </div>
-
-                <!-- Magazzino Pesante -->
-                <div class="col-12 col-md-6 col-xl-3">
-                    <div class="card-custom p-3 border-start border-success border-4">
-                        <div class="text-muted small fw-semibold text-uppercase">Magazzino Pesante</div>
-                        <div class="d-flex align-items-baseline justify-content-between mt-2">
-                            <h3 class="fw-bold mb-0 text-success">{{ totale_pezzi_pesante }} <span class="fs-6 text-muted fw-normal">pezzi totali</span></h3>
-                            <i class="fa-solid fa-weight-hanging fs-3 text-success opacity-50"></i>
-                        </div>
-                        <div class="mt-2">
-                            <a href="{{ url_for('magazzino_pesante') }}" class="small text-decoration-none fw-semibold">Visualizza magazzino pesante &rarr;</a>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Articoli Sotto Soglia -->
-                <div class="col-12 col-md-6 col-xl-3">
-                    <div class="card-custom p-3 border-start border-danger border-4">
-                        <div class="text-muted small fw-semibold text-uppercase">Sotto Soglia Minima</div>
-                        <div class="d-flex align-items-baseline justify-content-between mt-2">
-                            <h3 class="fw-bold mb-0 text-danger">{{ prodotti_sotto_soglia|length }}</h3>
-                            <i class="fa-solid fa-triangle-exclamation fs-3 text-danger opacity-50"></i>
-                        </div>
-                        <div class="mt-2 text-muted small">Articoli da riordinare</div>
-                    </div>
-                </div>
-
-                <!-- Promemoria & Interventi -->
-                <div class="col-12 col-md-6 col-xl-3">
-                    <div class="card-custom p-3 border-start border-warning border-4">
-                        <div class="text-muted small fw-semibold text-uppercase">Promemoria & Attività</div>
-                        <div class="d-flex align-items-baseline justify-content-between mt-2">
-                            <h3 class="fw-bold mb-0 text-warning">{{ promemoria_urgenti }} <span class="fs-6 text-muted fw-normal">attivi</span></h3>
-                            <i class="fa-solid fa-bell fs-3 text-warning opacity-50"></i>
-                        </div>
-                        <div class="mt-2">
-                            <a href="{{ url_for('promemoria') }}" class="small text-decoration-none fw-semibold">Vai ai promemoria &rarr;</a>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- ================= TABELLA ARTICOLI STANDARD ================= -->
             <div class="card-custom p-3 p-md-4">
-                <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
-                    <h5 class="fw-bold mb-0"><i class="fa-solid fa-boxes-stacked me-2 text-primary"></i>Articoli in Magazzino Standard</h5>
-                    <button class="btn btn-primary btn-sm fw-semibold" data-bs-toggle="modal" data-bs-target="#modalAggiungi">
-                        <i class="fa-solid fa-plus me-1"></i> Nuovo Articolo
-                    </button>
-                </div>
-
                 <div class="table-responsive">
                     <table class="table table-hover align-middle mb-0">
                         <thead class="table-light">
                             <tr>
-                                <th style="width: 50px;">#</th>
-                                <th>QR Code</th>
-                                <th>Nome Articolo</th>
-                                <th>SAP</th>
-                                <th>Quantità</th>
-                                <th>Posizione</th>
+                                <th>Data / Ora</th>
+                                <th>Impianto / Macchina</th>
+                                <th>Articolo Precedente</th>
+                                <th>Articolo Successivo</th>
+                                <th>Operatore</th>
+                                <th>Note</th>
                                 <th class="text-end">Azioni</th>
                             </tr>
                         </thead>
                         <tbody>
-                            {% for p in prodotti %}
-                            <tr class="{% if p.quantita <= (p.soglia_minima or 3) %}table-danger{% endif %}">
-                                <td class="text-muted fw-semibold">{{ loop.index }}</td>
-                                <td><code>{{ p.qr_code }}</code></td>
-                                <td class="fw-semibold">{{ p.nome }}</td>
-                                <td>{{ p.sap or '-' }}</td>
-                                <td>
-                                    <span class="badge bg-{{ 'danger' if p.quantita <= (p.soglia_minima or 3) else 'primary' }} fs-6">
-                                        {{ p.quantita }} pz
-                                    </span>
-                                </td>
-                                <td>{{ p.posizione or '-' }}</td>
+                            {% for c in cambi %}
+                            <tr>
+                                <td class="small text-muted">{{ c.data_ora.strftime('%d/%m/%Y %H:%M') if c.data_ora else '-' }}</td>
+                                <td class="fw-semibold">{{ c.impianto }}</td>
+                                <td>{{ c.articolo_vecchio or '-' }}</td>
+                                <td><span class="badge bg-success fs-6">{{ c.articolo_nuovo or '-' }}</span></td>
+                                <td>{{ c.operatore or '-' }}</td>
+                                <td class="small text-muted">{{ c.note or '-' }}</td>
                                 <td class="text-end">
-                                    <a href="{{ url_for('gestisci_prodotto', qr_code=p.qr_code) }}" class="btn btn-sm btn-outline-primary" title="Gestisci">
-                                        <i class="fa-solid fa-gear"></i>
-                                    </a>
+                                    {% if session.is_admin %}
+                                    <form action="{{ url_for('elimina_cambio_serie', cambio_id=c.id) }}" method="POST" class="d-inline" onsubmit="return confirm('Eliminare questo cambio serie?');">
+                                        <button type="submit" class="btn btn-sm btn-outline-danger" title="Elimina">
+                                            <i class="fa-solid fa-trash"></i>
+                                        </button>
+                                    </form>
+                                    {% endif %}
                                 </td>
                             </tr>
                             {% else %}
                             <tr>
-                                <td colspan="7" class="text-center py-4 text-muted">Nessun articolo presente nel magazzino standard.</td>
+                                <td colspan="7" class="text-center py-4 text-muted">Nessun cambio serie registrato.</td>
                             </tr>
                             {% endfor %}
                         </tbody>
@@ -440,50 +358,40 @@
         </main>
     </div>
 
-    <!-- Modal Aggiungi Articolo -->
-    <div class="modal fade" id="modalAggiungi" tabindex="-1">
+    <!-- Modal Aggiungi Cambio Serie -->
+    <div class="modal fade" id="modalAggiungiCambio" tabindex="-1">
         <div class="modal-dialog">
             <div class="modal-content">
-                <form action="{{ url_for('aggiungi_prodotto') }}" method="POST">
+                <form action="{{ url_for('aggiungi_cambio_serie') }}" method="POST">
                     <div class="modal-header">
-                        <h5 class="modal-title fw-bold">Aggiungi Nuovo Articolo</h5>
+                        <h5 class="modal-title fw-bold">Registra Nuovo Cambio Serie</h5>
                         <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                     </div>
                     <div class="modal-body">
                         <div class="mb-3">
-                            <label class="form-label fw-semibold">QR Code (Lascia vuoto per progressivo automatico)</label>
-                            <input type="text" name="qr_code" class="form-control" placeholder="es. OMG-001 o automatico">
+                            <label class="form-label fw-semibold">Impianto / Macchina *</label>
+                            <input type="text" name="impianto" class="form-control" placeholder="es. Linea 1 / Forno / Macchina" required>
                         </div>
                         <div class="mb-3">
-                            <label class="form-label fw-semibold">Nome Articolo *</label>
-                            <input type="text" name="nome" class="form-control" required>
+                            <label class="form-label fw-semibold">Articolo Precedente</label>
+                            <input type="text" name="articolo_vecchio" class="form-control" placeholder="Articolo in uscita">
                         </div>
                         <div class="mb-3">
-                            <label class="form-label fw-semibold">Codice SAP</label>
-                            <input type="text" name="sap" class="form-control">
-                        </div>
-                        <div class="row">
-                            <div class="col-6 mb-3">
-                                <label class="form-label fw-semibold">Quantità Iniziale</label>
-                                <input type="number" name="quantita" class="form-control" value="0" min="0">
-                            </div>
-                            <div class="col-6 mb-3">
-                                <label class="form-label fw-semibold">Soglia Minima</label>
-                                <input type="number" name="soglia_minima" class="form-control" value="3" min="0">
-                            </div>
+                            <label class="form-label fw-semibold">Articolo Successivo (Nuovo) *</label>
+                            <input type="text" name="articolo_nuovo" class="form-control" placeholder="Articolo in arrivo" required>
                         </div>
                         <div class="mb-3">
-                            <label class="form-label fw-semibold">Posizione</label>
-                            <input type="text" name="posizione" class="form-control">
+                            <label class="form-label fw-semibold">Operatore</label>
+                            <input type="text" name="operatore" class="form-control" value="{{ session.get('username', '') }}">
                         </div>
-                        <div class="mb-3 form-check">
-                            <input type="checkbox" class="form-check-input" id="magazzino_pesante" name="magazzino_pesante" value="1">
-                            <label class="form-check-label fw-semibold" for="magazzino_pesante">Destina a Magazzino Pesante</label>
+                        <div class="mb-3">
+                            <label class="form-label fw-semibold">Note / Dettagli</label>
+                            <textarea name="note" class="form-control" rows="3" placeholder="Eventuali problematiche o note tecniche..."></textarea>
                         </div>
                     </div>
                     <div class="modal-footer">
                         <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annulla</button>
-                        <button type="submit" class="btn btn-primary">Salva Articolo</button>
+                        <button type="submit" class="btn btn-primary">Salva Cambio Serie</button>
                     </div>
                 </form>
             </div>
@@ -492,13 +400,5 @@
 
     <!-- JS Bootstrap -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-    <script>
-        function segnaLetteBanners() {
-            fetch('/api/notifiche/segna_lette', { method: 'POST' })
-                .then(() => {
-                    location.reload();
-                });
-        }
-    </script>
 </body>
 </html>
