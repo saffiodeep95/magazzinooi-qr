@@ -236,6 +236,21 @@ def init_db():
                 creato_il TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             );
         """)
+
+        cur.execute("""
+            CREATE TABLE IF NOT EXISTS cambi_serie (
+                id SERIAL PRIMARY KEY,
+                forno VARCHAR(50),
+                linea VARCHAR(50),
+                data_cambio VARCHAR(50),
+                nome_bottiglia VARCHAR(255),
+                tempo_cambio VARCHAR(50),
+                altezza_paratie VARCHAR(50),
+                num_bottiglie_tempera INT DEFAULT 0,
+                quantita_trattamento VARCHAR(50),
+                creato_il TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            );
+        """)
         
         permessi_lista = [
             ("puo_vedere_magazzino", "INT DEFAULT 1"),
@@ -532,22 +547,106 @@ def elimina_utente(user_id):
     return redirect(url_for('admin_utenti'))
 
 # --- CAMBI SERIE ---
-@app.route("/cambi_serie")
-@app.route("/cambi_serie.html")
+@app.route("/cambi_serie", methods=["GET", "POST"])
+@app.route("/cambi_serie.html", methods=["GET", "POST"])
 def cambi_serie():
-    return render_template("cambi_serie.html", cambi=[])
+    forno_filtro = request.args.get("forno", "Tutti")
+    settimana_filtro = request.args.get("settimana", "")
+
+    conn = get_db_connection()
+    cur = conn.cursor()
+    
+    query = "SELECT * FROM cambi_serie WHERE 1=1"
+    params = []
+
+    if forno_filtro != "Tutti":
+        query += " AND forno = %s"
+        params.append(forno_filtro)
+    
+    if settimana_filtro:
+        query += " AND TO_CHAR(data_cambio::DATE, 'IYYY-IW') = %s"
+        params.append(settimana_filtro)
+
+    query += " ORDER BY data_cambio DESC, id DESC;"
+    cur.execute(query, tuple(params))
+    record_serie = cur.fetchall()
+    
+    cur.close()
+    conn.close()
+
+    return render_template("cambi_serie.html", 
+                           record_serie=record_serie, 
+                           forno_filtro=forno_filtro, 
+                           settimana_filtro=settimana_filtro)
 
 @app.route("/aggiungi_cambio_serie", methods=["POST"])
 def aggiungi_cambio_serie():
-    registra_log("Aggiunto cambio serie")
-    flash("Cambio serie registrato con successo!", "success")
+    forno = request.form.get("forno")
+    linea = request.form.get("linea")
+    data_cambio = request.form.get("data_cambio")
+    nome_bottiglia = request.form.get("nome_bottiglia")
+    tempo_cambio = request.form.get("tempo_cambio", "")
+    altezza_paratie = request.form.get("altezza_paratie", "")
+    num_bottiglie_tempera = int(request.form.get("num_bottiglie_tempera", 0) or 0)
+    quantita_trattamento = request.form.get("quantita_trattamento", "")
+
+    try:
+        conn = get_db_connection()
+        cur = conn.cursor()
+        cur.execute("""
+            INSERT INTO cambi_serie (forno, linea, data_cambio, nome_bottiglia, tempo_cambio, altezza_paratie, num_bottiglie_tempera, quantita_trattamento)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s);
+        """, (forno, linea, data_cambio, nome_bottiglia, tempo_cambio, altezza_paratie, num_bottiglie_tempera, quantita_trattamento))
+        
+        conn.commit()
+        cur.close()
+        conn.close()
+        
+        registra_log(f"Registrato cambio serie per {forno} Linea {linea} - {nome_bottiglia}")
+        flash("Cambio serie registrato con successo!", "success")
+    except Exception as e:
+        flash(f"Errore durante il salvataggio del cambio serie: {e}", "error")
+
     return redirect(url_for("cambi_serie"))
 
-@app.route("/esporta_cambi_serie_csv")
+@app.route("/elimina_cambio_serie/<int:id_cambio>", methods=["POST"])
+def elimina_cambio_serie(id_cambio):
+    try:
+        conn = get_db_connection()
+        cur = conn.cursor()
+        cur.execute("DELETE FROM cambi_serie WHERE id = %s;", (id_cambio,))
+        conn.commit()
+        cur.close()
+        conn.close()
+        registra_log(f"Eliminato cambio serie ID {id_cambio}")
+        flash("Cambio serie eliminato con successo.", "success")
+    except Exception as e:
+        flash(f"Errore durante l'eliminazione: {e}", "error")
+    return redirect(url_for("cambi_serie"))
+
+@app.route("/esporta_cambi_serie_csv", endpoint="esporta_cambi_serie_csv")
 def esporta_cambi_serie_csv():
+    conn = get_db_connection()
+    cur = conn.cursor()
+    cur.execute("SELECT data_cambio, forno, linea, nome_bottiglia, tempo_cambio, altezza_paratie, num_bottiglie_tempera, quantita_trattamento FROM cambi_serie ORDER BY data_cambio DESC;")
+    righe = cur.fetchall()
+    cur.close()
+    conn.close()
+
     output = io.StringIO()
     writer = csv.writer(output)
-    writer.writerow(['ID', 'Descrizione', 'Data'])
+    writer.writerow(['Data Cambio', 'Forno', 'Linea', 'Nome Bottiglia', 'Tempo Cambio', 'Altezza Paratie', 'N° Bottiglie Tempera', 'Quantità Trattamento'])
+    for r in righe:
+        writer.writerow([
+            r.get('data_cambio', ''),
+            r.get('forno', ''),
+            r.get('linea', ''),
+            r.get('nome_bottiglia', ''),
+            r.get('tempo_cambio', ''),
+            r.get('altezza_paratie', ''),
+            r.get('num_bottiglie_tempera', 0),
+            r.get('quantita_trattamento', '')
+        ])
     return Response(
         output.getvalue(),
         mimetype="text/csv",
