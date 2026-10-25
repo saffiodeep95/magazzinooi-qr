@@ -3,402 +3,230 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Gestionale OMG - Cambi Serie</title>
-    <!-- Bootstrap 5 CSS -->
+    <title>Gestionale OMG - Home & Magazzino</title>
+    <!-- Bootstrap CSS -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <!-- Google Fonts & FontAwesome -->
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <!-- FontAwesome per le icone -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <style>
-        :root {
-            --sidebar-width: 260px;
-            --sidebar-bg: #111827;
-            --sidebar-color: #9ca3af;
-            --sidebar-active: #3b82f6;
-            --bg-main: #f3f4f6;
-            --card-radius: 14px;
-        }
-
-        body {
-            font-family: 'Inter', sans-serif;
-            background-color: var(--bg-main);
-            color: #1f2937;
-        }
-
-        .sidebar {
-            width: var(--sidebar-width);
-            height: 100vh;
-            position: fixed;
-            top: 0;
-            left: 0;
-            background-color: var(--sidebar-bg);
-            z-index: 1000;
-            display: flex;
-            flex-direction: column;
-            justify-content: space-between;
-            overflow-y: auto;
-        }
-
-        .sidebar-brand {
-            padding: 1.5rem 1.25rem;
-            color: #ffffff;
-            font-weight: 700;
-            font-size: 1.2rem;
-            border-bottom: 1px solid rgba(255, 255, 255, 0.08);
-            background-color: var(--sidebar-bg);
-            position: sticky;
-            top: 0;
-            z-index: 10;
-        }
-
-        .sidebar-menu {
-            padding: 1rem 0.75rem 3rem 0.75rem;
-            flex-grow: 1;
-        }
-
-        .sidebar-heading {
-            font-size: 0.7rem;
-            text-transform: uppercase;
-            letter-spacing: 0.05em;
-            color: #6b7280;
-            font-weight: 700;
-            padding: 0.75rem 0.75rem 0.25rem 0.75rem;
-        }
-
-        .nav-link-custom {
-            display: flex;
-            align-items: center;
-            padding: 0.65rem 0.85rem;
-            color: var(--sidebar-color);
-            border-radius: 8px;
-            font-size: 0.9rem;
-            font-weight: 500;
-            text-decoration: none;
-            margin-bottom: 0.2rem;
-            transition: all 0.2s ease;
-        }
-
-        .nav-link-custom:hover {
-            color: #ffffff;
-            background-color: rgba(255, 255, 255, 0.06);
-        }
-
-        .nav-link-custom.active {
-            color: #ffffff;
-            background-color: var(--sidebar-active);
-        }
-
-        .nav-link-custom i {
-            width: 24px;
-            font-size: 1.1rem;
-            margin-right: 0.6rem;
-        }
-
-        .main-wrapper {
-            margin-left: var(--sidebar-width);
-            min-height: 100vh;
-            display: flex;
-            flex-direction: column;
-        }
-
-        .top-navbar {
-            background-color: #ffffff;
-            min-height: 64px;
-            padding: 0.5rem 1rem;
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            border-bottom: 1px solid #e5e7eb;
-            position: sticky;
-            top: 0;
-            z-index: 999;
-        }
-
-        .card-custom {
-            background: #ffffff;
-            border: 1px solid #e5e7eb;
-            border-radius: var(--card-radius);
-            box-shadow: 0 1px 3px rgba(0,0,0,0.05);
-        }
-
-        @media (max-width: 991.98px) {
-            .sidebar { display: none; }
-            .main-wrapper { margin-left: 0; }
-        }
-    </style>
 </head>
-<body>
+<body class="bg-light">
 
-    <!-- ================= SIDEBAR DESKTOP ================= -->
-    <aside class="sidebar d-none d-lg-flex">
-        <div>
-            <div class="sidebar-brand d-flex align-items-center">
-                <i class="fa-solid fa-boxes-packing text-primary me-2 fs-4"></i>
-                <span>Gestionale OMG</span>
-            </div>
+    <!-- Navbar principale -->
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark shadow-sm">
+        <div class="container-fluid">
+            <a class="navbar-brand fw-bold" href="{{ url_for('index') }}"><i class="fa-solid fa-industry me-2"></i>Gestionale OMG</a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav me-auto">
+                    <li class="nav-item"><a class="nav-link active" href="{{ url_for('index') }}"><i class="fa-solid fa-boxes-stacked me-1"></i> Magazzino</a></li>
+                    
+                    {% if session.get('is_admin') or session.get('puo_vedere_pesante', 1) %}
+                    <li class="nav-item"><a class="nav-link" href="{{ url_for('magazzino_pesante') }}"><i class="fa-solid fa-weight-scale me-1"></i> Magazzino Pesante</a></li>
+                    {% endif %}
 
-            <div class="sidebar-menu">
-                <div class="sidebar-heading">Principale</div>
-                <a href="{{ url_for('index') }}" class="nav-link-custom">
-                    <i class="fa-solid fa-house"></i> Home & Magazzino
-                </a>
+                    {% if session.get('is_admin') or session.get('puo_vedere_manutenzioni_esterne', 1) %}
+                    <li class="nav-item"><a class="nav-link" href="{{ url_for('manutenzioni') }}"><i class="fa-solid fa-wrench me-1"></i> Manutenzioni Esterne</a></li>
+                    {% endif %}
 
-                <div class="sidebar-heading">Gestione Scorte</div>
-                <a href="{{ url_for('magazzino_pesante') }}" class="nav-link-custom">
-                    <i class="fa-solid fa-weight-hanging"></i> Magazzino Pesante
-                </a>
-                <a href="{{ url_for('manutenzioni') }}" class="nav-link-custom">
-                    <i class="fa-solid fa-truck-ramp-box"></i> Manutenzioni Esterne
-                </a>
-                <a href="{{ url_for('storico_manutenzioni') }}" class="nav-link-custom">
-                    <i class="fa-solid fa-clock-rotate-left"></i> Storico Manutenzioni
-                </a>
+                    {% if session.get('is_admin') or session.get('puo_vedere_manutenzione', 1) %}
+                    <li class="nav-item"><a class="nav-link" href="{{ url_for('richieste_manutenzione') }}"><i class="fa-solid fa-clipboard-list me-1"></i> Officina</a></li>
+                    {% endif %}
 
-                <div class="sidebar-heading">Officina & Produzione</div>
-                <a href="{{ url_for('richieste_manutenzione') }}" class="nav-link-custom">
-                    <i class="fa-solid fa-wrench"></i> Richieste Intervento
-                </a>
-                <a href="{{ url_for('cambi_serie') }}" class="nav-link-custom active">
-                    <i class="fa-solid fa-industry"></i> Cambi Serie
-                </a>
-                <a href="{{ url_for('report_ore') }}" class="nav-link-custom">
-                    <i class="fa-solid fa-user-clock"></i> Report Ore
-                </a>
+                    <li class="nav-item"><a class="nav-link" href="{{ url_for('cambi_serie') }}"><i class="fa-solid fa-arrows-rotate me-1"></i> Cambi Serie</a></li>
 
-                <div class="sidebar-heading">Anagrafiche & Risorse</div>
-                <a href="{{ url_for('fornitori') }}" class="nav-link-custom">
-                    <i class="fa-solid fa-building"></i> Fornitori & Tecnici
-                </a>
-                <a href="{{ url_for('promemoria') }}" class="nav-link-custom">
-                    <i class="fa-solid fa-bell"></i> Promemoria
-                </a>
-                <a href="{{ url_for('documenti') }}" class="nav-link-custom">
-                    <i class="fa-solid fa-folder-open"></i> Documenti & File
-                </a>
-                <a href="{{ url_for('esportazioni') }}" class="nav-link-custom">
-                    <i class="fa-solid fa-file-arrow-down"></i> Esportazioni & CSV
-                </a>
+                    {% if session.get('is_admin') or session.get('puo_vedere_promemoria', 1) %}
+                    <li class="nav-item"><a class="nav-link" href="{{ url_for('promemoria') }}"><i class="fa-solid fa-calendar-check me-1"></i> Promemoria</a></li>
+                    {% endif %}
 
-                {% if session.is_admin %}
-                <div class="sidebar-heading">Amministrazione</div>
-                <a href="{{ url_for('admin_utenti') }}" class="nav-link-custom">
-                    <i class="fa-solid fa-user-gear"></i> Pannello Admin
-                </a>
-                {% endif %}
-            </div>
-        </div>
+                    {% if session.get('is_admin') or session.get('puo_gestire_fornitori', 1) %}
+                    <li class="nav-item"><a class="nav-link" href="{{ url_for('fornitori') }}"><i class="fa-solid fa-address-book me-1"></i> Fornitori</a></li>
+                    {% endif %}
 
-        <div class="p-3 border-top border-secondary border-opacity-25 d-flex align-items-center justify-content-between bg-dark">
-            <div class="d-flex align-items-center">
-                <div class="bg-primary text-white rounded-circle d-flex align-items-center justify-content-center me-2" style="width: 36px; height: 36px; font-weight: 600;">
-                    {{ session.get('username', 'U')[0]|upper }}
-                </div>
-                <div class="lh-1">
-                    <div class="text-white fw-semibold small">{{ session.get('username', 'Utente') }}</div>
-                    <small class="text-muted" style="font-size: 0.75rem;">Online</small>
-                </div>
-            </div>
-            <a href="{{ url_for('logout') }}" class="text-danger fs-5" title="Disconnetti">
-                <i class="fa-solid fa-right-from-bracket"></i>
-            </a>
-        </div>
-    </aside>
+                    {% if session.get('is_admin') or session.get('puo_gestire_documenti', 1) %}
+                    <li class="nav-item"><a class="nav-link" href="{{ url_for('documenti') }}"><i class="fa-solid fa-folder-open me-1"></i> Documenti</a></li>
+                    {% endif %}
 
-    <!-- ================= OFFCANVAS SIDEBAR (MOBILE) ================= -->
-    <div class="offcanvas offcanvas-start bg-dark text-white" tabindex="-1" id="offcanvasSidebar">
-        <div class="offcanvas-header border-bottom border-secondary border-opacity-25">
-            <h5 class="offcanvas-title fw-bold d-flex align-items-center">
-                <i class="fa-solid fa-boxes-packing text-primary me-2"></i> Gestionale OMG
-            </h5>
-            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="offcanvas"></button>
-        </div>
-        <div class="offcanvas-body p-0 d-flex flex-column justify-content-between">
-            <div class="sidebar-menu p-3">
-                <div class="sidebar-heading text-muted">Principale</div>
-                <a href="{{ url_for('index') }}" class="nav-link-custom">
-                    <i class="fa-solid fa-house"></i> Home & Magazzino
-                </a>
+                    {% if session.get('is_admin') or session.get('puo_vedere_report_ore', 1) %}
+                    <li class="nav-item"><a class="nav-link" href="{{ url_for('report_ore') }}"><i class="fa-solid fa-chart-pie me-1"></i> Report Ore</a></li>
+                    {% endif %}
 
-                <div class="sidebar-heading text-muted">Gestione Scorte</div>
-                <a href="{{ url_for('magazzino_pesante') }}" class="nav-link-custom">
-                    <i class="fa-solid fa-weight-hanging"></i> Magazzino Pesante
-                </a>
-                <a href="{{ url_for('manutenzioni') }}" class="nav-link-custom">
-                    <i class="fa-solid fa-truck-ramp-box"></i> Manutenzioni Esterne
-                </a>
-                <a href="{{ url_for('storico_manutenzioni') }}" class="nav-link-custom">
-                    <i class="fa-solid fa-clock-rotate-left"></i> Storico Manutenzioni
-                </a>
+                    {% if session.get('is_admin') %}
+                    <li class="nav-item"><a class="nav-link" href="{{ url_for('admin_utenti') }}"><i class="fa-solid fa-users-gear me-1"></i> Admin</a></li>
+                    {% endif %}
+                </ul>
 
-                <div class="sidebar-heading text-muted">Officina & Produzione</div>
-                <a href="{{ url_for('richieste_manutenzione') }}" class="nav-link-custom">
-                    <i class="fa-solid fa-wrench"></i> Richieste Intervento
-                </a>
-                <a href="{{ url_for('cambi_serie') }}" class="nav-link-custom active">
-                    <i class="fa-solid fa-industry"></i> Cambi Serie
-                </a>
-                <a href="{{ url_for('report_ore') }}" class="nav-link-custom">
-                    <i class="fa-solid fa-user-clock"></i> Report Ore
-                </a>
-
-                <div class="sidebar-heading text-muted">Anagrafiche & Risorse</div>
-                <a href="{{ url_for('fornitori') }}" class="nav-link-custom">
-                    <i class="fa-solid fa-building"></i> Fornitori & Tecnici
-                </a>
-                <a href="{{ url_for('promemoria') }}" class="nav-link-custom">
-                    <i class="fa-solid fa-bell"></i> Promemoria
-                </a>
-                <a href="{{ url_for('documenti') }}" class="nav-link-custom">
-                    <i class="fa-solid fa-folder-open"></i> Documenti & File
-                </a>
-                <a href="{{ url_for('esportazioni') }}" class="nav-link-custom">
-                    <i class="fa-solid fa-file-arrow-down"></i> Esportazioni & CSV
-                </a>
-
-                {% if session.is_admin %}
-                <div class="sidebar-heading text-muted">Amministrazione</div>
-                <a href="{{ url_for('admin_utenti') }}" class="nav-link-custom">
-                    <i class="fa-solid fa-user-gear"></i> Pannello Admin
-                </a>
-                {% endif %}
-            </div>
-            <div class="p-3 border-top border-secondary border-opacity-25 d-flex align-items-center justify-content-between bg-dark">
-                <div class="d-flex align-items-center">
-                    <div class="bg-primary text-white rounded-circle d-flex align-items-center justify-content-center me-2" style="width: 36px; height: 36px; font-weight: 600;">
-                        {{ session.get('username', 'U')[0]|upper }}
-                    </div>
-                    <div class="lh-1">
-                        <div class="text-white fw-semibold small">{{ session.get('username', 'Utente') }}</div>
-                        <small class="text-muted" style="font-size: 0.75rem;">Online</small>
-                    </div>
-                </div>
-                <a href="{{ url_for('logout') }}" class="text-danger fs-5" title="Disconnetti">
-                    <i class="fa-solid fa-right-from-bracket"></i>
-                </a>
+                <!-- Profilo Utente -->
+                <ul class="navbar-nav ms-auto">
+                    <li class="nav-item dropdown">
+                        <a class="nav-link dropdown-toggle text-light" href="#" role="button" data-bs-toggle="dropdown">
+                            <i class="fa-solid fa-user-circle me-1"></i> {{ session.get('username', 'Utente') }}
+                        </a>
+                        <ul class="dropdown-menu dropdown-menu-end">
+                            <li><a class="dropdown-item text-danger" href="{{ url_for('logout') }}"><i class="fa-solid fa-right-from-bracket me-1"></i> Logout</a></li>
+                        </ul>
+                    </li>
+                </ul>
             </div>
         </div>
-    </div>
+    </nav>
 
-    <!-- ================= CONTENUTO PRINCIPALE ================= -->
-    <div class="main-wrapper">
-        
-        <header class="top-navbar">
-            <div class="d-flex align-items-center gap-2">
-                <button class="btn btn-light border d-lg-none py-1 px-2" type="button" data-bs-toggle="offcanvas" data-bs-target="#offcanvasSidebar">
-                    <i class="fa-solid fa-bars"></i>
-                </button>
-                <h5 class="fw-bold mb-0 text-dark fs-6">Registro Cambi Serie</h5>
-            </div>
-            <div class="d-flex align-items-center gap-2">
-                <a href="{{ url_for('esporta_cambi_serie_csv') }}" class="btn btn-sm btn-outline-secondary">
-                    <i class="fa-solid fa-file-arrow-down me-1"></i> Esporta CSV
-                </a>
-                <button class="btn btn-sm btn-primary fw-semibold" data-bs-toggle="modal" data-bs-target="#modalAggiungiCambio">
-                    <i class="fa-solid fa-plus me-1"></i> Nuovo Cambio Serie
-                </button>
-            </div>
-        </header>
+    <!-- Contenuto principale -->
+    <div class="container my-4">
 
-        <main class="p-3 p-md-4">
-
-            {% with messages = get_flashed_messages(with_categories=true) %}
-              {% if messages %}
+        <!-- Flash messages -->
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
                 {% for category, message in messages %}
-                  <div class="alert alert-{{ 'danger' if category == 'error' else category }} alert-dismissible fade show mb-3 shadow-sm" role="alert">
-                    {{ message }}
-                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-                  </div>
+                    <div class="alert alert-{{ 'danger' if category == 'error' else 'success' }} alert-dismissible fade show" role="alert">
+                        {{ message }}
+                        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                    </div>
                 {% endfor %}
-              {% endif %}
-            {% endwith %}
+            {% endif %}
+        {% endwith %}
 
-            <div class="card-custom p-3 p-md-4">
+        <!-- Avviso Articoli Sotto Soglia -->
+        {% if prodotti_sotto_soglia %}
+        <div class="alert alert-warning shadow-sm mb-4" role="alert">
+            <h5 class="alert-heading fw-bold"><i class="fa-solid fa-triangle-exclamation me-2"></i>Attenzione! Articoli sotto la scorta minima:</h5>
+            <ul class="mb-0">
+                {% for p in prodotti_sotto_soglia %}
+                <li><strong>{{ p.nome }}</strong> (Codice: {{ p.qr_code }}) - Quantità: <span class="badge bg-danger">{{ p.quantita }}</span> (Soglia: {{ p.soglia_minima or 3 }})</li>
+                {% endfor %}
+            </ul>
+        </div>
+        {% endif %}
+
+        <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
+            <h2><i class="fa-solid fa-boxes-stacked me-2 text-primary"></i>Inventario Magazzino</h2>
+            <div class="d-flex gap-2 flex-wrap">
+                <a href="{{ url_for('esporta_inventario') }}" class="btn btn-outline-success">
+                    <i class="fa-solid fa-file-excel me-1"></i> Esporta CSV
+                </a>
+                <a href="{{ url_for('stampa_multipla_qr') }}" class="btn btn-outline-dark">
+                    <i class="fa-solid fa-print me-1"></i> Stampa QR
+                </a>
+                {% if session.get('is_admin') or session.get('puo_aggiungere_prodotti', 1) %}
+                <button class="btn btn-dark" data-bs-toggle="modal" data-bs-target="#modalNuovoProdotto">
+                    <i class="fa-solid fa-plus me-1"></i> Nuovo Articolo
+                </button>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Tabella Prodotti -->
+        <div class="card shadow-sm">
+            <div class="card-header bg-dark text-white d-flex justify-content-between align-items-center py-3">
+                <h5 class="mb-0"><i class="fa-solid fa-table-list me-2"></i>Elenco Articoli</h5>
+                <span class="badge bg-secondary fs-6">{{ prodotti|length }} articoli</span>
+            </div>
+            <div class="card-body">
                 <div class="table-responsive">
-                    <table class="table table-hover align-middle mb-0">
+                    <table class="table table-hover align-middle">
                         <thead class="table-light">
                             <tr>
-                                <th>Data / Ora</th>
-                                <th>Impianto / Macchina</th>
-                                <th>Articolo Precedente</th>
-                                <th>Articolo Successivo</th>
-                                <th>Operatore</th>
-                                <th>Note</th>
+                                <th>QR Code</th>
+                                <th>Nome Articolo</th>
+                                <th>SAP</th>
+                                <th>Quantità</th>
+                                <th>Posizione</th>
+                                <th>Peso</th>
                                 <th class="text-end">Azioni</th>
                             </tr>
                         </thead>
                         <tbody>
-                            {% for c in cambi %}
+                            {% for p in prodotti %}
                             <tr>
-                                <td class="small text-muted">{{ c.data_ora.strftime('%d/%m/%Y %H:%M') if c.data_ora else '-' }}</td>
-                                <td class="fw-semibold">{{ c.impianto }}</td>
-                                <td>{{ c.articolo_vecchio or '-' }}</td>
-                                <td><span class="badge bg-success fs-6">{{ c.articolo_nuovo or '-' }}</span></td>
-                                <td>{{ c.operatore or '-' }}</td>
-                                <td class="small text-muted">{{ c.note or '-' }}</td>
+                                <td><span class="badge bg-secondary font-monospace">{{ p.qr_code }}</span></td>
+                                <td class="fw-bold text-dark">{{ p.nome }}</td>
+                                <td>{{ p.sap or '-' }}</td>
+                                <td>
+                                    <span class="badge {% if p.quantita <= (p.soglia_minima or 3) %}bg-danger{% else %}bg-success{% endif %} fs-6">
+                                        {{ p.quantita }} pz
+                                    </span>
+                                </td>
+                                <td>{{ p.posizione or '-' }}</td>
+                                <td>{{ p.peso or '-' }}</td>
                                 <td class="text-end">
-                                    {% if session.is_admin %}
-                                    <form action="{{ url_for('elimina_cambio_serie', cambio_id=c.id) }}" method="POST" class="d-inline" onsubmit="return confirm('Eliminare questo cambio serie?');">
-                                        <button type="submit" class="btn btn-sm btn-outline-danger" title="Elimina">
-                                            <i class="fa-solid fa-trash"></i>
-                                        </button>
-                                    </form>
-                                    {% endif %}
+                                    <div class="btn-group">
+                                        <a href="{{ url_for('gestisci_prodotto', qr_code=p.qr_code) }}" class="btn btn-sm btn-outline-primary" title="Gestisci">
+                                            <i class="fa-solid fa-pen-to-square"></i>
+                                        </a>
+                                        <a href="{{ url_for('stampa_singolo_qr', qr_code=p.qr_code) }}" class="btn btn-sm btn-outline-dark" title="Stampa QR">
+                                            <i class="fa-solid fa-qrcode"></i>
+                                        </a>
+                                    </div>
                                 </td>
                             </tr>
                             {% else %}
                             <tr>
-                                <td colspan="7" class="text-center py-4 text-muted">Nessun cambio serie registrato.</td>
+                                <td colspan="7" class="text-center text-muted py-4">Nessun articolo trovato in magazzino.</td>
                             </tr>
                             {% endfor %}
                         </tbody>
                     </table>
                 </div>
             </div>
+        </div>
 
-        </main>
     </div>
 
-    <!-- Modal Aggiungi Cambio Serie -->
-    <div class="modal fade" id="modalAggiungiCambio" tabindex="-1">
+    <!-- Modale Nuovo Prodotto -->
+    <div class="modal fade" id="modalNuovoProdotto" tabindex="-1">
         <div class="modal-dialog">
             <div class="modal-content">
-                <form action="{{ url_for('aggiungi_cambio_serie') }}" method="POST">
-                    <div class="modal-header">
-                        <h5 class="modal-title fw-bold">Registra Nuovo Cambio Serie</h5>
-                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                <form action="{{ url_for('aggiungi_prodotto') }}" method="POST">
+                    <div class="modal-header bg-dark text-white">
+                        <h5 class="modal-title"><i class="fa-solid fa-plus-circle me-1"></i> Aggiungi Nuovo Articolo</h5>
+                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
                     </div>
                     <div class="modal-body">
                         <div class="mb-3">
-                            <label class="form-label fw-semibold">Impianto / Macchina *</label>
-                            <input type="text" name="impianto" class="form-control" placeholder="es. Linea 1 / Forno / Macchina" required>
+                            <label class="form-label fw-bold">QR Code / Codice a Barre (Opzionale)</label>
+                            <input type="text" class="form-control" name="qr_code" placeholder="Lascia vuoto per generazione automatica (es. OMG-0001)">
+                            <div class="form-text text-muted">Se lasci vuoto questo campo, il sistema creerà un codice progressivo in automatico.</div>
                         </div>
                         <div class="mb-3">
-                            <label class="form-label fw-semibold">Articolo Precedente</label>
-                            <input type="text" name="articolo_vecchio" class="form-control" placeholder="Articolo in uscita">
+                            <label class="form-label fw-bold">Nome Articolo *</label>
+                            <input type="text" class="form-control" name="nome" placeholder="Inserisci nome articolo..." required>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Codice SAP</label>
+                                <input type="text" class="form-control" name="sap" placeholder="Codice SAP...">
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Peso</label>
+                                <input type="text" class="form-control" name="peso" placeholder="Es. 1.5 kg">
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Quantità Iniziale</label>
+                                <input type="number" class="form-control" name="quantita" value="0" min="0">
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Soglia Scorta Minima</label>
+                                <input type="number" class="form-control" name="soglia_minima" value="3" min="0">
+                            </div>
                         </div>
                         <div class="mb-3">
-                            <label class="form-label fw-semibold">Articolo Successivo (Nuovo) *</label>
-                            <input type="text" name="articolo_nuovo" class="form-control" placeholder="Articolo in arrivo" required>
-                        </div>
-                        <div class="mb-3">
-                            <label class="form-label fw-semibold">Operatore</label>
-                            <input type="text" name="operatore" class="form-control" value="{{ session.get('username', '') }}">
-                        </div>
-                        <div class="mb-3">
-                            <label class="form-label fw-semibold">Note / Dettagli</label>
-                            <textarea name="note" class="form-control" rows="3" placeholder="Eventuali problematiche o note tecniche..."></textarea>
+                            <label class="form-label">Posizione in Magazzino</label>
+                            <input type="text" class="form-control" name="posizione" placeholder="Es. Scaffale A1...">
                         </div>
                     </div>
                     <div class="modal-footer">
                         <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annulla</button>
-                        <button type="submit" class="btn btn-primary">Salva Cambio Serie</button>
+                        <button type="submit" class="btn btn-primary">Salva Articolo</button>
                     </div>
                 </form>
             </div>
         </div>
     </div>
 
-    <!-- JS Bootstrap -->
+    <!-- Bootstrap JS -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>
