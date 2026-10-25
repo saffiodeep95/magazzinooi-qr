@@ -237,6 +237,7 @@ def init_db():
             );
         """)
 
+        # TABELLA CAMBI SERIE DETTAGLIATA
         cur.execute("""
             CREATE TABLE IF NOT EXISTS cambi_serie (
                 id SERIAL PRIMARY KEY,
@@ -332,6 +333,7 @@ def api_segna_lette():
         conn.close()
     return jsonify({"status": "ok"})
 
+# HOME PAGE DEL MAGAZZINO
 @app.route("/")
 @app.route("/index")
 @app.route("/index.html")
