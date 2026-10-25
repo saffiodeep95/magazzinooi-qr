@@ -237,15 +237,19 @@ def init_db():
             );
         """)
 
+        # TABELLA CAMBI SERIE
         cur.execute("""
             CREATE TABLE IF NOT EXISTS cambi_serie (
                 id SERIAL PRIMARY KEY,
-                data_ora TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                impianto VARCHAR(255),
-                articolo_vecchio VARCHAR(255),
-                articolo_nuovo VARCHAR(255),
-                operatore VARCHAR(255),
-                note TEXT
+                data_cambio VARCHAR(255),
+                forno VARCHAR(255),
+                linea VARCHAR(255),
+                nome_bottiglia VARCHAR(255),
+                tempo_cambio VARCHAR(255),
+                altezza_paratie VARCHAR(255),
+                num_bottiglie_tempera INT DEFAULT 0,
+                quantita_trattamento VARCHAR(255),
+                creato_il TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             );
         """)
         
@@ -571,92 +575,78 @@ def elimina_utente(user_id):
 @app.route("/cambi_serie")
 @app.route("/cambi_serie.html")
 def cambi_serie():
-    cambi = []
+    forno_filtro = request.args.get("forno", "Tutti")
+    settimana_filtro = request.args.get("settimana", "")
+    
+    record_serie = []
     try:
         conn = get_db_connection()
         cur = conn.cursor()
-        cur.execute("SELECT * FROM cambi_serie ORDER BY data_ora DESC;")
-        cambi = cur.fetchall()
+        
+        query = "SELECT * FROM cambi_serie WHERE 1=1"
+        params = []
+        
+        if forno_filtro != "Tutti":
+            query += " AND forno = %s"
+            params.append(forno_filtro)
+
+        query += " ORDER BY id DESC;"
+        cur.execute(query, tuple(params))
+        record_serie = cur.fetchall()
+        
         cur.close()
         conn.close()
     except Exception as e:
         print(f"Errore caricamento cambi serie: {e}")
-    return render_template("cambi_serie.html", cambi=cambi)
+        
+    return render_template("cambi_serie.html", record_serie=record_serie, forno_filtro=forno_filtro, settimana_filtro=settimana_filtro)
 
 @app.route("/aggiungi_cambio_serie", methods=["POST"])
 def aggiungi_cambio_serie():
-    impianto = request.form.get("impianto", "").strip()
-    articolo_vecchio = request.form.get("articolo_vecchio", "").strip()
-    articolo_nuovo = request.form.get("articolo_nuovo", "").strip()
-    operatore = request.form.get("operatore", "").strip() or session.get('username', 'Utente')
-    note = request.form.get("note", "").strip()
+    forno = request.form.get("forno", "").strip()
+    linea = request.form.get("linea", "").strip()
+    data_cambio = request.form.get("data_cambio", "").strip()
+    nome_bottiglia = request.form.get("nome_bottiglia", "").strip()
+    tempo_cambio = request.form.get("tempo_cambio", "").strip()
+    altezza_paratie = request.form.get("altezza_paratie", "").strip()
+    num_bottiglie_tempera = request.form.get("num_bottiglie_tempera", 0)
+    quantita_trattamento = request.form.get("quantita_trattamento", "").strip()
     
-    if not impianto:
-        flash("Il campo Impianto / Macchina è obbligatorio!", "error")
+    if not forno or not nome_bottiglia or not data_cambio:
+        flash("Compila tutti i campi obbligatori (Forno, Data e Nome Bottiglia)!", "error")
         return redirect(url_for("cambi_serie"))
 
     try:
         conn = get_db_connection()
         cur = conn.cursor()
         cur.execute("""
-            INSERT INTO cambi_serie (impianto, articolo_vecchio, articolo_nuovo, operatore, note)
-            VALUES (%s, %s, %s, %s, %s);
-        """, (impianto, articolo_vecchio, articolo_nuovo, operatore, note))
+            INSERT INTO cambi_serie (forno, linea, data_cambio, nome_bottiglia, tempo_cambio, altezza_paratie, num_bottiglie_tempera, quantita_trattamento)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s);
+        """, (forno, linea, data_cambio, nome_bottiglia, tempo_cambio, altezza_paratie, num_bottiglie_tempera, quantita_trattamento))
         conn.commit()
         cur.close()
         conn.close()
-        registra_log(f"Registrato cambio serie su impianto: {impianto}")
+        registra_log(f"Registrato cambio serie per {nome_bottiglia} su {forno} Linea {linea}")
         flash("Cambio serie registrato e salvato con successo!", "success")
     except Exception as e:
         flash(f"Errore durante il salvataggio del cambio serie: {e}", "error")
         
     return redirect(url_for("cambi_serie"))
 
-@app.route("/elimina_cambio_serie/<int:cambio_id>", methods=["POST"])
-def elimina_cambio_serie(cambio_id):
+@app.route("/elimina_cambio_serie/<int:id_cambio>", methods=["POST"])
+def elimina_cambio_serie(id_cambio):
     try:
         conn = get_db_connection()
         cur = conn.cursor()
-        cur.execute("DELETE FROM cambi_serie WHERE id = %s;", (cambio_id,))
+        cur.execute("DELETE FROM cambi_serie WHERE id = %s;", (id_cambio,))
         conn.commit()
         cur.close()
         conn.close()
-        registra_log(f"Eliminato record cambio serie ID {cambio_id}")
+        registra_log(f"Eliminato record cambio serie ID {id_cambio}")
         flash("Cambio serie eliminato con successo.", "success")
     except Exception as e:
         flash(f"Errore eliminazione: {e}", "error")
     return redirect(url_for("cambi_serie"))
-
-@app.route("/esporta_cambi_serie_csv", endpoint="esporta_cambi_serie_csv")
-def esporta_cambi_serie_csv():
-    try:
-        conn = get_db_connection()
-        cur = conn.cursor()
-        cur.execute("SELECT * FROM cambi_serie ORDER BY data_ora DESC;")
-        cambi = cur.fetchall()
-        cur.close()
-        conn.close()
-    except Exception:
-        cambi = []
-
-    output = io.StringIO()
-    writer = csv.writer(output)
-    writer.writerow(['ID', 'Data / Ora', 'Impianto / Macchina', 'Articolo Precedente', 'Articolo Successivo', 'Operatore', 'Note'])
-    for c in cambi:
-        writer.writerow([
-            c.get('id', ''),
-            c.get('data_ora', ''),
-            c.get('impianto', ''),
-            c.get('articolo_vecchio', ''),
-            c.get('articolo_nuovo', ''),
-            c.get('operatore', ''),
-            c.get('note', '')
-        ])
-    return Response(
-        output.getvalue(),
-        mimetype="text/csv",
-        headers={"Content-disposition": "attachment; filename=Cambi_Serie_OMG.csv"}
-    )
 
 # --- MODULO: REPORT ORE & STATISTICHE MANUTENZIONI ---
 @app.route("/report_ore")
