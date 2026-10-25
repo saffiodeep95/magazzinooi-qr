@@ -12,7 +12,7 @@ from datetime import datetime, timedelta
 import pandas as pd
 import psycopg2
 from psycopg2.extras import RealDictCursor
-from flask import Flask, render_template, render_template_string, request, redirect, url_for, flash, session, send_file, Response, jsonify
+from flask import Flask, render_template, request, redirect, url_for, flash, session, send_file, Response, jsonify
 from werkzeug.security import generate_password_hash, check_password_hash
 
 app = Flask(__name__)
@@ -236,22 +236,6 @@ def init_db():
                 creato_il TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             );
         """)
-
-        # TABELLA CAMBI SERIE AGGIORNATA
-        cur.execute("""
-            CREATE TABLE IF NOT EXISTS cambi_serie (
-                id SERIAL PRIMARY KEY,
-                data_cambio VARCHAR(255),
-                forno VARCHAR(255),
-                linea VARCHAR(255),
-                nome_bottiglia VARCHAR(255),
-                tempo_cambio VARCHAR(255),
-                altezza_paratie VARCHAR(255),
-                num_bottiglie_tempera INT DEFAULT 0,
-                quantita_trattamento VARCHAR(255),
-                creato_il TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-            );
-        """)
         
         permessi_lista = [
             ("puo_vedere_magazzino", "INT DEFAULT 1"),
@@ -313,7 +297,7 @@ def api_notifiche():
     cur.execute("""
         SELECT id, titolo, messaggio, link, letta, creato_il 
         FROM notifiche 
-        WHERE LOWER(destinatario) = LOWER(%s) 
+        WHERE destinatario = %s 
         ORDER BY creato_il DESC LIMIT 15;
     """, (username,))
     notifiche = cur.fetchall()
@@ -327,7 +311,7 @@ def api_segna_lette():
     if username:
         conn = get_db_connection()
         cur = conn.cursor()
-        cur.execute("UPDATE notifiche SET letta = TRUE WHERE LOWER(destinatario) = LOWER(%s);", (username,))
+        cur.execute("UPDATE notifiche SET letta = TRUE WHERE destinatario = %s;", (username,))
         conn.commit()
         cur.close()
         conn.close()
@@ -338,16 +322,11 @@ def api_segna_lette():
 @app.route("/index.html")
 def index():
     prodotti = []
-    prodotti_pesanti = []
     prodotti_sotto_soglia = []
     promemoria_urgenti = 0
     interventi_aperti_count = 0
     interventi_in_lavoro_count = 0
     interventi_attesa_count = 0
-    notifiche_attive = []
-    
-    totale_pezzi_standard = 0
-    totale_pezzi_pesante = 0
     
     username = session.get('username')
     is_admin = session.get('is_admin')
@@ -359,14 +338,6 @@ def index():
         
         cur.execute("SELECT * FROM prodotti ORDER BY nome ASC;")
         tutti = cur.fetchall()
-        
-        if username:
-            cur.execute("""
-                SELECT * FROM notifiche 
-                WHERE LOWER(destinatario) = LOWER(%s) AND letta = FALSE 
-                ORDER BY creato_il DESC;
-            """, (username,))
-            notifiche_attive = cur.fetchall()
         
         if is_admin or puo_assegnare:
             cur.execute("SELECT COUNT(*) as count FROM promemoria WHERE completato = FALSE;")
@@ -389,32 +360,21 @@ def index():
         for p in tutti:
             val_pesante = p.get('magazzino_pesante')
             is_pesante = (val_pesante == 1 or val_pesante == '1' or val_pesante is True or val_pesante == 1.0)
-            qta = p.get('quantita', 0) or 0
-            
-            if is_pesante:
-                prodotti_pesanti.append(p)
-                totale_pezzi_pesante += qta
-            else:
+            if not is_pesante:
                 prodotti.append(p)
-                totale_pezzi_standard += qta
-                
             soglia = p.get('soglia_minima', 3) or 3
-            if qta <= soglia:
+            if p.get('quantita', 0) <= soglia:
                 prodotti_sotto_soglia.append(p)
     except Exception as e:
         print(f"Errore index: {e}")
         
     return render_template("index.html", 
                            prodotti=prodotti, 
-                           prodotti_pesanti=prodotti_pesanti,
                            prodotti_sotto_soglia=prodotti_sotto_soglia,
                            promemoria_urgenti=promemoria_urgenti,
                            interventi_aperti_count=interventi_aperti_count,
                            interventi_in_lavoro_count=interventi_in_lavoro_count,
-                           interventi_attesa_count=interventi_attesa_count,
-                           totale_pezzi_standard=totale_pezzi_standard,
-                           totale_pezzi_pesante=totale_pezzi_pesante,
-                           notifiche_attive=notifiche_attive)
+                           interventi_attesa_count=interventi_attesa_count)
 
 @app.route("/login", methods=["GET", "POST"])
 @app.route("/login.html", methods=["GET", "POST"])
@@ -575,78 +535,24 @@ def elimina_utente(user_id):
 @app.route("/cambi_serie")
 @app.route("/cambi_serie.html")
 def cambi_serie():
-    forno_filtro = request.args.get("forno", "Tutti")
-    settimana_filtro = request.args.get("settimana", "")
-    
-    record_serie = []
-    try:
-        conn = get_db_connection()
-        cur = conn.cursor()
-        
-        query = "SELECT * FROM cambi_serie WHERE 1=1"
-        params = []
-        
-        if forno_filtro != "Tutti":
-            query += " AND forno = %s"
-            params.append(forno_filtro)
-
-        query += " ORDER BY id DESC;"
-        cur.execute(query, tuple(params))
-        record_serie = cur.fetchall()
-        
-        cur.close()
-        conn.close()
-    except Exception as e:
-        print(f"Errore caricamento cambi serie: {e}")
-        
-    return render_template("cambi_serie.html", record_serie=record_serie, forno_filtro=forno_filtro, settimana_filtro=settimana_filtro)
+    return render_template("cambi_serie.html", cambi=[])
 
 @app.route("/aggiungi_cambio_serie", methods=["POST"])
 def aggiungi_cambio_serie():
-    forno = request.form.get("forno", "").strip()
-    linea = request.form.get("linea", "").strip()
-    data_cambio = request.form.get("data_cambio", "").strip()
-    nome_bottiglia = request.form.get("nome_bottiglia", "").strip()
-    tempo_cambio = request.form.get("tempo_cambio", "").strip()
-    altezza_paratie = request.form.get("altezza_paratie", "").strip()
-    num_bottiglie_tempera = int(request.form.get("num_bottiglie_tempera", 0) or 0)
-    quantita_trattamento = request.form.get("quantita_trattamento", "").strip()
-    
-    if not forno or not nome_bottiglia or not data_cambio:
-        flash("Compila tutti i campi obbligatori (Forno, Data e Nome Bottiglia)!", "error")
-        return redirect(url_for("cambi_serie"))
-
-    try:
-        conn = get_db_connection()
-        cur = conn.cursor()
-        cur.execute("""
-            INSERT INTO cambi_serie (forno, linea, data_cambio, nome_bottiglia, tempo_cambio, altezza_paratie, num_bottiglie_tempera, quantita_trattamento)
-            VALUES (%s, %s, %s, %s, %s, %s, %s, %s);
-        """, (forno, linea, data_cambio, nome_bottiglia, tempo_cambio, altezza_paratie, num_bottiglie_tempera, quantita_trattamento))
-        conn.commit()
-        cur.close()
-        conn.close()
-        registra_log(f"Registrato cambio serie per {nome_bottiglia} su {forno} Linea {linea}")
-        flash("Cambio serie registrato e salvato con successo!", "success")
-    except Exception as e:
-        flash(f"Errore durante il salvataggio del cambio serie: {e}", "error")
-        
+    registra_log("Aggiunto cambio serie")
+    flash("Cambio serie registrato con successo!", "success")
     return redirect(url_for("cambi_serie"))
 
-@app.route("/elimina_cambio_serie/<int:id_cambio>", methods=["POST"])
-def elimina_cambio_serie(id_cambio):
-    try:
-        conn = get_db_connection()
-        cur = conn.cursor()
-        cur.execute("DELETE FROM cambi_serie WHERE id = %s;", (id_cambio,))
-        conn.commit()
-        cur.close()
-        conn.close()
-        registra_log(f"Eliminato record cambio serie ID {id_cambio}")
-        flash("Cambio serie eliminato con successo.", "success")
-    except Exception as e:
-        flash(f"Errore eliminazione: {e}", "error")
-    return redirect(url_for("cambi_serie"))
+@app.route("/esporta_cambi_serie_csv")
+def esporta_cambi_serie_csv():
+    output = io.StringIO()
+    writer = csv.writer(output)
+    writer.writerow(['ID', 'Descrizione', 'Data'])
+    return Response(
+        output.getvalue(),
+        mimetype="text/csv",
+        headers={"Content-disposition": "attachment; filename=Cambi_Serie_OMG.csv"}
+    )
 
 # --- MODULO: REPORT ORE & STATISTICHE MANUTENZIONI ---
 @app.route("/report_ore")
@@ -997,49 +903,7 @@ def stampa_intervento(intervento_id):
     if not intervento:
         flash("Intervento non trovato.", "error")
         return redirect(url_for("richieste_manutenzione"))
-    
-    html_content = """
-    <!DOCTYPE html>
-    <html lang="it">
-    <head>
-        <meta charset="UTF-8">
-        <title>Stampa Intervento #{{ intervento.id }}</title>
-        <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    </head>
-    <body class="p-5">
-        <div class="container">
-            <h2 class="fw-bold mb-3">Scheda Intervento Officina #{{ intervento.id }}</h2>
-            <hr>
-            <p><strong>Titolo:</strong> {{ intervento.titolo }}</p>
-            <p><strong>Impianto / Macchina:</strong> {{ intervento.impianto_macchina or '-' }}</p>
-            <p><strong>Tipo Guasto:</strong> {{ intervento.tipo_guasto or '-' }}</p>
-            <p><strong>Priorità:</strong> {{ intervento.priorita }}</p>
-            <p><strong>Stato:</strong> {{ intervento.stato }}</p>
-            <p><strong>Assegnato a:</strong> {{ intervento.assegnato_a or '-' }}</p>
-            <p><strong>Creato da:</strong> {{ intervento.creato_da or '-' }}</p>
-            <div class="card p-3 my-3 bg-light">
-                <strong>Descrizione:</strong>
-                <p class="mb-0">{{ intervento.descrizione or '-' }}</p>
-            </div>
-            {% if ricambi %}
-                <h5 class="mt-4">Ricambi Utilizzati</h5>
-                <ul class="list-group mb-3">
-                    {% for ric in ricambi %}
-                        <li class="list-group-item d-flex justify-content-between align-items-center">
-                            {{ ric.nome_ricambio }} (QR: <code>{{ ric.qr_code }}</code>)
-                            <span class="badge bg-primary rounded-pill">{{ ric.quantita }} pz</span>
-                        </li>
-                    {% endfor %}
-                </ul>
-            {% endif %}
-            <hr>
-            <button onclick="window.print()" class="btn btn-dark me-2">Stampa Scheda</button>
-            <a href="{{ url_for('richieste_manutenzione') }}" class="btn btn-secondary">Torna Indietro</a>
-        </div>
-    </body>
-    </html>
-    """
-    return render_template_string(html_content, intervento=intervento, r=intervento, ricambi=ricambi)
+    return render_template("stampa_intervento.html", r=intervento, ricambi=ricambi, intervento=intervento)
 
 @app.route("/elimina_intervento/<int:intervento_id>", methods=["POST"])
 def elimina_intervento(intervento_id):
@@ -1454,8 +1318,7 @@ def importa_intelligente():
         flash(f"Errore importazione: {e}", "error")
     return redirect(url_for("fornitori"))
 
-@app.route("/esporta_fornitori_intelligente", endpoint="esporta_fornitori_intelligente")
-@app.route("/esporta_fornitori_csv", endpoint="esporta_fornitori_csv")
+@app.route("/esporta_fornitori_csv")
 def esporta_fornitori_csv():
     conn = get_db_connection()
     cur = conn.cursor()
@@ -2061,7 +1924,7 @@ def aggiungi_prodotto():
         flash("Permesso negato per inserire nuovi prodotti.", "error")
         return redirect(url_for("index"))
 
-    qr_code = request.form.get("qr_code", "").strip()
+    qr_code = request.form.get("qr_code")
     nome = request.form.get("nome")
     sap = request.form.get("sap", "")
     peso = request.form.get("peso", "")
@@ -2070,27 +1933,13 @@ def aggiungi_prodotto():
     posizione = request.form.get("posizione", "")
     flag_sezione = 1 if request.form.get("magazzino_pesante") else 0
 
-    if not nome:
-        flash("Il Nome è obbligatorio!", "error")
+    if not qr_code or not nome:
+        flash("QR Code e Nome sono obbligatori!", "error")
         return redirect(url_for("index"))
 
     try:
         conn = get_db_connection()
         cur = conn.cursor()
-        
-        # Generazione automatica progressivo QR se vuoto
-        if not qr_code:
-            cur.execute("SELECT COUNT(*) as cnt FROM prodotti;")
-            cnt = cur.fetchone()['cnt'] + 1
-            qr_code = f"OMG-{cnt:03d}"
-            while True:
-                cur.execute("SELECT id FROM prodotti WHERE qr_code = %s;", (qr_code,))
-                if cur.fetchone():
-                    cnt += 1
-                    qr_code = f"OMG-{cnt:03d}"
-                else:
-                    break
-
         cur.execute("""
             INSERT INTO prodotti (qr_code, nome, sap, peso, quantita, posizione, magazzino_pesante, soglia_minima)
             VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
@@ -2108,7 +1957,7 @@ def aggiungi_prodotto():
         cur.close()
         conn.close()
         registra_log(f"Aggiunto prodotto: {nome} (QR: {qr_code})")
-        flash(f"Articolo salvato con successo! (QR: {qr_code})", "success")
+        flash("Prodotto salvato con successo!", "success")
     except Exception as e:
         flash(f"Errore: {e}", "error")
 
