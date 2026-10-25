@@ -237,7 +237,7 @@ def init_db():
             );
         """)
 
-        # TABELLA CAMBI SERIE
+        # TABELLA CAMBI SERIE AGGIORNATA
         cur.execute("""
             CREATE TABLE IF NOT EXISTS cambi_serie (
                 id SERIAL PRIMARY KEY,
@@ -609,7 +609,7 @@ def aggiungi_cambio_serie():
     nome_bottiglia = request.form.get("nome_bottiglia", "").strip()
     tempo_cambio = request.form.get("tempo_cambio", "").strip()
     altezza_paratie = request.form.get("altezza_paratie", "").strip()
-    num_bottiglie_tempera = request.form.get("num_bottiglie_tempera", 0)
+    num_bottiglie_tempera = int(request.form.get("num_bottiglie_tempera", 0) or 0)
     quantita_trattamento = request.form.get("quantita_trattamento", "").strip()
     
     if not forno or not nome_bottiglia or not data_cambio:
