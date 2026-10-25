@@ -209,7 +209,6 @@
                                 <th>Nome Bottiglia</th>
                                 <th>Tempo Cambio</th>
                                 <th>Altezza Paratie</th>
-                                <th>Misura Piastrina</th>
                                 <th>N° Bottiglie Tempera</th>
                                 <th>Q.tà Trattamento</th>
                                 <th class="no-print text-end">Azioni</th>
@@ -230,7 +229,6 @@
                                 <td class="fw-bold text-primary fs-5">{{ r.nome_bottiglia }}</td>
                                 <td><span class="badge bg-secondary fs-6">{{ r.tempo_cambio or '-' }}</span></td>
                                 <td>{{ r.altezza_paratie or '-' }}</td>
-                                <td>{{ r.misura_piastrina or '-' }}</td>
                                 <td><span class="badge bg-info text-dark fs-6">{{ r.num_bottiglie_tempera }} pz</span></td>
                                 <td>{{ r.quantita_trattamento or '-' }}</td>
                                 <td class="no-print text-end">
@@ -243,7 +241,7 @@
                             </tr>
                             {% else %}
                             <tr>
-                                <td colspan="9" class="text-center text-muted py-4">Nessun cambio serie trovato con i filtri selezionati.</td>
+                                <td colspan="8" class="text-center text-muted py-4">Nessun cambio serie trovato con i filtri selezionati.</td>
                             </tr>
                             {% endfor %}
                         </tbody>
@@ -302,17 +300,13 @@
                         </div>
                         <div class="row">
                             <div class="col-md-6 mb-3">
-                                <label class="form-label">Misura Piastrina</label>
-                                <input type="text" class="form-control" name="misura_piastrina" placeholder="Es. 50x50 mm">
-                            </div>
-                            <div class="col-md-6 mb-3">
                                 <label class="form-label">N° Bottiglie in Tempera</label>
                                 <input type="number" class="form-control" name="num_bottiglie_tempera" value="0" min="0">
                             </div>
-                        </div>
-                        <div class="mb-3">
-                            <label class="form-label">Quantità Trattamento</label>
-                            <input type="text" class="form-control" name="quantita_trattamento" placeholder="Es. 5000 pz">
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Quantità Trattamento</label>
+                                <input type="text" class="form-control" name="quantita_trattamento" placeholder="Es. 5000 pz">
+                            </div>
                         </div>
                     </div>
                     <div class="modal-footer">
