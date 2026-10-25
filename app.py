@@ -237,7 +237,6 @@ def init_db():
             );
         """)
 
-        # TABELLA CAMBI SERIE DETTAGLIATA
         cur.execute("""
             CREATE TABLE IF NOT EXISTS cambi_serie (
                 id SERIAL PRIMARY KEY,
@@ -333,7 +332,6 @@ def api_segna_lette():
         conn.close()
     return jsonify({"status": "ok"})
 
-# HOME PAGE DEL MAGAZZINO
 @app.route("/")
 @app.route("/index")
 @app.route("/index.html")
@@ -1419,7 +1417,8 @@ def importa_intelligente():
         flash(f"Errore importazione: {e}", "error")
     return redirect(url_for("fornitori"))
 
-@app.route("/esporta_fornitori_csv")
+@app.route("/esporta_fornitori_intelligente", endpoint="esporta_fornitori_intelligente")
+@app.route("/esporta_fornitori_csv", endpoint="esporta_fornitori_csv")
 def esporta_fornitori_csv():
     conn = get_db_connection()
     cur = conn.cursor()
@@ -2025,22 +2024,37 @@ def aggiungi_prodotto():
         flash("Permesso negato per inserire nuovi prodotti.", "error")
         return redirect(url_for("index"))
 
-    qr_code = request.form.get("qr_code")
+    qr_code = request.form.get("qr_code", "").strip()
     nome = request.form.get("nome")
     sap = request.form.get("sap", "")
     peso = request.form.get("peso", "")
-    quantita = int(request.form.get("quantita", 0))
+    quantita = int(request.form.get("quantita", 0) or 0)
     soglia_minima = int(request.form.get("soglia_minima", 3) or 3)
     posizione = request.form.get("posizione", "")
     flag_sezione = 1 if request.form.get("magazzino_pesante") else 0
 
-    if not qr_code or not nome:
-        flash("QR Code e Nome sono obbligatori!", "error")
+    if not nome:
+        flash("Il nome dell'articolo è obbligatorio!", "error")
         return redirect(url_for("index"))
 
     try:
         conn = get_db_connection()
         cur = conn.cursor()
+        
+        # Generazione automatica del QR code se lasciato vuoto
+        if not qr_code:
+            cur.execute("SELECT COUNT(*) + 1 as next_id FROM prodotti;")
+            res_id = cur.fetchone()
+            next_num = res_id['next_id'] if res_id else 1
+            qr_code = f"OMG-{next_num:04d}"
+            
+            while True:
+                cur.execute("SELECT id FROM prodotti WHERE qr_code = %s;", (qr_code,))
+                if not cur.fetchone():
+                    break
+                next_num += 1
+                qr_code = f"OMG-{next_num:04d}"
+
         cur.execute("""
             INSERT INTO prodotti (qr_code, nome, sap, peso, quantita, posizione, magazzino_pesante, soglia_minima)
             VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
@@ -2058,7 +2072,7 @@ def aggiungi_prodotto():
         cur.close()
         conn.close()
         registra_log(f"Aggiunto prodotto: {nome} (QR: {qr_code})")
-        flash("Prodotto salvato con successo!", "success")
+        flash(f"Prodotto salvato con successo! (QR Code: {qr_code})", "success")
     except Exception as e:
         flash(f"Errore: {e}", "error")
 
