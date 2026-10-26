@@ -102,6 +102,47 @@
             {% endif %}
         {% endwith %}
 
+        <!-- CARD STATISTICHE E TOTALI PEZZI -->
+        {% set ns = namespace(totale_std=0) %}
+        {% for p in prodotti %}
+            {% set ns.totale_std = ns.totale_std + (p.quantita or 0) %}
+        {% endfor %}
+        <div class="row g-3 mb-4">
+            <div class="col-md-4">
+                <div class="card bg-primary text-white shadow-sm border-0 h-100">
+                    <div class="card-body d-flex align-items-center justify-content-between">
+                        <div>
+                            <h6 class="card-title text-white-50 text-uppercase fw-bold mb-1">Magazzino Standard</h6>
+                            <h3 class="fw-bold mb-0">{{ ns.totale_std }} <small class="fs-6 fw-normal">pz</small></h3>
+                        </div>
+                        <i class="fa-solid fa-boxes-stacked fs-1 text-white-50"></i>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="card bg-dark text-white shadow-sm border-0 h-100">
+                    <div class="card-body d-flex align-items-center justify-content-between">
+                        <div>
+                            <h6 class="card-title text-white-50 text-uppercase fw-bold mb-1">Articoli in Tabella</h6>
+                            <h3 class="fw-bold mb-0">{{ prodotti|length }} <small class="fs-6 fw-normal">tipologie</small></h3>
+                        </div>
+                        <i class="fa-solid fa-list-check fs-1 text-white-50"></i>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="card bg-danger text-white shadow-sm border-0 h-100">
+                    <div class="card-body d-flex align-items-center justify-content-between">
+                        <div>
+                            <h6 class="card-title text-white-50 text-uppercase fw-bold mb-1">Sotto Scorta Minima</h6>
+                            <h3 class="fw-bold mb-0">{{ prodotti_sotto_soglia|length }} <small class="fs-6 fw-normal">articoli</small></h3>
+                        </div>
+                        <i class="fa-solid fa-triangle-exclamation fs-1 text-white-50"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+
         <!-- Avviso Articoli Sotto Soglia -->
         {% if prodotti_sotto_soglia %}
         <div class="alert alert-warning shadow-sm mb-4" role="alert">
@@ -114,32 +155,56 @@
         </div>
         {% endif %}
 
-        <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
-            <h2><i class="fa-solid fa-boxes-stacked me-2 text-primary"></i>Inventario Magazzino</h2>
-            <div class="d-flex gap-2 flex-wrap">
-                <a href="{{ url_for('esporta_inventario') }}" class="btn btn-outline-success">
-                    <i class="fa-solid fa-file-excel me-1"></i> Esporta CSV
-                </a>
-                <a href="{{ url_for('stampa_multipla_qr') }}" class="btn btn-outline-dark">
-                    <i class="fa-solid fa-print me-1"></i> Stampa QR
-                </a>
-                {% if session.get('is_admin') or session.get('puo_aggiungere_prodotti', 1) %}
-                <button class="btn btn-dark" data-bs-toggle="modal" data-bs-target="#modalNuovoProdotto">
-                    <i class="fa-solid fa-plus me-1"></i> Nuovo Articolo
-                </button>
-                {% endif %}
+        <!-- BARRA AZIONI RAPIDE (CARICO, SCARICO, SCANNER, ESPORTA, NUOVO) -->
+        <div class="card shadow-sm mb-4">
+            <div class="card-body bg-white py-3">
+                <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
+                    <div class="d-flex gap-2 flex-wrap">
+                        {% if session.get('is_admin') or session.get('puo_caricare_scaricare', 1) %}
+                        <a href="{{ url_for('carico') }}" class="btn btn-success fw-bold">
+                            <i class="fa-solid fa-circle-plus me-1"></i> Carico
+                        </a>
+                        <a href="{{ url_for('scarico') }}" class="btn btn-danger fw-bold">
+                            <i class="fa-solid fa-circle-minus me-1"></i> Scarico
+                        </a>
+                        {% endif %}
+                        <a href="{{ url_for('scanner_globale') }}" class="btn btn-warning text-dark fw-bold">
+                            <i class="fa-solid fa-qrcode me-1"></i> Scanner QR
+                        </a>
+                    </div>
+
+                    <div class="d-flex gap-2 flex-wrap">
+                        <a href="{{ url_for('esporta_inventario') }}" class="btn btn-outline-success">
+                            <i class="fa-solid fa-file-excel me-1"></i> Esporta CSV
+                        </a>
+                        <a href="{{ url_for('stampa_multipla_qr') }}" class="btn btn-outline-dark">
+                            <i class="fa-solid fa-print me-1"></i> Stampa QR
+                        </a>
+                        {% if session.get('is_admin') or session.get('puo_aggiungere_prodotti', 1) %}
+                        <button class="btn btn-dark" data-bs-toggle="modal" data-bs-target="#modalNuovoProdotto">
+                            <i class="fa-solid fa-plus me-1"></i> Nuovo Articolo
+                        </button>
+                        {% endif %}
+                    </div>
+                </div>
             </div>
         </div>
 
-        <!-- Tabella Prodotti -->
+        <!-- TABELLA PRODOTTI CON RICERCA -->
         <div class="card shadow-sm">
-            <div class="card-header bg-dark text-white d-flex justify-content-between align-items-center py-3">
+            <div class="card-header bg-dark text-white d-flex justify-content-between align-items-center py-3 flex-wrap gap-2">
                 <h5 class="mb-0"><i class="fa-solid fa-table-list me-2"></i>Elenco Articoli</h5>
-                <span class="badge bg-secondary fs-6">{{ prodotti|length }} articoli</span>
+                
+                <div class="w-auto">
+                    <div class="input-group input-group-sm" style="max-width: 280px;">
+                        <span class="input-group-text bg-secondary text-white border-secondary"><i class="fa-solid fa-magnifying-glass"></i></span>
+                        <input type="text" id="cercaInTabella" class="form-control border-secondary" placeholder="Cerca articolo, QR, SAP..." onkeyup="filtraTabella()">
+                    </div>
+                </div>
             </div>
             <div class="card-body">
                 <div class="table-responsive">
-                    <table class="table table-hover align-middle">
+                    <table class="table table-hover align-middle" id="tabellaProdotti">
                         <thead class="table-light">
                             <tr>
                                 <th>QR Code</th>
@@ -241,9 +306,31 @@
         </div>
     </div>
 
-    <!-- Bootstrap JS e Logica Notifiche Live -->
+    <!-- Bootstrap JS e Script -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script>
+    function filtraTabella() {
+        const input = document.getElementById("cercaInTabella");
+        const filter = input.value.toLowerCase();
+        const table = document.getElementById("tabellaProdotti");
+        const tr = table.getElementsByTagName("tr");
+
+        for (let i = 1; i < tr.length; i++) {
+            let show = false;
+            const tdList = tr[i].getElementsByTagName("td");
+            for (let j = 0; j < tdList.length - 1; j++) {
+                if (tdList[j]) {
+                    const textValue = tdList[j].textContent || tdList[j].innerText;
+                    if (textValue.toLowerCase().indexOf(filter) > -1) {
+                        show = true;
+                        break;
+                    }
+                }
+            }
+            tr[i].style.display = show ? "" : "none";
+        }
+    }
+
     function caricaNotifiche() {
         fetch('/api/notifiche')
             .then(response => response.json())
@@ -291,7 +378,7 @@
 
     document.addEventListener("DOMContentLoaded", function() {
         caricaNotifiche();
-        setInterval(caricaNotifiche, 15000); // Polling automatico ogni 15 secondi
+        setInterval(caricaNotifiche, 15000);
     });
     </script>
 </body>
