@@ -81,6 +81,23 @@ def init_db():
                 soglia_minima INT DEFAULT 3
             );
         """)
+
+        cur.execute("""
+            CREATE TABLE IF NOT EXISTS nastri (
+                id SERIAL PRIMARY KEY,
+                codice_sap VARCHAR(255),
+                numero VARCHAR(50),
+                stato VARCHAR(50) DEFAULT 'aperto',
+                misura VARCHAR(255),
+                tipo VARCHAR(255),
+                sezione_impianto VARCHAR(255),
+                utilizzo VARCHAR(255),
+                misura_nastro_finito VARCHAR(255),
+                tipo_di_riduttore VARCHAR(255),
+                tipo_di_motore VARCHAR(255),
+                note TEXT
+            );
+        """)
         
         cur.execute("""
             CREATE TABLE IF NOT EXISTS fornitori (
@@ -176,7 +193,8 @@ def init_db():
                 puo_eliminare_documenti INT DEFAULT 0,
                 puo_vedere_promemoria INT DEFAULT 1,
                 puo_assegnare_promemoria INT DEFAULT 0,
-                puo_vedere_report_ore INT DEFAULT 1
+                puo_vedere_report_ore INT DEFAULT 1,
+                puo_gestire_nastri INT DEFAULT 1
             );
         """)
 
@@ -273,7 +291,8 @@ def init_db():
             ("puo_eliminare_documenti", "INT DEFAULT 0"),
             ("puo_vedere_promemoria", "INT DEFAULT 1"),
             ("puo_assegnare_promemoria", "INT DEFAULT 0"),
-            ("puo_vedere_report_ore", "INT DEFAULT 1")
+            ("puo_vedere_report_ore", "INT DEFAULT 1"),
+            ("puo_gestire_nastri", "INT DEFAULT 1")
         ]
         
         for p_col, p_type in permessi_lista:
@@ -283,8 +302,8 @@ def init_db():
         if not cur.fetchone():
             hashed_pw = generate_password_hash("admin")
             cur.execute("""
-                INSERT INTO utenti (username, password, is_admin, puo_vedere_magazzino, puo_aggiungere_prodotti, puo_modificare_prodotti, puo_caricare_scaricare, puo_eliminare, puo_vedere_pesante, puo_vedere_manutenzione, puo_aprire_manutenzioni, puo_gestire_interventi, puo_assegnare_manutenzioni, puo_eliminare_interventi, puo_vedere_manutenzioni_esterne, puo_vedere_storico_manutenzioni, puo_eliminare_storico, puo_gestire_fornitori, puo_importare_fornitori, puo_gestire_documenti, puo_eliminare_documenti, puo_vedere_promemoria, puo_assegnare_promemoria, puo_vedere_report_ore)
-                VALUES (%s, %s, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1);
+                INSERT INTO utenti (username, password, is_admin, puo_vedere_magazzino, puo_aggiungere_prodotti, puo_modificare_prodotti, puo_caricare_scaricare, puo_eliminare, puo_vedere_pesante, puo_vedere_manutenzione, puo_aprire_manutenzioni, puo_gestire_interventi, puo_assegnare_manutenzioni, puo_eliminare_interventi, puo_vedere_manutenzioni_esterne, puo_vedere_storico_manutenzioni, puo_eliminare_storico, puo_gestire_fornitori, puo_importare_fornitori, puo_gestire_documenti, puo_eliminare_documenti, puo_vedere_promemoria, puo_assegnare_promemoria, puo_vedere_report_ore, puo_gestire_nastri)
+                VALUES (%s, %s, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1);
             """, ('admin', hashed_pw))
 
         conn.commit()
@@ -439,8 +458,8 @@ def registra():
                 cur = conn.cursor()
                 hashed_pw = generate_password_hash(password)
                 cur.execute("""
-                    INSERT INTO utenti (username, password, is_admin, puo_vedere_magazzino, puo_aggiungere_prodotti, puo_modificare_prodotti, puo_caricare_scaricare, puo_eliminare, puo_vedere_pesante, puo_vedere_manutenzione, puo_aprire_manutenzioni, puo_gestire_interventi, puo_assegnare_manutenzioni, puo_eliminare_interventi, puo_vedere_manutenzioni_esterne, puo_vedere_storico_manutenzioni, puo_eliminare_storico, puo_gestire_fornitori, puo_importare_fornitori, puo_gestire_documenti, puo_eliminare_documenti, puo_vedere_promemoria, puo_assegnare_promemoria, puo_vedere_report_ore)
-                    VALUES (%s, %s, 0, 1, 1, 1, 1, 0, 1, 1, 1, 1, 1, 0, 1, 1, 0, 1, 1, 1, 0, 1, 0, 1);
+                    INSERT INTO utenti (username, password, is_admin, puo_vedere_magazzino, puo_aggiungere_prodotti, puo_modificare_prodotti, puo_caricare_scaricare, puo_eliminare, puo_vedere_pesante, puo_vedere_manutenzione, puo_aprire_manutenzioni, puo_gestire_interventi, puo_assegnare_manutenzioni, puo_eliminare_interventi, puo_vedere_manutenzioni_esterne, puo_vedere_storico_manutenzioni, puo_eliminare_storico, puo_gestire_fornitori, puo_importare_fornitori, puo_gestire_documenti, puo_eliminare_documenti, puo_vedere_promemoria, puo_assegnare_promemoria, puo_vedere_report_ore, puo_gestire_nastri)
+                    VALUES (%s, %s, 0, 1, 1, 1, 1, 0, 1, 1, 1, 1, 1, 0, 1, 1, 0, 1, 1, 1, 0, 1, 0, 1, 1);
                 """, (username, hashed_pw))
                 conn.commit()
                 cur.close()
@@ -451,6 +470,112 @@ def registra():
             except Exception as e:
                 flash("Username già esistente o errore di registrazione.", "error")
     return render_template("registra.html")
+
+# --- MAGAZZINO NASTRI ---
+@app.route("/nastri", methods=["GET", "POST"])
+@app.route("/nastri.html", methods=["GET", "POST"])
+def nastri():
+    if not (session.get('is_admin') or session.get('puo_gestire_nastri', 1)):
+        flash("Accesso non autorizzato.", "error")
+        return redirect(url_for('index'))
+
+    sezione_filtro = request.args.get("sezione", "Tutte")
+    conn = get_db_connection()
+    cur = conn.cursor()
+
+    if request.method == "POST":
+        codice_sap = request.form.get("codice_sap", "")
+        numero = request.form.get("numero", "")
+        stato = request.form.get("stato", "aperto")
+        misura = request.form.get("misura", "")
+        tipo = request.form.get("tipo", "")
+        sezione_impianto = request.form.get("sezione_impianto", "COMPOSIZIONE")
+        utilizzo = request.form.get("utilizzo", "")
+        misura_nastro_finito = request.form.get("misura_nastro_finito", "")
+        tipo_di_riduttore = request.form.get("tipo_di_riduttore", "")
+        tipo_di_motore = request.form.get("tipo_di_motore", "")
+        note = request.form.get("note", "")
+
+        cur.execute("""
+            INSERT INTO nastri (codice_sap, numero, stato, misura, tipo, sezione_impianto, utilizzo, misura_nastro_finito, tipo_di_riduttore, tipo_di_motore, note)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s);
+        """, (codice_sap, numero, stato, misura, tipo, sezione_impianto, utilizzo, misura_nastro_finito, tipo_di_riduttore, tipo_di_motore, note))
+        conn.commit()
+        registra_log(f"Aggiunto nastro - {sezione_impianto} N° {numero}")
+        flash("Nastro aggiunto con successo!", "success")
+        return redirect(url_for("nastri", sezione=sezione_filtro))
+
+    query = "SELECT * FROM nastri WHERE 1=1"
+    params = []
+    if sezione_filtro != "Tutte":
+        query += " AND sezione_impianto = %s"
+        params.append(sezione_filtro)
+    query += " ORDER BY sezione_impianto ASC, id ASC;"
+    cur.execute(query, tuple(params))
+    lista_nastri = cur.fetchall()
+
+    cur.execute("SELECT DISTINCT sezione_impianto FROM nastri WHERE sezione_impianto IS NOT NULL ORDER BY sezione_impianto ASC;")
+    sezioni_disponibili = [r['sezione_impianto'] for r in cur.fetchall()]
+
+    cur.close()
+    conn.close()
+    return render_template("nastri.html", nastri=lista_nastri, sezioni_disponibili=sezioni_disponibili, sezione_filtro=sezione_filtro)
+
+@app.route("/modifica_nastro/<int:nastro_id>", methods=["POST"])
+def modifica_nastro(nastro_id):
+    try:
+        conn = get_db_connection()
+        cur = conn.cursor()
+        cur.execute("""
+            UPDATE nastri 
+            SET codice_sap = %s, numero = %s, stato = %s, misura = %s, tipo = %s, 
+                sezione_impianto = %s, utilizzo = %s, misura_nastro_finito = %s, 
+                tipo_di_riduttore = %s, tipo_di_motore = %s, note = %s
+            WHERE id = %s;
+        """, (
+            request.form.get("codice_sap"), request.form.get("numero"), request.form.get("stato"),
+            request.form.get("misura"), request.form.get("tipo"), request.form.get("sezione_impianto"),
+            request.form.get("utilizzo"), request.form.get("misura_nastro_finito"),
+            request.form.get("tipo_di_riduttore"), request.form.get("tipo_di_motore"),
+            request.form.get("note"), nastro_id
+        ))
+        conn.commit()
+        cur.close()
+        conn.close()
+        flash("Nastro aggiornato!", "success")
+    except Exception as e:
+        flash(f"Errore: {e}", "error")
+    return redirect(url_for("nastri"))
+
+@app.route("/elimina_nastro/<int:nastro_id>", methods=["POST"])
+def elimina_nastro(nastro_id):
+    try:
+        conn = get_db_connection()
+        cur = conn.cursor()
+        cur.execute("DELETE FROM nastri WHERE id = %s;", (nastro_id,))
+        conn.commit()
+        cur.close()
+        conn.close()
+        flash("Nastro eliminato.", "success")
+    except Exception as e:
+        flash(f"Errore: {e}", "error")
+    return redirect(url_for("nastri"))
+
+@app.route("/esporta_nastri_csv")
+def esporta_nastri_csv():
+    conn = get_db_connection()
+    cur = conn.cursor()
+    cur.execute("SELECT codice_sap, numero, stato, misura, tipo, sezione_impianto, utilizzo, misura_nastro_finito, tipo_di_riduttore, tipo_di_motore, note FROM nastri ORDER BY sezione_impianto ASC;")
+    righe = cur.fetchall()
+    cur.close()
+    conn.close()
+
+    output = io.StringIO()
+    writer = csv.writer(output)
+    writer.writerow(['Codice SAP', 'Numero', 'Stato', 'Misura', 'Tipo', 'Sezione', 'Utilizzo', 'Misura Finito', 'Riduttore', 'Motore', 'Note'])
+    for r in righe:
+        writer.writerow(list(r.values()))
+    return Response(output.getvalue(), mimetype="text/csv", headers={"Content-disposition": "attachment; filename=Magazzino_Nastri_OMG.csv"})
 
 # --- PANNELLO PERMESSI ADMIN & LOGS ---
 @app.route("/admin_utenti")
