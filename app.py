@@ -445,6 +445,13 @@ def registra():
                 flash("Username già esistente o errore di registrazione.", "error")
     return render_template("registra.html")
 
+# --- ROTTA DI SICUREZZA PER EVITARE BUILDERROR DA VECCHI LINK TEMPLATE ---
+@app.route("/magazzino_pesante", endpoint="magazzino_pesante")
+@app.route("/magazzino_pesante.html", endpoint="magazzino_pesante_html")
+@app.route("/esporta_pesante", endpoint="esporta_pesante")
+def magazzino_pesante_stub():
+    return redirect(url_for('index'))
+
 # --- PANNELLO PERMESSI ADMIN & LOGS ---
 @app.route("/admin_utenti")
 @app.route("/admin_utenti.html")
