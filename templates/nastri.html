@@ -4,70 +4,121 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Magazzino Nastri Trasportatori - Gestionale OMG</title>
-    <!-- Bootstrap 5 CSS -->
+    <!-- Bootstrap CSS -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <!-- FontAwesome Icons -->
+    <!-- FontAwesome per le icone -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </head>
-<body class="bg-dark text-white">
+<body class="bg-light">
 
-    <!-- Navbar di Navigazione -->
-    <nav class="navbar navbar-expand-lg navbar-dark bg-secondary bg-opacity-25 border-bottom border-secondary mb-4">
-        <div class="container-fluid px-4">
-            <a class="navbar-brand fw-bold" href="{{ url_for('index') }}">
-                <i class="fas fa-warehouse me-2 text-primary"></i> Gestionale OMG
-            </a>
+    <!-- Navbar principale -->
+    <nav class="navbar navbar-expand-xl navbar-dark bg-dark shadow-sm">
+        <div class="container-fluid">
+            <a class="navbar-brand fw-bold" href="{{ url_for('index') }}"><i class="fa-solid fa-industry me-2"></i>Gestionale OMG</a>
             <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
                 <span class="navbar-toggler-icon"></span>
             </button>
             <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav me-auto">
+                    <li class="nav-item"><a class="nav-link" href="{{ url_for('index') }}"><i class="fa-solid fa-boxes-stacked me-1"></i> Magazzino</a></li>
+                    
+                    <li class="nav-item"><a class="nav-link active text-warning fw-bold" href="{{ url_for('nastri') }}"><i class="fa-solid fa-stream me-1"></i> Nastri</a></li>
+
+                    {% if session.get('is_admin') or session.get('puo_vedere_manutenzioni_esterne', 1) %}
+                    <li class="nav-item"><a class="nav-link" href="{{ url_for('manutenzioni') }}"><i class="fa-solid fa-wrench me-1"></i> Manutenzioni Esterne</a></li>
+                    {% endif %}
+
+                    {% if session.get('is_admin') or session.get('puo_vedere_manutenzione', 1) %}
+                    <li class="nav-item"><a class="nav-link" href="{{ url_for('richieste_manutenzione') }}"><i class="fa-solid fa-clipboard-list me-1"></i> Officina</a></li>
+                    {% endif %}
+
+                    <li class="nav-item"><a class="nav-link" href="{{ url_for('cambi_serie') }}"><i class="fa-solid fa-arrows-rotate me-1"></i> Cambi Serie</a></li>
+
+                    {% if session.get('is_admin') or session.get('puo_vedere_promemoria', 1) %}
+                    <li class="nav-item"><a class="nav-link" href="{{ url_for('promemoria') }}"><i class="fa-solid fa-calendar-check me-1"></i> Promemoria</a></li>
+                    {% endif %}
+
+                    {% if session.get('is_admin') or session.get('puo_gestire_fornitori', 1) %}
+                    <li class="nav-item"><a class="nav-link" href="{{ url_for('fornitori') }}"><i class="fa-solid fa-address-book me-1"></i> Fornitori</a></li>
+                    {% endif %}
+
+                    {% if session.get('is_admin') or session.get('puo_gestire_documenti', 1) %}
+                    <li class="nav-item"><a class="nav-link" href="{{ url_for('documenti') }}"><i class="fa-solid fa-folder-open me-1"></i> Documenti</a></li>
+                    {% endif %}
+
+                    {% if session.get('is_admin') or session.get('puo_vedere_report_ore', 1) %}
+                    <li class="nav-item"><a class="nav-link" href="{{ url_for('report_ore') }}"><i class="fa-solid fa-chart-pie me-1"></i> Report Ore</a></li>
+                    {% endif %}
+
+                    {% if session.get('is_admin') %}
+                    <li class="nav-item"><a class="nav-link" href="{{ url_for('admin_utenti') }}"><i class="fa-solid fa-users-gear me-1"></i> Admin</a></li>
+                    {% endif %}
+                </ul>
+
+                <!-- Notifiche & Profilo Utente -->
                 <ul class="navbar-nav ms-auto align-items-center">
-                    <li class="nav-item"><a class="nav-link" href="{{ url_for('index') }}">Magazzino</a></li>
-                    <li class="nav-item"><a class="nav-link active text-warning fw-bold" href="{{ url_for('nastri') }}">Magazzino Nastri</a></li>
-                    <li class="nav-item"><a class="nav-link" href="{{ url_for('richieste_manutenzione') }}">Manutenzioni</a></li>
-                    <li class="nav-item"><a class="nav-link" href="{{ url_for('cambi_serie') }}">Cambi Serie</a></li>
-                    <li class="nav-item"><a class="nav-link" href="{{ url_for('fornitori') }}">Fornitori</a></li>
-                    <li class="nav-item"><a class="nav-link" href="{{ url_for('documenti') }}">Documenti</a></li>
-                    <li class="nav-item"><a class="nav-link text-danger ms-3" href="{{ url_for('logout') }}"><i class="fas fa-sign-out-alt"></i></a></li>
+                    <li class="nav-item dropdown me-3">
+                        <a class="nav-link position-relative text-light" href="#" id="dropdownNotifiche" role="button" data-bs-toggle="dropdown" onclick="segnaNotificheLette()">
+                            <i class="fa-solid fa-bell fs-5"></i>
+                            <span id="badgeNotifiche" class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger d-none">
+                                0
+                            </span>
+                        </a>
+                        <ul class="dropdown-menu dropdown-menu-end shadow" aria-labelledby="dropdownNotifiche" id="listaNotifiche" style="width: 330px; max-height: 400px; overflow-y: auto;">
+                            <li><h6 class="dropdown-header border-bottom py-2"><i class="fa-solid fa-bell me-1"></i> Notifiche System</h6></li>
+                            <li id="emptyNotifiche" class="dropdown-item text-muted text-center py-3">Nessuna notifica presente</li>
+                        </ul>
+                    </li>
+
+                    <li class="nav-item dropdown">
+                        <a class="nav-link dropdown-toggle text-light" href="#" role="button" data-bs-toggle="dropdown">
+                            <i class="fa-solid fa-user-circle me-1"></i> {{ session.get('username', 'Utente') }}
+                        </a>
+                        <ul class="dropdown-menu dropdown-menu-end">
+                            <li><a class="dropdown-item text-danger" href="{{ url_for('logout') }}"><i class="fa-solid fa-right-from-bracket me-1"></i> Logout</a></li>
+                        </ul>
+                    </li>
                 </ul>
             </div>
         </div>
     </nav>
 
-    <div class="container-fluid px-4 py-2">
-        <!-- Messaggi Flash -->
-        with get_flashed_messages(with_categories=true) as messages:
-            if messages:
-                for category, message in messages:
+    <!-- Contenuto principale -->
+    <div class="container-fluid px-4 py-4">
+
+        <!-- Flash messages corretti -->
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
                     <div class="alert alert-{{ 'danger' if category == 'error' else 'success' }} alert-dismissible fade show" role="alert">
                         {{ message }}
                         <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
                     </div>
-                endfor
-            endif
-        endwith
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
 
         <div class="d-flex justify-content-between align-items-center mb-4">
-            <h2 class="text-white fw-bold"><i class="fas fa-stream me-2 text-warning"></i> Magazzino Nastri Trasportatori</h2>
+            <h2><i class="fa-solid fa-stream me-2 text-warning"></i>Magazzino Nastri Trasportatori</h2>
             <div>
-                <a href="{{ url_for('esporta_nastri_csv') }}" class="btn btn-success me-2 shadow-sm">
-                    <i class="fas fa-file-csv me-1"></i> Esporta CSV
+                <a href="{{ url_for('esporta_nastri_csv') }}" class="btn btn-outline-success me-2">
+                    <i class="fa-solid fa-file-csv me-1"></i> Esporta CSV
                 </a>
-                <button class="btn btn-primary shadow-sm" data-bs-toggle="modal" data-bs-target="#modalNuovoNastro">
-                    <i class="fas fa-plus me-1"></i> Nuovo Nastro
+                <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#modalNuovoNastro">
+                    <i class="fa-solid fa-plus me-1"></i> Nuovo Nastro
                 </button>
             </div>
         </div>
 
         <!-- Filtro Sezione Impianto -->
-        <div class="card bg-dark text-white mb-4 shadow border-secondary">
+        <div class="card shadow-sm mb-4">
             <div class="card-body">
                 <form method="GET" action="{{ url_for('nastri') }}" class="row g-3 align-items-center">
                     <div class="col-auto">
                         <label for="sezione" class="col-form-label fw-bold">Filtra per Sezione / Impianto:</label>
                     </div>
                     <div class="col-auto">
-                        <select name="sezione" id="sezione" class="form-select bg-secondary text-white border-0" onchange="this.form.submit()">
+                        <select name="sezione" id="sezione" class="form-select" onchange="this.form.submit()">
                             <option value="Tutte" {% if sezione_filtro == 'Tutte' %}selected{% endif %}>Tutte le sezioni</option>
                             {% for sez in sezioni_disponibili %}
                             <option value="{{ sez }}" {% if sezione_filtro == sez %}selected{% endif %}>{{ sez }}</option>
@@ -79,12 +130,16 @@
         </div>
 
         <!-- Tabella Elenco Nastri -->
-        <div class="card bg-dark text-white shadow border-secondary">
+        <div class="card shadow-sm">
+            <div class="card-header bg-dark text-white d-flex justify-content-between align-items-center py-3">
+                <h5 class="mb-0"><i class="fa-solid fa-table-list me-2"></i>Elenco Nastri</h5>
+                <span class="badge bg-secondary fs-6">{{ nastri|length }} nastri</span>
+            </div>
             <div class="card-body">
                 <div class="table-responsive">
-                    <table class="table table-dark table-striped table-hover align-middle text-nowrap">
-                        <thead>
-                            <tr class="text-secondary">
+                    <table class="table table-hover align-middle text-nowrap">
+                        <thead class="table-light">
+                            <tr>
                                 <th>Codice SAP</th>
                                 <th>N°</th>
                                 <th>Stato</th>
@@ -102,8 +157,8 @@
                         <tbody>
                             {% for r in nastri %}
                             <tr>
-                                <td class="fw-bold text-info">{{ r.codice_sap or '-' }}</td>
-                                <td><span class="badge bg-light text-dark fw-bold">{{ r.numero or '-' }}</span></td>
+                                <td class="fw-bold text-primary">{{ r.codice_sap or '-' }}</td>
+                                <td><span class="badge bg-dark fw-bold">{{ r.numero or '-' }}</span></td>
                                 <td>
                                     <span class="badge bg-{{ 'success' if (r.stato or '').lower() == 'aperto' else 'danger' }}">
                                         {{ r.stato or 'aperto' }}
@@ -118,12 +173,12 @@
                                 <td>{{ r.tipo_di_motore or '-' }}</td>
                                 <td>{{ r.note or '-' }}</td>
                                 <td class="text-end">
-                                    <button class="btn btn-sm btn-outline-warning" data-bs-toggle="modal" data-bs-target="#modalModifica{{ r.id }}" title="Modifica">
-                                        <i class="fas fa-edit"></i>
+                                    <button class="btn btn-sm btn-outline-primary" data-bs-toggle="modal" data-bs-target="#modalModifica{{ r.id }}" title="Modifica">
+                                        <i class="fa-solid fa-pen-to-square"></i>
                                     </button>
                                     <form action="{{ url_for('elimina_nastro', nastro_id=r.id) }}" method="POST" class="d-inline" onsubmit="return confirm('Sei sicuro di voler eliminare questo nastro?');">
                                         <button type="submit" class="btn btn-sm btn-outline-danger" title="Elimina">
-                                            <i class="fas fa-trash"></i>
+                                            <i class="fa-solid fa-trash"></i>
                                         </button>
                                     </form>
                                 </td>
@@ -132,25 +187,25 @@
                             <!-- Modal Modifica Nastro -->
                             <div class="modal fade" id="modalModifica{{ r.id }}" tabindex="-1" aria-hidden="true">
                                 <div class="modal-dialog modal-lg">
-                                    <div class="modal-content bg-dark text-white border-secondary">
+                                    <div class="modal-content">
                                         <form action="{{ url_for('modifica_nastro', nastro_id=r.id) }}" method="POST">
-                                            <div class="modal-header border-secondary">
+                                            <div class="modal-header bg-dark text-white">
                                                 <h5 class="modal-title">Modifica Nastro (N° {{ r.numero }})</h5>
                                                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
                                             </div>
                                             <div class="modal-body text-start">
                                                 <div class="row g-3">
                                                     <div class="col-md-4">
-                                                        <label class="form-label">Codice SAP</label>
-                                                        <input type="text" class="form-control bg-secondary text-white border-0" name="codice_sap" value="{{ r.codice_sap }}">
+                                                        <label class="form-label fw-bold">Codice SAP</label>
+                                                        <input type="text" class="form-control" name="codice_sap" value="{{ r.codice_sap }}">
                                                     </div>
                                                     <div class="col-md-4">
-                                                        <label class="form-label">Numero</label>
-                                                        <input type="text" class="form-control bg-secondary text-white border-0" name="numero" value="{{ r.numero }}">
+                                                        <label class="form-label fw-bold">Numero</label>
+                                                        <input type="text" class="form-control" name="numero" value="{{ r.numero }}">
                                                     </div>
                                                     <div class="col-md-4">
-                                                        <label class="form-label">Stato</label>
-                                                        <select class="form-select bg-secondary text-white border-0" name="stato">
+                                                        <label class="form-label fw-bold">Stato</label>
+                                                        <select class="form-select" name="stato">
                                                             <option value="aperto" {% if r.stato == 'aperto' %}selected{% endif %}>Aperto</option>
                                                             <option value="chiuso" {% if r.stato == 'chiuso' %}selected{% endif %}>Chiuso</option>
                                                             <option value="ordinato" {% if r.stato == 'ordinato' %}selected{% endif %}>Ordinato</option>
@@ -158,41 +213,41 @@
                                                     </div>
                                                     <div class="col-md-6">
                                                         <label class="form-label">Misura</label>
-                                                        <input type="text" class="form-control bg-secondary text-white border-0" name="misura" value="{{ r.misura }}">
+                                                        <input type="text" class="form-control" name="misura" value="{{ r.misura }}">
                                                     </div>
                                                     <div class="col-md-6">
                                                         <label class="form-label">Tipo</label>
-                                                        <input type="text" class="form-control bg-secondary text-white border-0" name="tipo" value="{{ r.tipo }}">
+                                                        <input type="text" class="form-control" name="tipo" value="{{ r.tipo }}">
                                                     </div>
                                                     <div class="col-md-6">
                                                         <label class="form-label">Sezione / Impianto</label>
-                                                        <input type="text" class="form-control bg-secondary text-white border-0" name="sezione_impianto" value="{{ r.sezione_impianto }}">
+                                                        <input type="text" class="form-control" name="sezione_impianto" value="{{ r.sezione_impianto }}">
                                                     </div>
                                                     <div class="col-md-6">
                                                         <label class="form-label">Utilizzo</label>
-                                                        <input type="text" class="form-control bg-secondary text-white border-0" name="utilizzo" value="{{ r.utilizzo }}">
+                                                        <input type="text" class="form-control" name="utilizzo" value="{{ r.utilizzo }}">
                                                     </div>
                                                     <div class="col-md-4">
                                                         <label class="form-label">Misura Nastro Finito</label>
-                                                        <input type="text" class="form-control bg-secondary text-white border-0" name="misura_nastro_finito" value="{{ r.misura_nastro_finito }}">
+                                                        <input type="text" class="form-control" name="misura_nastro_finito" value="{{ r.misura_nastro_finito }}">
                                                     </div>
                                                     <div class="col-md-4">
                                                         <label class="form-label">Tipo di Riduttore</label>
-                                                        <input type="text" class="form-control bg-secondary text-white border-0" name="tipo_di_riduttore" value="{{ r.tipo_di_riduttore }}">
+                                                        <input type="text" class="form-control" name="tipo_di_riduttore" value="{{ r.tipo_di_riduttore }}">
                                                     </div>
                                                     <div class="col-md-4">
                                                         <label class="form-label">Tipo di Motore</label>
-                                                        <input type="text" class="form-control bg-secondary text-white border-0" name="tipo_di_motore" value="{{ r.tipo_di_motore }}">
+                                                        <input type="text" class="form-control" name="tipo_di_motore" value="{{ r.tipo_di_motore }}">
                                                     </div>
                                                     <div class="col-12">
                                                         <label class="form-label">Note</label>
-                                                        <textarea class="form-control bg-secondary text-white border-0" name="note" rows="2">{{ r.note }}</textarea>
+                                                        <textarea class="form-control" name="note" rows="2">{{ r.note }}</textarea>
                                                     </div>
                                                 </div>
                                             </div>
-                                            <div class="modal-footer border-secondary">
+                                            <div class="modal-footer">
                                                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annulla</button>
-                                                <button type="submit" class="btn btn-warning">Salva Modifiche</button>
+                                                <button type="submit" class="btn btn-primary">Salva Modifiche</button>
                                             </div>
                                         </form>
                                     </div>
@@ -208,30 +263,31 @@
                 </div>
             </div>
         </div>
+
     </div>
 
     <!-- Modal Nuovo Nastro -->
     <div class="modal fade" id="modalNuovoNastro" tabindex="-1" aria-hidden="true">
         <div class="modal-dialog modal-lg">
-            <div class="modal-content bg-dark text-white border-secondary">
+            <div class="modal-content">
                 <form action="{{ url_for('nastri') }}" method="POST">
-                    <div class="modal-header border-secondary">
+                    <div class="modal-header bg-dark text-white">
                         <h5 class="modal-title">Aggiungi Nuovo Nastro</h5>
                         <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
                     </div>
                     <div class="modal-body text-start">
                         <div class="row g-3">
                             <div class="col-md-4">
-                                <label class="form-label">Codice SAP</label>
-                                <input type="text" class="form-control bg-secondary text-white border-0" name="codice_sap" placeholder="Es. 6916589">
+                                <label class="form-label fw-bold">Codice SAP</label>
+                                <input type="text" class="form-control" name="codice_sap" placeholder="Es. 6916589">
                             </div>
                             <div class="col-md-4">
-                                <label class="form-label">Numero</label>
-                                <input type="text" class="form-control bg-secondary text-white border-0" name="numero" placeholder="Es. 22 o E21">
+                                <label class="form-label fw-bold">Numero</label>
+                                <input type="text" class="form-control" name="numero" placeholder="Es. 22 o E21">
                             </div>
                             <div class="col-md-4">
-                                <label class="form-label">Stato</label>
-                                <select class="form-select bg-secondary text-white border-0" name="stato">
+                                <label class="form-label fw-bold">Stato</label>
+                                <select class="form-select" name="stato">
                                     <option value="aperto" selected>Aperto</option>
                                     <option value="chiuso">Chiuso</option>
                                     <option value="ordinato">Ordinato</option>
@@ -239,39 +295,39 @@
                             </div>
                             <div class="col-md-6">
                                 <label class="form-label">Misura (es. mt. 37x 800 5+2 4 tele)</label>
-                                <input type="text" class="form-control bg-secondary text-white border-0" name="misura" placeholder="Misura e caratteristiche">
+                                <input type="text" class="form-control" name="misura" placeholder="Misura e caratteristiche">
                             </div>
                             <div class="col-md-6">
                                 <label class="form-label">Tipo (es. normalgum/500)</label>
-                                <input type="text" class="form-control bg-secondary text-white border-0" name="tipo" placeholder="Tipo di nastro">
+                                <input type="text" class="form-control" name="tipo" placeholder="Tipo di nastro">
                             </div>
                             <div class="col-md-6">
                                 <label class="form-label">Sezione / Impianto</label>
-                                <input type="text" class="form-control bg-secondary text-white border-0" name="sezione_impianto" value="COMPOSIZIONE" placeholder="Es. COMPOSIZIONE, CARICO SABBIA">
+                                <input type="text" class="form-control" name="sezione_impianto" value="COMPOSIZIONE" placeholder="Es. COMPOSIZIONE, CARICO SABBIA">
                             </div>
                             <div class="col-md-6">
                                 <label class="form-label">Utilizzo</label>
-                                <input type="text" class="form-control bg-secondary text-white border-0" name="utilizzo" placeholder="Es. carico elevatore">
+                                <input type="text" class="form-control" name="utilizzo" placeholder="Es. carico elevatore">
                             </div>
                             <div class="col-md-4">
                                 <label class="form-label">Misura Nastro Finito</label>
-                                <input type="text" class="form-control bg-secondary text-white border-0" name="misura_nastro_finito" placeholder="Es. 24060 mm">
+                                <input type="text" class="form-control" name="misura_nastro_finito" placeholder="Es. 24060 mm">
                             </div>
                             <div class="col-md-4">
                                 <label class="form-label">Tipo di Riduttore</label>
-                                <input type="text" class="form-control bg-secondary text-white border-0" name="tipo_di_riduttore" placeholder="Es. A 703 I 81 70 P190 V5">
+                                <input type="text" class="form-control" name="tipo_di_riduttore" placeholder="Es. A 703 I 81 70 P190 V5">
                             </div>
                             <div class="col-md-4">
                                 <label class="form-label">Tipo di Motore</label>
-                                <input type="text" class="form-control bg-secondary text-white border-0" name="tipo_di_motore" placeholder="Es. A 603 H400 P190 95 H 27.5">
+                                <input type="text" class="form-control" name="tipo_di_motore" placeholder="Es. A 603 H400 P190 95 H 27.5">
                             </div>
                             <div class="col-12">
                                 <label class="form-label">Note</label>
-                                <textarea class="form-control bg-secondary text-white border-0" name="note" rows="2" placeholder="Eventuali annotazioni..."></textarea>
+                                <textarea class="form-control" name="note" rows="2" placeholder="Eventuali annotazioni..."></textarea>
                             </div>
                         </div>
                     </div>
-                    <div class="modal-footer border-secondary">
+                    <div class="modal-footer">
                         <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annulla</button>
                         <button type="submit" class="btn btn-primary">Salva Nastro</button>
                     </div>
@@ -280,7 +336,58 @@
         </div>
     </div>
 
-    <!-- Bootstrap JS Bundle -->
+    <!-- Bootstrap JS e Logica Notifiche Live -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+    function caricaNotifiche() {
+        fetch('/api/notifiche')
+            .then(response => response.json())
+            .then(data => {
+                const badge = document.getElementById('badgeNotifiche');
+                const lista = document.getElementById('listaNotifiche');
+                if (!badge || !lista) return;
+
+                lista.innerHTML = '<li><h6 class="dropdown-header border-bottom py-2"><i class="fa-solid fa-bell me-1"></i> Notifiche System</h6></li>';
+                
+                let nonLette = 0;
+                if (!data || data.length === 0) {
+                    lista.innerHTML += '<li class="dropdown-item text-muted text-center py-3">Nessuna notifica presente</li>';
+                } else {
+                    data.forEach(n => {
+                        if (!n.letta) nonLette++;
+                        const item = document.createElement('li');
+                        item.innerHTML = `
+                            <a class="dropdown-item py-2 border-bottom ${!n.letta ? 'bg-light fw-bold' : ''}" href="${n.link || '#'}">
+                                <div>${n.titolo}</div>
+                                <small class="text-muted d-block fw-normal">${n.messaggio}</small>
+                            </a>
+                        `;
+                        lista.appendChild(item);
+                    });
+                }
+
+                if (nonLette > 0) {
+                    badge.textContent = nonLette;
+                    badge.classList.remove('d-none');
+                } else {
+                    badge.classList.add('d-none');
+                }
+            })
+            .catch(err => console.error("Errore recupero notifiche:", err));
+    }
+
+    function segnaNotificheLette() {
+        fetch('/api/notifiche/segna_lette', { method: 'POST' })
+            .then(() => {
+                const badge = document.getElementById('badgeNotifiche');
+                if (badge) badge.classList.add('d-none');
+            });
+    }
+
+    document.addEventListener("DOMContentLoaded", function() {
+        caricaNotifiche();
+        setInterval(caricaNotifiche, 15000);
+    });
+    </script>
 </body>
 </html>
