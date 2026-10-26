@@ -1,5 +1,5 @@
 # ========================================================================
-# Gestionale OMG Application - Unified Warehouse & System
+# Gestionale OMG Application - Unified Warehouse System
 # Copyright (c) 2026 Marco Pavan. All Rights Reserved.
 # Designed & Developed by Marco Pavan
 # ========================================================================
@@ -69,7 +69,6 @@ def init_db():
                 peso VARCHAR(255),
                 quantita INT DEFAULT 0,
                 posizione VARCHAR(255),
-                magazzino_pesante INT DEFAULT 0,
                 in_manutenzione BOOLEAN DEFAULT FALSE,
                 cliente_manutenzione VARCHAR(255),
                 quantita_manutenzione INT DEFAULT 0,
@@ -161,7 +160,6 @@ def init_db():
                 puo_modificare_prodotti INT DEFAULT 1,
                 puo_caricare_scaricare INT DEFAULT 1,
                 puo_eliminare INT DEFAULT 0,
-                puo_vedere_pesante INT DEFAULT 1,
                 puo_vedere_manutenzione INT DEFAULT 1,
                 puo_aprire_manutenzioni INT DEFAULT 1,
                 puo_gestire_interventi INT DEFAULT 1,
@@ -258,7 +256,6 @@ def init_db():
             ("puo_modificare_prodotti", "INT DEFAULT 1"),
             ("puo_caricare_scaricare", "INT DEFAULT 1"),
             ("puo_eliminare", "INT DEFAULT 0"),
-            ("puo_vedere_pesante", "INT DEFAULT 1"),
             ("puo_vedere_manutenzione", "INT DEFAULT 1"),
             ("puo_aprire_manutenzioni", "INT DEFAULT 1"),
             ("puo_gestire_interventi", "INT DEFAULT 1"),
@@ -283,7 +280,7 @@ def init_db():
         if not cur.fetchone():
             hashed_pw = generate_password_hash("admin")
             cur.execute("""
-                INSERT INTO utenti (username, password, is_admin, puo_vedere_magazzino, puo_aggiungere_prodotti, puo_modificare_prodotti, puo_caricare_scaricare, puo_eliminare, puo_vedere_pesante, puo_vedere_manutenzione, puo_aprire_manutenzioni, puo_gestire_interventi, puo_assegnare_manutenzioni, puo_eliminare_interventi, puo_vedere_manutenzioni_esterne, puo_vedere_storico_manutenzioni, puo_eliminare_storico, puo_gestire_fornitori, puo_importare_fornitori, puo_gestire_documenti, puo_eliminare_documenti, puo_vedere_promemoria, puo_assegnare_promemoria, puo_vedere_report_ore)
+                INSERT INTO utenti (username, password, is_admin, puo_vedere_magazzino, puo_aggiungere_prodotti, puo_modificare_prodotti, puo_caricare_scaricare, puo_eliminare, puo_vedere_manutenzione, puo_aprire_manutenzioni, puo_gestire_interventi, puo_assegnare_manutenzioni, puo_eliminare_interventi, puo_vedere_manutenzioni_esterne, puo_vedere_storico_manutenzioni, puo_eliminare_storico, puo_gestire_fornitori, puo_importare_fornitori, puo_gestire_documenti, puo_eliminare_documenti, puo_vedere_promemoria, puo_assegnare_promemoria, puo_vedere_report_ore)
                 VALUES (%s, %s, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1);
             """, ('admin', hashed_pw))
 
@@ -428,7 +425,7 @@ def registra():
                 cur = conn.cursor()
                 hashed_pw = generate_password_hash(password)
                 cur.execute("""
-                    INSERT INTO utenti (username, password, is_admin, puo_vedere_magazzino, puo_aggiungere_prodotti, puo_modificare_prodotti, puo_caricare_scaricare, puo_eliminare, puo_vedere_pesante, puo_vedere_manutenzione, puo_aprire_manutenzioni, puo_gestire_interventi, puo_assegnare_manutenzioni, puo_eliminare_interventi, puo_vedere_manutenzioni_esterne, puo_vedere_storico_manutenzioni, puo_eliminare_storico, puo_gestire_fornitori, puo_importare_fornitori, puo_gestire_documenti, puo_eliminare_documenti, puo_vedere_promemoria, puo_assegnare_promemoria, puo_vedere_report_ore)
+                    INSERT INTO utenti (username, password, is_admin, puo_vedere_magazzino, puo_aggiungere_prodotti, puo_modificare_prodotti, puo_caricare_scaricare, puo_eliminare, puo_vedere_manutenzione, puo_aprire_manutenzioni, puo_gestire_interventi, puo_assegnare_manutenzioni, puo_eliminare_interventi, puo_vedere_manutenzioni_esterne, puo_vedere_storico_manutenzioni, puo_eliminare_storico, puo_gestire_fornitori, puo_importare_fornitori, puo_gestire_documenti, puo_eliminare_documenti, puo_vedere_promemoria, puo_assegnare_promemoria, puo_vedere_report_ore)
                     VALUES (%s, %s, 0, 1, 1, 1, 1, 0, 1, 1, 1, 1, 1, 0, 1, 1, 0, 1, 1, 1, 0, 1, 0, 1);
                 """, (username, hashed_pw))
                 conn.commit()
