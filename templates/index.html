@@ -22,7 +22,6 @@
                 <ul class="navbar-nav me-auto">
                     <li class="nav-item"><a class="nav-link active" href="{{ url_for('index') }}"><i class="fa-solid fa-boxes-stacked me-1"></i> Magazzino</a></li>
                     
-                    <!-- Voce Nastri resa identica alle altre -->
                     <li class="nav-item"><a class="nav-link" href="{{ url_for('nastri') }}"><i class="fa-solid fa-stream me-1"></i> Nastri</a></li>
 
                     {% if session.get('is_admin') or session.get('puo_vedere_manutenzioni_esterne', 1) %}
@@ -114,6 +113,10 @@
         <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
             <h2><i class="fa-solid fa-boxes-stacked me-2 text-primary"></i>Inventario Magazzino</h2>
             <div class="d-flex gap-2 flex-wrap">
+                <!-- Pulsante Scanner QR -->
+                <a href="{{ url_for('scanner') }}" class="btn btn-outline-primary">
+                    <i class="fa-solid fa-camera me-1"></i> Scanner QR
+                </a>
                 <a href="{{ url_for('esporta_inventario') }}" class="btn btn-outline-success">
                     <i class="fa-solid fa-file-excel me-1"></i> Esporta CSV
                 </a>
@@ -155,7 +158,7 @@
                                 <th>Quantità</th>
                                 <th>Posizione</th>
                                 <th>Peso</th>
-                                <th class="text-end">Azioni</th>
+                                <th class="text-end">Azioni (Carica / Scarica)</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -173,9 +176,19 @@
                                 <td>{{ p.peso or '-' }}</td>
                                 <td class="text-end">
                                     <div class="btn-group">
+                                        <!-- Pulsante Carica (+) -->
+                                        <a href="{{ url_for('carica_prodotto', qr_code=p.qr_code) }}" class="btn btn-sm btn-outline-success" title="Carica Quantità">
+                                            <i class="fa-solid fa-plus"></i> Carica
+                                        </a>
+                                        <!-- Pulsante Scarica (-) -->
+                                        <a href="{{ url_for('scarica_prodotto', qr_code=p.qr_code) }}" class="btn btn-sm btn-outline-warning text-dark" title="Scarica Quantità">
+                                            <i class="fa-solid fa-minus"></i> Scarica
+                                        </a>
+                                        <!-- Pulsante Gestisci -->
                                         <a href="{{ url_for('gestisci_prodotto', qr_code=p.qr_code) }}" class="btn btn-sm btn-outline-primary" title="Gestisci">
                                             <i class="fa-solid fa-pen-to-square"></i>
                                         </a>
+                                        <!-- Pulsante Stampa QR -->
                                         <a href="{{ url_for('stampa_singolo_qr', qr_code=p.qr_code) }}" class="btn btn-sm btn-outline-dark" title="Stampa QR">
                                             <i class="fa-solid fa-qrcode"></i>
                                         </a>
