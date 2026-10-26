@@ -1,4 +1,21 @@
-<!DOCTYPE html>
+[13:15, 26/10/2026] Marco Pavan: <!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gestionale OMG - Home & Magazzino</title>
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- FontAwesome per le icone -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body class="bg-light">
+
+    <!-- Navbar principale -->
+    <nav class="navbar navbar-expand-xl navbar-dark bg-dark shadow-sm">
+        <div class="container-fluid">
+            <a class="navbar-brand fw-bold" href="{{ url_for('index') }}"><i class="fa-solid fa-industry me-2"></i>Ges…
+[13:22, 26/10/2026] Marco Pavan: <!DOCTYPE html>
 <html lang="it">
 <head>
     <meta charset="UTF-8">
@@ -112,7 +129,6 @@
         <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
             <h2><i class="fa-solid fa-boxes-stacked me-2 text-primary"></i>Inventario Magazzino</h2>
             <div class="d-flex gap-2 flex-wrap">
-                <!-- Pulsante Scanner QR (Corretto puntamento a scanner_globale) -->
                 <a href="{{ url_for('scanner_globale') }}" class="btn btn-outline-primary">
                     <i class="fa-solid fa-camera me-1"></i> Scanner QR
                 </a>
@@ -175,19 +191,15 @@
                                 <td>{{ p.peso or '-' }}</td>
                                 <td class="text-end">
                                     <div class="btn-group">
-                                        <!-- Pulsante Carica Rapido -->
                                         <a href="{{ url_for('carica_prodotto', qr_code=p.qr_code) }}" class="btn btn-sm btn-outline-success" title="Carica Quantità">
                                             <i class="fa-solid fa-plus"></i> Carica
                                         </a>
-                                        <!-- Pulsante Scarica Rapido -->
                                         <a href="{{ url_for('scarica_prodotto', qr_code=p.qr_code) }}" class="btn btn-sm btn-outline-warning text-dark" title="Scarica Quantità">
                                             <i class="fa-solid fa-minus"></i> Scarica
                                         </a>
-                                        <!-- Pulsante Gestisci -->
                                         <a href="{{ url_for('gestisci_prodotto', qr_code=p.qr_code) }}" class="btn btn-sm btn-outline-primary" title="Gestisci">
                                             <i class="fa-solid fa-pen-to-square"></i>
                                         </a>
-                                        <!-- Stampa QR Singolo -->
                                         <a href="{{ url_for('stampa_singolo_qr', qr_code=p.qr_code) }}" class="btn btn-sm btn-outline-dark" title="Stampa QR">
                                             <i class="fa-solid fa-qrcode"></i>
                                         </a>
