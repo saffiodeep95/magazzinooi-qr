@@ -521,6 +521,34 @@ def nastri():
     conn.close()
     return render_template("nastri.html", nastri=lista_nastri, sezioni_disponibili=sezioni_disponibili, sezione_filtro=sezione_filtro)
 
+@app.route("/stampa_nastri")
+@app.route("/stampa_nastri.html")
+def stampa_nastri():
+    if not (session.get('is_admin') or session.get('puo_gestire_nastri', 1)):
+        flash("Accesso non autorizzato.", "error")
+        return redirect(url_for('index'))
+
+    sezione_filtro = request.args.get("sezione", "Tutte")
+    conn = get_db_connection()
+    cur = conn.cursor()
+
+    query = "SELECT * FROM nastri WHERE 1=1"
+    params = []
+    if sezione_filtro != "Tutte":
+        query += " AND sezione_impianto = %s"
+        params.append(sezione_filtro)
+    query += " ORDER BY sezione_impianto ASC, id ASC;"
+    cur.execute(query, tuple(params))
+    lista_nastri = cur.fetchall()
+
+    cur.close()
+    conn.close()
+
+    return render_template("stampa_nastri.html", 
+                           nastri=lista_nastri, 
+                           sezione_filtro=sezione_filtro,
+                           data_stampa=datetime.now().strftime("%d/%m/%Y %H:%M"))
+
 @app.route("/modifica_nastro/<int:nastro_id>", methods=["POST"])
 def modifica_nastro(nastro_id):
     try:
@@ -2168,7 +2196,6 @@ def aggiungi_prodotto():
         conn = get_db_connection()
         cur = conn.cursor()
         
-        # Generazione automatica del QR code se lasciato vuoto
         if not qr_code:
             cur.execute("SELECT COUNT(*) + 1 as next_id FROM prodotti;")
             res_id = cur.fetchone()
