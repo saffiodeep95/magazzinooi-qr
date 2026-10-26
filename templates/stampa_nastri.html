@@ -9,33 +9,38 @@
     <style>
         @media print {
             @page {
-                size: landscape; /* Imposta automaticamente il foglio in orizzontale */
-                margin: 10mm;
+                size: A4 landscape !important;
+                margin: 8mm !important;
+            }
+            body {
+                background: white !important;
+                font-size: 10px !important;
+                -webkit-print-color-adjust: exact;
             }
             .no-print {
                 display: none !important;
             }
-            body {
-                background: white !important;
-                font-size: 10px; /* Riduce leggermente il testo per far entrare tutte le colonne */
+            .container-fluid {
+                width: 100% !important;
+                padding: 0 !important;
+                margin: 0 !important;
             }
             .table {
                 width: 100% !important;
-                table-layout: fixed; /* Adatta le colonne uniformemente */
                 border-collapse: collapse !important;
             }
             .table th, .table td {
-                padding: 4px 6px !important;
-                border: 1px solid #333 !important;
-                word-wrap: break-word;
+                padding: 4px 5px !important;
+                border: 1px solid #000 !important;
+                font-size: 9.5px !important;
             }
         }
     </style>
 </head>
-<body class="bg-white text-dark py-4">
+<body class="bg-white text-dark py-3">
     <div class="container-fluid px-3">
         <!-- Intestazione Stampa -->
-        <div class="d-flex justify-content-between align-items-center border-bottom pb-3 mb-3">
+        <div class="d-flex justify-content-between align-items-center border-bottom pb-2 mb-3">
             <div>
                 <h4 class="fw-bold mb-1"><i class="fas fa-industry me-2"></i>Gestionale OMG - Magazzino Nastri</h4>
                 <p class="text-muted mb-0 small">Filtro Sezione: <strong>{{ sezione_filtro }}</strong> | Data Stampa: {{ data_stampa }}</p>
@@ -51,17 +56,17 @@
             <table class="table table-bordered table-striped align-middle">
                 <thead class="table-dark text-center">
                     <tr>
-                        <th style="width: 10%;">SAP</th>
-                        <th style="width: 5%;">N°</th>
-                        <th style="width: 8%;">Stato</th>
-                        <th style="width: 9%;">Misura</th>
-                        <th style="width: 9%;">Tipo</th>
-                        <th style="width: 10%;">Sezione</th>
-                        <th style="width: 10%;">Utilizzo</th>
-                        <th style="width: 9%;">Misura Finito</th>
-                        <th style="width: 10%;">Riduttore</th>
-                        <th style="width: 10%;">Motore</th>
-                        <th style="width: 10%;">Note</th>
+                        <th>SAP</th>
+                        <th>N°</th>
+                        <th>Stato</th>
+                        <th>Misura</th>
+                        <th>Tipo</th>
+                        <th>Sezione</th>
+                        <th>Utilizzo</th>
+                        <th>Misura Finito</th>
+                        <th>Riduttore</th>
+                        <th>Motore</th>
+                        <th>Note</th>
                     </tr>
                 </thead>
                 <tbody>
