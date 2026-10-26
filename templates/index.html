@@ -3,39 +3,92 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Gestionale Officina OMG - Home</title>
-    <!-- Bootstrap 5 CSS -->
+    <title>Gestionale OMG - Home & Magazzino</title>
+    <!-- Bootstrap CSS -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <!-- FontAwesome Icons -->
+    <!-- FontAwesome per le icone -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </head>
-<body class="bg-dark text-white">
+<body class="bg-light">
 
-    <!-- Navbar di Navigazione -->
-    <nav class="navbar navbar-expand-lg navbar-dark bg-secondary bg-opacity-25 border-bottom border-secondary mb-4">
-        <div class="container-fluid px-4">
-            <a class="navbar-brand fw-bold" href="{{ url_for('index') }}">
-                <i class="fas fa-warehouse me-2 text-primary"></i> Gestionale OMG
-            </a>
+    <!-- Navbar principale -->
+    <nav class="navbar navbar-expand-xl navbar-dark bg-dark shadow-sm">
+        <div class="container-fluid">
+            <a class="navbar-brand fw-bold" href="{{ url_for('index') }}"><i class="fa-solid fa-industry me-2"></i>Gestionale OMG</a>
             <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
                 <span class="navbar-toggler-icon"></span>
             </button>
             <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav me-auto">
+                    <li class="nav-item"><a class="nav-link active" href="{{ url_for('index') }}"><i class="fa-solid fa-boxes-stacked me-1"></i> Magazzino</a></li>
+                    
+                    <li class="nav-item"><a class="nav-link text-warning fw-bold" href="{{ url_for('nastri') }}"><i class="fa-solid fa-stream me-1"></i> Nastri</a></li>
+
+                    {% if session.get('is_admin') or session.get('puo_vedere_manutenzioni_esterne', 1) %}
+                    <li class="nav-item"><a class="nav-link" href="{{ url_for('manutenzioni') }}"><i class="fa-solid fa-wrench me-1"></i> Manutenzioni Esterne</a></li>
+                    {% endif %}
+
+                    {% if session.get('is_admin') or session.get('puo_vedere_manutenzione', 1) %}
+                    <li class="nav-item"><a class="nav-link" href="{{ url_for('richieste_manutenzione') }}"><i class="fa-solid fa-clipboard-list me-1"></i> Officina</a></li>
+                    {% endif %}
+
+                    <li class="nav-item"><a class="nav-link" href="{{ url_for('cambi_serie') }}"><i class="fa-solid fa-arrows-rotate me-1"></i> Cambi Serie</a></li>
+
+                    {% if session.get('is_admin') or session.get('puo_vedere_promemoria', 1) %}
+                    <li class="nav-item"><a class="nav-link" href="{{ url_for('promemoria') }}"><i class="fa-solid fa-calendar-check me-1"></i> Promemoria</a></li>
+                    {% endif %}
+
+                    {% if session.get('is_admin') or session.get('puo_gestire_fornitori', 1) %}
+                    <li class="nav-item"><a class="nav-link" href="{{ url_for('fornitori') }}"><i class="fa-solid fa-address-book me-1"></i> Fornitori</a></li>
+                    {% endif %}
+
+                    {% if session.get('is_admin') or session.get('puo_gestire_documenti', 1) %}
+                    <li class="nav-item"><a class="nav-link" href="{{ url_for('documenti') }}"><i class="fa-solid fa-folder-open me-1"></i> Documenti</a></li>
+                    {% endif %}
+
+                    {% if session.get('is_admin') or session.get('puo_vedere_report_ore', 1) %}
+                    <li class="nav-item"><a class="nav-link" href="{{ url_for('report_ore') }}"><i class="fa-solid fa-chart-pie me-1"></i> Report Ore</a></li>
+                    {% endif %}
+
+                    {% if session.get('is_admin') %}
+                    <li class="nav-item"><a class="nav-link" href="{{ url_for('admin_utenti') }}"><i class="fa-solid fa-users-gear me-1"></i> Admin</a></li>
+                    {% endif %}
+                </ul>
+
+                <!-- Notifiche & Profilo Utente -->
                 <ul class="navbar-nav ms-auto align-items-center">
-                    <li class="nav-item"><a class="nav-link active" href="{{ url_for('index') }}">Magazzino</a></li>
-                    <li class="nav-item"><a class="nav-link text-warning fw-bold" href="{{ url_for('nastri') }}">Magazzino Nastri</a></li>
-                    <li class="nav-item"><a class="nav-link" href="{{ url_for('richieste_manutenzione') }}">Manutenzioni</a></li>
-                    <li class="nav-item"><a class="nav-link" href="{{ url_for('cambi_serie') }}">Cambi Serie</a></li>
-                    <li class="nav-item"><a class="nav-link" href="{{ url_for('fornitori') }}">Fornitori</a></li>
-                    <li class="nav-item"><a class="nav-link" href="{{ url_for('documenti') }}">Documenti</a></li>
-                    <li class="nav-item"><a class="nav-link text-danger ms-3" href="{{ url_for('logout') }}"><i class="fas fa-sign-out-alt"></i></a></li>
+                    <!-- Dropdown Notifiche System -->
+                    <li class="nav-item dropdown me-3">
+                        <a class="nav-link position-relative text-light" href="#" id="dropdownNotifiche" role="button" data-bs-toggle="dropdown" onclick="segnaNotificheLette()">
+                            <i class="fa-solid fa-bell fs-5"></i>
+                            <span id="badgeNotifiche" class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger d-none">
+                                0
+                            </span>
+                        </a>
+                        <ul class="dropdown-menu dropdown-menu-end shadow" aria-labelledby="dropdownNotifiche" id="listaNotifiche" style="width: 330px; max-height: 400px; overflow-y: auto;">
+                            <li><h6 class="dropdown-header border-bottom py-2"><i class="fa-solid fa-bell me-1"></i> Notifiche System</h6></li>
+                            <li id="emptyNotifiche" class="dropdown-item text-muted text-center py-3">Nessuna notifica presente</li>
+                        </ul>
+                    </li>
+
+                    <!-- Dropdown Utente -->
+                    <li class="nav-item dropdown">
+                        <a class="nav-link dropdown-toggle text-light" href="#" role="button" data-bs-toggle="dropdown">
+                            <i class="fa-solid fa-user-circle me-1"></i> {{ session.get('username', 'Utente') }}
+                        </a>
+                        <ul class="dropdown-menu dropdown-menu-end">
+                            <li><a class="dropdown-item text-danger" href="{{ url_for('logout') }}"><i class="fa-solid fa-right-from-bracket me-1"></i> Logout</a></li>
+                        </ul>
+                    </li>
                 </ul>
             </div>
         </div>
     </nav>
 
-    <div class="container-fluid px-4 py-2">
-        <!-- Messaggi Flash Corretti -->
+    <!-- Contenuto principale -->
+    <div class="container my-4">
+
+        <!-- Flash messages -->
         {% with messages = get_flashed_messages(with_categories=true) %}
             {% if messages %}
                 {% for category, message in messages %}
@@ -47,81 +100,82 @@
             {% endif %}
         {% endwith %}
 
-        <!-- Intestazione principale -->
-        <div class="d-flex justify-content-between align-items-center mb-4">
-            <div>
-                <h1 class="text-white fw-bold"><i class="fas fa-boxes me-2 text-primary"></i> Inventario Magazzino Officina</h1>
-                <p class="text-muted mb-0">Panoramica generale dei componenti e delle scorte.</p>
-            </div>
-            <div>
-                <a href="{{ url_for('nastri') }}" class="btn btn-warning fw-bold shadow-sm me-2">
-                    <i class="fas fa-stream me-1"></i> Magazzino Nastri
-                </a>
-                <button class="btn btn-success shadow-sm" data-bs-toggle="modal" data-bs-target="#modalAggiungiProdotto">
-                    <i class="fas fa-plus me-1"></i> Nuovo Articolo
-                </button>
-            </div>
-        </div>
-
-        <!-- Avvisi prodotti sotto soglia -->
+        <!-- Avviso Articoli Sotto Soglia -->
         {% if prodotti_sotto_soglia %}
-        <div class="alert alert-danger shadow border-0 mb-4" role="alert">
-            <h5 class="alert-heading fw-bold"><i class="fas fa-exclamation-triangle me-2"></i> Attenzione! Articoli sotto la soglia minima di scorta:</h5>
+        <div class="alert alert-warning shadow-sm mb-4" role="alert">
+            <h5 class="alert-heading fw-bold"><i class="fa-solid fa-triangle-exclamation me-2"></i>Attenzione! Articoli sotto la scorta minima:</h5>
             <ul class="mb-0">
                 {% for p in prodotti_sotto_soglia %}
-                <li><strong>{{ p.nome }}</strong> (Codice SAP: {{ p.sap or 'N/D' }}) - Quantità attuale: <span class="badge bg-dark">{{ p.quantita }}</span> (Soglia: {{ p.soglia_minima or 3 }})</li>
+                <li><strong>{{ p.nome }}</strong> (Codice: {{ p.qr_code }}) - Quantità: <span class="badge bg-danger">{{ p.quantita }}</span> (Soglia: {{ p.soglia_minima or 3 }})</li>
                 {% endfor %}
             </ul>
         </div>
         {% endif %}
 
-        <!-- Tabella Inventario Principale -->
-        <div class="card bg-dark text-white shadow border-secondary">
+        <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
+            <h2><i class="fa-solid fa-boxes-stacked me-2 text-primary"></i>Inventario Magazzino</h2>
+            <div class="d-flex gap-2 flex-wrap">
+                <a href="{{ url_for('esporta_inventario') }}" class="btn btn-outline-success">
+                    <i class="fa-solid fa-file-excel me-1"></i> Esporta CSV
+                </a>
+                <a href="{{ url_for('stampa_multipla_qr') }}" class="btn btn-outline-dark">
+                    <i class="fa-solid fa-print me-1"></i> Stampa QR
+                </a>
+                {% if session.get('is_admin') or session.get('puo_aggiungere_prodotti', 1) %}
+                <button class="btn btn-dark" data-bs-toggle="modal" data-bs-target="#modalNuovoProdotto">
+                    <i class="fa-solid fa-plus me-1"></i> Nuovo Articolo
+                </button>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Tabella Prodotti -->
+        <div class="card shadow-sm">
+            <div class="card-header bg-dark text-white d-flex justify-content-between align-items-center py-3">
+                <h5 class="mb-0"><i class="fa-solid fa-table-list me-2"></i>Elenco Articoli</h5>
+                <span class="badge bg-secondary fs-6">{{ prodotti|length }} articoli</span>
+            </div>
             <div class="card-body">
                 <div class="table-responsive">
-                    <table class="table table-dark table-striped table-hover align-middle">
-                        <thead>
-                            <tr class="text-secondary">
+                    <table class="table table-hover align-middle">
+                        <thead class="table-light">
+                            <tr>
                                 <th>QR Code</th>
                                 <th>Nome Articolo</th>
-                                <th>Codice SAP</th>
+                                <th>SAP</th>
                                 <th>Quantità</th>
                                 <th>Posizione</th>
-                                <th>Stato</th>
+                                <th>Peso</th>
                                 <th class="text-end">Azioni</th>
                             </tr>
                         </thead>
                         <tbody>
                             {% for p in prodotti %}
                             <tr>
-                                <td class="fw-bold text-info">{{ p.qr_code }}</td>
-                                <td>{{ p.nome }}</td>
+                                <td><span class="badge bg-secondary font-monospace">{{ p.qr_code }}</span></td>
+                                <td class="fw-bold text-dark">{{ p.nome }}</td>
                                 <td>{{ p.sap or '-' }}</td>
                                 <td>
                                     <span class="badge {% if p.quantita <= (p.soglia_minima or 3) %}bg-danger{% else %}bg-success{% endif %} fs-6">
-                                        {{ p.quantita }}
+                                        {{ p.quantita }} pz
                                     </span>
                                 </td>
                                 <td>{{ p.posizione or '-' }}</td>
-                                <td>
-                                    {% if p.in_manutenzione %}
-                                    <span class="badge bg-warning text-dark">In Manutenzione Esterna</span>
-                                    {% else %}
-                                    <span class="badge bg-secondary">Disponibile</span>
-                                    {% endif %}
-                                </td>
+                                <td>{{ p.peso or '-' }}</td>
                                 <td class="text-end">
-                                    <a href="{{ url_for('gestisci_prodotto', qr_code=p.qr_code) }}" class="btn btn-sm btn-outline-info" title="Gestisci / Dettagli">
-                                        <i class="fas fa-cog"></i>
-                                    </a>
-                                    <a href="{{ url_for('stampa_singolo_qr', qr_code=p.qr_code) }}" class="btn btn-sm btn-outline-light" title="Stampa QR">
-                                        <i class="fas fa-qrcode"></i>
-                                    </a>
+                                    <div class="btn-group">
+                                        <a href="{{ url_for('gestisci_prodotto', qr_code=p.qr_code) }}" class="btn btn-sm btn-outline-primary" title="Gestisci">
+                                            <i class="fa-solid fa-pen-to-square"></i>
+                                        </a>
+                                        <a href="{{ url_for('stampa_singolo_qr', qr_code=p.qr_code) }}" class="btn btn-sm btn-outline-dark" title="Stampa QR">
+                                            <i class="fa-solid fa-qrcode"></i>
+                                        </a>
+                                    </div>
                                 </td>
                             </tr>
                             {% else %}
                             <tr>
-                                <td colspan="7" class="text-center text-muted py-4">Nessun articolo presente in magazzino.</td>
+                                <td colspan="7" class="text-center text-muted py-4">Nessun articolo trovato in magazzino.</td>
                             </tr>
                             {% endfor %}
                         </tbody>
@@ -129,55 +183,114 @@
                 </div>
             </div>
         </div>
+
     </div>
 
-    <!-- Modal Aggiungi Prodotto -->
-    <div class="modal fade" id="modalAggiungiProdotto" tabindex="-1" aria-hidden="true">
+    <!-- Modale Nuovo Prodotto -->
+    <div class="modal fade" id="modalNuovoProdotto" tabindex="-1">
         <div class="modal-dialog">
-            <div class="modal-content bg-dark text-white border-secondary">
+            <div class="modal-content">
                 <form action="{{ url_for('aggiungi_prodotto') }}" method="POST">
-                    <div class="modal-header border-secondary">
-                        <h5 class="modal-title">Aggiungi Nuovo Articolo</h5>
-                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                    <div class="modal-header bg-dark text-white">
+                        <h5 class="modal-title"><i class="fa-solid fa-plus-circle me-1"></i> Aggiungi Nuovo Articolo</h5>
+                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
                     </div>
-                    <div class="modal-body text-start">
+                    <div class="modal-body">
                         <div class="mb-3">
-                            <label class="form-label">QR Code (lascia vuoto per generazione automatica)</label>
-                            <input type="text" class="form-control bg-secondary text-white border-0" name="qr_code" placeholder="Es. OMG-0001">
+                            <label class="form-label fw-bold">QR Code / Codice a Barre (Opzionale)</label>
+                            <input type="text" class="form-control" name="qr_code" placeholder="Lascia vuoto per generazione automatica (es. OMG-0001)">
+                            <div class="form-text text-muted">Se lasci vuoto questo campo, il sistema creerà un codice progressivo in automatico.</div>
                         </div>
                         <div class="mb-3">
-                            <label class="form-label">Nome Articolo *</label>
-                            <input type="text" class="form-control bg-secondary text-white border-0" name="nome" required placeholder="Nome componente o ricambio">
+                            <label class="form-label fw-bold">Nome Articolo *</label>
+                            <input type="text" class="form-control" name="nome" placeholder="Inserisci nome articolo..." required>
                         </div>
-                        <div class="mb-3">
-                            <label class="form-label">Codice SAP</label>
-                            <input type="text" class="form-control bg-secondary text-white border-0" name="sap" placeholder="Codice SAP">
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Codice SAP</label>
+                                <input type="text" class="form-control" name="sap" placeholder="Codice SAP...">
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Peso</label>
+                                <input type="text" class="form-control" name="peso" placeholder="Es. 1.5 kg">
+                            </div>
                         </div>
                         <div class="row">
                             <div class="col-md-6 mb-3">
                                 <label class="form-label">Quantità Iniziale</label>
-                                <input type="number" class="form-control bg-secondary text-white border-0" name="quantita" value="0" min="0">
+                                <input type="number" class="form-control" name="quantita" value="0" min="0">
                             </div>
                             <div class="col-md-6 mb-3">
-                                <label class="form-label">Soglia Minima Scorta</label>
-                                <input type="number" class="form-control bg-secondary text-white border-0" name="soglia_minima" value="3" min="1">
+                                <label class="form-label">Soglia Scorta Minima</label>
+                                <input type="number" class="form-control" name="soglia_minima" value="3" min="0">
                             </div>
                         </div>
                         <div class="mb-3">
                             <label class="form-label">Posizione in Magazzino</label>
-                            <input type="text" class="form-control bg-secondary text-white border-0" name="posizione" placeholder="Es. Scaffale A1">
+                            <input type="text" class="form-control" name="posizione" placeholder="Es. Scaffale A1...">
                         </div>
                     </div>
-                    <div class="modal-footer border-secondary">
+                    <div class="modal-footer">
                         <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annulla</button>
-                        <button type="submit" class="btn btn-success">Salva Articolo</button>
+                        <button type="submit" class="btn btn-primary">Salva Articolo</button>
                     </div>
                 </form>
             </div>
         </div>
     </div>
 
-    <!-- Bootstrap JS Bundle -->
+    <!-- Bootstrap JS e Logica Notifiche Live -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+    function caricaNotifiche() {
+        fetch('/api/notifiche')
+            .then(response => response.json())
+            .then(data => {
+                const badge = document.getElementById('badgeNotifiche');
+                const lista = document.getElementById('listaNotifiche');
+                if (!badge || !lista) return;
+
+                lista.innerHTML = '<li><h6 class="dropdown-header border-bottom py-2"><i class="fa-solid fa-bell me-1"></i> Notifiche System</h6></li>';
+                
+                let nonLette = 0;
+                if (!data || data.length === 0) {
+                    lista.innerHTML += '<li class="dropdown-item text-muted text-center py-3">Nessuna notifica presente</li>';
+                } else {
+                    data.forEach(n => {
+                        if (!n.letta) nonLette++;
+                        const item = document.createElement('li');
+                        item.innerHTML = `
+                            <a class="dropdown-item py-2 border-bottom ${!n.letta ? 'bg-light fw-bold' : ''}" href="${n.link || '#'}">
+                                <div>${n.titolo}</div>
+                                <small class="text-muted d-block fw-normal">${n.messaggio}</small>
+                            </a>
+                        `;
+                        lista.appendChild(item);
+                    });
+                }
+
+                if (nonLette > 0) {
+                    badge.textContent = nonLette;
+                    badge.classList.remove('d-none');
+                } else {
+                    badge.classList.add('d-none');
+                }
+            })
+            .catch(err => console.error("Errore recupero notifiche:", err));
+    }
+
+    function segnaNotificheLette() {
+        fetch('/api/notifiche/segna_lette', { method: 'POST' })
+            .then(() => {
+                const badge = document.getElementById('badgeNotifiche');
+                if (badge) badge.classList.add('d-none');
+            });
+    }
+
+    document.addEventListener("DOMContentLoaded", function() {
+        caricaNotifiche();
+        setInterval(caricaNotifiche, 15000);
+    });
+    </script>
 </body>
 </html>
