@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Stampa Magazzino Nastri - Gestionale OMG</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        @media print {
+            .no-print {
+                display: none !important;
+            }
+            body {
+                background: white !important;
+                font-size: 11px;
+            }
+            .table {
+                width: 100% !important;
+                border-collapse: collapse !important;
+            }
+            .table th, .table td {
+                padding: 5px !important;
+                border: 1px solid #333 !important;
+            }
+        }
+    </style>
+</head>
+<body class="bg-white text-dark py-4">
+    <div class="container-fluid px-4">
+        <!-- Intestazione Stampa -->
+        <div class="d-flex justify-content-between align-items-center border-bottom pb-3 mb-4">
+            <div>
+                <h3 class="fw-bold mb-1"><i class="fas fa-industry me-2"></i>Gestionale OMG - Magazzino Nastri</h3>
+                <p class="text-muted mb-0">Filtro Sezione: <strong>{{ sezione_filtro }}</strong> | Data Stampa: {{ data_stampa }}</p>
+            </div>
+            <div class="no-print">
+                <button onclick="window.print();" class="btn btn-primary btn-sm me-2"><i class="fas fa-print me-1"></i>Stampa / PDF</button>
+                <a href="{{ url_for('nastri', sezione=sezione_filtro) }}" class="btn btn-secondary btn-sm"><i class="fas fa-arrow-left me-1"></i>Torna Indietro</a>
+            </div>
+        </div>
+
+        <!-- Tabella Nastri -->
+        <div class="table-responsive">
+            <table class="table table-bordered table-striped align-middle">
+                <thead class="table-dark text-center">
+                    <tr>
+                        <th>SAP</th>
+                        <th>N°</th>
+                        <th>Stato</th>
+                        <th>Misura</th>
+                        <th>Tipo</th>
+                        <th>Sezione</th>
+                        <th>Utilizzo</th>
+                        <th>Misura Finito</th>
+                        <th>Riduttore</th>
+                        <th>Motore</th>
+                        <th>Note</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for n in nastri %}
+                    <tr>
+                        <td class="fw-bold text-center"><code>{{ n.codice_sap or '-' }}</code></td>
+                        <td class="text-center fw-bold">{{ n.numero or '-' }}</td>
+                        <td class="text-center">
+                            <span class="badge bg-{{ 'success' if n.stato == 'aperto' else 'secondary' }}">
+                                {{ n.stato or 'aperto' }}
+                            </span>
+                        </td>
+                        <td>{{ n.misura or '-' }}</td>
+                        <td>{{ n.tipo or '-' }}</td>
+                        <td class="fw-semibold">{{ n.sezione_impianto or '-' }}</td>
+                        <td>{{ n.utilizzo or '-' }}</td>
+                        <td>{{ n.misura_nastro_finito or '-' }}</td>
+                        <td>{{ n.tipo_di_riduttore or '-' }}</td>
+                        <td>{{ n.tipo_di_motore or '-' }}</td>
+                        <td><small>{{ n.note or '-' }}</small></td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="11" class="text-center py-4 text-muted">Nessun nastro trovato per la sezione selezionata.</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</body>
+</html>
