@@ -2027,6 +2027,7 @@ def stampa_bolla(qr_code):
 
 @app.route("/carico", methods=["GET", "POST"])
 @app.route("/carico.html", methods=["GET", "POST"])
+@app.route("/carica_prodotto", methods=["GET", "POST"], endpoint="carica_prodotto")
 def carico():
     if not (session.get('is_admin') or session.get('puo_caricare_scaricare', 1)):
         flash("Permesso negato per il carico.", "error")
@@ -2049,6 +2050,7 @@ def carico():
 
 @app.route("/scarico", methods=["GET", "POST"])
 @app.route("/scarico.html", methods=["GET", "POST"])
+@app.route("/scarica_prodotto", methods=["GET", "POST"], endpoint="scarica_prodotto")
 def scarico():
     if not (session.get('is_admin') or session.get('puo_caricare_scaricare', 1)):
         flash("Permesso negato per lo scarico.", "error")
