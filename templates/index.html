@@ -22,7 +22,8 @@
                 <ul class="navbar-nav me-auto">
                     <li class="nav-item"><a class="nav-link active" href="{{ url_for('index') }}"><i class="fa-solid fa-boxes-stacked me-1"></i> Magazzino</a></li>
                     
-                    <li class="nav-item"><a class="nav-link text-warning fw-bold" href="{{ url_for('nastri') }}"><i class="fa-solid fa-stream me-1"></i> Nastri</a></li>
+                    <!-- Voce Nastri resa identica alle altre -->
+                    <li class="nav-item"><a class="nav-link" href="{{ url_for('nastri') }}"><i class="fa-solid fa-stream me-1"></i> Nastri</a></li>
 
                     {% if session.get('is_admin') or session.get('puo_vedere_manutenzioni_esterne', 1) %}
                     <li class="nav-item"><a class="nav-link" href="{{ url_for('manutenzioni') }}"><i class="fa-solid fa-wrench me-1"></i> Manutenzioni Esterne</a></li>
@@ -57,7 +58,6 @@
 
                 <!-- Notifiche & Profilo Utente -->
                 <ul class="navbar-nav ms-auto align-items-center">
-                    <!-- Dropdown Notifiche System -->
                     <li class="nav-item dropdown me-3">
                         <a class="nav-link position-relative text-light" href="#" id="dropdownNotifiche" role="button" data-bs-toggle="dropdown" onclick="segnaNotificheLette()">
                             <i class="fa-solid fa-bell fs-5"></i>
@@ -71,7 +71,6 @@
                         </ul>
                     </li>
 
-                    <!-- Dropdown Utente -->
                     <li class="nav-item dropdown">
                         <a class="nav-link dropdown-toggle text-light" href="#" role="button" data-bs-toggle="dropdown">
                             <i class="fa-solid fa-user-circle me-1"></i> {{ session.get('username', 'Utente') }}
@@ -129,6 +128,16 @@
             </div>
         </div>
 
+        <!-- Barra di Ricerca Istantanea Magazzino -->
+        <div class="card shadow-sm mb-4">
+            <div class="card-body py-3">
+                <div class="input-group">
+                    <span class="input-group-text bg-dark text-white"><i class="fa-solid fa-search"></i></span>
+                    <input type="text" id="searchInput" class="form-control" placeholder="Cerca articolo per nome, codice SAP, QR Code o posizione..." onkeyup="filterTable()">
+                </div>
+            </div>
+        </div>
+
         <!-- Tabella Prodotti -->
         <div class="card shadow-sm">
             <div class="card-header bg-dark text-white d-flex justify-content-between align-items-center py-3">
@@ -137,7 +146,7 @@
             </div>
             <div class="card-body">
                 <div class="table-responsive">
-                    <table class="table table-hover align-middle">
+                    <table class="table table-hover align-middle" id="inventoryTable">
                         <thead class="table-light">
                             <tr>
                                 <th>QR Code</th>
@@ -174,7 +183,7 @@
                                 </td>
                             </tr>
                             {% else %}
-                            <tr>
+                            <tr id="noResultsRow">
                                 <td colspan="7" class="text-center text-muted py-4">Nessun articolo trovato in magazzino.</td>
                             </tr>
                             {% endfor %}
@@ -185,6 +194,36 @@
         </div>
 
     </div>
+
+    <!-- Script per la ricerca in tempo reale -->
+    <script>
+    function filterTable() {
+        let input = document.getElementById("searchInput");
+        let filter = input.value.toLowerCase();
+        let table = document.getElementById("inventoryTable");
+        let tr = table.getElementsByTagName("tr");
+
+        for (let i = 1; i < tr.length; i++) {
+            if (tr[i].id === "noResultsRow") continue;
+            let tds = tr[i].getElementsByTagName("td");
+            let found = false;
+            for (let j = 0; j < tds.length - 1; j++) {
+                if (tds[j]) {
+                    let txtValue = tds[j].textContent || tds[j].innerText;
+                    if (txtValue.toLowerCase().indexOf(filter) > -1) {
+                        found = true;
+                        break;
+                    }
+                }
+            }
+            if (found) {
+                tr[i].style.display = "";
+            } else {
+                tr[i].style.display = "none";
+            }
+        }
+    }
+    </script>
 
     <!-- Modale Nuovo Prodotto -->
     <div class="modal fade" id="modalNuovoProdotto" tabindex="-1">
