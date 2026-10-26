@@ -69,6 +69,7 @@ def init_db():
                 peso VARCHAR(255),
                 quantita INT DEFAULT 0,
                 posizione VARCHAR(255),
+                magazzino_pesante INT DEFAULT 0,
                 in_manutenzione BOOLEAN DEFAULT FALSE,
                 cliente_manutenzione VARCHAR(255),
                 quantita_manutenzione INT DEFAULT 0,
@@ -78,23 +79,6 @@ def init_db():
                 ordine_amministrativo BOOLEAN DEFAULT FALSE,
                 note_manutenzione TEXT,
                 soglia_minima INT DEFAULT 3
-            );
-        """)
-
-        cur.execute("""
-            CREATE TABLE IF NOT EXISTS nastri (
-                id SERIAL PRIMARY KEY,
-                codice_sap VARCHAR(255),
-                numero VARCHAR(50),
-                stato VARCHAR(50) DEFAULT 'aperto',
-                misura VARCHAR(255),
-                tipo VARCHAR(255),
-                sezione_impianto VARCHAR(255),
-                utilizzo VARCHAR(255),
-                misura_nastro_finito VARCHAR(255),
-                tipo_di_riduttore VARCHAR(255),
-                tipo_di_motore VARCHAR(255),
-                note TEXT
             );
         """)
         
@@ -177,6 +161,7 @@ def init_db():
                 puo_modificare_prodotti INT DEFAULT 1,
                 puo_caricare_scaricare INT DEFAULT 1,
                 puo_eliminare INT DEFAULT 0,
+                puo_vedere_pesante INT DEFAULT 1,
                 puo_vedere_manutenzione INT DEFAULT 1,
                 puo_aprire_manutenzioni INT DEFAULT 1,
                 puo_gestire_interventi INT DEFAULT 1,
@@ -191,8 +176,7 @@ def init_db():
                 puo_eliminare_documenti INT DEFAULT 0,
                 puo_vedere_promemoria INT DEFAULT 1,
                 puo_assegnare_promemoria INT DEFAULT 0,
-                puo_vedere_report_ore INT DEFAULT 1,
-                puo_gestire_nastri INT DEFAULT 1
+                puo_vedere_report_ore INT DEFAULT 1
             );
         """)
 
@@ -274,6 +258,7 @@ def init_db():
             ("puo_modificare_prodotti", "INT DEFAULT 1"),
             ("puo_caricare_scaricare", "INT DEFAULT 1"),
             ("puo_eliminare", "INT DEFAULT 0"),
+            ("puo_vedere_pesante", "INT DEFAULT 1"),
             ("puo_vedere_manutenzione", "INT DEFAULT 1"),
             ("puo_aprire_manutenzioni", "INT DEFAULT 1"),
             ("puo_gestire_interventi", "INT DEFAULT 1"),
@@ -288,8 +273,7 @@ def init_db():
             ("puo_eliminare_documenti", "INT DEFAULT 0"),
             ("puo_vedere_promemoria", "INT DEFAULT 1"),
             ("puo_assegnare_promemoria", "INT DEFAULT 0"),
-            ("puo_vedere_report_ore", "INT DEFAULT 1"),
-            ("puo_gestire_nastri", "INT DEFAULT 1")
+            ("puo_vedere_report_ore", "INT DEFAULT 1")
         ]
         
         for p_col, p_type in permessi_lista:
@@ -299,7 +283,7 @@ def init_db():
         if not cur.fetchone():
             hashed_pw = generate_password_hash("admin")
             cur.execute("""
-                INSERT INTO utenti (username, password, is_admin, puo_vedere_magazzino, puo_aggiungere_prodotti, puo_modificare_prodotti, puo_caricare_scaricare, puo_eliminare, puo_vedere_manutenzione, puo_aprire_manutenzioni, puo_gestire_interventi, puo_assegnare_manutenzioni, puo_eliminare_interventi, puo_vedere_manutenzioni_esterne, puo_vedere_storico_manutenzioni, puo_eliminare_storico, puo_gestire_fornitori, puo_importare_fornitori, puo_gestire_documenti, puo_eliminare_documenti, puo_vedere_promemoria, puo_assegnare_promemoria, puo_vedere_report_ore, puo_gestire_nastri)
+                INSERT INTO utenti (username, password, is_admin, puo_vedere_magazzino, puo_aggiungere_prodotti, puo_modificare_prodotti, puo_caricare_scaricare, puo_eliminare, puo_vedere_pesante, puo_vedere_manutenzione, puo_aprire_manutenzioni, puo_gestire_interventi, puo_assegnare_manutenzioni, puo_eliminare_interventi, puo_vedere_manutenzioni_esterne, puo_vedere_storico_manutenzioni, puo_eliminare_storico, puo_gestire_fornitori, puo_importare_fornitori, puo_gestire_documenti, puo_eliminare_documenti, puo_vedere_promemoria, puo_assegnare_promemoria, puo_vedere_report_ore)
                 VALUES (%s, %s, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1);
             """, ('admin', hashed_pw))
 
@@ -368,7 +352,7 @@ def index():
         cur = conn.cursor()
         
         cur.execute("SELECT * FROM prodotti ORDER BY nome ASC;")
-        prodotti = cur.fetchall()
+        tutti = cur.fetchall()
         
         if is_admin or puo_assegnare:
             cur.execute("SELECT COUNT(*) as count FROM promemoria WHERE completato = FALSE;")
@@ -388,7 +372,11 @@ def index():
         cur.close()
         conn.close()
         
-        for p in prodotti:
+        for p in tutti:
+            val_pesante = p.get('magazzino_pesante')
+            is_pesante = (val_pesante == 1 or val_pesante == '1' or val_pesante is True or val_pesante == 1.0)
+            if not is_pesante:
+                prodotti.append(p)
             soglia = p.get('soglia_minima', 3) or 3
             if p.get('quantita', 0) <= soglia:
                 prodotti_sotto_soglia.append(p)
@@ -451,8 +439,8 @@ def registra():
                 cur = conn.cursor()
                 hashed_pw = generate_password_hash(password)
                 cur.execute("""
-                    INSERT INTO utenti (username, password, is_admin, puo_vedere_magazzino, puo_aggiungere_prodotti, puo_modificare_prodotti, puo_caricare_scaricare, puo_eliminare, puo_vedere_manutenzione, puo_aprire_manutenzioni, puo_gestire_interventi, puo_assegnare_manutenzioni, puo_eliminare_interventi, puo_vedere_manutenzioni_esterne, puo_vedere_storico_manutenzioni, puo_eliminare_storico, puo_gestire_fornitori, puo_importare_fornitori, puo_gestire_documenti, puo_eliminare_documenti, puo_vedere_promemoria, puo_assegnare_promemoria, puo_vedere_report_ore, puo_gestire_nastri)
-                    VALUES (%s, %s, 0, 1, 1, 1, 1, 0, 1, 1, 1, 1, 1, 0, 1, 1, 0, 1, 1, 1, 0, 1, 0, 1, 1);
+                    INSERT INTO utenti (username, password, is_admin, puo_vedere_magazzino, puo_aggiungere_prodotti, puo_modificare_prodotti, puo_caricare_scaricare, puo_eliminare, puo_vedere_pesante, puo_vedere_manutenzione, puo_aprire_manutenzioni, puo_gestire_interventi, puo_assegnare_manutenzioni, puo_eliminare_interventi, puo_vedere_manutenzioni_esterne, puo_vedere_storico_manutenzioni, puo_eliminare_storico, puo_gestire_fornitori, puo_importare_fornitori, puo_gestire_documenti, puo_eliminare_documenti, puo_vedere_promemoria, puo_assegnare_promemoria, puo_vedere_report_ore)
+                    VALUES (%s, %s, 0, 1, 1, 1, 1, 0, 1, 1, 1, 1, 1, 0, 1, 1, 0, 1, 1, 1, 0, 1, 0, 1);
                 """, (username, hashed_pw))
                 conn.commit()
                 cur.close()
@@ -463,159 +451,6 @@ def registra():
             except Exception as e:
                 flash("Username già esistente o errore di registrazione.", "error")
     return render_template("registra.html")
-
-# --- ROTTA DI SICUREZZA ---
-@app.route("/magazzino_pesante", endpoint="magazzino_pesante")
-@app.route("/magazzino_pesante.html", endpoint="magazzino_pesante_html")
-@app.route("/esporta_pesante", endpoint="esporta_pesante")
-def magazzino_pesante_stub():
-    return redirect(url_for('index'))
-
-# --- MODULO: GESTIONE MAGAZZINO NASTRI ---
-@app.route("/nastri", methods=["GET", "POST"])
-@app.route("/nastri.html", methods=["GET", "POST"])
-def nastri():
-    if not (session.get('is_admin') or session.get('puo_gestire_nastri', 1)):
-        flash("Accesso al magazzino nastri non autorizzato.", "error")
-        return redirect(url_for('index'))
-
-    sezione_filtro = request.args.get("sezione", "Tutte")
-
-    conn = get_db_connection()
-    cur = conn.cursor()
-
-    if request.method == "POST":
-        codice_sap = request.form.get("codice_sap", "")
-        numero = request.form.get("numero", "")
-        stato = request.form.get("stato", "aperto")
-        misura = request.form.get("misura", "")
-        tipo = request.form.get("tipo", "")
-        sezione_impianto = request.form.get("sezione_impianto", "COMPOSIZIONE")
-        utilizzo = request.form.get("utilizzo", "")
-        misura_nastro_finito = request.form.get("misura_nastro_finito", "")
-        tipo_di_riduttore = request.form.get("tipo_di_riduttore", "")
-        tipo_di_motore = request.form.get("tipo_di_motore", "")
-        note = request.form.get("note", "")
-
-        cur.execute("""
-            INSERT INTO nastri (codice_sap, numero, stato, misura, tipo, sezione_impianto, utilizzo, misura_nastro_finito, tipo_di_riduttore, tipo_di_motore, note)
-            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s);
-        """, (codice_sap, numero, stato, misura, tipo, sezione_impianto, utilizzo, misura_nastro_finito, tipo_di_riduttore, tipo_di_motore, note))
-        conn.commit()
-        registra_log(f"Aggiunto nuovo nastro - Impianto: {sezione_impianto}, N°: {numero}")
-        flash("Nastro aggiunto con successo al magazzino!", "success")
-        return redirect(url_for("nastri", sezione=sezione_filtro))
-
-    query = "SELECT * FROM nastri WHERE 1=1"
-    params = []
-    if sezione_filtro != "Tutte":
-        query += " AND sezione_impianto = %s"
-        params.append(sezione_filtro)
-    
-    query += " ORDER BY sezione_impianto ASC, id ASC;"
-    cur.execute(query, tuple(params))
-    lista_nastri = cur.fetchall()
-
-    cur.execute("SELECT DISTINCT sezione_impianto FROM nastri WHERE sezione_impianto IS NOT NULL ORDER BY sezione_impianto ASC;")
-    sezioni_disponibili = [r['sezione_impianto'] for r in cur.fetchall()]
-
-    cur.close()
-    conn.close()
-
-    return render_template("nastri.html", 
-                           nastri=lista_nastri, 
-                           sezioni_disponibili=sezioni_disponibili, 
-                           sezione_filtro=sezione_filtro)
-
-@app.route("/modifica_nastro/<int:nastro_id>", methods=["POST"])
-def modifica_nastro(nastro_id):
-    if not (session.get('is_admin') or session.get('puo_gestire_nastri', 1)):
-        flash("Permesso negato.", "error")
-        return redirect(url_for("nastri"))
-
-    codice_sap = request.form.get("codice_sap", "")
-    numero = request.form.get("numero", "")
-    stato = request.form.get("stato", "aperto")
-    misura = request.form.get("misura", "")
-    tipo = request.form.get("tipo", "")
-    sezione_impianto = request.form.get("sezione_impianto", "")
-    utilizzo = request.form.get("utilizzo", "")
-    misura_nastro_finito = request.form.get("misura_nastro_finito", "")
-    tipo_di_riduttore = request.form.get("tipo_di_riduttore", "")
-    tipo_di_motore = request.form.get("tipo_di_motore", "")
-    note = request.form.get("note", "")
-
-    try:
-        conn = get_db_connection()
-        cur = conn.cursor()
-        cur.execute("""
-            UPDATE nastri 
-            SET codice_sap = %s, numero = %s, stato = %s, misura = %s, tipo = %s, 
-                sezione_impianto = %s, utilizzo = %s, misura_nastro_finito = %s, 
-                tipo_di_riduttore = %s, tipo_di_motore = %s, note = %s
-            WHERE id = %s;
-        """, (codice_sap, numero, stato, misura, tipo, sezione_impianto, utilizzo, misura_nastro_finito, tipo_di_riduttore, tipo_di_motore, note, nastro_id))
-        conn.commit()
-        cur.close()
-        conn.close()
-        registra_log(f"Aggiornato nastro ID {nastro_id} ({numero})")
-        flash("Nastro aggiornato con successo!", "success")
-    except Exception as e:
-        flash(f"Errore aggiornamento nastro: {e}", "error")
-
-    return redirect(url_for("nastri"))
-
-@app.route("/elimina_nastro/<int:nastro_id>", methods=["POST"])
-def elimina_nastro(nastro_id):
-    if not (session.get('is_admin') or session.get('puo_eliminare', 0)):
-        flash("Permesso negato per eliminare elementi.", "error")
-        return redirect(url_for("nastri"))
-
-    try:
-        conn = get_db_connection()
-        cur = conn.cursor()
-        cur.execute("DELETE FROM nastri WHERE id = %s;", (nastro_id,))
-        conn.commit()
-        cur.close()
-        conn.close()
-        registra_log(f"Eliminato nastro ID {nastro_id}")
-        flash("Nastro eliminato dal magazzino.", "success")
-    except Exception as e:
-        flash(f"Errore durante l'eliminazione: {e}", "error")
-
-    return redirect(url_for("nastri"))
-
-@app.route("/esporta_nastri_csv")
-def esporta_nastri_csv():
-    conn = get_db_connection()
-    cur = conn.cursor()
-    cur.execute("SELECT codice_sap, numero, stato, misura, tipo, sezione_impianto, utilizzo, misura_nastro_finito, tipo_di_riduttore, tipo_di_motore, note FROM nastri ORDER BY sezione_impianto ASC, id ASC;")
-    righe = cur.fetchall()
-    cur.close()
-    conn.close()
-
-    output = io.StringIO()
-    writer = csv.writer(output)
-    writer.writerow(['Codice SAP', 'Numero', 'Stato', 'Misura', 'Tipo', 'Sezione Impianto', 'Utilizzo', 'Misura Nastro Finito', 'Tipo di Riduttore', 'Tipo di Motore', 'Note'])
-    for r in righe:
-        writer.writerow([
-            r.get('codice_sap', ''),
-            r.get('numero', ''),
-            r.get('stato', ''),
-            r.get('misura', ''),
-            r.get('tipo', ''),
-            r.get('sezione_impianto', ''),
-            r.get('utilizzo', ''),
-            r.get('misura_nastro_finito', ''),
-            r.get('tipo_di_riduttore', ''),
-            r.get('tipo_di_motore', ''),
-            r.get('note', '')
-        ])
-    return Response(
-        output.getvalue(),
-        mimetype="text/csv",
-        headers={"Content-disposition": "attachment; filename=Magazzino_Nastri_OMG.csv"}
-    )
 
 # --- PANNELLO PERMESSI ADMIN & LOGS ---
 @app.route("/admin_utenti")
@@ -818,7 +653,7 @@ def esporta_cambi_serie_csv():
         headers={"Content-disposition": "attachment; filename=Cambi_Serie_OMG.csv"}
     )
 
-# --- MODULO: REPORT ORE ---
+# --- MODULO: REPORT ORE & STATISTICHE MANUTENZIONI ---
 @app.route("/report_ore")
 @app.route("/report_ore.html")
 def report_ore():
@@ -918,7 +753,7 @@ def report_ore():
                            chart_tipi_labels=chart_tipi_labels,
                            chart_tipi_values=chart_tipi_values)
 
-# --- RICHIESTE INTERVENTO MANUTENZIONE ---
+# --- RICHIESTE INTERVENTO MANUTENZIONE OFFICINA ---
 @app.route("/richieste_manutenzione", methods=["GET", "POST"])
 @app.route("/richieste_manutenzione.html", methods=["GET", "POST"])
 def richieste_manutenzione():
@@ -1317,7 +1152,7 @@ def elimina_promemoria(promemoria_id):
     flash("Promemoria eliminato.", "success")
     return redirect(url_for("promemoria"))
 
-# --- GESTIONE FORNITORI ---
+# --- GESTIONE FORNITORI E CONTATTI ---
 @app.route("/fornitori", methods=["GET", "POST"])
 @app.route("/fornitori.html", methods=["GET", "POST"])
 def fornitori():
@@ -1755,7 +1590,7 @@ def elimina_file(file_id):
         return redirect(url_for("documenti", cartella_id=cartella_id))
     return redirect(url_for("documenti"))
 
-# --- ALTRE ROTTE E ESPORTAZIONI CSV ---
+# --- ALTRE ROTTE GESTIONALE E ESPORTAZIONI CSV ---
 @app.route("/esportazioni")
 @app.route("/esportazioni.html")
 def esportazioni():
@@ -1770,14 +1605,14 @@ def esporta_csv():
 def esporta_inventario():
     conn = get_db_connection()
     cur = conn.cursor()
-    cur.execute("SELECT qr_code, nome, sap, quantita, posizione, peso FROM prodotti ORDER BY nome ASC;")
+    cur.execute("SELECT qr_code, nome, sap, quantita, posizione, peso, magazzino_pesante FROM prodotti ORDER BY nome ASC;")
     prodotti = cur.fetchall()
     cur.close()
     conn.close()
     
     output = io.StringIO()
     writer = csv.writer(output)
-    writer.writerow(['QR Code', 'Nome Articolo', 'SAP', 'Quantita', 'Posizione', 'Peso'])
+    writer.writerow(['QR Code', 'Nome Articolo', 'SAP', 'Quantita', 'Posizione', 'Peso', 'Magazzino Pesante'])
     for p in prodotti:
         writer.writerow([
             p.get('qr_code', ''), 
@@ -1785,7 +1620,8 @@ def esporta_inventario():
             p.get('sap', ''), 
             p.get('quantita', 0), 
             p.get('posizione', ''), 
-            p.get('peso', '')
+            p.get('peso', ''), 
+            'Si' if p.get('magazzino_pesante') else 'No'
         ])
     
     return Response(
@@ -1900,6 +1736,63 @@ def stampa_singolo_qr(qr_code):
         flash("Prodotto non trovato.", "error")
         return redirect(url_for("index"))
     return render_template("stampa_singolo_qr.html", prodotto=prodotto)
+
+@app.route("/magazzino_pesante")
+@app.route("/magazzino_pesante.html")
+def magazzino_pesante():
+    if not (session.get('is_admin') or session.get('puo_vedere_pesante', 1)):
+        flash("Accesso al Magazzino Pesante negato.", "error")
+        return redirect(url_for('index'))
+    prodotti = []
+    try:
+        conn = get_db_connection()
+        cur = conn.cursor()
+        cur.execute("SELECT * FROM prodotti ORDER BY nome ASC;")
+        tutti = cur.fetchall()
+        cur.close()
+        conn.close()
+        for p in tutti:
+            val_pesante = p.get('magazzino_pesante')
+            is_pesante = (val_pesante == 1 or val_pesante == '1' or val_pesante is True or val_pesante == 1.0)
+            if is_pesante:
+                prodotti.append(p)
+    except Exception:
+        pass
+    return render_template("magazzino_pesante.html", prodotti=prodotti)
+
+@app.route("/esporta_pesante", endpoint="esporta_pesante")
+def esporta_pesante():
+    if not (session.get('is_admin') or session.get('puo_vedere_pesante', 1)):
+        flash("Accesso negato.", "error")
+        return redirect(url_for('index'))
+    try:
+        conn = get_db_connection()
+        cur = conn.cursor()
+        cur.execute("SELECT qr_code, nome, sap, quantita, posizione, peso FROM prodotti WHERE magazzino_pesante IN (1, '1', true) ORDER BY nome ASC;")
+        prodotti = cur.fetchall()
+        cur.close()
+        conn.close()
+    except Exception:
+        prodotti = []
+
+    output = io.StringIO()
+    writer = csv.writer(output)
+    writer.writerow(['QR Code', 'Nome Articolo', 'SAP', 'Quantita', 'Posizione', 'Peso'])
+    for p in prodotti:
+        writer.writerow([
+            p.get('qr_code', ''), 
+            p.get('nome', ''), 
+            p.get('sap', ''), 
+            p.get('quantita', 0), 
+            p.get('posizione', ''), 
+            p.get('peso', '')
+        ])
+    
+    return Response(
+        output.getvalue(),
+        mimetype="text/csv",
+        headers={"Content-disposition": "attachment; filename=Magazzino_Pesante_OMG.csv"}
+    )
 
 @app.route("/manutenzioni")
 @app.route("/manutenzioni.html")
@@ -2106,14 +1999,15 @@ def aggiorna_prodotto(qr_code):
     posizione = request.form.get("posizione", "")
     peso = request.form.get("peso", "")
     soglia_minima = int(request.form.get("soglia_minima", 3) or 3)
+    flag_sezione = 1 if request.form.get("magazzino_pesante") else 0
     try:
         conn = get_db_connection()
         cur = conn.cursor()
         cur.execute("""
             UPDATE prodotti 
-            SET nome = %s, sap = %s, posizione = %s, peso = %s, soglia_minima = %s
+            SET nome = %s, sap = %s, posizione = %s, peso = %s, magazzino_pesante = %s, soglia_minima = %s
             WHERE qr_code = %s;
-        """, (nome, sap, posizione, peso, soglia_minima, qr_code))
+        """, (nome, sap, posizione, peso, flag_sezione, soglia_minima, qr_code))
         conn.commit()
         cur.close()
         conn.close()
@@ -2137,6 +2031,7 @@ def aggiungi_prodotto():
     quantita = int(request.form.get("quantita", 0) or 0)
     soglia_minima = int(request.form.get("soglia_minima", 3) or 3)
     posizione = request.form.get("posizione", "")
+    flag_sezione = 1 if request.form.get("magazzino_pesante") else 0
 
     if not nome:
         flash("Il nome dell'articolo è obbligatorio!", "error")
@@ -2146,6 +2041,7 @@ def aggiungi_prodotto():
         conn = get_db_connection()
         cur = conn.cursor()
         
+        # Generazione automatica del QR code se lasciato vuoto
         if not qr_code:
             cur.execute("SELECT COUNT(*) + 1 as next_id FROM prodotti;")
             res_id = cur.fetchone()
@@ -2160,8 +2056,8 @@ def aggiungi_prodotto():
                 qr_code = f"OMG-{next_num:04d}"
 
         cur.execute("""
-            INSERT INTO prodotti (qr_code, nome, sap, peso, quantita, posizione, soglia_minima)
-            VALUES (%s, %s, %s, %s, %s, %s, %s)
+            INSERT INTO prodotti (qr_code, nome, sap, peso, quantita, posizione, magazzino_pesante, soglia_minima)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
             ON CONFLICT (qr_code)
             DO UPDATE SET 
                 quantita = prodotti.quantita + EXCLUDED.quantita,
@@ -2169,8 +2065,9 @@ def aggiungi_prodotto():
                 sap = EXCLUDED.sap,
                 peso = EXCLUDED.peso,
                 posizione = EXCLUDED.posizione,
+                magazzino_pesante = EXCLUDED.magazzino_pesante,
                 soglia_minima = EXCLUDED.soglia_minima;
-        """, (qr_code, nome, sap, peso, quantita, posizione, soglia_minima))
+        """, (qr_code, nome, sap, peso, quantita, posizione, flag_sezione, soglia_minima))
         conn.commit()
         cur.close()
         conn.close()
@@ -2179,6 +2076,8 @@ def aggiungi_prodotto():
     except Exception as e:
         flash(f"Errore: {e}", "error")
 
+    if flag_sezione == 1:
+        return redirect(url_for("magazzino_pesante"))
     return redirect(url_for("index"))
 
 @app.route("/manda_manutenzione/<qr_code>", methods=["POST"])
