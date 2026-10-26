@@ -309,6 +309,11 @@ def api_notifiche():
         return jsonify([])
     conn = get_db_connection()
     cur = conn.cursor()
+    
+    # Pulizia automatica notifiche con più di 30 giorni
+    cur.execute("DELETE FROM notifiche WHERE creato_il < NOW() - INTERVAL '30 days';")
+    conn.commit()
+
     cur.execute("""
         SELECT id, titolo, messaggio, link, letta, creato_il 
         FROM notifiche 
@@ -339,9 +344,10 @@ def index():
     prodotti = []
     prodotti_sotto_soglia = []
     promemoria_urgenti = 0
-    interventi_aperti_count = 0
-    interventi_in_lavoro_count = 0
-    interventi_attesa_count = 0
+    
+    totale_std_pezzi = 0
+    totale_pesante_pezzi = 0
+    tipologie_pesante = 0
     
     username = session.get('username')
     is_admin = session.get('is_admin')
@@ -362,23 +368,23 @@ def index():
         if res_p:
             promemoria_urgenti = res_p['count']
             
-        cur.execute("SELECT COUNT(*) as count FROM richieste_manutenzione WHERE stato = 'Aperta';")
-        interventi_aperti_count = cur.fetchone()['count']
-        cur.execute("SELECT COUNT(*) as count FROM richieste_manutenzione WHERE stato IN ('In Lavoro', 'In Pausa');")
-        interventi_in_lavoro_count = cur.fetchone()['count']
-        cur.execute("SELECT COUNT(*) as count FROM richieste_manutenzione WHERE stato = 'Attesa Ricambio';")
-        interventi_attesa_count = cur.fetchone()['count']
-        
         cur.close()
         conn.close()
         
         for p in tutti:
             val_pesante = p.get('magazzino_pesante')
             is_pesante = (val_pesante == 1 or val_pesante == '1' or val_pesante is True or val_pesante == 1.0)
-            if not is_pesante:
+            qta = p.get('quantita', 0) or 0
+            
+            if is_pesante:
+                totale_pesante_pezzi += qta
+                tipologie_pesante += 1
+            else:
                 prodotti.append(p)
+                totale_std_pezzi += qta
+                
             soglia = p.get('soglia_minima', 3) or 3
-            if p.get('quantita', 0) <= soglia:
+            if qta <= soglia:
                 prodotti_sotto_soglia.append(p)
     except Exception as e:
         print(f"Errore index: {e}")
@@ -387,9 +393,9 @@ def index():
                            prodotti=prodotti, 
                            prodotti_sotto_soglia=prodotti_sotto_soglia,
                            promemoria_urgenti=promemoria_urgenti,
-                           interventi_aperti_count=interventi_aperti_count,
-                           interventi_in_lavoro_count=interventi_in_lavoro_count,
-                           interventi_attesa_count=interventi_attesa_count)
+                           totale_std_pezzi=totale_std_pezzi,
+                           totale_pesante_pezzi=totale_pesante_pezzi,
+                           tipologie_pesante=tipologie_pesante)
 
 @app.route("/login", methods=["GET", "POST"])
 @app.route("/login.html", methods=["GET", "POST"])
