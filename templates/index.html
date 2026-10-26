@@ -21,7 +21,6 @@
             <div class="collapse navbar-collapse" id="navbarNav">
                 <ul class="navbar-nav me-auto">
                     <li class="nav-item"><a class="nav-link active" href="{{ url_for('index') }}"><i class="fa-solid fa-boxes-stacked me-1"></i> Magazzino</a></li>
-                    
                     <li class="nav-item"><a class="nav-link" href="{{ url_for('nastri') }}"><i class="fa-solid fa-stream me-1"></i> Nastri</a></li>
 
                     {% if session.get('is_admin') or session.get('puo_vedere_manutenzioni_esterne', 1) %}
@@ -113,8 +112,8 @@
         <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
             <h2><i class="fa-solid fa-boxes-stacked me-2 text-primary"></i>Inventario Magazzino</h2>
             <div class="d-flex gap-2 flex-wrap">
-                <!-- Pulsante Scanner QR -->
-                <a href="{{ url_for('scanner') }}" class="btn btn-outline-primary">
+                <!-- Pulsante Scanner QR (Corretto puntamento a scanner_globale) -->
+                <a href="{{ url_for('scanner_globale') }}" class="btn btn-outline-primary">
                     <i class="fa-solid fa-camera me-1"></i> Scanner QR
                 </a>
                 <a href="{{ url_for('esporta_inventario') }}" class="btn btn-outline-success">
@@ -176,11 +175,11 @@
                                 <td>{{ p.peso or '-' }}</td>
                                 <td class="text-end">
                                     <div class="btn-group">
-                                        <!-- Pulsante Carica (+) -->
+                                        <!-- Pulsante Carica Rapido -->
                                         <a href="{{ url_for('carica_prodotto', qr_code=p.qr_code) }}" class="btn btn-sm btn-outline-success" title="Carica Quantità">
                                             <i class="fa-solid fa-plus"></i> Carica
                                         </a>
-                                        <!-- Pulsante Scarica (-) -->
+                                        <!-- Pulsante Scarica Rapido -->
                                         <a href="{{ url_for('scarica_prodotto', qr_code=p.qr_code) }}" class="btn btn-sm btn-outline-warning text-dark" title="Scarica Quantità">
                                             <i class="fa-solid fa-minus"></i> Scarica
                                         </a>
@@ -188,7 +187,7 @@
                                         <a href="{{ url_for('gestisci_prodotto', qr_code=p.qr_code) }}" class="btn btn-sm btn-outline-primary" title="Gestisci">
                                             <i class="fa-solid fa-pen-to-square"></i>
                                         </a>
-                                        <!-- Pulsante Stampa QR -->
+                                        <!-- Stampa QR Singolo -->
                                         <a href="{{ url_for('stampa_singolo_qr', qr_code=p.qr_code) }}" class="btn btn-sm btn-outline-dark" title="Stampa QR">
                                             <i class="fa-solid fa-qrcode"></i>
                                         </a>
@@ -251,7 +250,6 @@
                         <div class="mb-3">
                             <label class="form-label fw-bold">QR Code / Codice a Barre (Opzionale)</label>
                             <input type="text" class="form-control" name="qr_code" placeholder="Lascia vuoto per generazione automatica (es. OMG-0001)">
-                            <div class="form-text text-muted">Se lasci vuoto questo campo, il sistema creerà un codice progressivo in automatico.</div>
                         </div>
                         <div class="mb-3">
                             <label class="form-label fw-bold">Nome Articolo *</label>
@@ -291,7 +289,6 @@
         </div>
     </div>
 
-    <!-- Bootstrap JS e Logica Notifiche Live -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script>
     function caricaNotifiche() {
@@ -301,44 +298,32 @@
                 const badge = document.getElementById('badgeNotifiche');
                 const lista = document.getElementById('listaNotifiche');
                 if (!badge || !lista) return;
-
                 lista.innerHTML = '<li><h6 class="dropdown-header border-bottom py-2"><i class="fa-solid fa-bell me-1"></i> Notifiche System</h6></li>';
-                
                 let nonLette = 0;
-                if (!data || data.length === 0) {
-                    lista.innerHTML += '<li class="dropdown-item text-muted text-center py-3">Nessuna notifica presente</li>';
-                } else {
+                if (data && data.length > 0) {
                     data.forEach(n => {
                         if (!n.letta) nonLette++;
                         const item = document.createElement('li');
-                        item.innerHTML = `
-                            <a class="dropdown-item py-2 border-bottom ${!n.letta ? 'bg-light fw-bold' : ''}" href="${n.link || '#'}">
-                                <div>${n.titolo}</div>
-                                <small class="text-muted d-block fw-normal">${n.messaggio}</small>
-                            </a>
-                        `;
+                        item.innerHTML = <a class="dropdown-item py-2 border-bottom ${!n.letta ? 'bg-light fw-bold' : ''}" href="${n.link || '#'}"><div>${n.titolo}</div><small class="text-muted d-block fw-normal">${n.messaggio}</small></a>;
                         lista.appendChild(item);
                     });
+                } else {
+                    lista.innerHTML += '<li class="dropdown-item text-muted text-center py-3">Nessuna notifica presente</li>';
                 }
-
                 if (nonLette > 0) {
                     badge.textContent = nonLette;
                     badge.classList.remove('d-none');
                 } else {
                     badge.classList.add('d-none');
                 }
-            })
-            .catch(err => console.error("Errore recupero notifiche:", err));
+            }).catch(err => console.error(err));
     }
-
     function segnaNotificheLette() {
-        fetch('/api/notifiche/segna_lette', { method: 'POST' })
-            .then(() => {
-                const badge = document.getElementById('badgeNotifiche');
-                if (badge) badge.classList.add('d-none');
-            });
+        fetch('/api/notifiche/segna_lette', { method: 'POST' }).then(() => {
+            const badge = document.getElementById('badgeNotifiche');
+            if (badge) badge.classList.add('d-none');
+        });
     }
-
     document.addEventListener("DOMContentLoaded", function() {
         caricaNotifiche();
         setInterval(caricaNotifiche, 15000);
