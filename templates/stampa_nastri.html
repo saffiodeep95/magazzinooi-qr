@@ -8,31 +8,37 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
         @media print {
+            @page {
+                size: landscape; /* Imposta automaticamente il foglio in orizzontale */
+                margin: 10mm;
+            }
             .no-print {
                 display: none !important;
             }
             body {
                 background: white !important;
-                font-size: 11px;
+                font-size: 10px; /* Riduce leggermente il testo per far entrare tutte le colonne */
             }
             .table {
                 width: 100% !important;
+                table-layout: fixed; /* Adatta le colonne uniformemente */
                 border-collapse: collapse !important;
             }
             .table th, .table td {
-                padding: 5px !important;
+                padding: 4px 6px !important;
                 border: 1px solid #333 !important;
+                word-wrap: break-word;
             }
         }
     </style>
 </head>
 <body class="bg-white text-dark py-4">
-    <div class="container-fluid px-4">
+    <div class="container-fluid px-3">
         <!-- Intestazione Stampa -->
-        <div class="d-flex justify-content-between align-items-center border-bottom pb-3 mb-4">
+        <div class="d-flex justify-content-between align-items-center border-bottom pb-3 mb-3">
             <div>
-                <h3 class="fw-bold mb-1"><i class="fas fa-industry me-2"></i>Gestionale OMG - Magazzino Nastri</h3>
-                <p class="text-muted mb-0">Filtro Sezione: <strong>{{ sezione_filtro }}</strong> | Data Stampa: {{ data_stampa }}</p>
+                <h4 class="fw-bold mb-1"><i class="fas fa-industry me-2"></i>Gestionale OMG - Magazzino Nastri</h4>
+                <p class="text-muted mb-0 small">Filtro Sezione: <strong>{{ sezione_filtro }}</strong> | Data Stampa: {{ data_stampa }}</p>
             </div>
             <div class="no-print">
                 <button onclick="window.print();" class="btn btn-primary btn-sm me-2"><i class="fas fa-print me-1"></i>Stampa / PDF</button>
@@ -45,17 +51,17 @@
             <table class="table table-bordered table-striped align-middle">
                 <thead class="table-dark text-center">
                     <tr>
-                        <th>SAP</th>
-                        <th>N°</th>
-                        <th>Stato</th>
-                        <th>Misura</th>
-                        <th>Tipo</th>
-                        <th>Sezione</th>
-                        <th>Utilizzo</th>
-                        <th>Misura Finito</th>
-                        <th>Riduttore</th>
-                        <th>Motore</th>
-                        <th>Note</th>
+                        <th style="width: 10%;">SAP</th>
+                        <th style="width: 5%;">N°</th>
+                        <th style="width: 8%;">Stato</th>
+                        <th style="width: 9%;">Misura</th>
+                        <th style="width: 9%;">Tipo</th>
+                        <th style="width: 10%;">Sezione</th>
+                        <th style="width: 10%;">Utilizzo</th>
+                        <th style="width: 9%;">Misura Finito</th>
+                        <th style="width: 10%;">Riduttore</th>
+                        <th style="width: 10%;">Motore</th>
+                        <th style="width: 10%;">Note</th>
                     </tr>
                 </thead>
                 <tbody>
