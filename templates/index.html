@@ -3,95 +3,41 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Gestionale OMG - Home & Magazzino</title>
-    <!-- Bootstrap CSS -->
+    <title>Dashboard - Gestionale OMG</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <!-- FontAwesome per le icone -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </head>
 <body class="bg-light">
-
-    <!-- Navbar principale -->
-    <nav class="navbar navbar-expand-xl navbar-dark bg-dark shadow-sm">
+    <!-- Navbar -->
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark shadow-sm">
         <div class="container-fluid">
-            <a class="navbar-brand fw-bold" href="{{ url_for('index') }}"><i class="fa-solid fa-industry me-2"></i>Ges…
-[13:22, 26/10/2026] Marco Pavan: <!DOCTYPE html>
-<html lang="it">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Gestionale OMG - Home & Magazzino</title>
-    <!-- Bootstrap CSS -->
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <!-- FontAwesome per le icone -->
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-</head>
-<body class="bg-light">
-
-    <!-- Navbar principale -->
-    <nav class="navbar navbar-expand-xl navbar-dark bg-dark shadow-sm">
-        <div class="container-fluid">
-            <a class="navbar-brand fw-bold" href="{{ url_for('index') }}"><i class="fa-solid fa-industry me-2"></i>Gestionale OMG</a>
+            <a class="navbar-brand fw-bold" href="{{ url_for('index') }}"><i class="fas fa-industry me-2"></i>Gestionale OMG</a>
             <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
                 <span class="navbar-toggler-icon"></span>
             </button>
             <div class="collapse navbar-collapse" id="navbarNav">
                 <ul class="navbar-nav me-auto">
-                    <li class="nav-item"><a class="nav-link active" href="{{ url_for('index') }}"><i class="fa-solid fa-boxes-stacked me-1"></i> Magazzino</a></li>
-                    <li class="nav-item"><a class="nav-link" href="{{ url_for('nastri') }}"><i class="fa-solid fa-stream me-1"></i> Nastri</a></li>
-
-                    {% if session.get('is_admin') or session.get('puo_vedere_manutenzioni_esterne', 1) %}
-                    <li class="nav-item"><a class="nav-link" href="{{ url_for('manutenzioni') }}"><i class="fa-solid fa-wrench me-1"></i> Manutenzioni Esterne</a></li>
-                    {% endif %}
-
-                    {% if session.get('is_admin') or session.get('puo_vedere_manutenzione', 1) %}
-                    <li class="nav-item"><a class="nav-link" href="{{ url_for('richieste_manutenzione') }}"><i class="fa-solid fa-clipboard-list me-1"></i> Officina</a></li>
-                    {% endif %}
-
-                    <li class="nav-item"><a class="nav-link" href="{{ url_for('cambi_serie') }}"><i class="fa-solid fa-arrows-rotate me-1"></i> Cambi Serie</a></li>
-
-                    {% if session.get('is_admin') or session.get('puo_vedere_promemoria', 1) %}
-                    <li class="nav-item"><a class="nav-link" href="{{ url_for('promemoria') }}"><i class="fa-solid fa-calendar-check me-1"></i> Promemoria</a></li>
-                    {% endif %}
-
-                    {% if session.get('is_admin') or session.get('puo_gestire_fornitori', 1) %}
-                    <li class="nav-item"><a class="nav-link" href="{{ url_for('fornitori') }}"><i class="fa-solid fa-address-book me-1"></i> Fornitori</a></li>
-                    {% endif %}
-
-                    {% if session.get('is_admin') or session.get('puo_gestire_documenti', 1) %}
-                    <li class="nav-item"><a class="nav-link" href="{{ url_for('documenti') }}"><i class="fa-solid fa-folder-open me-1"></i> Documenti</a></li>
-                    {% endif %}
-
-                    {% if session.get('is_admin') or session.get('puo_vedere_report_ore', 1) %}
-                    <li class="nav-item"><a class="nav-link" href="{{ url_for('report_ore') }}"><i class="fa-solid fa-chart-pie me-1"></i> Report Ore</a></li>
-                    {% endif %}
-
+                    <li class="nav-item"><a class="nav-link active" href="{{ url_for('index') }}"><i class="fas fa-boxes me-1"></i>Magazzino</a></li>
+                    <li class="nav-item"><a class="nav-link" href="{{ url_for('nastri') }}"><i class="fas fa-stream me-1"></i>Magazzino Nastri</a></li>
+                    <li class="nav-item"><a class="nav-link" href="{{ url_for('magazzino_pesante') }}"><i class="fas fa-weight-hanging me-1"></i>Magazzino Pesante</a></li>
+                    <li class="nav-item"><a class="nav-link" href="{{ url_for('richieste_manutenzione') }}"><i class="fas fa-tools me-1"></i>Manutenzione Officina</a></li>
+                    <li class="nav-item"><a class="nav-link" href="{{ url_for('report_ore') }}"><i class="fas fa-clock me-1"></i>Report Ore</a></li>
+                    <li class="nav-item"><a class="nav-link" href="{{ url_for('cambi_serie') }}"><i class="fas fa-exchange-alt me-1"></i>Cambi Serie</a></li>
+                    <li class="nav-item"><a class="nav-link" href="{{ url_for('promemoria') }}"><i class="fas fa-bell me-1"></i>Promemoria</a></li>
+                    <li class="nav-item"><a class="nav-link" href="{{ url_for('fornitori') }}"><i class="fas fa-address-book me-1"></i>Fornitori</a></li>
+                    <li class="nav-item"><a class="nav-link" href="{{ url_for('documenti') }}"><i class="fas fa-folder-open me-1"></i>Documenti</a></li>
+                    <li class="nav-item"><a class="nav-link" href="{{ url_for('esportazioni') }}"><i class="fas fa-file-export me-1"></i>Esportazioni</a></li>
                     {% if session.get('is_admin') %}
-                    <li class="nav-item"><a class="nav-link" href="{{ url_for('admin_utenti') }}"><i class="fa-solid fa-users-gear me-1"></i> Admin</a></li>
+                    <li class="nav-item"><a class="nav-link text-warning" href="{{ url_for('admin_utenti') }}"><i class="fas fa-user-shield me-1"></i>Admin</a></li>
                     {% endif %}
                 </ul>
-
-                <!-- Notifiche & Profilo Utente -->
-                <ul class="navbar-nav ms-auto align-items-center">
-                    <li class="nav-item dropdown me-3">
-                        <a class="nav-link position-relative text-light" href="#" id="dropdownNotifiche" role="button" data-bs-toggle="dropdown" onclick="segnaNotificheLette()">
-                            <i class="fa-solid fa-bell fs-5"></i>
-                            <span id="badgeNotifiche" class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger d-none">
-                                0
-                            </span>
-                        </a>
-                        <ul class="dropdown-menu dropdown-menu-end shadow" aria-labelledby="dropdownNotifiche" id="listaNotifiche" style="width: 330px; max-height: 400px; overflow-y: auto;">
-                            <li><h6 class="dropdown-header border-bottom py-2"><i class="fa-solid fa-bell me-1"></i> Notifiche System</h6></li>
-                            <li id="emptyNotifiche" class="dropdown-item text-muted text-center py-3">Nessuna notifica presente</li>
-                        </ul>
-                    </li>
-
+                <ul class="navbar-nav">
                     <li class="nav-item dropdown">
                         <a class="nav-link dropdown-toggle text-light" href="#" role="button" data-bs-toggle="dropdown">
-                            <i class="fa-solid fa-user-circle me-1"></i> {{ session.get('username', 'Utente') }}
+                            <i class="fas fa-user-circle me-1"></i>{{ session.get('username', 'Utente') }}
                         </a>
                         <ul class="dropdown-menu dropdown-menu-end">
-                            <li><a class="dropdown-item text-danger" href="{{ url_for('logout') }}"><i class="fa-solid fa-right-from-bracket me-1"></i> Logout</a></li>
+                            <li><a class="dropdown-item" href="{{ url_for('logout') }}"><i class="fas fa-sign-out-alt me-2"></i>Esci</a></li>
                         </ul>
                     </li>
                 </ul>
@@ -99,10 +45,8 @@
         </div>
     </nav>
 
-    <!-- Contenuto principale -->
     <div class="container my-4">
-
-        <!-- Flash messages -->
+        <!-- Flash Messages -->
         {% with messages = get_flashed_messages(with_categories=true) %}
             {% if messages %}
                 {% for category, message in messages %}
@@ -114,57 +58,107 @@
             {% endif %}
         {% endwith %}
 
-        <!-- Avviso Articoli Sotto Soglia -->
-        {% if prodotti_sotto_soglia %}
-        <div class="alert alert-warning shadow-sm mb-4" role="alert">
-            <h5 class="alert-heading fw-bold"><i class="fa-solid fa-triangle-exclamation me-2"></i>Attenzione! Articoli sotto la scorta minima:</h5>
-            <ul class="mb-0">
-                {% for p in prodotti_sotto_soglia %}
-                <li><strong>{{ p.nome }}</strong> (Codice: {{ p.qr_code }}) - Quantità: <span class="badge bg-danger">{{ p.quantita }}</span> (Soglia: {{ p.soglia_minima or 3 }})</li>
-                {% endfor %}
-            </ul>
-        </div>
-        {% endif %}
-
-        <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
-            <h2><i class="fa-solid fa-boxes-stacked me-2 text-primary"></i>Inventario Magazzino</h2>
-            <div class="d-flex gap-2 flex-wrap">
-                <a href="{{ url_for('scanner_globale') }}" class="btn btn-outline-primary">
-                    <i class="fa-solid fa-camera me-1"></i> Scanner QR
-                </a>
-                <a href="{{ url_for('esporta_inventario') }}" class="btn btn-outline-success">
-                    <i class="fa-solid fa-file-excel me-1"></i> Esporta CSV
-                </a>
-                <a href="{{ url_for('stampa_multipla_qr') }}" class="btn btn-outline-dark">
-                    <i class="fa-solid fa-print me-1"></i> Stampa QR
-                </a>
-                {% if session.get('is_admin') or session.get('puo_aggiungere_prodotti', 1) %}
-                <button class="btn btn-dark" data-bs-toggle="modal" data-bs-target="#modalNuovoProdotto">
-                    <i class="fa-solid fa-plus me-1"></i> Nuovo Articolo
-                </button>
-                {% endif %}
+        <!-- Stat Cards -->
+        <div class="row g-3 mb-4">
+            <div class="col-md-3">
+                <div class="card bg-primary text-white shadow-sm">
+                    <div class="card-body">
+                        <h5 class="card-title">Articoli in Magazzino</h5>
+                        <h3>{{ prodotti|length }}</h3>
+                        <a href="{{ url_for('esporta_inventario') }}" class="text-white small text-decoration-none"><i class="fas fa-download me-1"></i>Esporta CSV</a>
+                    </div>
+                </div>
             </div>
-        </div>
-
-        <!-- Barra di Ricerca Istantanea Magazzino -->
-        <div class="card shadow-sm mb-4">
-            <div class="card-body py-3">
-                <div class="input-group">
-                    <span class="input-group-text bg-dark text-white"><i class="fa-solid fa-search"></i></span>
-                    <input type="text" id="searchInput" class="form-control" placeholder="Cerca articolo per nome, codice SAP, QR Code o posizione..." onkeyup="filterTable()">
+            <div class="col-md-3">
+                <div class="card bg-warning text-dark shadow-sm">
+                    <div class="card-body">
+                        <h5 class="card-title">Sotto Soglia Minima</h5>
+                        <h3>{{ prodotti_sotto_soglia|length }}</h3>
+                        <a href="#sotto-soglia" class="text-dark small text-decoration-none"><i class="fas fa-exclamation-triangle me-1"></i>Vedi dettagli</a>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card bg-danger text-white shadow-sm">
+                    <div class="card-body">
+                        <h5 class="card-title">Interventi Aperti</h5>
+                        <h3>{{ interventi_aperti_count }} ({{ interventi_in_lavoro_count }} in corso)</h3>
+                        <a href="{{ url_for('richieste_manutenzione') }}" class="text-white small text-decoration-none"><i class="fas fa-tools me-1"></i>Gestione Officina</a>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card bg-success text-white shadow-sm">
+                    <div class="card-body">
+                        <h5 class="card-title">Promemoria Urgenti</h5>
+                        <h3>{{ promemoria_urgenti }}</h3>
+                        <a href="{{ url_for('promemoria') }}" class="text-white small text-decoration-none"><i class="fas fa-bell me-1"></i>Vai a Promemoria</a>
+                    </div>
                 </div>
             </div>
         </div>
 
-        <!-- Tabella Prodotti -->
-        <div class="card shadow-sm">
-            <div class="card-header bg-dark text-white d-flex justify-content-between align-items-center py-3">
-                <h5 class="mb-0"><i class="fa-solid fa-table-list me-2"></i>Elenco Articoli</h5>
-                <span class="badge bg-secondary fs-6">{{ prodotti|length }} articoli</span>
+        <!-- Quick Actions Toolbar -->
+        <div class="card shadow-sm mb-4">
+            <div class="card-body d-flex flex-wrap gap-2 justify-content-between align-items-center">
+                <h4 class="mb-0"><i class="fas fa-boxes me-2"></i>Inventario Magazzino Principale</h4>
+                <div class="d-flex flex-wrap gap-2">
+                    <a href="{{ url_for('carico') }}" class="btn btn-success btn-sm"><i class="fas fa-plus-circle me-1"></i>Carico Rapido</a>
+                    <a href="{{ url_for('scarico') }}" class="btn btn-danger btn-sm"><i class="fas fa-minus-circle me-1"></i>Scarico Rapido</a>
+                    <a href="{{ url_for('scanner_globale') }}" class="btn btn-info btn-sm text-white"><i class="fas fa-qrcode me-1"></i>Scanner QR</a>
+                    <button class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#modalNuovoProdotto"><i class="fas fa-cart-plus me-1"></i>Nuovo Articolo</button>
+                </div>
             </div>
-            <div class="card-body">
+        </div>
+
+        <!-- Warning Alert for Low Stock -->
+        {% if prodotti_sotto_soglia %}
+        <div class="card border-warning shadow-sm mb-4" id="sotto-soglia">
+            <div class="card-header bg-warning text-dark fw-bold"><i class="fas fa-exclamation-triangle me-2"></i>Articoli Sotto la Soglia Minima</div>
+            <div class="card-body p-0">
                 <div class="table-responsive">
-                    <table class="table table-hover align-middle" id="inventoryTable">
+                    <table class="table table-striped mb-0 align-middle">
+                        <thead>
+                            <tr>
+                                <th>QR Code</th>
+                                <th>Nome Articolo</th>
+                                <th>SAP</th>
+                                <th>Quantità Attuale</th>
+                                <th>Soglia Minima</th>
+                                <th>Posizione</th>
+                                <th>Azioni</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for p in prodotti_sotto_soglia %}
+                            <tr>
+                                <td><code>{{ p.qr_code }}</code></td>
+                                <td class="fw-bold">{{ p.nome }}</td>
+                                <td>{{ p.sap or '-' }}</td>
+                                <td><span class="badge bg-danger">{{ p.quantita }}</span></td>
+                                <td>{{ p.soglia_minima or 3 }}</td>
+                                <td>{{ p.posizione or '-' }}</td>
+                                <td>
+                                    <a href="{{ url_for('gestisci_prodotto', qr_code=p.qr_code) }}" class="btn btn-sm btn-outline-primary"><i class="fas fa-cog"></i> Gestisci</a>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Main Products Table -->
+        <div class="card shadow-sm">
+            <div class="card-header bg-dark text-white d-flex justify-content-between align-items-center">
+                <span><i class="fas fa-list me-2"></i>Elenco Articoli Magazzino</span>
+                <input type="text" id="searchTable" class="form-control form-control-sm w-25" placeholder="Cerca articolo...">
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-hover mb-0 align-middle" id="inventarioTable">
                         <thead class="table-light">
                             <tr>
                                 <th>QR Code</th>
@@ -173,42 +167,32 @@
                                 <th>Quantità</th>
                                 <th>Posizione</th>
                                 <th>Peso</th>
-                                <th class="text-end">Azioni (Carica / Scarica)</th>
+                                <th>Azioni</th>
                             </tr>
                         </thead>
                         <tbody>
                             {% for p in prodotti %}
                             <tr>
-                                <td><span class="badge bg-secondary font-monospace">{{ p.qr_code }}</span></td>
-                                <td class="fw-bold text-dark">{{ p.nome }}</td>
+                                <td><code>{{ p.qr_code }}</code></td>
+                                <td class="fw-bold">{{ p.nome }}</td>
                                 <td>{{ p.sap or '-' }}</td>
                                 <td>
-                                    <span class="badge {% if p.quantita <= (p.soglia_minima or 3) %}bg-danger{% else %}bg-success{% endif %} fs-6">
-                                        {{ p.quantita }} pz
-                                    </span>
+                                    {% if p.quantita <= (p.soglia_minima or 3) %}
+                                        <span class="badge bg-danger">{{ p.quantita }}</span>
+                                    {% else %}
+                                        <span class="badge bg-success">{{ p.quantita }}</span>
+                                    {% endif %}
                                 </td>
                                 <td>{{ p.posizione or '-' }}</td>
                                 <td>{{ p.peso or '-' }}</td>
-                                <td class="text-end">
-                                    <div class="btn-group">
-                                        <a href="{{ url_for('carica_prodotto', qr_code=p.qr_code) }}" class="btn btn-sm btn-outline-success" title="Carica Quantità">
-                                            <i class="fa-solid fa-plus"></i> Carica
-                                        </a>
-                                        <a href="{{ url_for('scarica_prodotto', qr_code=p.qr_code) }}" class="btn btn-sm btn-outline-warning text-dark" title="Scarica Quantità">
-                                            <i class="fa-solid fa-minus"></i> Scarica
-                                        </a>
-                                        <a href="{{ url_for('gestisci_prodotto', qr_code=p.qr_code) }}" class="btn btn-sm btn-outline-primary" title="Gestisci">
-                                            <i class="fa-solid fa-pen-to-square"></i>
-                                        </a>
-                                        <a href="{{ url_for('stampa_singolo_qr', qr_code=p.qr_code) }}" class="btn btn-sm btn-outline-dark" title="Stampa QR">
-                                            <i class="fa-solid fa-qrcode"></i>
-                                        </a>
-                                    </div>
+                                <td>
+                                    <a href="{{ url_for('gestisci_prodotto', qr_code=p.qr_code) }}" class="btn btn-sm btn-outline-dark"><i class="fas fa-folder-open"></i> Apri</a>
+                                    <a href="{{ url_for('stampa_singolo_qr', qr_code=p.qr_code) }}" class="btn btn-sm btn-outline-secondary" target="_blank"><i class="fas fa-print"></i></a>
                                 </td>
                             </tr>
                             {% else %}
-                            <tr id="noResultsRow">
-                                <td colspan="7" class="text-center text-muted py-4">Nessun articolo trovato in magazzino.</td>
+                            <tr>
+                                <td colspan="7" class="text-center py-4 text-muted">Nessun articolo presente nel magazzino.</td>
                             </tr>
                             {% endfor %}
                         </tbody>
@@ -216,66 +200,29 @@
                 </div>
             </div>
         </div>
-
     </div>
 
-    <!-- Script per la ricerca in tempo reale -->
-    <script>
-    function filterTable() {
-        let input = document.getElementById("searchInput");
-        let filter = input.value.toLowerCase();
-        let table = document.getElementById("inventoryTable");
-        let tr = table.getElementsByTagName("tr");
-
-        for (let i = 1; i < tr.length; i++) {
-            if (tr[i].id === "noResultsRow") continue;
-            let tds = tr[i].getElementsByTagName("td");
-            let found = false;
-            for (let j = 0; j < tds.length - 1; j++) {
-                if (tds[j]) {
-                    let txtValue = tds[j].textContent || tds[j].innerText;
-                    if (txtValue.toLowerCase().indexOf(filter) > -1) {
-                        found = true;
-                        break;
-                    }
-                }
-            }
-            if (found) {
-                tr[i].style.display = "";
-            } else {
-                tr[i].style.display = "none";
-            }
-        }
-    }
-    </script>
-
-    <!-- Modale Nuovo Prodotto -->
+    <!-- Modal Nuovo Prodotto -->
     <div class="modal fade" id="modalNuovoProdotto" tabindex="-1">
         <div class="modal-dialog">
             <div class="modal-content">
                 <form action="{{ url_for('aggiungi_prodotto') }}" method="POST">
                     <div class="modal-header bg-dark text-white">
-                        <h5 class="modal-title"><i class="fa-solid fa-plus-circle me-1"></i> Aggiungi Nuovo Articolo</h5>
+                        <h5 class="modal-title"><i class="fas fa-plus-circle me-2"></i>Aggiungi Nuovo Articolo</h5>
                         <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
                     </div>
                     <div class="modal-body">
                         <div class="mb-3">
-                            <label class="form-label fw-bold">QR Code / Codice a Barre (Opzionale)</label>
-                            <input type="text" class="form-control" name="qr_code" placeholder="Lascia vuoto per generazione automatica (es. OMG-0001)">
+                            <label class="form-label">QR Code (lascia vuoto per generazione automatica OMG-XXXX)</label>
+                            <input type="text" class="form-control" name="qr_code" placeholder="Es. OMG-0001">
                         </div>
                         <div class="mb-3">
-                            <label class="form-label fw-bold">Nome Articolo *</label>
-                            <input type="text" class="form-control" name="nome" placeholder="Inserisci nome articolo..." required>
+                            <label class="form-label">Nome Articolo *</label>
+                            <input type="text" class="form-control" name="nome" required>
                         </div>
-                        <div class="row">
-                            <div class="col-md-6 mb-3">
-                                <label class="form-label">Codice SAP</label>
-                                <input type="text" class="form-control" name="sap" placeholder="Codice SAP...">
-                            </div>
-                            <div class="col-md-6 mb-3">
-                                <label class="form-label">Peso</label>
-                                <input type="text" class="form-control" name="peso" placeholder="Es. 1.5 kg">
-                            </div>
+                        <div class="mb-3">
+                            <label class="form-label">Codice SAP</label>
+                            <input type="text" class="form-control" name="sap">
                         </div>
                         <div class="row">
                             <div class="col-md-6 mb-3">
@@ -283,18 +230,28 @@
                                 <input type="number" class="form-control" name="quantita" value="0" min="0">
                             </div>
                             <div class="col-md-6 mb-3">
-                                <label class="form-label">Soglia Scorta Minima</label>
+                                <label class="form-label">Soglia Minima Allarme</label>
                                 <input type="number" class="form-control" name="soglia_minima" value="3" min="0">
                             </div>
                         </div>
-                        <div class="mb-3">
-                            <label class="form-label">Posizione in Magazzino</label>
-                            <input type="text" class="form-control" name="posizione" placeholder="Es. Scaffale A1...">
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Posizione / Scaffale</label>
+                                <input type="text" class="form-control" name="posizione">
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Peso</label>
+                                <input type="text" class="form-control" name="peso">
+                            </div>
+                        </div>
+                        <div class="form-check mb-3">
+                            <input class="form-check-input" type="checkbox" name="magazzino_pesante" value="1" id="checkPesante">
+                            <label class="form-check-label" for="checkPesante">Sposta in Magazzino Pesante</label>
                         </div>
                     </div>
                     <div class="modal-footer">
                         <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annulla</button>
-                        <button type="submit" class="btn btn-primary">Salva Articolo</button>
+                        <button type="submit" class="btn btn-success">Salva Articolo</button>
                     </div>
                 </form>
             </div>
@@ -303,43 +260,15 @@
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script>
-    function caricaNotifiche() {
-        fetch('/api/notifiche')
-            .then(response => response.json())
-            .then(data => {
-                const badge = document.getElementById('badgeNotifiche');
-                const lista = document.getElementById('listaNotifiche');
-                if (!badge || !lista) return;
-                lista.innerHTML = '<li><h6 class="dropdown-header border-bottom py-2"><i class="fa-solid fa-bell me-1"></i> Notifiche System</h6></li>';
-                let nonLette = 0;
-                if (data && data.length > 0) {
-                    data.forEach(n => {
-                        if (!n.letta) nonLette++;
-                        const item = document.createElement('li');
-                        item.innerHTML = <a class="dropdown-item py-2 border-bottom ${!n.letta ? 'bg-light fw-bold' : ''}" href="${n.link || '#'}"><div>${n.titolo}</div><small class="text-muted d-block fw-normal">${n.messaggio}</small></a>;
-                        lista.appendChild(item);
-                    });
-                } else {
-                    lista.innerHTML += '<li class="dropdown-item text-muted text-center py-3">Nessuna notifica presente</li>';
-                }
-                if (nonLette > 0) {
-                    badge.textContent = nonLette;
-                    badge.classList.remove('d-none');
-                } else {
-                    badge.classList.add('d-none');
-                }
-            }).catch(err => console.error(err));
-    }
-    function segnaNotificheLette() {
-        fetch('/api/notifiche/segna_lette', { method: 'POST' }).then(() => {
-            const badge = document.getElementById('badgeNotifiche');
-            if (badge) badge.classList.add('d-none');
+        // Live search filter for main inventory table
+        document.getElementById('searchTable').addEventListener('keyup', function() {
+            let filter = this.value.toLowerCase();
+            let rows = document.querySelectorAll('#inventarioTable tbody tr');
+            rows.forEach(row => {
+                let text = row.textContent.toLowerCase();
+                row.style.display = text.includes(filter) ? '' : 'none';
+            });
         });
-    }
-    document.addEventListener("DOMContentLoaded", function() {
-        caricaNotifiche();
-        setInterval(caricaNotifiche, 15000);
-    });
     </script>
 </body>
 </html>
