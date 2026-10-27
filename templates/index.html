@@ -306,7 +306,7 @@
                         li.className = 'dropdown-item py-2 border-bottom ' + (n.letta ? 'bg-white text-muted' : 'bg-light fw-bold');
                         li.style.whiteSpace = 'normal';
                         
-                        // Il pulsante di eliminazione compare SOLO SE la notifica è già stata aperta/letta
+                        // Il pulsante di eliminazione compare SOLO SE la notifica è già stata aperta/letta sul server
                         let bottoneElimina = n.letta ? `
                             <button class="btn btn-sm btn-outline-danger py-0 px-1 border-0" title="Elimina notifica" onclick="eliminaSingolaNotifica(${n.id}, true, event)">
                                 <i class="fas fa-times"></i>
