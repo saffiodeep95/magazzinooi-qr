@@ -80,21 +80,21 @@
                     <table class="table table-hover mb-0 align-middle">
                         <thead class="table-light">
                             <tr>
-                                <th>Stato</th>
+                                <th style="width: 80px;" class="text-center">Fatto</th>
                                 <th>Titolo / Descrizione</th>
                                 <th>Ditta Fornitrice</th>
                                 <th>Visibile A</th>
                                 <th>Creato Da</th>
-                                <th>Azioni</th>
+                                <th style="width: 80px;">Azioni</th>
                             </tr>
                         </thead>
                         <tbody>
                             {% for a in attivita %}
-                            <tr class="{% if a.completato %}table-success text-muted text-decoration-line-through{% endif %}">
-                                <td>
-                                    <form action="{{ url_for('completa_agenda', agenda_id=a.id) }}" method="POST" class="d-inline">
-                                        <button type="submit" class="btn btn-sm btn-{{ 'success' if a.completato else 'outline-secondary' }}" title="Segna come completato">
-                                            <i class="fas fa-{{ 'check' if a.completato else 'minus' }}"></i>
+                            <tr>
+                                <td class="text-center">
+                                    <form action="{{ url_for('completa_agenda', agenda_id=a.id) }}" method="POST" class="d-inline" onsubmit="return confirm('Segnare come completata e rimuovere dall\'agenda?');">
+                                        <button type="submit" class="btn btn-sm btn-outline-success" title="Segna come completato e rimuovi">
+                                            <i class="fas fa-check"></i>
                                         </button>
                                     </form>
                                 </td>
@@ -103,12 +103,12 @@
                                     <small class="text-muted">{{ a.descrizione or '' }}</small>
                                 </td>
                                 <td><span class="badge bg-info text-dark">{{ a.nome_azienda or 'Nessuna ditta' }}</span></td>
-                                <td><small class="badge bg-secondary">{{ a.utenti_visibili }}</small></td>
+                                <td><small class="badge bg-secondary">{{ a.utenti_visibili or 'Solo Creatore / Admin' }}</small></td>
                                 <td><small>{{ a.creato_da or '-' }}</small></td>
                                 <td>
                                     {% if session.get('is_admin') %}
                                     <form action="{{ url_for('elimina_agenda', agenda_id=a.id) }}" method="POST" class="d-inline" onsubmit="return confirm('Eliminare questa voce dall\'agenda?');">
-                                        <button type="submit" class="btn btn-sm btn-outline-danger"><i class="fas fa-trash"></i></button>
+                                        <button type="submit" class="btn btn-sm btn-outline-danger" title="Elimina"><i class="fas fa-trash"></i></button>
                                     </form>
                                     {% endif %}
                                 </td>
@@ -155,12 +155,12 @@
                         <div class="mb-3">
                             <label class="form-label fw-bold text-primary">Chi può vedere questa attività?</label>
                             <div class="form-check">
-                                <input class="form-check-input" type="checkbox" name="utenti_visibili[]" value="Tutti" id="checkTutti" checked>
+                                <input class="form-check-input" type="checkbox" name="utenti_visibili[]" value="Tutti" id="checkTutti">
                                 <label class="form-check-label fw-bold" for="checkTutti">Tutti gli utenti</label>
                             </div>
                             <hr class="my-2">
-                            <div class="text-muted small mb-2">Oppure seleziona utenti specifici:</div>
-                            <div style="max-height: 120px; overflow-y: auto;" class="border p-2 rounded">
+                            <div class="text-muted small mb-2">Seleziona gli utenti specifici che possono vederla:</div>
+                            <div style="max-height: 120px; overflow-y: auto;" class="border p-2 rounded bg-white">
                                 {% for u in utenti %}
                                 <div class="form-check">
                                     <input class="form-check-input" type="checkbox" name="utenti_visibili[]" value="{{ u.username }}" id="user_{{ u.username }}">
