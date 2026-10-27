@@ -3,99 +3,60 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Magazzino Nastri Trasportatori - Gestionale OMG</title>
-    <!-- Bootstrap CSS -->
+    <title>Nastri - Gestionale OMG</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <!-- FontAwesome per le icone -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    
-    <!-- Stile ottimizzato per la stampa -->
     <style>
-        @media print {
-            nav, .btn, .modal, form, .navbar, .d-flex.justify-content-between, .d-print-none {
-                display: none !important;
-            }
-            body {
-                background-color: white !important;
-                color: black !important;
-            }
-            .card {
-                border: none !important;
-                box-shadow: none !important;
-            }
-            .table {
-                width: 100% !important;
-                color: black !important;
-            }
+        .navbar-nav .nav-link {
+            font-size: 0.82rem;
+            padding-left: 0.4rem !important;
+            padding-right: 0.4rem !important;
+            white-space: nowrap;
         }
+        .status-dot {
+            height: 14px;
+            width: 14px;
+            border-radius: 50%;
+            display: inline-block;
+            margin-right: 6px;
+        }
+        .dot-green { background-color: #10b981; box-shadow: 0 0 6px rgba(16, 185, 129, 0.6); }
+        .dot-red { background-color: #ef4444; box-shadow: 0 0 6px rgba(239, 68, 68, 0.6); }
     </style>
 </head>
 <body class="bg-light">
-
-    <!-- Navbar principale -->
-    <nav class="navbar navbar-expand-xl navbar-dark bg-dark shadow-sm">
-        <div class="container-fluid">
-            <a class="navbar-brand fw-bold" href="{{ url_for('index') }}"><i class="fa-solid fa-industry me-2"></i>Gestionale OMG</a>
+    <!-- Navbar -->
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark shadow-sm">
+        <div class="container-fluid px-2">
+            <a class="navbar-brand fw-bold fs-6" href="{{ url_for('index') }}"><i class="fas fa-industry me-1"></i>Gestionale OMG</a>
             <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
                 <span class="navbar-toggler-icon"></span>
             </button>
             <div class="collapse navbar-collapse" id="navbarNav">
-                <ul class="navbar-nav me-auto">
-                    <li class="nav-item"><a class="nav-link" href="{{ url_for('index') }}"><i class="fa-solid fa-boxes-stacked me-1"></i> Magazzino</a></li>
-                    <li class="nav-item"><a class="nav-link active" href="{{ url_for('nastri') }}"><i class="fa-solid fa-stream me-1"></i> Nastri</a></li>
-
-                    {% if session.get('is_admin') or session.get('puo_vedere_manutenzioni_esterne', 1) %}
-                    <li class="nav-item"><a class="nav-link" href="{{ url_for('manutenzioni') }}"><i class="fa-solid fa-wrench me-1"></i> Manutenzioni Esterne</a></li>
+                <ul class="navbar-nav me-auto mb-2 mb-lg-0">
+                    <li class="nav-item"><a class="nav-link" href="{{ url_for('index') }}"><i class="fas fa-boxes me-1"></i>Magazzino</a></li>
+                    <li class="nav-item"><a class="nav-link active" href="{{ url_for('nastri') }}"><i class="fas fa-stream me-1"></i>Nastri</a></li>
+                    {% if session.get('is_admin') or session.get('puo_gestire_agenda', 0) %}
+                    <li class="nav-item"><a class="nav-link" href="{{ url_for('agenda') }}"><i class="fas fa-calendar-alt me-1"></i>Agenda</a></li>
                     {% endif %}
-
-                    {% if session.get('is_admin') or session.get('puo_vedere_manutenzione', 1) %}
-                    <li class="nav-item"><a class="nav-link" href="{{ url_for('richieste_manutenzione') }}"><i class="fa-solid fa-clipboard-list me-1"></i> Officina</a></li>
-                    {% endif %}
-
-                    <li class="nav-item"><a class="nav-link" href="{{ url_for('cambi_serie') }}"><i class="fa-solid fa-arrows-rotate me-1"></i> Cambi Serie</a></li>
-
-                    {% if session.get('is_admin') or session.get('puo_vedere_promemoria', 1) %}
-                    <li class="nav-item"><a class="nav-link" href="{{ url_for('promemoria') }}"><i class="fa-solid fa-calendar-check me-1"></i> Promemoria</a></li>
-                    {% endif %}
-
-                    {% if session.get('is_admin') or session.get('puo_gestire_fornitori', 1) %}
-                    <li class="nav-item"><a class="nav-link" href="{{ url_for('fornitori') }}"><i class="fa-solid fa-address-book me-1"></i> Fornitori</a></li>
-                    {% endif %}
-
-                    {% if session.get('is_admin') or session.get('puo_gestire_documenti', 1) %}
-                    <li class="nav-item"><a class="nav-link" href="{{ url_for('documenti') }}"><i class="fa-solid fa-folder-open me-1"></i> Documenti</a></li>
-                    {% endif %}
-
-                    {% if session.get('is_admin') or session.get('puo_vedere_report_ore', 1) %}
-                    <li class="nav-item"><a class="nav-link" href="{{ url_for('report_ore') }}"><i class="fa-solid fa-chart-pie me-1"></i> Report Ore</a></li>
-                    {% endif %}
-
+                    <li class="nav-item"><a class="nav-link" href="{{ url_for('richieste_manutenzione') }}"><i class="fas fa-tools me-1"></i>Manutenzione</a></li>
+                    <li class="nav-item"><a class="nav-link" href="{{ url_for('report_ore') }}"><i class="fas fa-clock me-1"></i>Report Ore</a></li>
+                    <li class="nav-item"><a class="nav-link" href="{{ url_for('cambi_serie') }}"><i class="fas fa-exchange-alt me-1"></i>Cambi Serie</a></li>
+                    <li class="nav-item"><a class="nav-link" href="{{ url_for('promemoria') }}"><i class="fas fa-bell me-1"></i>Promemoria</a></li>
+                    <li class="nav-item"><a class="nav-link" href="{{ url_for('fornitori') }}"><i class="fas fa-address-book me-1"></i>Fornitori</a></li>
+                    <li class="nav-item"><a class="nav-link" href="{{ url_for('documenti') }}"><i class="fas fa-folder-open me-1"></i>Documenti</a></li>
+                    <li class="nav-item"><a class="nav-link" href="{{ url_for('esportazioni') }}"><i class="fas fa-file-export me-1"></i>Esportazioni</a></li>
                     {% if session.get('is_admin') %}
-                    <li class="nav-item"><a class="nav-link" href="{{ url_for('admin_utenti') }}"><i class="fa-solid fa-users-gear me-1"></i> Admin</a></li>
+                    <li class="nav-item"><a class="nav-link text-warning" href="{{ url_for('admin_utenti') }}"><i class="fas fa-user-shield me-1"></i>Admin</a></li>
                     {% endif %}
                 </ul>
-
-                <!-- Notifiche & Profilo Utente -->
-                <ul class="navbar-nav ms-auto align-items-center">
-                    <li class="nav-item dropdown me-3">
-                        <a class="nav-link position-relative text-light" href="#" id="dropdownNotifiche" role="button" data-bs-toggle="dropdown" onclick="segnaNotificheLette()">
-                            <i class="fa-solid fa-bell fs-5"></i>
-                            <span id="badgeNotifiche" class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger d-none">
-                                0
-                            </span>
-                        </a>
-                        <ul class="dropdown-menu dropdown-menu-end shadow" aria-labelledby="dropdownNotifiche" id="listaNotifiche" style="width: 330px; max-height: 400px; overflow-y: auto;">
-                            <li><h6 class="dropdown-header border-bottom py-2"><i class="fa-solid fa-bell me-1"></i> Notifiche System</h6></li>
-                            <li id="emptyNotifiche" class="dropdown-item text-muted text-center py-3">Nessuna notifica presente</li>
-                        </ul>
-                    </li>
-
+                <ul class="navbar-nav align-items-center">
                     <li class="nav-item dropdown">
-                        <a class="nav-link dropdown-toggle text-light" href="#" role="button" data-bs-toggle="dropdown">
-                            <i class="fa-solid fa-user-circle me-1"></i> {{ session.get('username', 'Utente') }}
+                        <a class="nav-link dropdown-toggle text-light px-2" href="#" role="button" data-bs-toggle="dropdown">
+                            <i class="fas fa-user-circle me-1"></i>{{ session.get('username', 'Utente') }}
                         </a>
                         <ul class="dropdown-menu dropdown-menu-end">
-                            <li><a class="dropdown-item text-danger" href="{{ url_for('logout') }}"><i class="fa-solid fa-right-from-bracket me-1"></i> Logout</a></li>
+                            <li><a class="dropdown-item" href="{{ url_for('logout') }}"><i class="fas fa-sign-out-alt me-2"></i>Esci</a></li>
                         </ul>
                     </li>
                 </ul>
@@ -103,10 +64,7 @@
         </div>
     </nav>
 
-    <!-- Contenuto principale -->
-    <div class="container-fluid px-4 py-4">
-
-        <!-- Flash messages -->
+    <div class="container my-4">
         {% with messages = get_flashed_messages(with_categories=true) %}
             {% if messages %}
                 {% for category, message in messages %}
@@ -118,168 +76,56 @@
             {% endif %}
         {% endwith %}
 
-        <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
-            <h2><i class="fa-solid fa-stream me-2 text-warning"></i>Magazzino Nastri Trasportatori</h2>
-            <div class="d-flex gap-2 flex-wrap">
-                <!-- PULSANTE STAMPA AGGIUNTO -->
-                <button onclick="window.print()" class="btn btn-outline-dark">
-                    <i class="fa-solid fa-print me-1"></i> Stampa Tabella
-                </button>
-                <a href="{{ url_for('esporta_nastri_csv') }}" class="btn btn-outline-success">
-                    <i class="fa-solid fa-file-csv me-1"></i> Esporta CSV
-                </a>
-                <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#modalNuovoNastro">
-                    <i class="fa-solid fa-plus me-1"></i> Nuovo Nastro
-                </button>
-            </div>
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h2><i class="fas fa-stream me-2"></i>Gestione Nastri e Tappeti</h2>
+            <button class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#modalNuovoNastro">
+                <i class="fas fa-plus-circle me-1"></i>Aggiungi Nastro
+            </button>
         </div>
 
-        <!-- Filtro Sezione Impianto -->
-        <div class="card shadow-sm mb-4">
-            <div class="card-body">
-                <form method="GET" action="{{ url_for('nastri') }}" class="row g-3 align-items-center">
-                    <div class="col-auto">
-                        <label for="sezione" class="col-form-label fw-bold">Filtra per Sezione / Impianto:</label>
-                    </div>
-                    <div class="col-auto">
-                        <select name="sezione" id="sezione" class="form-select" onchange="this.form.submit()">
-                            <option value="Tutte" {% if sezione_filtro == 'Tutte' %}selected{% endif %}>Tutte le sezioni</option>
-                            {% for sez in sezioni_disponibili %}
-                            <option value="{{ sez }}" {% if sezione_filtro == sez %}selected{% endif %}>{{ sez }}</option>
-                            {% endfor %}
-                        </select>
-                    </div>
-                </form>
-            </div>
-        </div>
-
-        <!-- Tabella Elenco Nastri -->
         <div class="card shadow-sm">
-            <div class="card-header bg-dark text-white d-flex justify-content-between align-items-center py-3">
-                <h5 class="mb-0"><i class="fa-solid fa-table-list me-2"></i>Elenco Nastri</h5>
-                <span class="badge bg-secondary fs-6">{{ nastri|length }} nastri</span>
-            </div>
-            <div class="card-body">
+            <div class="card-body p-0">
                 <div class="table-responsive">
-                    <table class="table table-hover align-middle text-nowrap">
+                    <table class="table table-hover mb-0 align-middle">
                         <thead class="table-light">
                             <tr>
-                                <th>Codice SAP</th>
-                                <th>N°</th>
-                                <th>Stato</th>
-                                <th>Misura / Dettagli</th>
-                                <th>Tipo</th>
-                                <th>Sezione Impianto</th>
-                                <th>Utilizzo</th>
-                                <th>Misura Nastro Finito</th>
-                                <th>Tipo Riduttore</th>
-                                <th>Tipo Motore</th>
+                                <th style="width: 140px;">Stato Tappeto</th>
+                                <th>Nome / Codice Nastro</th>
+                                <th>Misura</th>
                                 <th>Note</th>
-                                <th class="text-end d-print-none">Azioni</th>
+                                <th class="text-center" style="width: 100px;">Azioni</th>
                             </tr>
                         </thead>
                         <tbody>
-                            {% for r in nastri %}
+                            {% for n in nastri %}
                             <tr>
-                                <td class="fw-bold text-primary">{{ r.codice_sap or '-' }}</td>
-                                <td><span class="badge bg-dark fw-bold">{{ r.numero or '-' }}</span></td>
                                 <td>
-                                    <span class="badge bg-{{ 'success' if (r.stato or '').lower() == 'aperto' else 'danger' }}">
-                                        {{ r.stato or 'aperto' }}
-                                    </span>
-                                </td>
-                                <td>{{ r.misura or '-' }}</td>
-                                <td>{{ r.tipo or '-' }}</td>
-                                <td><span class="badge bg-warning text-dark">{{ r.sezione_impianto or '-' }}</span></td>
-                                <td>{{ r.utilizzo or '-' }}</td>
-                                <td>{{ r.misura_nastro_finito or '-' }}</td>
-                                <td>{{ r.tipo_di_riduttore or '-' }}</td>
-                                <td>{{ r.tipo_di_motore or '-' }}</td>
-                                <td>{{ r.note or '-' }}</td>
-                                <td class="text-end d-print-none">
-                                    <button class="btn btn-sm btn-outline-primary" data-bs-toggle="modal" data-bs-target="#modalModifica{{ r.id }}" title="Modifica">
-                                        <i class="fa-solid fa-pen-to-square"></i>
-                                    </button>
-                                    <form action="{{ url_for('elimina_nastro', nastro_id=r.id) }}" method="POST" class="d-inline" onsubmit="return confirm('Sei sicuro di voler eliminare questo nastro?');">
-                                        <button type="submit" class="btn btn-sm btn-outline-danger" title="Elimina">
-                                            <i class="fa-solid fa-trash"></i>
+                                    <form action="{{ url_for('toggle_tappeto', nastro_id=n.id) }}" method="POST" class="d-inline">
+                                        <button type="submit" class="btn btn-sm btn-light border d-flex align-items-center gap-1" title="Clicca per cambiare stato">
+                                            {% if n.tappeto_presente %}
+                                                <span class="status-dot dot-green"></span>
+                                                <small class="fw-bold text-success">Presente</small>
+                                            {% else %}
+                                                <span class="status-dot dot-red"></span>
+                                                <small class="fw-bold text-danger">Assente</small>
+                                            {% endif %}
                                         </button>
                                     </form>
                                 </td>
+                                <td><strong class="text-primary">{{ n.nome_nastro }}</strong></td>
+                                <td><span class="badge bg-secondary">{{ n.misura or '-' }}</span></td>
+                                <td><small class="text-muted">{{ n.note or '-' }}</small></td>
+                                <td class="text-center">
+                                    {% if session.get('is_admin') or session.get('puo_eliminare', 0) %}
+                                    <form action="{{ url_for('elimina_nastro', nastro_id=n.id) }}" method="POST" class="d-inline" onsubmit="return confirm('Eliminare questo nastro?');">
+                                        <button type="submit" class="btn btn-sm btn-outline-danger" title="Elimina"><i class="fas fa-trash"></i></button>
+                                    </form>
+                                    {% endif %}
+                                </td>
                             </tr>
-
-                            <!-- Modal Modifica Nastro -->
-                            <div class="modal fade" id="modalModifica{{ r.id }}" tabindex="-1" aria-hidden="true">
-                                <div class="modal-dialog modal-lg">
-                                    <div class="modal-content">
-                                        <form action="{{ url_for('modifica_nastro', nastro_id=r.id) }}" method="POST">
-                                            <div class="modal-header bg-dark text-white">
-                                                <h5 class="modal-title">Modifica Nastro (N° {{ r.numero }})</h5>
-                                                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
-                                            </div>
-                                            <div class="modal-body text-start">
-                                                <div class="row g-3">
-                                                    <div class="col-md-4">
-                                                        <label class="form-label fw-bold">Codice SAP</label>
-                                                        <input type="text" class="form-control" name="codice_sap" value="{{ r.codice_sap }}">
-                                                    </div>
-                                                    <div class="col-md-4">
-                                                        <label class="form-label fw-bold">Numero</label>
-                                                        <input type="text" class="form-control" name="numero" value="{{ r.numero }}">
-                                                    </div>
-                                                    <div class="col-md-4">
-                                                        <label class="form-label fw-bold">Stato</label>
-                                                        <select class="form-select" name="stato">
-                                                            <option value="aperto" {% if r.stato == 'aperto' %}selected{% endif %}>Aperto</option>
-                                                            <option value="chiuso" {% if r.stato == 'chiuso' %}selected{% endif %}>Chiuso</option>
-                                                            <option value="ordinato" {% if r.stato == 'ordinato' %}selected{% endif %}>Ordinato</option>
-                                                        </select>
-                                                    </div>
-                                                    <div class="col-md-6">
-                                                        <label class="form-label">Misura</label>
-                                                        <input type="text" class="form-control" name="misura" value="{{ r.misura }}">
-                                                    </div>
-                                                    <div class="col-md-6">
-                                                        <label class="form-label">Tipo</label>
-                                                        <input type="text" class="form-control" name="tipo" value="{{ r.tipo }}">
-                                                    </div>
-                                                    <div class="col-md-6">
-                                                        <label class="form-label">Sezione / Impianto</label>
-                                                        <input type="text" class="form-control" name="sezione_impianto" value="{{ r.sezione_impianto }}">
-                                                    </div>
-                                                    <div class="col-md-6">
-                                                        <label class="form-label">Utilizzo</label>
-                                                        <input type="text" class="form-control" name="utilizzo" value="{{ r.utilizzo }}">
-                                                    </div>
-                                                    <div class="col-md-4">
-                                                        <label class="form-label">Misura Nastro Finito</label>
-                                                        <input type="text" class="form-control" name="misura_nastro_finito" value="{{ r.misura_nastro_finito }}">
-                                                    </div>
-                                                    <div class="col-md-4">
-                                                        <label class="form-label">Tipo di Riduttore</label>
-                                                        <input type="text" class="form-control" name="tipo_di_riduttore" value="{{ r.tipo_di_riduttore }}">
-                                                    </div>
-                                                    <div class="col-md-4">
-                                                        <label class="form-label">Tipo di Motore</label>
-                                                        <input type="text" class="form-control" name="tipo_di_motore" value="{{ r.tipo_di_motore }}">
-                                                    </div>
-                                                    <div class="col-12">
-                                                        <label class="form-label">Note</label>
-                                                        <textarea class="form-control" name="note" rows="2">{{ r.note }}</textarea>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                            <div class="modal-footer">
-                                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annulla</button>
-                                                <button type="submit" class="btn btn-primary">Salva Modifiche</button>
-                                            </div>
-                                        </form>
-                                    </div>
-                                </div>
-                            </div>
                             {% else %}
                             <tr>
-                                <td colspan="12" class="text-center text-muted py-4">Nessun nastro registrato in archivio.</td>
+                                <td colspan="5" class="text-center py-4 text-muted">Nessun nastro presente a sistema.</td>
                             </tr>
                             {% endfor %}
                         </tbody>
@@ -287,131 +133,47 @@
                 </div>
             </div>
         </div>
-
     </div>
 
-    <!-- Modal Nuovo Nastro -->
-    <div class="modal fade" id="modalNuovoNastro" tabindex="-1" aria-hidden="true">
-        <div class="modal-dialog modal-lg">
+    <!-- Modale Nuovo Nastro -->
+    <div class="modal fade" id="modalNuovoNastro" tabindex="-1">
+        <div class="modal-dialog">
             <div class="modal-content">
                 <form action="{{ url_for('nastri') }}" method="POST">
                     <div class="modal-header bg-dark text-white">
-                        <h5 class="modal-title">Aggiungi Nuovo Nastro</h5>
-                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                        <h5 class="modal-title"><i class="fas fa-plus-circle me-2"></i>Aggiungi Nuovo Nastro</h5>
+                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
                     </div>
-                    <div class="modal-body text-start">
-                        <div class="row g-3">
-                            <div class="col-md-4">
-                                <label class="form-label fw-bold">Codice SAP</label>
-                                <input type="text" class="form-control" name="codice_sap" placeholder="Es. 6916589">
-                            </div>
-                            <div class="col-md-4">
-                                <label class="form-label fw-bold">Numero</label>
-                                <input type="text" class="form-control" name="numero" placeholder="Es. 22 o E21">
-                            </div>
-                            <div class="col-md-4">
-                                <label class="form-label fw-bold">Stato</label>
-                                <select class="form-select" name="stato">
-                                    <option value="aperto" selected>Aperto</option>
-                                    <option value="chiuso">Chiuso</option>
-                                    <option value="ordinato">Ordinato</option>
-                                </select>
-                            </div>
-                            <div class="col-md-6">
-                                <label class="form-label">Misura (es. mt. 37x 800 5+2 4 tele)</label>
-                                <input type="text" class="form-control" name="misura" placeholder="Misura e caratteristiche">
-                            </div>
-                            <div class="col-md-6">
-                                <label class="form-label">Tipo (es. normalgum/500)</label>
-                                <input type="text" class="form-control" name="tipo" placeholder="Tipo di nastro">
-                            </div>
-                            <div class="col-md-6">
-                                <label class="form-label">Sezione / Impianto</label>
-                                <input type="text" class="form-control" name="sezione_impianto" value="COMPOSIZIONE" placeholder="Es. COMPOSIZIONE, CARICO SABBIA">
-                            </div>
-                            <div class="col-md-6">
-                                <label class="form-label">Utilizzo</label>
-                                <input type="text" class="form-control" name="utilizzo" placeholder="Es. carico elevatore">
-                            </div>
-                            <div class="col-md-4">
-                                <label class="form-label">Misura Nastro Finito</label>
-                                <input type="text" class="form-control" name="misura_nastro_finito" placeholder="Es. 24060 mm">
-                            </div>
-                            <div class="col-md-4">
-                                <label class="form-label">Tipo di Riduttore</label>
-                                <input type="text" class="form-control" name="tipo_di_riduttore" placeholder="Es. A 703 I 81 70 P190 V5">
-                            </div>
-                            <div class="col-md-4">
-                                <label class="form-label">Tipo di Motore</label>
-                                <input type="text" class="form-control" name="tipo_di_motore" placeholder="Es. A 603 H400 P190 95 H 27.5">
-                            </div>
-                            <div class="col-12">
-                                <label class="form-label">Note</label>
-                                <textarea class="form-control" name="note" rows="2" placeholder="Eventuali annotazioni..."></textarea>
-                            </div>
+                    <div class="modal-body">
+                        <div class="mb-3">
+                            <label class="form-label">Nome / Codice Nastro *</label>
+                            <input type="text" class="form-control" name="nome_nastro" required placeholder="Es. Nastro Linea 1">
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Misura</label>
+                            <input type="text" class="form-control" name="misura" placeholder="Es. 1200x500 mm">
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Stato Tappeto</label>
+                            <select class="form-select" name="tappeto_presente">
+                                <option value="1">🟢 Presente (Tappeto disponibile)</option>
+                                <option value="0">🔴 Assente (Tappeto mancante / da ordinare)</option>
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Note</label>
+                            <textarea class="form-control" name="note" rows="2" placeholder="Note o specifiche aggiuntive..."></textarea>
                         </div>
                     </div>
                     <div class="modal-footer">
                         <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annulla</button>
-                        <button type="submit" class="btn btn-primary">Salva Nastro</button>
+                        <button type="submit" class="btn btn-success">Salva Nastro</button>
                     </div>
                 </form>
             </div>
         </div>
     </div>
 
-    <!-- Bootstrap JS e Logica Notifiche Live -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-    <script>
-    function caricaNotifiche() {
-        fetch('/api/notifiche')
-            .then(response => response.json())
-            .then(data => {
-                const badge = document.getElementById('badgeNotifiche');
-                const lista = document.getElementById('listaNotifiche');
-                if (!badge || !lista) return;
-
-                lista.innerHTML = '<li><h6 class="dropdown-header border-bottom py-2"><i class="fa-solid fa-bell me-1"></i> Notifiche System</h6></li>';
-                
-                let nonLette = 0;
-                if (!data || data.length === 0) {
-                    lista.innerHTML += '<li class="dropdown-item text-muted text-center py-3">Nessuna notifica presente</li>';
-                } else {
-                    data.forEach(n => {
-                        if (!n.letta) nonLette++;
-                        const item = document.createElement('li');
-                        item.innerHTML = `
-                            <a class="dropdown-item py-2 border-bottom ${!n.letta ? 'bg-light fw-bold' : ''}" href="${n.link || '#'}">
-                                <div>${n.titolo}</div>
-                                <small class="text-muted d-block fw-normal">${n.messaggio}</small>
-                            </a>
-                        `;
-                        lista.appendChild(item);
-                    });
-                }
-
-                if (nonLette > 0) {
-                    badge.textContent = nonLette;
-                    badge.classList.remove('d-none');
-                } else {
-                    badge.classList.add('d-none');
-                }
-            })
-            .catch(err => console.error("Errore recupero notifiche:", err));
-    }
-
-    function segnaNotificheLette() {
-        fetch('/api/notifiche/segna_lette', { method: 'POST' })
-            .then(() => {
-                const badge = document.getElementById('badgeNotifiche');
-                if (badge) badge.classList.add('d-none');
-            });
-    }
-
-    document.addEventListener("DOMContentLoaded", function() {
-        caricaNotifiche();
-        setInterval(caricaNotifiche, 15000);
-    });
-    </script>
 </body>
 </html>
