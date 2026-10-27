@@ -1,5 +1,5 @@
 # ========================================================================
-# Gestionale OMG Application - System with Push Notifications & Ore Report
+# Gestionale OMG Application - System with Push Notifications & Agenda
 # Copyright (c) 2026 Marco Pavan. All Rights Reserved.
 # Designed & Developed by Marco Pavan
 # ========================================================================
@@ -137,6 +137,20 @@ def init_db():
         """)
 
         cur.execute("""
+            CREATE TABLE IF NOT EXISTS agenda (
+                id SERIAL PRIMARY KEY,
+                titolo VARCHAR(255) NOT NULL,
+                descrizione TEXT,
+                data_scadenza VARCHAR(50),
+                fornitore_id INT REFERENCES fornitori(id) ON DELETE SET NULL,
+                utenti_visibili TEXT DEFAULT 'Tutti',
+                completato BOOLEAN DEFAULT FALSE,
+                creato_da VARCHAR(255),
+                creato_il TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            );
+        """)
+
+        cur.execute("""
             CREATE TABLE IF NOT EXISTS richieste_manutenzione (
                 id SERIAL PRIMARY KEY,
                 titolo VARCHAR(255) NOT NULL,
@@ -194,7 +208,8 @@ def init_db():
                 puo_vedere_promemoria INT DEFAULT 1,
                 puo_assegnare_promemoria INT DEFAULT 0,
                 puo_vedere_report_ore INT DEFAULT 1,
-                puo_gestire_nastri INT DEFAULT 1
+                puo_gestire_nastri INT DEFAULT 1,
+                puo_gestire_agenda INT DEFAULT 0
             );
         """)
 
@@ -292,7 +307,8 @@ def init_db():
             ("puo_vedere_promemoria", "INT DEFAULT 1"),
             ("puo_assegnare_promemoria", "INT DEFAULT 0"),
             ("puo_vedere_report_ore", "INT DEFAULT 1"),
-            ("puo_gestire_nastri", "INT DEFAULT 1")
+            ("puo_gestire_nastri", "INT DEFAULT 1"),
+            ("puo_gestire_agenda", "INT DEFAULT 0")
         ]
         
         for p_col, p_type in permessi_lista:
@@ -302,8 +318,8 @@ def init_db():
         if not cur.fetchone():
             hashed_pw = generate_password_hash("admin")
             cur.execute("""
-                INSERT INTO utenti (username, password, is_admin, puo_vedere_magazzino, puo_aggiungere_prodotti, puo_modificare_prodotti, puo_caricare_scaricare, puo_eliminare, puo_vedere_pesante, puo_vedere_manutenzione, puo_aprire_manutenzioni, puo_gestire_interventi, puo_assegnare_manutenzioni, puo_eliminare_interventi, puo_vedere_manutenzioni_esterne, puo_vedere_storico_manutenzioni, puo_eliminare_storico, puo_gestire_fornitori, puo_importare_fornitori, puo_gestire_documenti, puo_eliminare_documenti, puo_vedere_promemoria, puo_assegnare_promemoria, puo_vedere_report_ore, puo_gestire_nastri)
-                VALUES (%s, %s, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1);
+                INSERT INTO utenti (username, password, is_admin, puo_vedere_magazzino, puo_aggiungere_prodotti, puo_modificare_prodotti, puo_caricare_scaricare, puo_eliminare, puo_vedere_pesante, puo_vedere_manutenzione, puo_aprire_manutenzioni, puo_gestire_interventi, puo_assegnare_manutenzioni, puo_eliminare_interventi, puo_vedere_manutenzioni_esterne, puo_vedere_storico_manutenzioni, puo_eliminare_storico, puo_gestire_fornitori, puo_importare_fornitori, puo_gestire_documenti, puo_eliminare_documenti, puo_vedere_promemoria, puo_assegnare_promemoria, puo_vedere_report_ore, puo_gestire_nastri, puo_gestire_agenda)
+                VALUES (%s, %s, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1);
             """, ('admin', hashed_pw))
 
         conn.commit()
@@ -360,7 +376,6 @@ def index():
     promemoria_urgenti = 0
     interventi_aperti_count = 0
     interventi_in_lavoro_count = 0
-    interventi_attesa_count = 0
     
     username = session.get('username')
     is_admin = session.get('is_admin')
@@ -385,8 +400,6 @@ def index():
         interventi_aperti_count = cur.fetchone()['count']
         cur.execute("SELECT COUNT(*) as count FROM richieste_manutenzione WHERE stato IN ('In Lavoro', 'In Pausa');")
         interventi_in_lavoro_count = cur.fetchone()['count']
-        cur.execute("SELECT COUNT(*) as count FROM richieste_manutenzione WHERE stato = 'Attesa Ricambio';")
-        interventi_attesa_count = cur.fetchone()['count']
         
         cur.close()
         conn.close()
@@ -407,8 +420,7 @@ def index():
                            prodotti_sotto_soglia=prodotti_sotto_soglia,
                            promemoria_urgenti=promemoria_urgenti,
                            interventi_aperti_count=interventi_aperti_count,
-                           interventi_in_lavoro_count=interventi_in_lavoro_count,
-                           interventi_attesa_count=interventi_attesa_count)
+                           interventi_in_lavoro_count=interventi_in_lavoro_count)
 
 @app.route("/login", methods=["GET", "POST"])
 @app.route("/login.html", methods=["GET", "POST"])
@@ -458,8 +470,8 @@ def registra():
                 cur = conn.cursor()
                 hashed_pw = generate_password_hash(password)
                 cur.execute("""
-                    INSERT INTO utenti (username, password, is_admin, puo_vedere_magazzino, puo_aggiungere_prodotti, puo_modificare_prodotti, puo_caricare_scaricare, puo_eliminare, puo_vedere_pesante, puo_vedere_manutenzione, puo_aprire_manutenzioni, puo_gestire_interventi, puo_assegnare_manutenzioni, puo_eliminare_interventi, puo_vedere_manutenzioni_esterne, puo_vedere_storico_manutenzioni, puo_eliminare_storico, puo_gestire_fornitori, puo_importare_fornitori, puo_gestire_documenti, puo_eliminare_documenti, puo_vedere_promemoria, puo_assegnare_promemoria, puo_vedere_report_ore, puo_gestire_nastri)
-                    VALUES (%s, %s, 0, 1, 1, 1, 1, 0, 1, 1, 1, 1, 1, 0, 1, 1, 0, 1, 1, 1, 0, 1, 0, 1, 1);
+                    INSERT INTO utenti (username, password, is_admin, puo_vedere_magazzino, puo_aggiungere_prodotti, puo_modificare_prodotti, puo_caricare_scaricare, puo_eliminare, puo_vedere_pesante, puo_vedere_manutenzione, puo_aprire_manutenzioni, puo_gestire_interventi, puo_assegnare_manutenzioni, puo_eliminare_interventi, puo_vedere_manutenzioni_esterne, puo_vedere_storico_manutenzioni, puo_eliminare_storico, puo_gestire_fornitori, puo_importare_fornitori, puo_gestire_documenti, puo_eliminare_documenti, puo_vedere_promemoria, puo_assegnare_promemoria, puo_vedere_report_ore, puo_gestire_nastri, puo_gestire_agenda)
+                    VALUES (%s, %s, 0, 1, 1, 1, 1, 0, 1, 1, 1, 1, 1, 0, 1, 1, 0, 1, 1, 1, 0, 1, 0, 1, 1, 0);
                 """, (username, hashed_pw))
                 conn.commit()
                 cur.close()
@@ -470,6 +482,102 @@ def registra():
             except Exception as e:
                 flash("Username già esistente o errore di registrazione.", "error")
     return render_template("registra.html")
+
+# --- AGENDA & ATTIVITÀ FORNITORI ---
+@app.route("/agenda", methods=["GET", "POST"])
+@app.route("/agenda.html", methods=["GET", "POST"])
+def agenda():
+    if not (session.get('is_admin') or session.get('puo_gestire_agenda', 0)):
+        flash("Non hai i permessi per accedere all'Agenda.", "error")
+        return redirect(url_for('index'))
+
+    username_corrente = session.get('username')
+    is_admin = session.get('is_admin')
+
+    conn = get_db_connection()
+    cur = conn.cursor()
+
+    if request.method == "POST":
+        titolo = request.form.get("titolo")
+        descrizione = request.form.get("descrizione", "")
+        data_scadenza = request.form.get("data_scadenza", "")
+        fornitore_id = request.form.get("fornitore_id")
+        fornitore_id = int(fornitore_id) if fornitore_id else None
+        
+        utenti_selezionati = request.form.getlist("utenti_visibili[]")
+        if "Tutti" in utenti_selezionati or not utenti_selezionati:
+            utenti_visibili = "Tutti"
+        else:
+            utenti_visibili = ",".join(utenti_selezionati)
+
+        if titolo:
+            cur.execute("""
+                INSERT INTO agenda (titolo, descrizione, data_scadenza, fornitore_id, utenti_visibili, creato_da)
+                VALUES (%s, %s, %s, %s, %s, %s);
+            """, (titolo, descrizione, data_scadenza, fornitore_id, utenti_visibili, username_corrente))
+            conn.commit()
+            registra_log(f"Creata attività in agenda: {titolo}")
+            flash("Attività aggiunta all'agenda con successo!", "success")
+        return redirect(url_for("agenda"))
+
+    cur.execute("SELECT id, nome_azienda FROM fornitori ORDER BY nome_azienda ASC;")
+    fornitori_list = cur.fetchall()
+
+    cur.execute("SELECT username FROM utenti ORDER BY username ASC;")
+    utenti_list = cur.fetchall()
+
+    if is_admin:
+        cur.execute("""
+            SELECT a.*, f.nome_azienda 
+            FROM agenda a 
+            LEFT JOIN fornitori f ON a.fornitore_id = f.id 
+            ORDER BY a.completato ASC, a.data_scadenza ASC;
+        """)
+    else:
+        cur.execute("""
+            SELECT a.*, f.nome_azienda 
+            FROM agenda a 
+            LEFT JOIN fornitori f ON a.fornitore_id = f.id 
+            WHERE a.utenti_visibili = 'Tutti' OR a.utenti_visibili LIKE %s 
+            ORDER BY a.completato ASC, a.data_scadenza ASC;
+        """, (f"%{username_corrente}%",))
+
+    lista_attivita = cur.fetchall()
+    cur.close()
+    conn.close()
+
+    return render_template("agenda.html", 
+                           attivita=lista_attivita, 
+                           fornitori=fornitori_list, 
+                           utenti=utenti_list)
+
+@app.route("/completa_agenda/<int:agenda_id>", methods=["POST"])
+def completa_agenda(agenda_id):
+    if not (session.get('is_admin') or session.get('puo_gestire_agenda', 0)):
+        flash("Permesso negato.", "error")
+        return redirect(url_for('agenda'))
+    conn = get_db_connection()
+    cur = conn.cursor()
+    cur.execute("UPDATE agenda SET completato = NOT completato WHERE id = %s;", (agenda_id,))
+    conn.commit()
+    cur.close()
+    conn.close()
+    flash("Stato attività aggiornato.", "success")
+    return redirect(url_for("agenda"))
+
+@app.route("/elimina_agenda/<int:agenda_id>", methods=["POST"])
+def elimina_agenda(agenda_id):
+    if not session.get('is_admin'):
+        flash("Solo l'amministratore può eliminare le voci dall'agenda.", "error")
+        return redirect(url_for("agenda"))
+    conn = get_db_connection()
+    cur = conn.cursor()
+    cur.execute("DELETE FROM agenda WHERE id = %s;", (agenda_id,))
+    conn.commit()
+    cur.close()
+    conn.close()
+    flash("Attività eliminata dall'agenda.", "success")
+    return redirect(url_for("agenda"))
 
 # --- MAGAZZINO NASTRI ---
 @app.route("/nastri", methods=["GET", "POST"])
