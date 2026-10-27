@@ -105,7 +105,7 @@
         {% endif %}
 
         <!-- Intestazione e Pulsanti Azione Rapida -->
-        <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
+        <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
             <h2><i class="fas fa-boxes me-2"></i>Magazzino Principale</h2>
             <div class="d-flex gap-2">
                 <a href="{{ url_for('scanner_globale') }}" class="btn btn-outline-dark btn-sm"><i class="fas fa-qrcode me-1"></i>Scanner QR</a>
@@ -120,11 +120,21 @@
             </div>
         </div>
 
+        <!-- Barra di Ricerca Rapida Magazzino -->
+        <div class="card shadow-sm mb-3">
+            <div class="card-body p-2">
+                <div class="input-group">
+                    <span class="input-group-text bg-white border-end-0"><i class="fas fa-search text-muted"></i></span>
+                    <input type="text" id="inputRicercaMagazzino" class="form-control border-start-0" placeholder="Cerca articolo per nome, codice SAP o QR code..." onkeyup="filtraTabellaMagazzino()">
+                </div>
+            </div>
+        </div>
+
         <!-- Tabella Articoli Magazzino -->
         <div class="card shadow-sm">
             <div class="card-body p-0">
                 <div class="table-responsive">
-                    <table class="table table-hover mb-0 align-middle">
+                    <table class="table table-hover mb-0 align-middle" id="tabellaMagazzino">
                         <thead class="table-light">
                             <tr>
                                 <th>QR Code</th>
@@ -137,7 +147,7 @@
                         </thead>
                         <tbody>
                             {% for p in prodotti %}
-                            <tr>
+                            <tr class="riga-articolo">
                                 <td><code>{{ p.qr_code }}</code></td>
                                 <td><strong>{{ p.nome }}</strong></td>
                                 <td>{{ p.sap or '-' }}</td>
@@ -157,7 +167,7 @@
                                 </td>
                             </tr>
                             {% else %}
-                            <tr>
+                            <tr id="rigaNessunArticolo">
                                 <td colspan="6" class="text-center py-4 text-muted">Nessun articolo presente nel magazzino principale.</td>
                             </tr>
                             {% endfor %}
@@ -216,6 +226,21 @@
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script>
+        // Funzione per filtrare la tabella del magazzino in tempo reale
+        function filtraTabellaMagazzino() {
+            const input = document.getElementById('inputRicercaMagazzino').value.toLowerCase();
+            const righe = document.querySelectorAll('.riga-articolo');
+            
+            righe.forEach(riga => {
+                const testoRiga = riga.innerText.toLowerCase();
+                if (testoRiga.includes(input)) {
+                    riga.style.display = "";
+                } else {
+                    riga.style.display = "none";
+                }
+            });
+        }
+
         // Caricamento notifiche e gestione sicurezza cancellazione
         function caricaNotifiche() {
             fetch('/api/notifiche')
