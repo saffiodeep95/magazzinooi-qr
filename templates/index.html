@@ -7,11 +7,10 @@
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
-        /* Ottimizzazione grafica per far rientrare perfettamente tutte le voci nella navbar */
         .navbar-nav .nav-link {
-            font-size: 0.85rem;
-            padding-left: 0.45rem !important;
-            padding-right: 0.45rem !important;
+            font-size: 0.82rem;
+            padding-left: 0.4rem !important;
+            padding-right: 0.4rem !important;
             white-space: nowrap;
         }
     </style>
@@ -27,8 +26,11 @@
             <div class="collapse navbar-collapse" id="navbarNav">
                 <ul class="navbar-nav me-auto mb-2 mb-lg-0">
                     <li class="nav-item"><a class="nav-link active" href="{{ url_for('index') }}"><i class="fas fa-boxes me-1"></i>Magazzino</a></li>
-                    <li class="nav-item"><a class="nav-link" href="{{ url_for('nastri') }}"><i class="fas fa-stream me-1"></i>Magazzino Nastri</a></li>
-                    <li class="nav-item"><a class="nav-link" href="{{ url_for('richieste_manutenzione') }}"><i class="fas fa-tools me-1"></i>Manutenzione Officina</a></li>
+                    <li class="nav-item"><a class="nav-link" href="{{ url_for('nastri') }}"><i class="fas fa-stream me-1"></i>Nastri</a></li>
+                    {% if session.get('is_admin') or session.get('puo_gestire_agenda', 0) %}
+                    <li class="nav-item"><a class="nav-link" href="{{ url_for('agenda') }}"><i class="fas fa-calendar-alt me-1"></i>Agenda</a></li>
+                    {% endif %}
+                    <li class="nav-item"><a class="nav-link" href="{{ url_for('richieste_manutenzione') }}"><i class="fas fa-tools me-1"></i>Manutenzione</a></li>
                     <li class="nav-item"><a class="nav-link" href="{{ url_for('report_ore') }}"><i class="fas fa-clock me-1"></i>Report Ore</a></li>
                     <li class="nav-item"><a class="nav-link" href="{{ url_for('cambi_serie') }}"><i class="fas fa-exchange-alt me-1"></i>Cambi Serie</a></li>
                     <li class="nav-item"><a class="nav-link" href="{{ url_for('promemoria') }}"><i class="fas fa-bell me-1"></i>Promemoria</a></li>
@@ -290,7 +292,6 @@
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script>
-        // Live search filter for main inventory table
         document.getElementById('searchTable').addEventListener('keyup', function() {
             let filter = this.value.toLowerCase();
             let rows = document.querySelectorAll('#inventarioTable tbody tr');
@@ -300,7 +301,6 @@
             });
         });
 
-        // Gestione Notifiche via AJAX
         function caricaNotifiche() {
             fetch('/api/notifiche')
                 .then(response => response.json())
@@ -346,10 +346,9 @@
                 });
         }
 
-        // Caricamento iniziale delle notifiche all'avvio della pagina
         document.addEventListener("DOMContentLoaded", function() {
             caricaNotifiche();
-            setInterval(caricaNotifiche, 30000); // Aggiorna ogni 30 secondi
+            setInterval(caricaNotifiche, 30000);
         });
     </script>
 </body>
