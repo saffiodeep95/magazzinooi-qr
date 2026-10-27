@@ -384,11 +384,10 @@ def api_elimina_notifiche():
         conn = get_db_connection()
         cur = conn.cursor()
         
+        # SICUREZZA: Elimina SOLO SE la notifica appartiene all'utente ed è GIÀ LETTA / APERTA (letta = TRUE)
         if notifica_id:
-            # Elimina SOLO SE la notifica appartiene all'utente ed è GIÀ LETTA (letta = TRUE)
             cur.execute("DELETE FROM notifiche WHERE id = %s AND destinatario = %s AND letta = TRUE;", (notifica_id, username))
         else:
-            # Elimina in blocco SOLO le notifiche già lette dall'utente
             cur.execute("DELETE FROM notifiche WHERE destinatario = %s AND letta = TRUE;", (username,))
             
         conn.commit()
