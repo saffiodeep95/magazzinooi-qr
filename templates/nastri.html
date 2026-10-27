@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Nastri - Gestionale OMG</title>
+    <title>Gestione Nastri - Gestionale OMG</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
@@ -14,11 +14,11 @@
             white-space: nowrap;
         }
         .status-dot {
-            height: 14px;
-            width: 14px;
+            height: 12px;
+            width: 12px;
             border-radius: 50%;
             display: inline-block;
-            margin-right: 6px;
+            margin-right: 4px;
         }
         .dot-green { background-color: #10b981; box-shadow: 0 0 6px rgba(16, 185, 129, 0.6); }
         .dot-red { background-color: #ef4444; box-shadow: 0 0 6px rgba(239, 68, 68, 0.6); }
@@ -64,7 +64,7 @@
         </div>
     </nav>
 
-    <div class="container my-4">
+    <div class="container-fluid my-4 px-4">
         {% with messages = get_flashed_messages(with_categories=true) %}
             {% if messages %}
                 {% for category, message in messages %}
@@ -76,24 +76,55 @@
             {% endif %}
         {% endwith %}
 
-        <div class="d-flex justify-content-between align-items-center mb-4">
-            <h2><i class="fas fa-stream me-2"></i>Gestione Nastri e Tappeti</h2>
-            <button class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#modalNuovoNastro">
-                <i class="fas fa-plus-circle me-1"></i>Aggiungi Nastro
-            </button>
+        <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
+            <h2><i class="fas fa-stream me-2"></i>Magazzino Nastri e Tappeti</h2>
+            <div class="d-flex gap-2">
+                <a href="{{ url_for('esporta_nastri_csv') }}" class="btn btn-success btn-sm"><i class="fas fa-file-excel me-1"></i>Esporta CSV</a>
+                <a href="{{ url_for('stampa_nastri', sezione=sezione_filtro) }}" target="_blank" class="btn btn-outline-dark btn-sm"><i class="fas fa-print me-1"></i>Stampa</a>
+                <button class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#modalNuovoNastro">
+                    <i class="fas fa-plus-circle me-1"></i>Nuovo Nastro
+                </button>
+            </div>
         </div>
 
+        <!-- Filtri Sezione Impianto -->
+        <div class="card shadow-sm mb-4">
+            <div class="card-body py-2">
+                <form method="GET" action="{{ url_for('nastri') }}" class="row align-items-center g-2">
+                    <div class="col-auto">
+                        <label class="fw-bold small">Filtra Sezione Impianto:</label>
+                    </div>
+                    <div class="col-md-4">
+                        <select class="form-select form-select-sm" name="sezione" onchange="this.form.submit()">
+                            <option value="Tutte" {% if sezione_filtro == 'Tutte' %}selected{% endif %}>Tutte le Sezioni</option>
+                            {% for sez in sezioni_disponibili %}
+                            <option value="{{ sez }}" {% if sezione_filtro == sez %}selected{% endif %}>{{ sez }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Tabella Completa Nastri -->
         <div class="card shadow-sm">
             <div class="card-body p-0">
                 <div class="table-responsive">
-                    <table class="table table-hover mb-0 align-middle">
-                        <thead class="table-light">
+                    <table class="table table-striped table-hover mb-0 align-middle" style="font-size: 0.85rem;">
+                        <thead class="table-dark">
                             <tr>
-                                <th style="width: 140px;">Stato Tappeto</th>
-                                <th>Nome / Codice Nastro</th>
+                                <th style="width: 110px;">Tappeto</th>
+                                <th>Cod. SAP</th>
+                                <th>N°</th>
+                                <th>Sezione Impianto</th>
                                 <th>Misura</th>
+                                <th>Tipo</th>
+                                <th>Utilizzo</th>
+                                <th>Misura Finito</th>
+                                <th>Riduttore</th>
+                                <th>Motore</th>
                                 <th>Note</th>
-                                <th class="text-center" style="width: 100px;">Azioni</th>
+                                <th class="text-center">Azioni</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -101,31 +132,109 @@
                             <tr>
                                 <td>
                                     <form action="{{ url_for('toggle_tappeto', nastro_id=n.id) }}" method="POST" class="d-inline">
-                                        <button type="submit" class="btn btn-sm btn-light border d-flex align-items-center gap-1" title="Clicca per cambiare stato">
-                                            {% if n.tappeto_presente %}
+                                        <button type="submit" class="btn btn-sm btn-light border py-0 px-2 d-flex align-items-center" title="Clicca per cambiare stato tappeto">
+                                            {% if n.tappeto_presente is none or n.tappeto_presente %}
                                                 <span class="status-dot dot-green"></span>
-                                                <small class="fw-bold text-success">Presente</small>
+                                                <span class="small fw-bold text-success" style="font-size: 11px;">Presente</span>
                                             {% else %}
                                                 <span class="status-dot dot-red"></span>
-                                                <small class="fw-bold text-danger">Assente</small>
+                                                <span class="small fw-bold text-danger" style="font-size: 11px;">Assente</span>
                                             {% endif %}
                                         </button>
                                     </form>
                                 </td>
-                                <td><strong class="text-primary">{{ n.nome_nastro }}</strong></td>
-                                <td><span class="badge bg-secondary">{{ n.misura or '-' }}</span></td>
+                                <td class="font-monospace fw-bold">{{ n.codice_sap or '-' }}</td>
+                                <td><span class="badge bg-secondary">{{ n.numero or '-' }}</span></td>
+                                <td class="fw-bold text-primary">{{ n.sezione_impianto or '-' }}</td>
+                                <td>{{ n.misura or '-' }}</td>
+                                <td>{{ n.tipo or '-' }}</td>
+                                <td>{{ n.utilizzo or '-' }}</td>
+                                <td>{{ n.misura_nastro_finito or '-' }}</td>
+                                <td>{{ n.tipo_di_riduttore or '-' }}</td>
+                                <td>{{ n.tipo_di_motore or '-' }}</td>
                                 <td><small class="text-muted">{{ n.note or '-' }}</small></td>
                                 <td class="text-center">
-                                    {% if session.get('is_admin') or session.get('puo_eliminare', 0) %}
-                                    <form action="{{ url_for('elimina_nastro', nastro_id=n.id) }}" method="POST" class="d-inline" onsubmit="return confirm('Eliminare questo nastro?');">
-                                        <button type="submit" class="btn btn-sm btn-outline-danger" title="Elimina"><i class="fas fa-trash"></i></button>
-                                    </form>
-                                    {% endif %}
+                                    <div class="d-flex justify-content-center gap-1">
+                                        <button class="btn btn-sm btn-outline-primary py-0 px-1" data-bs-toggle="modal" data-bs-target="#modalModifica_{{ n.id }}" title="Modifica">
+                                            <i class="fas fa-edit"></i>
+                                        </button>
+                                        {% if session.get('is_admin') or session.get('puo_eliminare', 0) %}
+                                        <form action="{{ url_for('elimina_nastro', nastro_id=n.id) }}" method="POST" class="d-inline" onsubmit="return confirm('Eliminare questo nastro?');">
+                                            <button type="submit" class="btn btn-sm btn-outline-danger py-0 px-1" title="Elimina"><i class="fas fa-trash"></i></button>
+                                        </form>
+                                        {% endif %}
+                                    </div>
                                 </td>
                             </tr>
+
+                            <!-- Modal Modifica Nastro -->
+                            <div class="modal fade" id="modalModifica_{{ n.id }}" tabindex="-1">
+                                <div class="modal-dialog modal-lg">
+                                    <div class="modal-content">
+                                        <form action="{{ url_for('modifica_nastro', nastro_id=n.id) }}" method="POST">
+                                            <div class="modal-header bg-dark text-white">
+                                                <h5 class="modal-title">Modifica Nastro - N° {{ n.numero }}</h5>
+                                                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                                            </div>
+                                            <div class="modal-body">
+                                                <div class="row">
+                                                    <div class="col-md-4 mb-3">
+                                                        <label class="form-label">Codice SAP</label>
+                                                        <input type="text" class="form-control" name="codice_sap" value="{{ n.codice_sap or '' }}">
+                                                    </div>
+                                                    <div class="col-md-4 mb-3">
+                                                        <label class="form-label">Numero Nastro</label>
+                                                        <input type="text" class="form-control" name="numero" value="{{ n.numero or '' }}">
+                                                    </div>
+                                                    <div class="col-md-4 mb-3">
+                                                        <label class="form-label">Sezione Impianto</label>
+                                                        <input type="text" class="form-control" name="sezione_impianto" value="{{ n.sezione_impianto or '' }}">
+                                                    </div>
+                                                </div>
+                                                <div class="row">
+                                                    <div class="col-md-4 mb-3">
+                                                        <label class="form-label">Misura</label>
+                                                        <input type="text" class="form-control" name="misura" value="{{ n.misura or '' }}">
+                                                    </div>
+                                                    <div class="col-md-4 mb-3">
+                                                        <label class="form-label">Tipo</label>
+                                                        <input type="text" class="form-control" name="tipo" value="{{ n.tipo or '' }}">
+                                                    </div>
+                                                    <div class="col-md-4 mb-3">
+                                                        <label class="form-label">Utilizzo</label>
+                                                        <input type="text" class="form-control" name="utilizzo" value="{{ n.utilizzo or '' }}">
+                                                    </div>
+                                                </div>
+                                                <div class="row">
+                                                    <div class="col-md-4 mb-3">
+                                                        <label class="form-label">Misura Nastro Finito</label>
+                                                        <input type="text" class="form-control" name="misura_nastro_finito" value="{{ n.misura_nastro_finito or '' }}">
+                                                    </div>
+                                                    <div class="col-md-4 mb-3">
+                                                        <label class="form-label">Tipo di Riduttore</label>
+                                                        <input type="text" class="form-control" name="tipo_di_riduttore" value="{{ n.tipo_di_riduttore or '' }}">
+                                                    </div>
+                                                    <div class="col-md-4 mb-3">
+                                                        <label class="form-label">Tipo di Motore</label>
+                                                        <input type="text" class="form-control" name="tipo_di_motore" value="{{ n.tipo_di_motore or '' }}">
+                                                    </div>
+                                                </div>
+                                                <div class="mb-3">
+                                                    <label class="form-label">Note</label>
+                                                    <textarea class="form-control" name="note" rows="2">{{ n.note or '' }}</textarea>
+                                                </div>
+                                            </div>
+                                            <div class="modal-footer">
+                                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annulla</button>
+                                                <button type="submit" class="btn btn-primary">Salva Modifiche</button>
+                                            </div>
+                                        </form>
+                                    </div>
+                                </div>
+                            </div>
                             {% else %}
                             <tr>
-                                <td colspan="5" class="text-center py-4 text-muted">Nessun nastro presente a sistema.</td>
+                                <td colspan="12" class="text-center py-4 text-muted">Nessun nastro trovato per questa sezione.</td>
                             </tr>
                             {% endfor %}
                         </tbody>
@@ -137,7 +246,7 @@
 
     <!-- Modale Nuovo Nastro -->
     <div class="modal fade" id="modalNuovoNastro" tabindex="-1">
-        <div class="modal-dialog">
+        <div class="modal-dialog modal-lg">
             <div class="modal-content">
                 <form action="{{ url_for('nastri') }}" method="POST">
                     <div class="modal-header bg-dark text-white">
@@ -145,24 +254,60 @@
                         <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
                     </div>
                     <div class="modal-body">
-                        <div class="mb-3">
-                            <label class="form-label">Nome / Codice Nastro *</label>
-                            <input type="text" class="form-control" name="nome_nastro" required placeholder="Es. Nastro Linea 1">
+                        <div class="row">
+                            <div class="col-md-4 mb-3">
+                                <label class="form-label">Codice SAP</label>
+                                <input type="text" class="form-control" name="codice_sap">
+                            </div>
+                            <div class="col-md-4 mb-3">
+                                <label class="form-label">Numero Nastro</label>
+                                <input type="text" class="form-control" name="numero">
+                            </div>
+                            <div class="col-md-4 mb-3">
+                                <label class="form-label">Sezione Impianto</label>
+                                <input type="text" class="form-control" name="sezione_impianto" value="COMPOSIZIONE">
+                            </div>
                         </div>
-                        <div class="mb-3">
-                            <label class="form-label">Misura</label>
-                            <input type="text" class="form-control" name="misura" placeholder="Es. 1200x500 mm">
+                        <div class="row">
+                            <div class="col-md-4 mb-3">
+                                <label class="form-label">Misura</label>
+                                <input type="text" class="form-control" name="misura">
+                            </div>
+                            <div class="col-md-4 mb-3">
+                                <label class="form-label">Tipo</label>
+                                <input type="text" class="form-control" name="tipo">
+                            </div>
+                            <div class="col-md-4 mb-3">
+                                <label class="form-label">Utilizzo</label>
+                                <input type="text" class="form-control" name="utilizzo">
+                            </div>
                         </div>
-                        <div class="mb-3">
-                            <label class="form-label">Stato Tappeto</label>
-                            <select class="form-select" name="tappeto_presente">
-                                <option value="1">🟢 Presente (Tappeto disponibile)</option>
-                                <option value="0">🔴 Assente (Tappeto mancante / da ordinare)</option>
-                            </select>
+                        <div class="row">
+                            <div class="col-md-4 mb-3">
+                                <label class="form-label">Misura Nastro Finito</label>
+                                <input type="text" class="form-control" name="misura_nastro_finito">
+                            </div>
+                            <div class="col-md-4 mb-3">
+                                <label class="form-label">Tipo di Riduttore</label>
+                                <input type="text" class="form-control" name="tipo_di_riduttore">
+                            </div>
+                            <div class="col-md-4 mb-3">
+                                <label class="form-label">Tipo di Motore</label>
+                                <input type="text" class="form-control" name="tipo_di_motore">
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Stato Iniziale Tappeto</label>
+                                <select class="form-select" name="tappeto_presente">
+                                    <option value="1">🟢 Presente (Disponibile)</option>
+                                    <option value="0">🔴 Assente (Mancante / Da ordinare)</option>
+                                </select>
+                            </div>
                         </div>
                         <div class="mb-3">
                             <label class="form-label">Note</label>
-                            <textarea class="form-control" name="note" rows="2" placeholder="Note o specifiche aggiuntive..."></textarea>
+                            <textarea class="form-control" name="note" rows="2"></textarea>
                         </div>
                     </div>
                     <div class="modal-footer">
