@@ -8,37 +8,40 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
         .navbar-nav .nav-link {
-            font-size: 0.82rem;
-            padding-left: 0.4rem !important;
-            padding-right: 0.4rem !important;
+            font-size: 0.78rem;
+            padding-left: 0.3rem !important;
+            padding-right: 0.3rem !important;
             white-space: nowrap;
         }
     </style>
 </head>
 <body class="bg-light">
-    <!-- Navbar principale -->
+    <!-- Navbar principale Smart & Compatta -->
     <nav class="navbar navbar-expand-lg navbar-dark bg-dark shadow-sm">
         <div class="container-fluid px-2">
-            <a class="navbar-brand fw-bold fs-6" href="{{ url_for('index') }}"><i class="fas fa-industry me-1"></i>Gestionale OMG</a>
+            <a class="navbar-brand fw-bold fs-6" href="{{ url_for('index') }}"><i class="fas fa-industry me-1"></i>OMG</a>
             <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
                 <span class="navbar-toggler-icon"></span>
             </button>
             <div class="collapse navbar-collapse" id="navbarNav">
                 <ul class="navbar-nav me-auto mb-2 mb-lg-0">
                     <li class="nav-item"><a class="nav-link active" href="{{ url_for('index') }}"><i class="fas fa-boxes me-1"></i>Magazzino</a></li>
+                    <li class="nav-item"><a class="nav-link" href="{{ url_for('magazzino_pesante') }}"><i class="fas fa-weight-hanging me-1"></i>Pesante</a></li>
+                    <li class="nav-item"><a class="nav-link" href="{{ url_for('manutenzioni') }}"><i class="fas fa-tools me-1"></i>Manut. Esterne</a></li>
+                    <li class="nav-item"><a class="nav-link" href="{{ url_for('storico_manutenzioni') }}"><i class="fas fa-history me-1"></i>Storico</a></li>
                     <li class="nav-item"><a class="nav-link" href="{{ url_for('nastri') }}"><i class="fas fa-stream me-1"></i>Nastri</a></li>
                     {% if session.get('is_admin') or session.get('puo_gestire_agenda', 0) %}
                     <li class="nav-item"><a class="nav-link" href="{{ url_for('agenda') }}"><i class="fas fa-calendar-alt me-1"></i>Agenda</a></li>
                     {% endif %}
-                    <li class="nav-item"><a class="nav-link" href="{{ url_for('richieste_manutenzione') }}"><i class="fas fa-tools me-1"></i>Manutenzione</a></li>
-                    <li class="nav-item"><a class="nav-link" href="{{ url_for('report_ore') }}"><i class="fas fa-clock me-1"></i>Report Ore</a></li>
-                    <li class="nav-item"><a class="nav-link" href="{{ url_for('cambi_serie') }}"><i class="fas fa-exchange-alt me-1"></i>Cambi Serie</a></li>
+                    <li class="nav-item"><a class="nav-link" href="{{ url_for('richieste_manutenzione') }}"><i class="fas fa-wrench me-1"></i>Officina</a></li>
+                    <li class="nav-item"><a class="nav-link" href="{{ url_for('report_ore') }}"><i class="fas fa-clock me-1"></i>Ore</a></li>
+                    <li class="nav-item"><a class="nav-link" href="{{ url_for('cambi_serie') }}"><i class="fas fa-exchange-alt me-1"></i>Cambi</a></li>
                     <li class="nav-item"><a class="nav-link" href="{{ url_for('promemoria') }}"><i class="fas fa-bell me-1"></i>Promemoria</a></li>
                     <li class="nav-item"><a class="nav-link" href="{{ url_for('fornitori') }}"><i class="fas fa-address-book me-1"></i>Fornitori</a></li>
-                    <li class="nav-item"><a class="nav-link" href="{{ url_for('documenti') }}"><i class="fas fa-folder-open me-1"></i>Documenti</a></li>
-                    <li class="nav-item"><a class="nav-link" href="{{ url_for('esportazioni') }}"><i class="fas fa-file-export me-1"></i>Esportazioni</a></li>
+                    <li class="nav-item"><a class="nav-link" href="{{ url_for('documenti') }}"><i class="fas fa-folder-open me-1"></i>Doc</a></li>
+                    <li class="nav-item"><a class="nav-link" href="{{ url_for('esportazioni') }}"><i class="fas fa-file-export me-1"></i>Export</a></li>
                     {% if session.get('is_admin') %}
-                    <li class="nav-item"><a class="nav-link text-warning" href="{{ url_for('admin_utenti') }}"><i class="fas fa-user-shield me-1"></i>Admin</a></li>
+                    <li class="nav-item"><a class="nav-link text-warning fw-bold" href="{{ url_for('admin_utenti') }}"><i class="fas fa-user-shield me-1"></i>Admin</a></li>
                     {% endif %}
                 </ul>
 
@@ -107,7 +110,7 @@
         <!-- Intestazione e Pulsanti Azione Rapida -->
         <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
             <h2><i class="fas fa-boxes me-2"></i>Magazzino Principale</h2>
-            <div class="d-flex gap-2">
+            <div class="d-flex gap-2 flex-wrap">
                 <a href="{{ url_for('scanner_globale') }}" class="btn btn-outline-dark btn-sm"><i class="fas fa-qrcode me-1"></i>Scanner QR</a>
                 <a href="{{ url_for('stampa_multipla_qr') }}" class="btn btn-outline-secondary btn-sm"><i class="fas fa-print me-1"></i>Stampa QR</a>
                 <a href="{{ url_for('carico') }}" class="btn btn-success btn-sm"><i class="fas fa-plus me-1"></i>Carico</a>
