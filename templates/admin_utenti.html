@@ -76,7 +76,7 @@
                     <th>Vedi</th>
                     <th>Ass.</th>
 
-                    <th>Gestione</th>
+                    <th>Vedi / Usa</th>
                 </tr>
             </thead>
             <tbody>
@@ -151,7 +151,7 @@
                     </td>
                     {% endfor %}
 
-                    <!-- Agenda -->
+                    <!-- Agenda (Vedi / Usa) -->
                     <td>
                         <form action="{{ url_for('toggle_permesso', user_id=u.id, campo='puo_gestire_agenda') }}" method="POST">
                             <button type="submit" class="btn-toggle {% if u.puo_gestire_agenda %}btn-on{% else %}btn-off{% endif %}">
