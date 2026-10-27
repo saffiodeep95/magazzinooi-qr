@@ -56,7 +56,6 @@
     </nav>
 
     <div class="container my-4">
-        <!-- Flash Messages -->
         {% with messages = get_flashed_messages(with_categories=true) %}
             {% if messages %}
                 {% for category, message in messages %}
@@ -75,7 +74,6 @@
             </button>
         </div>
 
-        <!-- Tabella Attività -->
         <div class="card shadow-sm">
             <div class="card-body p-0">
                 <div class="table-responsive">
