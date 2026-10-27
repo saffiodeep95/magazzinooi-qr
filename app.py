@@ -380,19 +380,15 @@ def api_elimina_notifiche():
     try:
         data = request.get_json(silent=True) or {}
         notifica_id = data.get('id')
-        cancella_tutte = data.get('tutte', False)
         
         conn = get_db_connection()
         cur = conn.cursor()
         
         if notifica_id:
-            # Elimina una specifica notifica dell'utente
-            cur.execute("DELETE FROM notifiche WHERE id = %s AND destinatario = %s;", (notifica_id, username))
-        elif cancella_tutte:
-            # Elimina tutte le notifiche dell'utente
-            cur.execute("DELETE FROM notifiche WHERE destinatario = %s;", (username,))
+            # Elimina SOLO SE la notifica appartiene all'utente ed è GIÀ LETTA (letta = TRUE)
+            cur.execute("DELETE FROM notifiche WHERE id = %s AND destinatario = %s AND letta = TRUE;", (notifica_id, username))
         else:
-            # Di default elimina solo quelle già lette
+            # Elimina in blocco SOLO le notifiche già lette dall'utente
             cur.execute("DELETE FROM notifiche WHERE destinatario = %s AND letta = TRUE;", (username,))
             
         conn.commit()
