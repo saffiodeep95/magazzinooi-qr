@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Agenda Attività - Gestionale OMG</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        .navbar-nav .nav-link {
+            font-size: 0.82rem;
+            padding-left: 0.4rem !important;
+            padding-right: 0.4rem !important;
+            white-space: nowrap;
+        }
+    </style>
+</head>
+<body class="bg-light">
+    <!-- Navbar -->
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark shadow-sm">
+        <div class="container-fluid px-2">
+            <a class="navbar-brand fw-bold fs-6" href="{{ url_for('index') }}"><i class="fas fa-industry me-1"></i>Gestionale OMG</a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav me-auto mb-2 mb-lg-0">
+                    <li class="nav-item"><a class="nav-link" href="{{ url_for('index') }}"><i class="fas fa-boxes me-1"></i>Magazzino</a></li>
+                    <li class="nav-item"><a class="nav-link" href="{{ url_for('nastri') }}"><i class="fas fa-stream me-1"></i>Nastri</a></li>
+                    {% if session.get('is_admin') or session.get('puo_gestire_agenda', 0) %}
+                    <li class="nav-item"><a class="nav-link active" href="{{ url_for('agenda') }}"><i class="fas fa-calendar-alt me-1"></i>Agenda</a></li>
+                    {% endif %}
+                    <li class="nav-item"><a class="nav-link" href="{{ url_for('richieste_manutenzione') }}"><i class="fas fa-tools me-1"></i>Manutenzione</a></li>
+                    <li class="nav-item"><a class="nav-link" href="{{ url_for('report_ore') }}"><i class="fas fa-clock me-1"></i>Report Ore</a></li>
+                    <li class="nav-item"><a class="nav-link" href="{{ url_for('cambi_serie') }}"><i class="fas fa-exchange-alt me-1"></i>Cambi Serie</a></li>
+                    <li class="nav-item"><a class="nav-link" href="{{ url_for('promemoria') }}"><i class="fas fa-bell me-1"></i>Promemoria</a></li>
+                    <li class="nav-item"><a class="nav-link" href="{{ url_for('fornitori') }}"><i class="fas fa-address-book me-1"></i>Fornitori</a></li>
+                    <li class="nav-item"><a class="nav-link" href="{{ url_for('documenti') }}"><i class="fas fa-folder-open me-1"></i>Documenti</a></li>
+                    <li class="nav-item"><a class="nav-link" href="{{ url_for('esportazioni') }}"><i class="fas fa-file-export me-1"></i>Esportazioni</a></li>
+                    {% if session.get('is_admin') %}
+                    <li class="nav-item"><a class="nav-link text-warning" href="{{ url_for('admin_utenti') }}"><i class="fas fa-user-shield me-1"></i>Admin</a></li>
+                    {% endif %}
+                </ul>
+                <ul class="navbar-nav align-items-center">
+                    <li class="nav-item dropdown">
+                        <a class="nav-link dropdown-toggle text-light px-2" href="#" role="button" data-bs-toggle="dropdown">
+                            <i class="fas fa-user-circle me-1"></i>{{ session.get('username', 'Utente') }}
+                        </a>
+                        <ul class="dropdown-menu dropdown-menu-end">
+                            <li><a class="dropdown-item" href="{{ url_for('logout') }}"><i class="fas fa-sign-out-alt me-2"></i>Esci</a></li>
+                        </ul>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container my-4">
+        <!-- Flash Messages -->
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                    <div class="alert alert-{{ 'danger' if category == 'error' else 'success' }} alert-dismissible fade show" role="alert">
+                        {{ message }}
+                        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                    </div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h2><i class="fas fa-calendar-alt me-2"></i>Agenda Attività e Fornitori</h2>
+            <button class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#modalNuovaAttivita">
+                <i class="fas fa-plus-circle me-1"></i>Nuova Attività
+            </button>
+        </div>
+
+        <!-- Tabella Attività -->
+        <div class="card shadow-sm">
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-hover mb-0 align-middle">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Stato</th>
+                                <th>Scadenza</th>
+                                <th>Titolo / Descrizione</th>
+                                <th>Ditta Fornitrice</th>
+                                <th>Visibile A</th>
+                                <th>Creato Da</th>
+                                <th>Azioni</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for a in attivita %}
+                            <tr class="{% if a.completato %}table-success text-muted text-decoration-line-through{% endif %}">
+                                <td>
+                                    <form action="{{ url_for('completa_agenda', agenda_id=a.id) }}" method="POST" class="d-inline">
+                                        <button type="submit" class="btn btn-sm btn-{{ 'success' if a.completato else 'outline-secondary' }}" title="Segna come completato">
+                                            <i class="fas fa-{{ 'check' if a.completato else 'minus' }}"></i>
+                                        </button>
+                                    </form>
+                                </td>
+                                <td class="fw-bold">{{ a.data_scadenza or '-' }}</td>
+                                <td>
+                                    <strong class="d-block">{{ a.titolo }}</strong>
+                                    <small class="text-muted">{{ a.descrizione or '' }}</small>
+                                </td>
+                                <td><span class="badge bg-info text-dark">{{ a.nome_azienda or 'Nessuna ditta' }}</span></td>
+                                <td><small class="badge bg-secondary">{{ a.utenti_visibili }}</small></td>
+                                <td><small>{{ a.creato_da or '-' }}</small></td>
+                                <td>
+                                    {% if session.get('is_admin') %}
+                                    <form action="{{ url_for('elimina_agenda', agenda_id=a.id) }}" method="POST" class="d-inline" onsubmit="return confirm('Eliminare questa voce dall\'agenda?');">
+                                        <button type="submit" class="btn btn-sm btn-outline-danger"><i class="fas fa-trash"></i></button>
+                                    </form>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% else %}
+                            <tr>
+                                <td colspan="7" class="text-center py-4 text-muted">Nessuna attività presente nell'agenda.</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modale Nuova Attività -->
+    <div class="modal fade" id="modalNuovaAttivita" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <form action="{{ url_for('agenda') }}" method="POST">
+                    <div class="modal-header bg-dark text-white">
+                        <h5 class="modal-title"><i class="fas fa-calendar-plus me-2"></i>Nuova Attività in Agenda</h5>
+                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body">
+                        <div class="mb-3">
+                            <label class="form-label">Titolo Attività *</label>
+                            <input type="text" class="form-control" name="titolo" required placeholder="Es. Verifica materiali da fornitore">
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Descrizione / Dettagli</label>
+                            <textarea class="form-control" name="descrizione" rows="3" placeholder="Specificare cosa fare..."></textarea>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Data Scadenza</label>
+                                <input type="date" class="form-control" name="data_scadenza">
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Ditta Fornitrice</label>
+                                <select class="form-select" name="fornitore_id">
+                                    <option value="">-- Nessuna ditta --</option>
+                                    {% for f in fornitori %}
+                                    <option value="{{ f.id }}">{{ f.nome_azienda }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label fw-bold text-primary">Chi può vedere questa attività?</label>
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" name="utenti_visibili[]" value="Tutti" id="checkTutti" checked>
+                                <label class="form-check-label fw-bold" for="checkTutti">Tutti gli utenti</label>
+                            </div>
+                            <hr class="my-2">
+                            <div class="text-muted small mb-2">Oppure seleziona utenti specifici:</div>
+                            <div style="max-height: 120px; overflow-y: auto;" class="border p-2 rounded">
+                                {% for u in utenti %}
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" name="utenti_visibili[]" value="{{ u.username }}" id="user_{{ u.username }}">
+                                    <label class="form-check-label" for="user_{{ u.username }}">{{ u.username }}</label>
+                                </div>
+                                {% endfor %}
+                            </div>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annulla</button>
+                        <button type="submit" class="btn btn-success">Salva in Agenda</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>
