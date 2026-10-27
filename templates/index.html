@@ -80,7 +80,7 @@
                 <ul class="navbar-nav align-items-center">
                     <!-- Dropdown Notifiche -->
                     <li class="nav-item dropdown me-3">
-                        <a class="nav-link text-light position-relative px-2" href="#" id="notificheDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false" onclick="segnaLetteAutomatico()">
+                        <a class="nav-link text-light position-relative px-2" href="#" id="notificheDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
                             <i class="fas fa-bell fa-lg"></i>
                             <span id="badgeNotifiche" class="position-absolute top-25 start-75 translate-middle badge rounded-pill bg-danger" style="display: none; font-size: 0.6rem;">0</span>
                         </a>
@@ -279,7 +279,7 @@
             });
         }
 
-        // Caricamento notifiche con blocco eliminazione se non prima aperte/lette
+        // Caricamento notifiche: la notifica si segna come letta SOLO quando ci si clicca sopra e si cambia pagina
         function caricaNotifiche() {
             fetch('/api/notifiche')
                 .then(response => response.json())
@@ -306,7 +306,6 @@
                         li.className = 'dropdown-item py-2 border-bottom ' + (n.letta ? 'bg-white text-muted' : 'bg-light fw-bold');
                         li.style.whiteSpace = 'normal';
                         
-                        // Il pulsante di eliminazione compare SOLO SE la notifica è già stata aperta/letta sul server
                         let bottoneElimina = n.letta ? `
                             <button class="btn btn-sm btn-outline-danger py-0 px-1 border-0" title="Elimina notifica" onclick="eliminaSingolaNotifica(${n.id}, true, event)">
                                 <i class="fas fa-times"></i>
@@ -317,7 +316,7 @@
 
                         li.innerHTML = `
                             <div class="d-flex justify-content-between align-items-start gap-2">
-                                <a href="${n.link || '#'}" class="text-decoration-none text-dark flex-grow-1" onclick="segnaLetteAutomatico()">
+                                <a href="${n.link || '#'}" class="text-decoration-none text-dark flex-grow-1" onclick="cliccaNotifica(${n.id}, '${n.link || '#'}', event)">
                                     <div class="small text-primary">${n.titolo}</div>
                                     <div class="small" style="font-size: 0.75rem;">${n.messaggio}</div>
                                     <div class="text-muted" style="font-size: 0.65rem;">${new Date(n.creato_il).toLocaleString()}</div>
@@ -331,10 +330,15 @@
                 .catch(err => console.error("Errore caricamento notifiche:", err));
         }
 
-        function segnaLetteAutomatico() {
-            fetch('/api/notifiche/segna_lette', { method: 'POST' })
+        // Segna come letta SOLO la singola notifica cliccata e cambia pagina
+        function cliccaNotifica(id, link, event) {
+            event.preventDefault();
+            fetch('/api/notifiche/segna_letta/' + id, { method: 'POST' })
                 .then(() => {
-                    setTimeout(caricaNotifiche, 300);
+                    window.location.href = link;
+                })
+                .catch(() => {
+                    window.location.href = link;
                 });
         }
 
