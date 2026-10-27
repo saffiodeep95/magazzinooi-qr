@@ -54,7 +54,7 @@
                             <li class="dropdown-header d-flex justify-content-between align-items-center bg-dark text-white py-2">
                                 <span class="fw-bold"><i class="fas fa-bell me-1"></i> Notifiche</span>
                                 <div>
-                                    <button class="btn btn-sm btn-outline-light py-0 px-1" style="font-size: 0.7rem;" onclick="eliminaNotificheLette()" title="Elimina già lette">Elimina lette</button>
+                                    <button class="btn btn-sm btn-outline-light py-0 px-1" style="font-size: 0.7rem;" onclick="eliminaNotificheLette()" title="Elimina solo notifiche svolte/lette">Elimina lette</button>
                                 </div>
                             </li>
                             <li><hr class="dropdown-divider my-0"></li>
@@ -200,7 +200,7 @@
                             </div>
                         </div>
                         <div class="mb-3">
-                            <label class="form-label">Posizione in Magazzino</label> scaffale, reparto...
+                            <label class="form-label">Posizione in Magazzino</label>
                             <input type="text" class="form-control" name="posizione" placeholder="Es. Scaffale A3">
                         </div>
                     </div>
@@ -215,7 +215,7 @@
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script>
-        // Gestione Notifiche in tempo reale con supporto eliminazione
+        // Caricamento notifiche e gestione sicurezza cancellazione
         function caricaNotifiche() {
             fetch('/api/notifiche')
                 .then(response => response.json())
@@ -241,6 +241,16 @@
                         let li = document.createElement('li');
                         li.className = 'dropdown-item py-2 border-bottom ' + (n.letta ? 'bg-white text-muted' : 'bg-light fw-bold');
                         li.style.whiteSpace = 'normal';
+                        
+                        // Il pulsante elimina viene mostrato SOLO se la notifica è già stata letta/svolta
+                        let bottoneElimina = n.letta ? `
+                            <button class="btn btn-sm btn-outline-danger py-0 px-1 border-0" title="Elimina notifica svolta" onclick="eliminaSingolaNotifica(${n.id}, true, event)">
+                                <i class="fas fa-times"></i>
+                            </button>
+                        ` : `
+                            <span class="badge bg-warning text-dark" style="font-size: 0.6rem;" title="Da visionare">Nuova</span>
+                        `;
+
                         li.innerHTML = `
                             <div class="d-flex justify-content-between align-items-start gap-2">
                                 <a href="${n.link || '#'}" class="text-decoration-none text-dark flex-grow-1">
@@ -248,9 +258,7 @@
                                     <div class="small" style="font-size: 0.75rem;">${n.messaggio}</div>
                                     <div class="text-muted" style="font-size: 0.65rem;">${new Date(n.creato_il).toLocaleString()}</div>
                                 </a>
-                                <button class="btn btn-sm btn-outline-danger py-0 px-1 border-0" title="Elimina notifica" onclick="eliminaSingolaNotifica(${n.id}, event)">
-                                    <i class="fas fa-times"></i>
-                                </button>
+                                ${bottoneElimina}
                             </div>
                         `;
                         container.appendChild(li);
@@ -266,6 +274,7 @@
                 });
         }
 
+        // Elimina SOLO quelle lette in blocco
         function eliminaNotificheLette() {
             fetch('/api/notifiche/elimina', {
                 method: 'POST',
@@ -276,8 +285,13 @@
             .then(() => caricaNotifiche());
         }
 
-        function eliminaSingolaNotifica(id, event) {
-            event.stopPropagation(); // Evita la chiusura del menu dropdown
+        // Elimina la singola notifica SOLO se la variabile isLetta è true
+        function eliminaSingolaNotifica(id, isLetta, event) {
+            event.stopPropagation();
+            if (!isLetta) {
+                alert("Non puoi eliminare una notifica prima di averla vista o completata!");
+                return;
+            }
             fetch('/api/notifiche/elimina', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -287,7 +301,7 @@
             .then(() => caricaNotifiche());
         }
 
-        // Aggiorna le notifiche ogni 30 secondi e all'avvio
+        // Polling automatico ogni 30 secondi
         setInterval(caricaNotifiche, 30000);
         document.addEventListener("DOMContentLoaded", caricaNotifiche);
     </script>
