@@ -88,7 +88,7 @@
                             <li class="dropdown-header d-flex justify-content-between align-items-center bg-dark text-white py-2 rounded-top">
                                 <span class="fw-bold"><i class="fas fa-bell me-1"></i> Notifiche</span>
                                 <div>
-                                    <button class="btn btn-sm btn-outline-light py-0 px-1" style="font-size: 0.7rem;" onclick="eliminaNotificheLette()" title="Elimina solo notifiche svolte/lette">Elimina lette</button>
+                                    <button class="btn btn-sm btn-outline-light py-0 px-1" style="font-size: 0.7rem;" onclick="eliminaNotificheLette()" title="Elimina solo notifiche aperte/lette">Elimina lette</button>
                                 </div>
                             </li>
                             <li><hr class="dropdown-divider my-0"></li>
@@ -279,7 +279,7 @@
             });
         }
 
-        // Caricamento notifiche e gestione sicurezza cancellazione
+        // Caricamento notifiche con blocco eliminazione se non prima aperte/lette
         function caricaNotifiche() {
             fetch('/api/notifiche')
                 .then(response => response.json())
@@ -306,17 +306,18 @@
                         li.className = 'dropdown-item py-2 border-bottom ' + (n.letta ? 'bg-white text-muted' : 'bg-light fw-bold');
                         li.style.whiteSpace = 'normal';
                         
+                        // Il pulsante di eliminazione compare SOLO SE la notifica è già stata aperta/letta
                         let bottoneElimina = n.letta ? `
-                            <button class="btn btn-sm btn-outline-danger py-0 px-1 border-0" title="Elimina notifica svolta" onclick="eliminaSingolaNotifica(${n.id}, true, event)">
+                            <button class="btn btn-sm btn-outline-danger py-0 px-1 border-0" title="Elimina notifica" onclick="eliminaSingolaNotifica(${n.id}, true, event)">
                                 <i class="fas fa-times"></i>
                             </button>
                         ` : `
-                            <span class="badge bg-warning text-dark" style="font-size: 0.6rem;" title="Da visionare">Nuova</span>
+                            <span class="badge bg-warning text-dark" style="font-size: 0.6rem;" title="Da aprire">Nuova</span>
                         `;
 
                         li.innerHTML = `
                             <div class="d-flex justify-content-between align-items-start gap-2">
-                                <a href="${n.link || '#'}" class="text-decoration-none text-dark flex-grow-1">
+                                <a href="${n.link || '#'}" class="text-decoration-none text-dark flex-grow-1" onclick="segnaLetteAutomatico()">
                                     <div class="small text-primary">${n.titolo}</div>
                                     <div class="small" style="font-size: 0.75rem;">${n.messaggio}</div>
                                     <div class="text-muted" style="font-size: 0.65rem;">${new Date(n.creato_il).toLocaleString()}</div>
@@ -333,7 +334,7 @@
         function segnaLetteAutomatico() {
             fetch('/api/notifiche/segna_lette', { method: 'POST' })
                 .then(() => {
-                    setTimeout(caricaNotifiche, 500);
+                    setTimeout(caricaNotifiche, 300);
                 });
         }
 
@@ -350,7 +351,7 @@
         function eliminaSingolaNotifica(id, isLetta, event) {
             event.stopPropagation();
             if (!isLetta) {
-                alert("Non puoi eliminare una notifica prima di averla vista o completata!");
+                alert("Non puoi eliminare una notifica prima di averla aperta e visionata!");
                 return;
             }
             fetch('/api/notifiche/elimina', {
