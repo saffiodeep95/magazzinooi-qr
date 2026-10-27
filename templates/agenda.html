@@ -16,7 +16,7 @@
     </style>
 </head>
 <body class="bg-light">
-    <!-- Navbar -->
+    <!-- Navbar principale -->
     <nav class="navbar navbar-expand-lg navbar-dark bg-dark shadow-sm">
         <div class="container-fluid px-2">
             <a class="navbar-brand fw-bold fs-6" href="{{ url_for('index') }}"><i class="fas fa-industry me-1"></i>Gestionale OMG</a>
@@ -56,6 +56,7 @@
     </nav>
 
     <div class="container my-4">
+        <!-- Notifiche e Flash Messages -->
         {% with messages = get_flashed_messages(with_categories=true) %}
             {% if messages %}
                 {% for category, message in messages %}
@@ -74,6 +75,7 @@
             </button>
         </div>
 
+        <!-- Tabella Attività -->
         <div class="card shadow-sm">
             <div class="card-body p-0">
                 <div class="table-responsive">
@@ -85,7 +87,7 @@
                                 <th>Ditta Fornitrice</th>
                                 <th>Visibile A</th>
                                 <th>Creato Da</th>
-                                <th style="width: 80px;">Azioni</th>
+                                <th style="width: 80px;" class="text-center">Azioni</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -105,7 +107,7 @@
                                 <td><span class="badge bg-info text-dark">{{ a.nome_azienda or 'Nessuna ditta' }}</span></td>
                                 <td><small class="badge bg-secondary">{{ a.utenti_visibili or 'Solo Creatore / Admin' }}</small></td>
                                 <td><small>{{ a.creato_da or '-' }}</small></td>
-                                <td>
+                                <td class="text-center">
                                     {% if session.get('is_admin') %}
                                     <form action="{{ url_for('elimina_agenda', agenda_id=a.id) }}" method="POST" class="d-inline" onsubmit="return confirm('Eliminare questa voce dall\'agenda?');">
                                         <button type="submit" class="btn btn-sm btn-outline-danger" title="Elimina"><i class="fas fa-trash"></i></button>
@@ -144,13 +146,14 @@
                             <textarea class="form-control" name="descrizione" rows="3" placeholder="Specificare cosa fare..."></textarea>
                         </div>
                         <div class="mb-3">
-                            <label class="form-label">Ditta Fornitrice (Opzionale)</label>
-                            <select class="form-select" name="fornitore_id">
-                                <option value="">-- Nessuna ditta --</option>
+                            <label class="form-label">Ditta Fornitrice (Seleziona o scrivi)</label>
+                            <input class="form-control" list="listaFornitori" name="fornitore_input" placeholder="Digita o seleziona una ditta...">
+                            <datalist id="listaFornitori">
                                 {% for f in fornitori %}
-                                <option value="{{ f.id }}">{{ f.nome_azienda }}</option>
+                                <option value="{{ f.nome_azienda }}">
                                 {% endfor %}
-                            </select>
+                            </datalist>
+                            <small class="text-muted">Puoi scegliere una ditta esistente o scriverne una nuova liberamente.</small>
                         </div>
                         <div class="mb-3">
                             <label class="form-label fw-bold text-primary">Chi può vedere questa attività?</label>
