@@ -505,8 +505,23 @@ def agenda():
         titolo = request.form.get("titolo")
         descrizione = request.form.get("descrizione", "")
         data_scadenza = request.form.get("data_scadenza", "").strip() or None
-        fornitore_id = request.form.get("fornitore_id")
-        fornitore_id = int(fornitore_id) if fornitore_id else None
+        
+        fornitore_input = request.form.get("fornitore_input", "").strip()
+        fornitore_id = None
+
+        if fornitore_input:
+            cur.execute("SELECT id FROM fornitori WHERE LOWER(nome_azienda) = LOWER(%s);", (fornitore_input,))
+            f_esistente = cur.fetchone()
+            if f_esistente:
+                fornitore_id = f_esistente['id']
+            else:
+                cur.execute("""
+                    INSERT INTO fornitori (nome_azienda, settore_note) 
+                    VALUES (%s, 'Inserita da Agenda') 
+                    RETURNING id;
+                """, (fornitore_input,))
+                res_f = cur.fetchone()
+                fornitore_id = res_f['id'] if res_f else None
 
         utenti_selezionati = request.form.getlist("utenti_visibili[]")
         if "Tutti" in utenti_selezionati:
