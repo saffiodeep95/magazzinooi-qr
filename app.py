@@ -52,6 +52,58 @@ def crea_notifica(destinatario, titolo, messaggio, link=""):
     except Exception as e:
         print(f"Errore inserimento notifica: {e}")
 
+def controlla_scadenze_promemoria():
+    try:
+        oggi = datetime.now().date()
+        conn = get_db_connection()
+        cur = conn.cursor()
+        
+        cur.execute("SELECT * FROM promemoria WHERE completato = FALSE AND data_scadenza IS NOT NULL;")
+        promemoria_list = cur.fetchall()
+        
+        for p in promemoria_list:
+            data_scadenza_str = p.get('data_scadenza')
+            if not data_scadenza_str:
+                continue
+            try:
+                dt_scadenza = datetime.strptime(data_scadenza_str.strip(), '%Y-%m-%d').date()
+            except ValueError:
+                continue
+            
+            un_giorno_prima = dt_scadenza - timedelta(days=1)
+            destinatario = p.get('assegnato_a')
+            if not destinatario:
+                continue
+            
+            titolo_p = p.get('titolo', 'Promemoria')
+            
+            # Notifica 1 giorno prima
+            if oggi == un_giorno_prima and not p.get('notificato_anticipo', False):
+                crea_notifica(
+                    destinatario=destinatario,
+                    titolo="⏰ Promemoria in Scadenza Domani",
+                    messaggio=f"Il promemoria '{titolo_p}' scadrà domani ({dt_scadenza.strftime('%d/%m/%Y')}).",
+                    link="/promemoria"
+                )
+                cur.execute("UPDATE promemoria SET notificato_anticipo = TRUE WHERE id = %s;", (p['id'],))
+                conn.commit()
+            
+            # Notifica lo stesso giorno (oggi)
+            if oggi == dt_scadenza and not p.get('notificato_oggi', False):
+                crea_notifica(
+                    destinatario=destinatario,
+                    titolo="🚨 Promemoria in Scadenza Oggi",
+                    messaggio=f"Il promemoria '{titolo_p}' scadrà oggi!",
+                    link="/promemoria"
+                )
+                cur.execute("UPDATE promemoria SET notificato_oggi = TRUE WHERE id = %s;", (p['id'],))
+                conn.commit()
+                
+        cur.close()
+        conn.close()
+    except Exception as e:
+        print(f"Errore controllo scadenze promemoria: {e}")
+
 def init_db():
     if not DATABASE_URL:
         print("DATABASE_URL non impostata!")
@@ -137,6 +189,8 @@ def init_db():
                 creato_il TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             );
         """)
+        cur.execute("ALTER TABLE promemoria ADD COLUMN IF NOT EXISTS notificato_anticipo BOOLEAN DEFAULT FALSE;")
+        cur.execute("ALTER TABLE promemoria ADD COLUMN IF NOT EXISTS notificato_oggi BOOLEAN DEFAULT FALSE;")
 
         cur.execute("""
             CREATE TABLE IF NOT EXISTS agenda (
@@ -362,6 +416,9 @@ def api_elimina_notifiche():
 @app.route("/index")
 @app.route("/index.html")
 def index():
+    # Esegue il controllo scadenze promemoria ogni volta che si apre la home
+    controlla_scadenze_promemoria()
+
     prodotti = []
     prodotti_sotto_soglia = []
     promemoria_urgenti = 0
@@ -1349,8 +1406,8 @@ def promemoria():
 
         if titolo:
             cur.execute("""
-                INSERT INTO promemoria (titolo, descrizione, data_scadenza, priorita, ricorrenza, assegnato_a)
-                VALUES (%s, %s, %s, %s, %s, %s);
+                INSERT INTO promemoria (titolo, descrizione, data_scadenza, priorita, ricorrenza, assegnato_a, notificato_anticipo, notificato_oggi)
+                VALUES (%s, %s, %s, %s, %s, %s, FALSE, FALSE);
             """, (titolo, descrizione, data_scadenza, priorita, ricorrenza, assegnato_a))
             conn.commit()
 
@@ -1420,7 +1477,7 @@ def completa_promemoria(promemoria_id):
 
                 cur.execute("""
                     UPDATE promemoria 
-                    SET data_scadenza = %s, completato = FALSE 
+                    SET data_scadenza = %s, completato = FALSE, notificato_anticipo = FALSE, notificato_oggi = FALSE 
                     WHERE id = %s;
                 """, (nuova_data_str, promemoria_id))
 
