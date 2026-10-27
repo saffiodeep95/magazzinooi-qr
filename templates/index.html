@@ -7,28 +7,59 @@
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
+        body {
+            background-color: #f4f6f9;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        .navbar {
+            background: linear-gradient(135deg, #1e293b, #0f172a) !important;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+        }
         .navbar-nav .nav-link {
             font-size: 0.78rem;
-            padding-left: 0.3rem !important;
-            padding-right: 0.3rem !important;
+            padding: 0.4rem 0.5rem !important;
+            color: #cbd5e1 !important;
+            transition: all 0.2s ease;
+            border-radius: 4px;
             white-space: nowrap;
+        }
+        .navbar-nav .nav-link:hover, .navbar-nav .nav-link.active {
+            color: #ffffff !important;
+            background-color: rgba(255, 255, 255, 0.1);
+        }
+        .card {
+            border: none;
+            border-radius: 10px;
+            box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+        }
+        .btn-sm {
+            border-radius: 6px;
+            font-weight: 500;
+        }
+        .table th {
+            font-weight: 600;
+            color: #475569;
+            background-color: #f8fafc !important;
+        }
+        .table td {
+            vertical-align: middle;
         }
     </style>
 </head>
-<body class="bg-light">
-    <!-- Navbar principale Smart & Compatta -->
-    <nav class="navbar navbar-expand-lg navbar-dark bg-dark shadow-sm">
-        <div class="container-fluid px-2">
-            <a class="navbar-brand fw-bold fs-6" href="{{ url_for('index') }}"><i class="fas fa-industry me-1"></i>OMG</a>
-            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+<body>
+    <!-- Navbar principale Smart & Pulita -->
+    <nav class="navbar navbar-expand-lg navbar-dark sticky-top">
+        <div class="container-fluid px-3">
+            <a class="navbar-brand fw-bold fs-5 text-white" href="{{ url_for('index') }}">
+                <i class="fas fa-industry text-warning me-2"></i>OMG
+            </a>
+            <button class="navbar-toggler border-0" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
                 <span class="navbar-toggler-icon"></span>
             </button>
             <div class="collapse navbar-collapse" id="navbarNav">
-                <ul class="navbar-nav me-auto mb-2 mb-lg-0">
+                <ul class="navbar-nav me-auto mb-2 mb-lg-0 align-lg-items-center">
                     <li class="nav-item"><a class="nav-link active" href="{{ url_for('index') }}"><i class="fas fa-boxes me-1"></i>Magazzino</a></li>
-                    <li class="nav-item"><a class="nav-link" href="{{ url_for('magazzino_pesante') }}"><i class="fas fa-weight-hanging me-1"></i>Pesante</a></li>
                     <li class="nav-item"><a class="nav-link" href="{{ url_for('manutenzioni') }}"><i class="fas fa-tools me-1"></i>Manut. Esterne</a></li>
-                    <li class="nav-item"><a class="nav-link" href="{{ url_for('storico_manutenzioni') }}"><i class="fas fa-history me-1"></i>Storico</a></li>
                     <li class="nav-item"><a class="nav-link" href="{{ url_for('nastri') }}"><i class="fas fa-stream me-1"></i>Nastri</a></li>
                     {% if session.get('is_admin') or session.get('puo_gestire_agenda', 0) %}
                     <li class="nav-item"><a class="nav-link" href="{{ url_for('agenda') }}"><i class="fas fa-calendar-alt me-1"></i>Agenda</a></li>
@@ -48,13 +79,13 @@
                 <!-- Sezione Destra Navbar: Notifiche e Utente -->
                 <ul class="navbar-nav align-items-center">
                     <!-- Dropdown Notifiche -->
-                    <li class="nav-item dropdown me-2">
+                    <li class="nav-item dropdown me-3">
                         <a class="nav-link text-light position-relative px-2" href="#" id="notificheDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false" onclick="segnaLetteAutomatico()">
                             <i class="fas fa-bell fa-lg"></i>
                             <span id="badgeNotifiche" class="position-absolute top-25 start-75 translate-middle badge rounded-pill bg-danger" style="display: none; font-size: 0.6rem;">0</span>
                         </a>
-                        <ul class="dropdown-menu dropdown-menu-end shadow" aria-labelledby="notificheDropdown" style="width: 320px; max-height: 400px; overflow-y: auto;">
-                            <li class="dropdown-header d-flex justify-content-between align-items-center bg-dark text-white py-2">
+                        <ul class="dropdown-menu dropdown-menu-end shadow border-0 mt-2" aria-labelledby="notificheDropdown" style="width: 320px; max-height: 400px; overflow-y: auto; border-radius: 10px;">
+                            <li class="dropdown-header d-flex justify-content-between align-items-center bg-dark text-white py-2 rounded-top">
                                 <span class="fw-bold"><i class="fas fa-bell me-1"></i> Notifiche</span>
                                 <div>
                                     <button class="btn btn-sm btn-outline-light py-0 px-1" style="font-size: 0.7rem;" onclick="eliminaNotificheLette()" title="Elimina solo notifiche svolte/lette">Elimina lette</button>
@@ -69,11 +100,12 @@
 
                     <!-- Utente Loggato -->
                     <li class="nav-item dropdown">
-                        <a class="nav-link dropdown-toggle text-light px-2" href="#" role="button" data-bs-toggle="dropdown">
-                            <i class="fas fa-user-circle me-1"></i>{{ session.get('username', 'Utente') }}
+                        <a class="nav-link dropdown-toggle text-light px-2 d-flex align-items-center gap-1" href="#" role="button" data-bs-toggle="dropdown">
+                            <i class="fas fa-user-circle fa-lg text-warning"></i>
+                            <span>{{ session.get('username', 'Utente') }}</span>
                         </a>
-                        <ul class="dropdown-menu dropdown-menu-end">
-                            <li><a class="dropdown-item" href="{{ url_for('logout') }}"><i class="fas fa-sign-out-alt me-2"></i>Esci</a></li>
+                        <ul class="dropdown-menu dropdown-menu-end shadow border-0 mt-2" style="border-radius: 10px;">
+                            <li><a class="dropdown-item py-2 text-danger" href="{{ url_for('logout') }}"><i class="fas fa-sign-out-alt me-2"></i>Esci</a></li>
                         </ul>
                     </li>
                 </ul>
@@ -86,7 +118,7 @@
         {% with messages = get_flashed_messages(with_categories=true) %}
             {% if messages %}
                 {% for category, message in messages %}
-                    <div class="alert alert-{{ 'danger' if category == 'error' else 'success' }} alert-dismissible fade show" role="alert">
+                    <div class="alert alert-{{ 'danger' if category == 'error' else 'success' }} alert-dismissible fade show shadow-sm border-0" role="alert" style="border-radius: 8px;">
                         {{ message }}
                         <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
                     </div>
@@ -96,12 +128,12 @@
 
         <!-- Sezione Avvisi Sotto Soglia -->
         {% if prodotti_sotto_soglia %}
-        <div class="alert alert-warning shadow-sm mb-4" role="alert">
-            <h5 class="alert-heading fw-bold"><i class="fas fa-exclamation-triangle me-2"></i>Attenzione: Articoli sotto la soglia minima!</h5>
-            <p class="mb-1">I seguenti articoli hanno una giacenza inferiore o uguale alla soglia minima impostata:</p>
-            <ul class="mb-0 ps-3">
+        <div class="alert alert-warning shadow-sm mb-4 border-0" role="alert" style="border-radius: 10px; background-color: #fef3c7; color: #92400e;">
+            <h5 class="alert-heading fw-bold fs-6"><i class="fas fa-exclamation-triangle me-2"></i>Attenzione: Articoli sotto la soglia minima!</h5>
+            <p class="mb-1 small">I seguenti articoli hanno una giacenza inferiore o uguale alla soglia minima impostata:</p>
+            <ul class="mb-0 ps-3 small">
                 {% for p in prodotti_sotto_soglia %}
-                <li><strong>{{ p.nome }}</strong> (Codice SAP: {{ p.sap or 'N/D' }}) — Giacenza attuale: <span class="badge bg-danger">{{ p.quantita }} pz</span> (Soglia: {{ p.soglia_minima }})</li>
+                <li><strong>{{ p.nome }}</strong> (Codice SAP: {{ p.sap or 'N/D' }}) — Giacenza: <span class="badge bg-danger">{{ p.quantita }} pz</span> (Soglia: {{ p.soglia_minima }})</li>
                 {% endfor %}
             </ul>
         </div>
@@ -109,14 +141,14 @@
 
         <!-- Intestazione e Pulsanti Azione Rapida -->
         <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
-            <h2><i class="fas fa-boxes me-2"></i>Magazzino Principale</h2>
+            <h2 class="fw-bold text-dark fs-4 mb-0"><i class="fas fa-boxes text-primary me-2"></i>Magazzino Principale</h2>
             <div class="d-flex gap-2 flex-wrap">
-                <a href="{{ url_for('scanner_globale') }}" class="btn btn-outline-dark btn-sm"><i class="fas fa-qrcode me-1"></i>Scanner QR</a>
-                <a href="{{ url_for('stampa_multipla_qr') }}" class="btn btn-outline-secondary btn-sm"><i class="fas fa-print me-1"></i>Stampa QR</a>
-                <a href="{{ url_for('carico') }}" class="btn btn-success btn-sm"><i class="fas fa-plus me-1"></i>Carico</a>
-                <a href="{{ url_for('scarico') }}" class="btn btn-danger btn-sm"><i class="fas fa-minus me-1"></i>Scarico</a>
+                <a href="{{ url_for('scanner_globale') }}" class="btn btn-outline-dark btn-sm shadow-sm"><i class="fas fa-qrcode me-1"></i>Scanner QR</a>
+                <a href="{{ url_for('stampa_multipla_qr') }}" class="btn btn-outline-secondary btn-sm shadow-sm"><i class="fas fa-print me-1"></i>Stampa QR</a>
+                <a href="{{ url_for('carico') }}" class="btn btn-success btn-sm shadow-sm"><i class="fas fa-plus me-1"></i>Carico</a>
+                <a href="{{ url_for('scarico') }}" class="btn btn-danger btn-sm shadow-sm"><i class="fas fa-minus me-1"></i>Scarico</a>
                 {% if session.get('is_admin') or session.get('puo_aggiungere_prodotti', 1) %}
-                <button class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#modalNuovoProdotto">
+                <button class="btn btn-primary btn-sm shadow-sm" data-bs-toggle="modal" data-bs-target="#modalNuovoProdotto">
                     <i class="fas fa-plus-circle me-1"></i>Nuovo Articolo
                 </button>
                 {% endif %}
@@ -127,8 +159,8 @@
         <div class="card shadow-sm mb-3">
             <div class="card-body p-2">
                 <div class="input-group">
-                    <span class="input-group-text bg-white border-end-0"><i class="fas fa-search text-muted"></i></span>
-                    <input type="text" id="inputRicercaMagazzino" class="form-control border-start-0" placeholder="Cerca articolo per nome, codice SAP o QR code..." onkeyup="filtraTabellaMagazzino()">
+                    <span class="input-group-text bg-transparent border-0 ps-3"><i class="fas fa-search text-muted"></i></span>
+                    <input type="text" id="inputRicercaMagazzino" class="form-control border-0 shadow-none" placeholder="Cerca articolo per nome, codice SAP o QR code..." onkeyup="filtraTabellaMagazzino()">
                 </div>
             </div>
         </div>
@@ -140,38 +172,41 @@
                     <table class="table table-hover mb-0 align-middle" id="tabellaMagazzino">
                         <thead class="table-light">
                             <tr>
-                                <th>QR Code</th>
+                                <th class="ps-3">QR Code</th>
                                 <th>Nome Articolo</th>
                                 <th>Codice SAP</th>
                                 <th class="text-center">Quantità</th>
                                 <th>Posizione</th>
-                                <th class="text-center">Azioni</th>
+                                <th class="text-center pe-3">Azioni</th>
                             </tr>
                         </thead>
                         <tbody>
                             {% for p in prodotti %}
                             <tr class="riga-articolo">
-                                <td><code>{{ p.qr_code }}</code></td>
+                                <td class="ps-3"><code>{{ p.qr_code }}</code></td>
                                 <td><strong>{{ p.nome }}</strong></td>
-                                <td>{{ p.sap or '-' }}</td>
+                                <td class="text-muted">{{ p.sap or '-' }}</td>
                                 <td class="text-center">
-                                    <span class="badge {{ 'bg-danger' if p.quantita <= (p.soglia_minima or 3) else 'bg-success' }}">
+                                    <span class="badge px-2 py-1 {{ 'bg-danger' if p.quantita <= (p.soglia_minima or 3) else 'bg-success' }}">
                                         {{ p.quantita }}
                                     </span>
                                 </td>
                                 <td>{{ p.posizione or '-' }}</td>
-                                <td class="text-center">
-                                    <a href="{{ url_for('gestisci_prodotto', qr_code=p.qr_code) }}" class="btn btn-sm btn-outline-primary" title="Gestisci / Modifica">
+                                <td class="text-center pe-3">
+                                    <a href="{{ url_for('gestisci_prodotto', qr_code=p.qr_code) }}" class="btn btn-sm btn-outline-primary px-2 py-1 me-1" title="Gestisci / Modifica">
                                         <i class="fas fa-cog"></i>
                                     </a>
-                                    <a href="{{ url_for('stampa_singolo_qr', qr_code=p.qr_code) }}" class="btn btn-sm btn-outline-secondary" title="Stampa QR">
+                                    <a href="{{ url_for('stampa_singolo_qr', qr_code=p.qr_code) }}" class="btn btn-sm btn-outline-secondary px-2 py-1" title="Stampa QR">
                                         <i class="fas fa-print"></i>
                                     </a>
                                 </td>
                             </tr>
                             {% else %}
                             <tr id="rigaNessunArticolo">
-                                <td colspan="6" class="text-center py-4 text-muted">Nessun articolo presente nel magazzino principale.</td>
+                                <td colspan="6" class="text-center py-5 text-muted">
+                                    <i class="fas fa-box-open fa-2x mb-2 text-secondary opacity-50"></i>
+                                    <p class="mb-0">Nessun articolo presente nel magazzino principale.</p>
+                                </td>
                             </tr>
                             {% endfor %}
                         </tbody>
@@ -184,43 +219,43 @@
     <!-- Modale Nuovo Articolo -->
     <div class="modal fade" id="modalNuovoProdotto" tabindex="-1">
         <div class="modal-dialog">
-            <div class="modal-content">
+            <div class="modal-content border-0 shadow">
                 <form action="{{ url_for('aggiungi_prodotto') }}" method="POST">
                     <div class="modal-header bg-dark text-white">
-                        <h5 class="modal-title"><i class="fas fa-plus-circle me-2"></i>Aggiungi Nuovo Articolo</h5>
+                        <h5 class="modal-title fs-6"><i class="fas fa-plus-circle me-2 text-warning"></i>Aggiungi Nuovo Articolo</h5>
                         <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
                     </div>
-                    <div class="modal-body">
+                    <div class="modal-body p-4">
                         <div class="mb-3">
-                            <label class="form-label">QR Code (Lascia vuoto per generazione automatica)</label>
+                            <label class="form-label small fw-bold text-muted">QR Code (Lascia vuoto per generazione automatica)</label>
                             <input type="text" class="form-control" name="qr_code" placeholder="Es. OMG-0001">
                         </div>
                         <div class="mb-3">
-                            <label class="form-label">Nome Articolo *</label>
+                            <label class="form-label small fw-bold text-muted">Nome Articolo *</label>
                             <input type="text" class="form-control" name="nome" required placeholder="Nome o descrizione articolo">
                         </div>
                         <div class="mb-3">
-                            <label class="form-label">Codice SAP</label>
+                            <label class="form-label small fw-bold text-muted">Codice SAP</label>
                             <input type="text" class="form-control" name="sap" placeholder="Codice SAP opzionale">
                         </div>
                         <div class="row">
                             <div class="col-md-6 mb-3">
-                                <label class="form-label">Quantità Iniziale</label>
+                                <label class="form-label small fw-bold text-muted">Quantità Iniziale</label>
                                 <input type="number" class="form-control" name="quantita" value="0" min="0">
                             </div>
                             <div class="col-md-6 mb-3">
-                                <label class="form-label">Soglia Minima</label>
+                                <label class="form-label small fw-bold text-muted">Soglia Minima</label>
                                 <input type="number" class="form-control" name="soglia_minima" value="3" min="1">
                             </div>
                         </div>
                         <div class="mb-3">
-                            <label class="form-label">Posizione in Magazzino</label>
+                            <label class="form-label small fw-bold text-muted">Posizione in Magazzino</label>
                             <input type="text" class="form-control" name="posizione" placeholder="Es. Scaffale A3">
                         </div>
                     </div>
-                    <div class="modal-footer">
-                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annulla</button>
-                        <button type="submit" class="btn btn-success">Salva Articolo</button>
+                    <div class="modal-footer bg-light">
+                        <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Annulla</button>
+                        <button type="submit" class="btn btn-success btn-sm">Salva Articolo</button>
                     </div>
                 </form>
             </div>
