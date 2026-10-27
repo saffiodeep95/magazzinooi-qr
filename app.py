@@ -371,6 +371,37 @@ def api_segna_lette():
         conn.close()
     return jsonify({"status": "ok"})
 
+@app.route("/api/notifiche/elimina", methods=["POST"])
+def api_elimina_notifiche():
+    username = session.get('username')
+    if not username:
+        return jsonify({"status": "error", "message": "Non autorizzato"})
+    
+    try:
+        data = request.get_json(silent=True) or {}
+        notifica_id = data.get('id')
+        cancella_tutte = data.get('tutte', False)
+        
+        conn = get_db_connection()
+        cur = conn.cursor()
+        
+        if notifica_id:
+            # Elimina una specifica notifica dell'utente
+            cur.execute("DELETE FROM notifiche WHERE id = %s AND destinatario = %s;", (notifica_id, username))
+        elif cancella_tutte:
+            # Elimina tutte le notifiche dell'utente
+            cur.execute("DELETE FROM notifiche WHERE destinatario = %s;", (username,))
+        else:
+            # Di default elimina solo quelle già lette
+            cur.execute("DELETE FROM notifiche WHERE destinatario = %s AND letta = TRUE;", (username,))
+            
+        conn.commit()
+        cur.close()
+        conn.close()
+        return jsonify({"status": "ok"})
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)})
+
 @app.route("/")
 @app.route("/index")
 @app.route("/index.html")
