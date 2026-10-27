@@ -287,49 +287,11 @@ def init_db():
                 creato_il TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             );
         """)
-        cur.execute("ALTER TABLE cambi_serie ADD COLUMN IF NOT EXISTS misura_piastrina VARCHAR(100);")
-
-        permessi_lista = [
-            ("puo_vedere_magazzino", "INT DEFAULT 1"),
-            ("puo_aggiungere_prodotti", "INT DEFAULT 1"),
-            ("puo_modificare_prodotti", "INT DEFAULT 1"),
-            ("puo_caricare_scaricare", "INT DEFAULT 1"),
-            ("puo_eliminare", "INT DEFAULT 0"),
-            ("puo_vedere_pesante", "INT DEFAULT 1"),
-            ("puo_vedere_manutenzione", "INT DEFAULT 1"),
-            ("puo_aprire_manutenzioni", "INT DEFAULT 1"),
-            ("puo_gestire_interventi", "INT DEFAULT 1"),
-            ("puo_assegnare_manutenzioni", "INT DEFAULT 1"),
-            ("puo_eliminare_interventi", "INT DEFAULT 0"),
-            ("puo_vedere_manutenzioni_esterne", "INT DEFAULT 1"),
-            ("puo_vedere_storico_manutenzioni", "INT DEFAULT 1"),
-            ("puo_eliminare_storico", "INT DEFAULT 0"),
-            ("puo_gestire_fornitori", "INT DEFAULT 1"),
-            ("puo_importare_fornitori", "INT DEFAULT 1"),
-            ("puo_gestire_documenti", "INT DEFAULT 1"),
-            ("puo_eliminare_documenti", "INT DEFAULT 0"),
-            ("puo_vedere_promemoria", "INT DEFAULT 1"),
-            ("puo_assegnare_promemoria", "INT DEFAULT 0"),
-            ("puo_vedere_report_ore", "INT DEFAULT 1"),
-            ("puo_gestire_nastri", "INT DEFAULT 1"),
-            ("puo_gestire_agenda", "INT DEFAULT 0")
-        ]
-
-        for p_col, p_type in permessi_lista:
-            cur.execute(f"ALTER TABLE utenti ADD COLUMN IF NOT EXISTS {p_col} {p_type};")
-
-        cur.execute("SELECT * FROM utenti WHERE username = 'admin';")
-        if not cur.fetchone():
-            hashed_pw = generate_password_hash("admin")
-            cur.execute("""
-                INSERT INTO utenti (username, password, is_admin, puo_vedere_magazzino, puo_aggiungere_prodotti, puo_modificare_prodotti, puo_caricare_scaricare, puo_eliminare, puo_vedere_pesante, puo_vedere_manutenzione, puo_aprire_manutenzioni, puo_gestire_interventi, puo_assegnare_manutenzioni, puo_eliminare_interventi, puo_vedere_manutenzioni_esterne, puo_vedere_storico_manutenzioni, puo_eliminare_storico, puo_gestire_fornitori, puo_importare_fornitori, puo_gestire_documenti, puo_eliminare_documenti, puo_vedere_promemoria, puo_assegnare_promemoria, puo_vedere_report_ore, puo_gestire_nastri, puo_gestire_agenda)
-                VALUES (%s, %s, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1);
-            """, ('admin', hashed_pw))
 
         conn.commit()
         cur.close()
         conn.close()
-        print("Database e permessi Gestionale OMG inizializzati.")
+        print("Database e permessi inizializzati.")
     except Exception as e:
         print(f"Errore init_db: {e}")
 
@@ -359,13 +321,13 @@ def api_notifiche():
     conn.close()
     return jsonify(notifiche)
 
-@app.route("/api/notifiche/segna_lette", methods=["POST"])
-def api_segna_lette():
+@app.route("/api/notifiche/segna_letta/<int:notifica_id>", methods=["POST"])
+def api_segna_letta(notifica_id):
     username = session.get('username')
     if username:
         conn = get_db_connection()
         cur = conn.cursor()
-        cur.execute("UPDATE notifiche SET letta = TRUE WHERE destinatario = %s;", (username,))
+        cur.execute("UPDATE notifiche SET letta = TRUE WHERE id = %s AND destinatario = %s;", (notifica_id, username))
         conn.commit()
         cur.close()
         conn.close()
@@ -384,7 +346,6 @@ def api_elimina_notifiche():
         conn = get_db_connection()
         cur = conn.cursor()
         
-        # SICUREZZA: Elimina SOLO SE la notifica appartiene all'utente ed è GIÀ LETTA / APERTA (letta = TRUE)
         if notifica_id:
             cur.execute("DELETE FROM notifiche WHERE id = %s AND destinatario = %s AND letta = TRUE;", (notifica_id, username))
         else:
