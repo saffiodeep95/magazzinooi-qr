@@ -16,7 +16,7 @@
     </style>
 </head>
 <body class="bg-light">
-    <!-- Navbar -->
+    <!-- Navbar principale -->
     <nav class="navbar navbar-expand-lg navbar-dark bg-dark shadow-sm">
         <div class="container-fluid px-2">
             <a class="navbar-brand fw-bold fs-6" href="{{ url_for('index') }}"><i class="fas fa-industry me-1"></i>Gestionale OMG</a>
@@ -41,23 +41,25 @@
                     <li class="nav-item"><a class="nav-link text-warning" href="{{ url_for('admin_utenti') }}"><i class="fas fa-user-shield me-1"></i>Admin</a></li>
                     {% endif %}
                 </ul>
+
+                <!-- Sezione Destra Navbar: Notifiche e Utente -->
                 <ul class="navbar-nav align-items-center">
-                    <!-- Campana Notifiche -->
+                    <!-- Dropdown Notifiche -->
                     <li class="nav-item dropdown me-2">
-                        <a class="nav-link dropdown-toggle text-light position-relative px-2" href="#" id="notificheDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false" onclick="caricaNotifiche()">
+                        <a class="nav-link text-light position-relative px-2" href="#" id="notificheDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false" onclick="segnaLetteAutomatico()">
                             <i class="fas fa-bell fa-lg"></i>
-                            <span id="badgeNotifiche" class="position-absolute top-25 start-75 translate-middle badge rounded-pill bg-danger" style="display: none; font-size: 0.65rem;">0</span>
+                            <span id="badgeNotifiche" class="position-absolute top-25 start-75 translate-middle badge rounded-pill bg-danger" style="display: none; font-size: 0.6rem;">0</span>
                         </a>
                         <ul class="dropdown-menu dropdown-menu-end shadow" aria-labelledby="notificheDropdown" style="width: 320px; max-height: 400px; overflow-y: auto;">
-                            <li>
-                                <h6 class="dropdown-header d-flex justify-content-between align-items-center">
-                                    <span>Notifiche</span>
-                                    <button class="btn btn-sm btn-link text-decoration-none p-0 text-muted small" onclick="segnaLette()">Segna lette</button>
-                                </h6>
+                            <li class="dropdown-header d-flex justify-content-between align-items-center bg-dark text-white py-2">
+                                <span class="fw-bold"><i class="fas fa-bell me-1"></i> Notifiche</span>
+                                <div>
+                                    <button class="btn btn-sm btn-outline-light py-0 px-1" style="font-size: 0.7rem;" onclick="eliminaNotificheLette()" title="Elimina già lette">Elimina lette</button>
+                                </div>
                             </li>
-                            <li><hr class="dropdown-divider"></li>
+                            <li><hr class="dropdown-divider my-0"></li>
                             <div id="listaNotificheContainer">
-                                <li><span class="dropdown-item text-muted text-center small py-2">Caricamento...</span></li>
+                                <li class="dropdown-item text-center text-muted small py-3">Caricamento notifiche...</li>
                             </div>
                         </ul>
                     </li>
@@ -77,7 +79,7 @@
     </nav>
 
     <div class="container my-4">
-        <!-- Flash Messages -->
+        <!-- Notifiche Flash -->
         {% with messages = get_flashed_messages(with_categories=true) %}
             {% if messages %}
                 {% for category, message in messages %}
@@ -89,146 +91,73 @@
             {% endif %}
         {% endwith %}
 
-        <!-- Stat Cards -->
-        <div class="row g-3 mb-4">
-            <div class="col-md-3">
-                <div class="card bg-primary text-white shadow-sm">
-                    <div class="card-body">
-                        <h5 class="card-title">Articoli in Magazzino</h5>
-                        <h3>{{ prodotti|length }}</h3>
-                        <a href="{{ url_for('esporta_inventario') }}" class="text-white small text-decoration-none"><i class="fas fa-download me-1"></i>Esporta CSV</a>
-                    </div>
-                </div>
-            </div>
-            <div class="col-md-3">
-                <div class="card bg-warning text-dark shadow-sm">
-                    <div class="card-body">
-                        <h5 class="card-title">Sotto Soglia Minima</h5>
-                        <h3>{{ prodotti_sotto_soglia|length }}</h3>
-                        <a href="#sotto-soglia" class="text-dark small text-decoration-none"><i class="fas fa-exclamation-triangle me-1"></i>Vedi dettagli</a>
-                    </div>
-                </div>
-            </div>
-            <div class="col-md-3">
-                <div class="card bg-danger text-white shadow-sm">
-                    <div class="card-body">
-                        <h5 class="card-title">Interventi Aperti</h5>
-                        <h3>{{ interventi_aperti_count }} ({{ interventi_in_lavoro_count }} in corso)</h3>
-                        <a href="{{ url_for('richieste_manutenzione') }}" class="text-white small text-decoration-none"><i class="fas fa-tools me-1"></i>Gestione Officina</a>
-                    </div>
-                </div>
-            </div>
-            <div class="col-md-3">
-                <div class="card bg-success text-white shadow-sm">
-                    <div class="card-body">
-                        <h5 class="card-title">Promemoria Urgenti</h5>
-                        <h3>{{ promemoria_urgenti }}</h3>
-                        <a href="{{ url_for('promemoria') }}" class="text-white small text-decoration-none"><i class="fas fa-bell me-1"></i>Vai a Promemoria</a>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Quick Actions Toolbar -->
-        <div class="card shadow-sm mb-4">
-            <div class="card-body d-flex flex-wrap gap-2 justify-content-between align-items-center">
-                <h4 class="mb-0"><i class="fas fa-boxes me-2"></i>Inventario Magazzino Principale</h4>
-                <div class="d-flex flex-wrap gap-2">
-                    <a href="{{ url_for('carico') }}" class="btn btn-success btn-sm"><i class="fas fa-plus-circle me-1"></i>Carico Rapido</a>
-                    <a href="{{ url_for('scarico') }}" class="btn btn-danger btn-sm"><i class="fas fa-minus-circle me-1"></i>Scarico Rapido</a>
-                    <a href="{{ url_for('scanner_globale') }}" class="btn btn-info btn-sm text-white"><i class="fas fa-qrcode me-1"></i>Scanner QR</a>
-                    <button class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#modalNuovoProdotto"><i class="fas fa-cart-plus me-1"></i>Nuovo Articolo</button>
-                </div>
-            </div>
-        </div>
-
-        <!-- Warning Alert for Low Stock -->
+        <!-- Sezione Avvisi Sotto Soglia -->
         {% if prodotti_sotto_soglia %}
-        <div class="card border-warning shadow-sm mb-4" id="sotto-soglia">
-            <div class="card-header bg-warning text-dark fw-bold"><i class="fas fa-exclamation-triangle me-2"></i>Articoli Sotto la Soglia Minima</div>
-            <div class="card-body p-0">
-                <div class="table-responsive">
-                    <table class="table table-striped mb-0 align-middle">
-                        <thead>
-                            <tr>
-                                <th>QR Code</th>
-                                <th>Nome Articolo</th>
-                                <th>SAP</th>
-                                <th>Quantità Attuale</th>
-                                <th>Soglia Minima</th>
-                                <th>Posizione</th>
-                                <th>Azioni</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {% for p in prodotti_sotto_soglia %}
-                            <tr>
-                                <td><code>{{ p.qr_code }}</code></td>
-                                <td class="fw-bold">{{ p.nome }}</td>
-                                <td>{{ p.sap or '-' }}</td>
-                                <td><span class="badge bg-danger">{{ p.quantita }}</span></td>
-                                <td>{{ p.soglia_minima or 3 }}</td>
-                                <td>{{ p.posizione or '-' }}</td>
-                                <td>
-                                    <a href="{{ url_for('gestisci_prodotto', qr_code=p.qr_code) }}" class="btn btn-sm btn-outline-primary"><i class="fas fa-cog"></i> Gestisci</a>
-                                </td>
-                            </tr>
-                            {% endfor %}
-                        </tbody>
-                    </table>
-                </div>
-            </div>
+        <div class="alert alert-warning shadow-sm mb-4" role="alert">
+            <h5 class="alert-heading fw-bold"><i class="fas fa-exclamation-triangle me-2"></i>Attenzione: Articoli sotto la soglia minima!</h5>
+            <p class="mb-1">I seguenti articoli hanno una giacenza inferiore o uguale alla soglia minima impostata:</p>
+            <ul class="mb-0 ps-3">
+                {% for p in prodotti_sotto_soglia %}
+                <li><strong>{{ p.nome }}</strong> (Codice SAP: {{ p.sap or 'N/D' }}) — Giacenza attuale: <span class="badge bg-danger">{{ p.quantita }} pz</span> (Soglia: {{ p.soglia_minima }})</li>
+                {% endfor %}
+            </ul>
         </div>
         {% endif %}
 
-        <!-- Main Products Table -->
-        <div class="card shadow-sm">
-            <div class="card-header bg-dark text-white d-flex justify-content-between align-items-center">
-                <span><i class="fas fa-list me-2"></i>Elenco Articoli Magazzino</span>
-                <input type="text" id="searchTable" class="form-control form-control-sm w-25" placeholder="Cerca articolo...">
+        <!-- Intestazione e Pulsanti Azione Rapida -->
+        <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
+            <h2><i class="fas fa-boxes me-2"></i>Magazzino Principale</h2>
+            <div class="d-flex gap-2">
+                <a href="{{ url_for('scanner_globale') }}" class="btn btn-outline-dark btn-sm"><i class="fas fa-qrcode me-1"></i>Scanner QR</a>
+                <a href="{{ url_for('carico') }}" class="btn btn-success btn-sm"><i class="fas fa-plus me-1"></i>Carico</a>
+                <a href="{{ url_for('scarico') }}" class="btn btn-danger btn-sm"><i class="fas fa-minus me-1"></i>Scarico</a>
+                {% if session.get('is_admin') or session.get('puo_aggiungere_prodotti', 1) %}
+                <button class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#modalNuovoProdotto">
+                    <i class="fas fa-plus-circle me-1"></i>Nuovo Articolo
+                </button>
+                {% endif %}
             </div>
+        </div>
+
+        <!-- Tabella Articoli Magazzino -->
+        <div class="card shadow-sm">
             <div class="card-body p-0">
                 <div class="table-responsive">
-                    <table class="table table-hover mb-0 align-middle" id="inventarioTable">
+                    <table class="table table-hover mb-0 align-middle">
                         <thead class="table-light">
                             <tr>
                                 <th>QR Code</th>
                                 <th>Nome Articolo</th>
-                                <th>SAP</th>
-                                <th>Quantità</th>
+                                <th>Codice SAP</th>
+                                <th class="text-center">Quantità</th>
                                 <th>Posizione</th>
-                                <th>Peso</th>
-                                <th>Azioni</th>
+                                <th class="text-center">Azioni</th>
                             </tr>
                         </thead>
                         <tbody>
                             {% for p in prodotti %}
                             <tr>
                                 <td><code>{{ p.qr_code }}</code></td>
-                                <td class="fw-bold">{{ p.nome }}</td>
+                                <td><strong>{{ p.nome }}</strong></td>
                                 <td>{{ p.sap or '-' }}</td>
-                                <td>
-                                    {% if p.quantita <= (p.soglia_minima or 3) %}
-                                        <span class="badge bg-danger">{{ p.quantita }}</span>
-                                    {% else %}
-                                        <span class="badge bg-success">{{ p.quantita }}</span>
-                                    {% endif %}
+                                <td class="text-center">
+                                    <span class="badge {{ 'bg-danger' if p.quantita <= (p.soglia_minima or 3) else 'bg-success' }}">
+                                        {{ p.quantita }}
+                                    </span>
                                 </td>
                                 <td>{{ p.posizione or '-' }}</td>
-                                <td>{{ p.peso or '-' }}</td>
-                                <td>
-                                    <a href="{{ url_for('gestisci_prodotto', qr_code=p.qr_code) }}" class="btn btn-sm btn-outline-dark" title="Apri"><i class="fas fa-folder-open"></i></a>
-                                    <a href="{{ url_for('stampa_singolo_qr', qr_code=p.qr_code) }}" class="btn btn-sm btn-outline-secondary" target="_blank" title="Stampa QR"><i class="fas fa-print"></i></a>
-                                    {% if session.get('is_admin') or session.get('puo_eliminare', 0) %}
-                                    <form action="{{ url_for('elimina_prodotto', qr_code=p.qr_code) }}" method="POST" class="d-inline" onsubmit="return confirm('Sei sicuro di voler eliminare definitivamente questo articolo?');">
-                                        <button type="submit" class="btn btn-sm btn-outline-danger" title="Elimina Articolo"><i class="fas fa-trash"></i></button>
-                                    </form>
-                                    {% endif %}
+                                <td class="text-center">
+                                    <a href="{{ url_for('gestisci_prodotto', qr_code=p.qr_code) }}" class="btn btn-sm btn-outline-primary" title="Gestisci / Modifica">
+                                        <i class="fas fa-cog"></i>
+                                    </a>
+                                    <a href="{{ url_for('stampa_singolo_qr', qr_code=p.qr_code) }}" class="btn btn-sm btn-outline-secondary" title="Stampa QR">
+                                        <i class="fas fa-print"></i>
+                                    </a>
                                 </td>
                             </tr>
                             {% else %}
                             <tr>
-                                <td colspan="7" class="text-center py-4 text-muted">Nessun articolo presente nel magazzino.</td>
+                                <td colspan="6" class="text-center py-4 text-muted">Nessun articolo presente nel magazzino principale.</td>
                             </tr>
                             {% endfor %}
                         </tbody>
@@ -238,7 +167,7 @@
         </div>
     </div>
 
-    <!-- Modal Nuovo Prodotto -->
+    <!-- Modale Nuovo Articolo -->
     <div class="modal fade" id="modalNuovoProdotto" tabindex="-1">
         <div class="modal-dialog">
             <div class="modal-content">
@@ -249,16 +178,16 @@
                     </div>
                     <div class="modal-body">
                         <div class="mb-3">
-                            <label class="form-label">QR Code (lascia vuoto per generazione automatica OMG-XXXX)</label>
+                            <label class="form-label">QR Code (Lascia vuoto per generazione automatica)</label>
                             <input type="text" class="form-control" name="qr_code" placeholder="Es. OMG-0001">
                         </div>
                         <div class="mb-3">
                             <label class="form-label">Nome Articolo *</label>
-                            <input type="text" class="form-control" name="nome" required>
+                            <input type="text" class="form-control" name="nome" required placeholder="Nome o descrizione articolo">
                         </div>
                         <div class="mb-3">
                             <label class="form-label">Codice SAP</label>
-                            <input type="text" class="form-control" name="sap">
+                            <input type="text" class="form-control" name="sap" placeholder="Codice SAP opzionale">
                         </div>
                         <div class="row">
                             <div class="col-md-6 mb-3">
@@ -266,19 +195,13 @@
                                 <input type="number" class="form-control" name="quantita" value="0" min="0">
                             </div>
                             <div class="col-md-6 mb-3">
-                                <label class="form-label">Soglia Minima Allarme</label>
-                                <input type="number" class="form-control" name="soglia_minima" value="3" min="0">
+                                <label class="form-label">Soglia Minima</label>
+                                <input type="number" class="form-control" name="soglia_minima" value="3" min="1">
                             </div>
                         </div>
-                        <div class="row">
-                            <div class="col-md-6 mb-3">
-                                <label class="form-label">Posizione / Scaffale</label>
-                                <input type="text" class="form-control" name="posizione">
-                            </div>
-                            <div class="col-md-6 mb-3">
-                                <label class="form-label">Peso</label>
-                                <input type="text" class="form-control" name="peso">
-                            </div>
+                        <div class="mb-3">
+                            <label class="form-label">Posizione in Magazzino</label> scaffale, reparto...
+                            <input type="text" class="form-control" name="posizione" placeholder="Es. Scaffale A3">
                         </div>
                     </div>
                     <div class="modal-footer">
@@ -292,15 +215,7 @@
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script>
-        document.getElementById('searchTable').addEventListener('keyup', function() {
-            let filter = this.value.toLowerCase();
-            let rows = document.querySelectorAll('#inventarioTable tbody tr');
-            rows.forEach(row => {
-                let text = row.textContent.toLowerCase();
-                row.style.display = text.includes(filter) ? '' : 'none';
-            });
-        });
-
+        // Gestione Notifiche in tempo reale con supporto eliminazione
         function caricaNotifiche() {
             fetch('/api/notifiche')
                 .then(response => response.json())
@@ -318,38 +233,63 @@
                     }
 
                     if (data.length === 0) {
-                        container.innerHTML = '<li><span class="dropdown-item text-muted text-center small py-2">Nessuna notifica</span></li>';
+                        container.innerHTML = '<li class="dropdown-item text-center text-muted small py-3">Nessuna notifica presente</li>';
                         return;
                     }
 
                     data.forEach(n => {
-                        let item = document.createElement('li');
-                        let bgClass = n.letta ? '' : 'bg-light fw-bold';
-                        item.innerHTML = `<a class="dropdown-item py-2 border-bottom ${bgClass}" href="${n.link || '#'}">
-                            <div class="small text-primary">${n.titolo}</div>
-                            <div class="text-wrap small text-dark">${n.messaggio}</div>
-                            <div class="text-muted" style="font-size: 10px;">${n.creato_il}</div>
-                        </a>`;
-                        container.appendChild(item);
+                        let li = document.createElement('li');
+                        li.className = 'dropdown-item py-2 border-bottom ' + (n.letta ? 'bg-white text-muted' : 'bg-light fw-bold');
+                        li.style.whiteSpace = 'normal';
+                        li.innerHTML = `
+                            <div class="d-flex justify-content-between align-items-start gap-2">
+                                <a href="${n.link || '#'}" class="text-decoration-none text-dark flex-grow-1">
+                                    <div class="small text-primary">${n.titolo}</div>
+                                    <div class="small" style="font-size: 0.75rem;">${n.messaggio}</div>
+                                    <div class="text-muted" style="font-size: 0.65rem;">${new Date(n.creato_il).toLocaleString()}</div>
+                                </a>
+                                <button class="btn btn-sm btn-outline-danger py-0 px-1 border-0" title="Elimina notifica" onclick="eliminaSingolaNotifica(${n.id}, event)">
+                                    <i class="fas fa-times"></i>
+                                </button>
+                            </div>
+                        `;
+                        container.appendChild(li);
                     });
                 })
                 .catch(err => console.error("Errore caricamento notifiche:", err));
         }
 
-        function segnaLette() {
+        function segnaLetteAutomatico() {
             fetch('/api/notifiche/segna_lette', { method: 'POST' })
-                .then(res => res.json())
-                .then(data => {
-                    if (data.status === 'ok') {
-                        caricaNotifiche();
-                    }
+                .then(() => {
+                    setTimeout(caricaNotifiche, 500);
                 });
         }
 
-        document.addEventListener("DOMContentLoaded", function() {
-            caricaNotifiche();
-            setInterval(caricaNotifiche, 30000);
-        });
+        function eliminaNotificheLette() {
+            fetch('/api/notifiche/elimina', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ tutte: false })
+            })
+            .then(res => res.json())
+            .then(() => caricaNotifiche());
+        }
+
+        function eliminaSingolaNotifica(id, event) {
+            event.stopPropagation(); // Evita la chiusura del menu dropdown
+            fetch('/api/notifiche/elimina', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ id: id })
+            })
+            .then(res => res.json())
+            .then(() => caricaNotifiche());
+        }
+
+        // Aggiorna le notifiche ogni 30 secondi e all'avvio
+        setInterval(caricaNotifiche, 30000);
+        document.addEventListener("DOMContentLoaded", caricaNotifiche);
     </script>
 </body>
 </html>
