@@ -81,7 +81,6 @@
                         <thead class="table-light">
                             <tr>
                                 <th>Stato</th>
-                                <th>Scadenza</th>
                                 <th>Titolo / Descrizione</th>
                                 <th>Ditta Fornitrice</th>
                                 <th>Visibile A</th>
@@ -99,7 +98,6 @@
                                         </button>
                                     </form>
                                 </td>
-                                <td class="fw-bold">{{ a.data_scadenza or '-' }}</td>
                                 <td>
                                     <strong class="d-block">{{ a.titolo }}</strong>
                                     <small class="text-muted">{{ a.descrizione or '' }}</small>
@@ -117,7 +115,7 @@
                             </tr>
                             {% else %}
                             <tr>
-                                <td colspan="7" class="text-center py-4 text-muted">Nessuna attività presente nell'agenda.</td>
+                                <td colspan="6" class="text-center py-4 text-muted">Nessuna attività presente nell'agenda.</td>
                             </tr>
                             {% endfor %}
                         </tbody>
@@ -145,20 +143,14 @@
                             <label class="form-label">Descrizione / Dettagli</label>
                             <textarea class="form-control" name="descrizione" rows="3" placeholder="Specificare cosa fare..."></textarea>
                         </div>
-                        <div class="row">
-                            <div class="col-md-6 mb-3">
-                                <label class="form-label">Data Scadenza</label>
-                                <input type="date" class="form-control" name="data_scadenza">
-                            </div>
-                            <div class="col-md-6 mb-3">
-                                <label class="form-label">Ditta Fornitrice</label>
-                                <select class="form-select" name="fornitore_id">
-                                    <option value="">-- Nessuna ditta --</option>
-                                    {% for f in fornitori %}
-                                    <option value="{{ f.id }}">{{ f.nome_azienda }}</option>
-                                    {% endfor %}
-                                </select>
-                            </div>
+                        <div class="mb-3">
+                            <label class="form-label">Ditta Fornitrice (Opzionale)</label>
+                            <select class="form-select" name="fornitore_id">
+                                <option value="">-- Nessuna ditta --</option>
+                                {% for f in fornitori %}
+                                <option value="{{ f.id }}">{{ f.nome_azienda }}</option>
+                                {% endfor %}
+                            </select>
                         </div>
                         <div class="mb-3">
                             <label class="form-label fw-bold text-primary">Chi può vedere questa attività?</label>
