@@ -1,4 +1,5 @@
-<!DOCTYPE html>
+[15:07, 29/10/2026] Marco Pavan: </html>
+[15:25, 29/10/2026] Marco Pavan: <!DOCTYPE html>
 <html lang="it">
 <head>
     <meta charset="UTF-8">
@@ -172,7 +173,21 @@
                         <tbody>
                             {% for r in record_serie %}
                             <tr>
-                                <td><span class="badge bg-primary fs-6 font-monospace">{{ r.data_cambio or '-' }}</span></td>
+                                <td>
+                                    <span class="badge bg-primary fs-6 font-monospace">
+                                        {% if r.data_cambio %}
+                                            {% set d_obj = r.data_cambio | string | striptags %}
+                                            {% set parsed_date = d_obj | todatetime('%Y-%m-%d') if false else none %}
+                                            {# Mostra data formattata con giorno della settimana in italiano tramite filtro o logic #}
+                                            {{ r.data_cambio }}
+                                            <br><small class="text-white-50">
+                                                {{ ['Lunedì', 'Martedì', 'Mercoledì', 'Giovedì', 'Venerdì', 'Sabato', 'Domenica'][d_obj | str_to_weekday] if d_obj | str_to_weekday is not none else '' }}
+                                            </small>
+                                        {% else %}
+                                            -
+                                        {% endif %}
+                                    </span>
+                                </td>
                                 <td>
                                     <span class="fw-bold text-dark">{{ r.forno }}</span><br>
                                     <span class="badge bg-secondary font-monospace">Linea {{ r.linea or '-' }}</span>
@@ -257,7 +272,7 @@
                             </div>
                             {% else %}
                             <tr>
-                                <td colspan="8" class="text-center text-muted py-4">Nessun cambio serie trovato.[span_0](start_span)[span_0](end_span)</td>
+                                <td colspan="8" class="text-center text-muted py-4">Nessun cambio serie trovato.</td>
                             </tr>
                             {% endfor %}
                         </tbody>
@@ -353,6 +368,23 @@
 
     document.addEventListener("DOMContentLoaded", function() {
         try { aggiornaLineeModal(); } catch(e){}
+        
+        // Calcolo e visualizzazione al volo del giorno della settimana lato client in modo semplice e sicuro
+        document.querySelectorAll('td span.badge.bg-primary').forEach(el => {
+            let textNode = el.childNodes[0];
+            if(textNode && textNode.nodeType === 3) {
+                let dateStr = textNode.textContent.trim();
+                let dateObj = new Date(dateStr);
+                if (!isNaN(dateObj)) {
+                    let giorni = ['Domenica', 'Lunedì', 'Martedì', 'Mercoledì', 'Giovedì', 'Venerdì', 'Sabato'];
+                    let nomeGiorno = giorni[dateObj.getDay()];
+                    let small = el.querySelector('small');
+                    if (small) {
+                        small.textContent = nomeGiorno;
+                    }
+                }
+            }
+        });
     });
     </script>
 </body>
