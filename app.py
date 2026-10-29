@@ -916,12 +916,12 @@ def cambi_serie():
         params.append(forno_filtro)
 
     if settimana_filtro:
-        # Funzionamento del filtro settimanale corretto con formato ISO anno-settimana (es. 2026-W39)
+        # Filtro settimanale ISO (es. 2026-W39)
         query += " AND TO_CHAR(data_cambio::DATE, 'IYYY-\"W\"IW') = %s"
         params.append(settimana_filtro)
 
-    # Ordinamento per data_cambio decrescente (più recente in alto)
-    query += " ORDER BY data_cambio DESC, id DESC;"
+    # Ordinamento per data_cambio decrescente (dal più recente in alto)
+    query += " ORDER BY data_cambio::DATE DESC, id DESC;"
     cur.execute(query, tuple(params))
     record_serie = cur.fetchall()
 
@@ -1015,7 +1015,7 @@ def elimina_cambio_serie(id_cambio):
 def esporta_cambi_serie_csv():
     conn = get_db_connection()
     cur = conn.cursor()
-    cur.execute("SELECT data_cambio, forno, linea, nome_bottiglia, tempo_cambio, altezza_paratie, num_bottiglie_tempera, quantita_trattamento, misura_piastrina FROM cambi_serie ORDER BY data_cambio DESC;")
+    cur.execute("SELECT data_cambio, forno, linea, nome_bottiglia, tempo_cambio, altezza_paratie, num_bottiglie_tempera, quantita_trattamento, misura_piastrina FROM cambi_serie ORDER BY data_cambio::DATE DESC;")
     righe = cur.fetchall()
     cur.close()
     conn.close()
