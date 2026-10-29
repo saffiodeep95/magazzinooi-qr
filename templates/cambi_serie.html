@@ -166,7 +166,6 @@
                                 <th>Altezza Paratie</th>
                                 <th>N° Bottiglie Tempera</th>
                                 <th>Q.tà Trattamento</th>
-                                <th>Misura Piastrina</th>
                                 <th class="no-print text-end">Azioni</th>
                             </tr>
                         </thead>
@@ -183,16 +182,82 @@
                                 <td>{{ r.altezza_paratie or '-' }}</td>
                                 <td><span class="badge bg-info text-dark fs-6">{{ r.num_bottiglie_tempera }} pz</span></td>
                                 <td>{{ r.quantita_trattamento or '-' }}</td>
-                                <td><span class="badge bg-dark font-monospace fs-6">{{ r.misura_piastrina or '-' }}</span></td>
                                 <td class="no-print text-end">
+                                    <button class="btn btn-sm btn-outline-primary me-1" data-bs-toggle="modal" data-bs-target="#modalModificaCambio{{ r.id }}" title="Modifica">
+                                        <i class="fa-solid fa-pen-to-square"></i>
+                                    </button>
                                     <form action="{{ url_for('elimina_cambio_serie', id_cambio=r.id) }}" method="POST" onsubmit="return confirm('Eliminare questo cambio serie?');" class="d-inline">
                                         <button type="submit" class="btn btn-sm btn-outline-danger" title="Elimina"><i class="fa-solid fa-trash-can"></i></button>
                                     </form>
                                 </td>
                             </tr>
+
+                            <!-- MODALE MODIFICA CAMBIO -->
+                            <div class="modal fade" id="modalModificaCambio{{ r.id }}" tabindex="-1">
+                                <div class="modal-dialog">
+                                    <div class="modal-content">
+                                        <form action="{{ url_for('modifica_cambio_serie', id_cambio=r.id) }}" method="POST">
+                                            <div class="modal-header bg-dark text-white">
+                                                <h5 class="modal-title"><i class="fa-solid fa-pen-to-square me-1"></i> Modifica Cambio Serie</h5>
+                                                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                                            </div>
+                                            <div class="modal-body text-start">
+                                                <div class="row">
+                                                    <div class="col-md-6 mb-3">
+                                                        <label class="form-label fw-bold">Seleziona Forno *</label>
+                                                        <select class="form-select" name="forno" required>
+                                                            <option value="Forno 1" {% if r.forno == 'Forno 1' %}selected{% endif %}>Forno 1</option>
+                                                            <option value="Forno 3" {% if r.forno == 'Forno 3' %}selected{% endif %}>Forno 3</option>
+                                                            <option value="Forno 4" {% if r.forno == 'Forno 4' %}selected{% endif %}>Forno 4</option>
+                                                        </select>
+                                                    </div>
+                                                    <div class="col-md-6 mb-3">
+                                                        <label class="form-label fw-bold">Linea / Macchina *</label>
+                                                        <input type="text" class="form-control" name="linea" value="{{ r.linea }}" required>
+                                                    </div>
+                                                </div>
+
+                                                <div class="mb-3">
+                                                    <label class="form-label fw-bold">Data Effettiva Cambio Serie *</label>
+                                                    <input type="date" class="form-control" name="data_cambio" value="{{ r.data_cambio }}" required>
+                                                </div>
+
+                                                <div class="mb-3">
+                                                    <label class="form-label fw-bold">Nome Bottiglia *</label>
+                                                    <input type="text" class="form-control" name="nome_bottiglia" value="{{ r.nome_bottiglia }}" required>
+                                                </div>
+                                                <div class="row">
+                                                    <div class="col-md-6 mb-3">
+                                                        <label class="form-label">Tempo Cambio</label>
+                                                        <input type="text" class="form-control" name="tempo_cambio" value="{{ r.tempo_cambio }}">
+                                                    </div>
+                                                    <div class="col-md-6 mb-3">
+                                                        <label class="form-label">Altezza Paratie</label>
+                                                        <input type="text" class="form-control" name="altezza_paratie" value="{{ r.altezza_paratie }}">
+                                                    </div>
+                                                </div>
+                                                <div class="row">
+                                                    <div class="col-md-6 mb-3">
+                                                        <label class="form-label">N° Bottiglie in Tempera</label>
+                                                        <input type="number" class="form-control" name="num_bottiglie_tempera" value="{{ r.num_bottiglie_tempera }}" min="0">
+                                                    </div>
+                                                    <div class="col-md-6 mb-3">
+                                                        <label class="form-label">Quantità Trattamento</label>
+                                                        <input type="text" class="form-control" name="quantita_trattamento" value="{{ r.quantita_trattamento }}">
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div class="modal-footer">
+                                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annulla</button>
+                                                <button type="submit" class="btn btn-primary">Salva Modifiche</button>
+                                            </div>
+                                        </form>
+                                    </div>
+                                </div>
+                            </div>
                             {% else %}
                             <tr>
-                                <td colspan="9" class="text-center text-muted py-4">Nessun cambio serie trovato.</td>
+                                <td colspan="8" class="text-center text-muted py-4">Nessun cambio serie trovato.[span_0](start_span)[span_0](end_span)</td>
                             </tr>
                             {% endfor %}
                         </tbody>
@@ -255,10 +320,6 @@
                                 <label class="form-label">Quantità Trattamento</label>
                                 <input type="text" class="form-control" name="quantita_trattamento" placeholder="Es. 5000 pz">
                             </div>
-                        </div>
-                        <div class="mb-3">
-                            <label class="form-label fw-bold">Misura Piastrina</label>
-                            <input type="text" class="form-control" name="misura_piastrina" placeholder="Es. 45 mm / Specifica misura...">
                         </div>
                     </div>
                     <div class="modal-footer">
