@@ -898,7 +898,7 @@ def elimina_utente(user_id):
         flash(f"Errore eliminazione utente: {e}", "error")
     return redirect(url_for('admin_utenti'))
 
-# --- CAMBI SERIE (Ordinati per data cambio dal più recente) ---
+# --- CAMBI SERIE (Ordinati per data cambio dal 4 al 6 - ASC) ---
 @app.route("/cambi_serie", methods=["GET", "POST"])
 @app.route("/cambi_serie.html", methods=["GET", "POST"])
 def cambi_serie():
@@ -919,7 +919,8 @@ def cambi_serie():
         query += " AND TO_CHAR(data_cambio::DATE, 'IYYY-\"W\"IW') = %s"
         params.append(settimana_filtro)
 
-    query += " ORDER BY data_cambio::DATE DESC, id DESC;"
+    # Ordinamento per data_cambio crescente (dal 4 al 6)
+    query += " ORDER BY data_cambio::DATE ASC, id ASC;"
     cur.execute(query, tuple(params))
     record_serie_raw = cur.fetchall()
 
@@ -1028,7 +1029,7 @@ def elimina_cambio_serie(id_cambio):
 def esporta_cambi_serie_csv():
     conn = get_db_connection()
     cur = conn.cursor()
-    cur.execute("SELECT data_cambio, forno, linea, nome_bottiglia, tempo_cambio, altezza_paratie, num_bottiglie_tempera, quantita_trattamento, misura_piastrina FROM cambi_serie ORDER BY data_cambio::DATE DESC;")
+    cur.execute("SELECT data_cambio, forno, linea, nome_bottiglia, tempo_cambio, altezza_paratie, num_bottiglie_tempera, quantita_trattamento, misura_piastrina FROM cambi_serie ORDER BY data_cambio::DATE ASC;")
     righe = cur.fetchall()
     cur.close()
     conn.close()
