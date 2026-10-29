@@ -416,7 +416,6 @@ def api_elimina_notifiche():
 @app.route("/index")
 @app.route("/index.html")
 def index():
-    # Esegue il controllo scadenze promemoria ogni volta che si apre la home
     controlla_scadenze_promemoria()
 
     prodotti = []
@@ -899,12 +898,12 @@ def elimina_utente(user_id):
         flash(f"Errore eliminazione utente: {e}", "error")
     return redirect(url_for('admin_utenti'))
 
-# --- CAMBI SERIE ---
+# --- CAMBI SERIE (Ordinati per data cambio dal più recente) ---
 @app.route("/cambi_serie", methods=["GET", "POST"])
 @app.route("/cambi_serie.html", methods=["GET", "POST"])
 def cambi_serie():
     forno_filtro = request.args.get("forno", "Tutti")
-    settimana_filtro = request.args.get("settimana", "")
+    settimana_filtro = request.args.get("settimana", "").strip()
 
     conn = get_db_connection()
     cur = conn.cursor()
@@ -917,9 +916,11 @@ def cambi_serie():
         params.append(forno_filtro)
 
     if settimana_filtro:
-        query += " AND TO_CHAR(data_cambio::DATE, 'IYYY-IW') = %s"
+        # Funzionamento del filtro settimanale corretto con formato ISO anno-settimana (es. 2026-W39)
+        query += " AND TO_CHAR(data_cambio::DATE, 'IYYY-\"W\"IW') = %s"
         params.append(settimana_filtro)
 
+    # Ordinamento per data_cambio decrescente (più recente in alto)
     query += " ORDER BY data_cambio DESC, id DESC;"
     cur.execute(query, tuple(params))
     record_serie = cur.fetchall()
@@ -960,6 +961,38 @@ def aggiungi_cambio_serie():
         flash("Cambio serie registrato con successo!", "success")
     except Exception as e:
         flash(f"Errore durante il salvataggio del cambio serie: {e}", "error")
+
+    return redirect(url_for("cambi_serie"))
+
+@app.route("/modifica_cambio_serie/<int:id_cambio>", methods=["POST"])
+def modifica_cambio_serie(id_cambio):
+    forno = request.form.get("forno")
+    linea = request.form.get("linea")
+    data_cambio = request.form.get("data_cambio")
+    nome_bottiglia = request.form.get("nome_bottiglia")
+    tempo_cambio = request.form.get("tempo_cambio", "")
+    altezza_paratie = request.form.get("altezza_paratie", "")
+    num_bottiglie_tempera = int(request.form.get("num_bottiglie_tempera", 0) or 0)
+    quantita_trattamento = request.form.get("quantita_trattamento", "")
+    misura_piastrina = request.form.get("misura_piastrina", "").strip()
+
+    try:
+        conn = get_db_connection()
+        cur = conn.cursor()
+        cur.execute("""
+            UPDATE cambi_serie 
+            SET forno = %s, linea = %s, data_cambio = %s, nome_bottiglia = %s, 
+                tempo_cambio = %s, altezza_paratie = %s, num_bottiglie_tempera = %s, 
+                quantita_trattamento = %s, misura_piastrina = %s
+            WHERE id = %s;
+        """, (forno, linea, data_cambio, nome_bottiglia, tempo_cambio, altezza_paratie, num_bottiglie_tempera, quantita_trattamento, misura_piastrina, id_cambio))
+        conn.commit()
+        cur.close()
+        conn.close()
+        registra_log(f"Modificato cambio serie ID {id_cambio}")
+        flash("Cambio serie aggiornato con successo!", "success")
+    except Exception as e:
+        flash(f"Errore durante l'aggiornamento del cambio serie: {e}", "error")
 
     return redirect(url_for("cambi_serie"))
 
