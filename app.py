@@ -916,17 +916,30 @@ def cambi_serie():
         params.append(forno_filtro)
 
     if settimana_filtro:
-        # Filtro settimanale ISO (es. 2026-W39)
         query += " AND TO_CHAR(data_cambio::DATE, 'IYYY-\"W\"IW') = %s"
         params.append(settimana_filtro)
 
-    # Ordinamento per data_cambio decrescente (dal più recente in alto)
     query += " ORDER BY data_cambio::DATE DESC, id DESC;"
     cur.execute(query, tuple(params))
-    record_serie = cur.fetchall()
+    record_serie_raw = cur.fetchall()
 
     cur.close()
     conn.close()
+
+    giorni_it = ['Lunedì', 'Martedì', 'Mercoledì', 'Giovedì', 'Venerdì', 'Sabato', 'Domenica']
+    
+    record_serie = []
+    for r in record_serie_raw:
+        row = dict(r)
+        giorno_str = ""
+        if row.get('data_cambio'):
+            try:
+                dt = datetime.strptime(str(row['data_cambio']).strip(), '%Y-%m-%d')
+                giorno_str = giorni_it[dt.weekday()]
+            except Exception:
+                giorno_str = ""
+        row['giorno_settimana'] = giorno_str
+        record_serie.append(row)
 
     return render_template("cambi_serie.html", 
                            record_serie=record_serie, 
