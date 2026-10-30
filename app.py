@@ -255,7 +255,30 @@ def init_db():
                 creato_il TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             );
         """)
+
+        cur.execute("""
+            CREATE TABLE IF NOT EXISTS nastri (
+                id SERIAL PRIMARY KEY,
+                codice VARCHAR(255) UNIQUE,
+                nome VARCHAR(255) NOT NULL,
+                posizione VARCHAR(255),
+                stato VARCHAR(50) DEFAULT 'In Uso',
+                note TEXT,
+                creato_il TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            );
+        """)
         
+        # Aggiornamento colonne mancanti se la tabella cambi_serie era già stata creata in precedenza
+        colonne_cambi_serie = [
+            ("bottiglia_precedente", "VARCHAR(255)"),
+            ("bottiglia_nuova", "VARCHAR(255)"),
+            ("num_bottiglie_tempera_vecchia", "INT DEFAULT 0"),
+            ("num_bottiglie_tempera_nuova", "INT DEFAULT 0"),
+            ("misura_piastrina", "VARCHAR(50)")
+        ]
+        for c_col, c_type in colonne_cambi_serie:
+            cur.execute(f"ALTER TABLE cambi_serie ADD COLUMN IF NOT EXISTS {c_col} {c_type};")
+
         permessi_lista = [
             ("puo_vedere_magazzino", "INT DEFAULT 1"),
             ("puo_aggiungere_prodotti", "INT DEFAULT 1"),
@@ -549,6 +572,25 @@ def elimina_utente(user_id):
     except Exception as e:
         flash(f"Errore eliminazione utente: {e}", "error")
     return redirect(url_for('admin_utenti'))
+
+# --- GESTIONE NASTRI ---
+@app.route("/nastri")
+@app.route("/nastri.html")
+def nastri():
+    if not (session.get('is_admin') or session.get('puo_vedere_magazzino', 1)):
+        flash("Accesso al modulo Nastri non autorizzato.", "error")
+        return redirect(url_for('index'))
+    lista_nastri = []
+    try:
+        conn = get_db_connection()
+        cur = conn.cursor()
+        cur.execute("SELECT * FROM nastri ORDER BY nome ASC;")
+        lista_nastri = cur.fetchall()
+        cur.close()
+        conn.close()
+    except Exception as e:
+        print(f"Errore caricamento nastri: {e}")
+    return render_template("nastri.html", nastri=lista_nastri)
 
 # --- CAMBI SERIE & API ULTIMA BOTTIGLIA ---
 @app.route("/api/ultima_bottiglia/<forno>/<linea>")
