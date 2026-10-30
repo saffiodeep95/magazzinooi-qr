@@ -314,10 +314,10 @@
                         <div class="row">
                             <div class="col-md-6 mb-3">
                                 <label class="form-label fw-bold">Seleziona Forno *</label>
-                                <select class="form-select" name="forno" id="selectForno" onchange="aggiornaLineeModal()" required>
+                                <select class="form-select" name="forno" id="selectForno" required>
                                     <option value="Forno 1">Forno 1</option>
                                     <option value="Forno 3">Forno 3</option>
-                                    <option value="Forno 4">Forno 4</option>
+                                    <option value="Forno 4" selected>Forno 4</option>
                                 </select>
                             </div>
                             <div class="col-md-6 mb-3">
@@ -355,7 +355,7 @@
 
                         <div class="row">
                             <div class="col-md-6 mb-3">
-                                <label class="form-label text-muted fw-bold">N° Bottiglie Tempera (Precedente)</label>
+                                <label class="form-label text-muted fw-bold">N° Bottiglie Tempera (Precedente - Autocompilata)</label>
                                 <input type="number" class="form-control bg-light" name="num_bottiglie_tempera_vecchia" value="0" min="0" readonly>
                             </div>
                             <div class="col-md-6 mb-3">
@@ -387,21 +387,31 @@
     };
 
     function aggiornaLineeModal() {
-        const forno = document.getElementById("selectForno").value;
+        const selectForno = document.getElementById("selectForno");
         const selectLinea = document.getElementById("selectLinea");
+        if (!selectForno || !selectLinea) return;
+
+        const forno = selectForno.value;
+        const lineeDisponibili = lineePerForno[forno] || [];
+
         selectLinea.innerHTML = "";
-        (lineePerForno[forno] || []).forEach(function(linea) {
+        lineeDisponibili.forEach(function(linea) {
             const opt = document.createElement("option");
             opt.value = linea;
             opt.textContent = "Linea " + linea;
             selectLinea.appendChild(opt);
         });
+
         caricaUltimaBottiglia();
     }
 
     async function caricaUltimaBottiglia() {
-        const forno = document.getElementById("selectForno").value;
-        const linea = document.getElementById("selectLinea").value;
+        const selectForno = document.getElementById("selectForno");
+        const selectLinea = document.getElementById("selectLinea");
+        if (!selectForno || !selectLinea) return;
+
+        const forno = selectForno.value;
+        const linea = selectLinea.value;
         
         if (!forno || !linea) return;
 
@@ -420,10 +430,24 @@
     }
 
     document.addEventListener("DOMContentLoaded", function() {
-        try { 
-            aggiornaLineeModal(); 
-            document.getElementById("selectLinea").addEventListener("change", caricaUltimaBottiglia);
-        } catch(e){}
+        aggiornaLineeModal();
+
+        const selectForno = document.getElementById("selectForno");
+        const selectLinea = document.getElementById("selectLinea");
+        
+        if (selectForno) {
+            selectForno.addEventListener("change", aggiornaLineeModal);
+        }
+        if (selectLinea) {
+            selectLinea.addEventListener("change", caricaUltimaBottiglia);
+        }
+
+        const modalNuovo = document.getElementById('modalNuovoCambio');
+        if (modalNuovo) {
+            modalNuovo.addEventListener('shown.bs.modal', function () {
+                aggiornaLineeModal();
+            });
+        }
     });
     </script>
 </body>
