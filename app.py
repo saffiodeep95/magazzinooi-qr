@@ -425,7 +425,7 @@ def api_ultima_bottiglia(forno, linea):
         conn = get_db_connection()
         cur = conn.cursor()
         cur.execute("""
-            SELECT bottiglia_nuova, num_bottiglie_tempera_nuova 
+            SELECT bottiglia_nuova, num_bottiglie_tempera_nuova, num_bottiglie_tempera 
             FROM cambi_serie 
             WHERE forno = %s AND linea = %s 
             ORDER BY data_cambio DESC, id DESC 
@@ -436,9 +436,13 @@ def api_ultima_bottiglia(forno, linea):
         conn.close()
         
         if res:
+            qta_tempera = res.get('num_bottiglie_tempera_nuova')
+            if qta_tempera is None or qta_tempera == 0:
+                qta_tempera = res.get('num_bottiglie_tempera', 0)
+                
             return jsonify({
                 "bottiglia": res.get('bottiglia_nuova', ''),
-                "tempera": res.get('num_bottiglie_tempera_nuova', 0)
+                "tempera": qta_tempera or 0
             })
     except Exception as e:
         print(f"Errore API ultima bottiglia: {e}")
@@ -612,6 +616,31 @@ def agenda():
                 VALUES (%s, %s, %s, %s, %s, %s);
             """, (titolo, descrizione, data_scadenza, fornitore_id, utenti_visibili, username_corrente))
             conn.commit()
+
+            # INVIO NOTIFICHE PUSH PER AGENDA
+            if utenti_visibili == "Tutti":
+                cur.execute("SELECT username FROM utenti;")
+                tutti_utenti = cur.fetchall()
+                for u in tutti_utenti:
+                    dest = u['username']
+                    if dest != username_corrente:
+                        crea_notifica(
+                            destinatario=dest,
+                            titolo="📅 Nuova Attività in Agenda",
+                            messaggio=f"Nuova attività assegnata a tutti: {titolo}",
+                            link="/agenda"
+                        )
+            else:
+                for u_target in utenti_selezionati:
+                    dest = u_target.strip()
+                    if dest and dest != username_corrente:
+                        crea_notifica(
+                            destinatario=dest,
+                            titolo="📅 Nuova Attività in Agenda",
+                            messaggio=f"Ti è stata assegnata una nuova attività: {titolo}",
+                            link="/agenda"
+                        )
+
             registra_log(f"Creata attività in agenda: {titolo}")
             flash("Attività aggiunta all'agenda con successo!", "success")
         return redirect(url_for("agenda"))
