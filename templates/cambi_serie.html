@@ -314,7 +314,11 @@
                             </div>
                             <div class="col-md-6 mb-3">
                                 <label class="form-label fw-bold">Linea / Macchina *</label>
-                                <select class="form-select" name="linea" id="selectLinea" required></select>
+                                <select class="form-select" name="linea" id="selectLinea" required>
+                                    <!-- Opzioni predefinite per Forno 4 (selezionato di default) -->
+                                    <option value="41">Linea 41</option>
+                                    <option value="42">Linea 42</option>
+                                </select>
                             </div>
                         </div>
 
@@ -364,7 +368,7 @@
         </div>
     </div>
 
-    <!-- Bootstrap JS & Script Corretto -->
+    <!-- Bootstrap JS & Script Dinamico Linee Completo -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script>
     const lineePerForno = {
@@ -438,9 +442,8 @@
                 aggiornaLineeModal();
             });
         }
-
-        // Avvio immediato di sicurezza
-        setTimeout(aggiornaLineeModal, 100);
+        
+        aggiornaLineeModal();
     });
     </script>
 </body>
