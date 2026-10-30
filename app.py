@@ -1,5 +1,5 @@
 # ========================================================================
-# Gestionale OMG Application - System with Push Notifications & Agenda
+# Gestionale OMG Application - System with Push Notifications & Ore Report
 # Copyright (c) 2026 Marco Pavan. All Rights Reserved.
 # Designed & Developed by Marco Pavan
 # ========================================================================
@@ -52,56 +52,6 @@ def crea_notifica(destinatario, titolo, messaggio, link=""):
     except Exception as e:
         print(f"Errore inserimento notifica: {e}")
 
-def controlla_scadenze_promemoria():
-    try:
-        oggi = datetime.now().date()
-        conn = get_db_connection()
-        cur = conn.cursor()
-        
-        cur.execute("SELECT * FROM promemoria WHERE completato = FALSE AND data_scadenza IS NOT NULL;")
-        promemoria_list = cur.fetchall()
-        
-        for p in promemoria_list:
-            data_scadenza_str = p.get('data_scadenza')
-            if not data_scadenza_str:
-                continue
-            try:
-                dt_scadenza = datetime.strptime(data_scadenza_str.strip(), '%Y-%m-%d').date()
-            except ValueError:
-                continue
-            
-            un_giorno_prima = dt_scadenza - timedelta(days=1)
-            destinatario = p.get('assegnato_a')
-            if not destinatario:
-                continue
-            
-            titolo_p = p.get('titolo', 'Promemoria')
-            
-            if oggi == un_giorno_prima and not p.get('notificato_anticipo', False):
-                crea_notifica(
-                    destinatario=destinatario,
-                    titolo="⏰ Promemoria in Scadenza Domani",
-                    messaggio=f"Il promemoria '{titolo_p}' scadrà domani ({dt_scadenza.strftime('%d/%m/%Y')}).",
-                    link="/promemoria"
-                )
-                cur.execute("UPDATE promemoria SET notificato_anticipo = TRUE WHERE id = %s;", (p['id'],))
-                conn.commit()
-            
-            if oggi == dt_scadenza and not p.get('notificato_oggi', False):
-                crea_notifica(
-                    destinatario=destinatario,
-                    titolo="🚨 Promemoria in Scadenza Oggi",
-                    messaggio=f"Il promemoria '{titolo_p}' scadrà oggi!",
-                    link="/promemoria"
-                )
-                cur.execute("UPDATE promemoria SET notificato_oggi = TRUE WHERE id = %s;", (p['id'],))
-                conn.commit()
-                
-        cur.close()
-        conn.close()
-    except Exception as e:
-        print(f"Errore controllo scadenze promemoria: {e}")
-
 def init_db():
     if not DATABASE_URL:
         print("DATABASE_URL non impostata!")
@@ -109,7 +59,7 @@ def init_db():
     try:
         conn = get_db_connection()
         cur = conn.cursor()
-
+        
         cur.execute("""
             CREATE TABLE IF NOT EXISTS prodotti (
                 id SERIAL PRIMARY KEY,
@@ -131,26 +81,7 @@ def init_db():
                 soglia_minima INT DEFAULT 3
             );
         """)
-
-        cur.execute("""
-            CREATE TABLE IF NOT EXISTS nastri (
-                id SERIAL PRIMARY KEY,
-                codice_sap VARCHAR(255),
-                numero VARCHAR(50),
-                stato VARCHAR(50) DEFAULT 'aperto',
-                misura VARCHAR(255),
-                tipo VARCHAR(255),
-                sezione_impianto VARCHAR(255),
-                utilizzo VARCHAR(255),
-                misura_nastro_finito VARCHAR(255),
-                tipo_di_riduttore VARCHAR(255),
-                tipo_di_motore VARCHAR(255),
-                note TEXT,
-                tappeto_presente BOOLEAN DEFAULT TRUE
-            );
-        """)
-        cur.execute("ALTER TABLE nastri ADD COLUMN IF NOT EXISTS tappeto_presente BOOLEAN DEFAULT TRUE;")
-
+        
         cur.execute("""
             CREATE TABLE IF NOT EXISTS fornitori (
                 id SERIAL PRIMARY KEY,
@@ -184,22 +115,6 @@ def init_db():
                 ricorrenza VARCHAR(50) DEFAULT 'Nessuna',
                 assegnato_a VARCHAR(255),
                 completato BOOLEAN DEFAULT FALSE,
-                creato_il TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-            );
-        """)
-        cur.execute("ALTER TABLE promemoria ADD COLUMN IF NOT EXISTS notificato_anticipo BOOLEAN DEFAULT FALSE;")
-        cur.execute("ALTER TABLE promemoria ADD COLUMN IF NOT EXISTS notificato_oggi BOOLEAN DEFAULT FALSE;")
-
-        cur.execute("""
-            CREATE TABLE IF NOT EXISTS agenda (
-                id SERIAL PRIMARY KEY,
-                titolo VARCHAR(255) NOT NULL,
-                descrizione TEXT,
-                data_scadenza VARCHAR(50),
-                fornitore_id INT REFERENCES fornitori(id) ON DELETE SET NULL,
-                utenti_visibili TEXT DEFAULT 'Tutti',
-                completato BOOLEAN DEFAULT FALSE,
-                creato_da VARCHAR(255),
                 creato_il TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             );
         """)
@@ -261,9 +176,7 @@ def init_db():
                 puo_eliminare_documenti INT DEFAULT 0,
                 puo_vedere_promemoria INT DEFAULT 1,
                 puo_assegnare_promemoria INT DEFAULT 0,
-                puo_vedere_report_ore INT DEFAULT 1,
-                puo_gestire_nastri INT DEFAULT 1,
-                puo_gestire_agenda INT DEFAULT 0
+                puo_vedere_report_ore INT DEFAULT 1
             );
         """)
 
@@ -334,25 +247,54 @@ def init_db():
                 bottiglia_precedente VARCHAR(255),
                 bottiglia_nuova VARCHAR(255),
                 tempo_cambio VARCHAR(50),
-                altezza_paratie VARCHAR(50),
                 num_bottiglie_tempera INT DEFAULT 0,
                 num_bottiglie_tempera_vecchia INT DEFAULT 0,
                 num_bottiglie_tempera_nuova INT DEFAULT 0,
                 quantita_trattamento VARCHAR(50),
-                misura_piastrina VARCHAR(100),
+                misura_piastrina VARCHAR(50),
                 creato_il TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             );
         """)
-        cur.execute("ALTER TABLE cambi_serie ADD COLUMN IF NOT EXISTS bottiglia_precedente VARCHAR(255);")
-        cur.execute("ALTER TABLE cambi_serie ADD COLUMN IF NOT EXISTS bottiglia_nuova VARCHAR(255);")
-        cur.execute("ALTER TABLE cambi_serie ADD COLUMN IF NOT EXISTS num_bottiglie_tempera_vecchia INT DEFAULT 0;")
-        cur.execute("ALTER TABLE cambi_serie ADD COLUMN IF NOT EXISTS num_bottiglie_tempera_nuova INT DEFAULT 0;")
-        cur.execute("ALTER TABLE cambi_serie ADD COLUMN IF NOT EXISTS misura_piastrina VARCHAR(100);")
+        
+        permessi_lista = [
+            ("puo_vedere_magazzino", "INT DEFAULT 1"),
+            ("puo_aggiungere_prodotti", "INT DEFAULT 1"),
+            ("puo_modificare_prodotti", "INT DEFAULT 1"),
+            ("puo_caricare_scaricare", "INT DEFAULT 1"),
+            ("puo_eliminare", "INT DEFAULT 0"),
+            ("puo_vedere_pesante", "INT DEFAULT 1"),
+            ("puo_vedere_manutenzione", "INT DEFAULT 1"),
+            ("puo_aprire_manutenzioni", "INT DEFAULT 1"),
+            ("puo_gestire_interventi", "INT DEFAULT 1"),
+            ("puo_assegnare_manutenzioni", "INT DEFAULT 1"),
+            ("puo_eliminare_interventi", "INT DEFAULT 0"),
+            ("puo_vedere_manutenzioni_esterne", "INT DEFAULT 1"),
+            ("puo_vedere_storico_manutenzioni", "INT DEFAULT 1"),
+            ("puo_eliminare_storico", "INT DEFAULT 0"),
+            ("puo_gestire_fornitori", "INT DEFAULT 1"),
+            ("puo_importare_fornitori", "INT DEFAULT 1"),
+            ("puo_gestire_documenti", "INT DEFAULT 1"),
+            ("puo_eliminare_documenti", "INT DEFAULT 0"),
+            ("puo_vedere_promemoria", "INT DEFAULT 1"),
+            ("puo_assegnare_promemoria", "INT DEFAULT 0"),
+            ("puo_vedere_report_ore", "INT DEFAULT 1")
+        ]
+        
+        for p_col, p_type in permessi_lista:
+            cur.execute(f"ALTER TABLE utenti ADD COLUMN IF NOT EXISTS {p_col} {p_type};")
+        
+        cur.execute("SELECT * FROM utenti WHERE username = 'admin';")
+        if not cur.fetchone():
+            hashed_pw = generate_password_hash("admin")
+            cur.execute("""
+                INSERT INTO utenti (username, password, is_admin, puo_vedere_magazzino, puo_aggiungere_prodotti, puo_modificare_prodotti, puo_caricare_scaricare, puo_eliminare, puo_vedere_pesante, puo_vedere_manutenzione, puo_aprire_manutenzioni, puo_gestire_interventi, puo_assegnare_manutenzioni, puo_eliminare_interventi, puo_vedere_manutenzioni_esterne, puo_vedere_storico_manutenzioni, puo_eliminare_storico, puo_gestire_fornitori, puo_importare_fornitori, puo_gestire_documenti, puo_eliminare_documenti, puo_vedere_promemoria, puo_assegnare_promemoria, puo_vedere_report_ore)
+                VALUES (%s, %s, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1);
+            """, ('admin', hashed_pw))
 
         conn.commit()
         cur.close()
         conn.close()
-        print("Database e permessi inizializzati.")
+        print("Database e permessi Gestionale OMG inizializzati.")
     except Exception as e:
         print(f"Errore init_db: {e}")
 
@@ -382,96 +324,40 @@ def api_notifiche():
     conn.close()
     return jsonify(notifiche)
 
-@app.route("/api/notifiche/segna_letta/<int:notifica_id>", methods=["POST"])
-def api_segna_letta(notifica_id):
+@app.route("/api/notifiche/segna_lette", methods=["POST"])
+def api_segna_lette():
     username = session.get('username')
     if username:
         conn = get_db_connection()
         cur = conn.cursor()
-        cur.execute("UPDATE notifiche SET letta = TRUE WHERE id = %s AND destinatario = %s;", (notifica_id, username))
+        cur.execute("UPDATE notifiche SET letta = TRUE WHERE destinatario = %s;", (username,))
         conn.commit()
         cur.close()
         conn.close()
     return jsonify({"status": "ok"})
 
-@app.route("/api/notifiche/elimina", methods=["POST"])
-def api_elimina_notifiche():
-    username = session.get('username')
-    if not username:
-        return jsonify({"status": "error", "message": "Non autorizzato"})
-    
-    try:
-        data = request.get_json(silent=True) or {}
-        notifica_id = data.get('id')
-        
-        conn = get_db_connection()
-        cur = conn.cursor()
-        
-        if notifica_id:
-            cur.execute("DELETE FROM notifiche WHERE id = %s AND destinatario = %s AND letta = TRUE;", (notifica_id, username))
-        else:
-            cur.execute("DELETE FROM notifiche WHERE destinatario = %s AND letta = TRUE;", (username,))
-            
-        conn.commit()
-        cur.close()
-        conn.close()
-        return jsonify({"status": "ok"})
-    except Exception as e:
-        return jsonify({"status": "error", "message": str(e)})
-
-@app.route("/api/ultima_bottiglia/<forno>/<linea>")
-def api_ultima_bottiglia(forno, linea):
-    try:
-        conn = get_db_connection()
-        cur = conn.cursor()
-        cur.execute("""
-            SELECT bottiglia_nuova, num_bottiglie_tempera_nuova, num_bottiglie_tempera 
-            FROM cambi_serie 
-            WHERE forno = %s AND linea = %s 
-            ORDER BY data_cambio DESC, id DESC 
-            LIMIT 1;
-        """, (forno, linea))
-        res = cur.fetchone()
-        cur.close()
-        conn.close()
-        
-        if res:
-            qta_tempera = res.get('num_bottiglie_tempera_nuova')
-            if qta_tempera is None or qta_tempera == 0:
-                qta_tempera = res.get('num_bottiglie_tempera', 0)
-                
-            return jsonify({
-                "bottiglia": res.get('bottiglia_nuova', ''),
-                "tempera": qta_tempera or 0
-            })
-    except Exception as e:
-        print(f"Errore API ultima bottiglia: {e}")
-    
-    return jsonify({"bottiglia": "", "tempera": 0})
-
 @app.route("/")
 @app.route("/index")
 @app.route("/index.html")
 def index():
-    controlla_scadenze_promemoria()
-
     prodotti = []
     prodotti_sotto_soglia = []
     promemoria_urgenti = 0
     interventi_aperti_count = 0
     interventi_in_lavoro_count = 0
-
+    interventi_attesa_count = 0
+    
     username = session.get('username')
     is_admin = session.get('is_admin')
     puo_assegnare = session.get('puo_assegnare_promemoria')
-
+    
     try:
         conn = get_db_connection()
         cur = conn.cursor()
-
+        
         cur.execute("SELECT * FROM prodotti ORDER BY nome ASC;")
         tutti = cur.fetchall()
-
+        
         if is_admin or puo_assegnare:
             cur.execute("SELECT COUNT(*) as count FROM promemoria WHERE completato = FALSE;")
         else:
@@ -479,15 +365,17 @@ def index():
         res_p = cur.fetchone()
         if res_p:
             promemoria_urgenti = res_p['count']
-
+            
         cur.execute("SELECT COUNT(*) as count FROM richieste_manutenzione WHERE stato = 'Aperta';")
         interventi_aperti_count = cur.fetchone()['count']
         cur.execute("SELECT COUNT(*) as count FROM richieste_manutenzione WHERE stato IN ('In Lavoro', 'In Pausa');")
         interventi_in_lavoro_count = cur.fetchone()['count']
-
+        cur.execute("SELECT COUNT(*) as count FROM richieste_manutenzione WHERE stato = 'Attesa Ricambio';")
+        interventi_attesa_count = cur.fetchone()['count']
+        
         cur.close()
         conn.close()
-
+        
         for p in tutti:
             val_pesante = p.get('magazzino_pesante')
             is_pesante = (val_pesante == 1 or val_pesante == '1' or val_pesante is True or val_pesante == 1.0)
@@ -498,13 +386,14 @@ def index():
                 prodotti_sotto_soglia.append(p)
     except Exception as e:
         print(f"Errore index: {e}")
-
+        
     return render_template("index.html", 
                            prodotti=prodotti, 
                            prodotti_sotto_soglia=prodotti_sotto_soglia,
                            promemoria_urgenti=promemoria_urgenti,
                            interventi_aperti_count=interventi_aperti_count,
-                           interventi_in_lavoro_count=interventi_in_lavoro_count)
+                           interventi_in_lavoro_count=interventi_in_lavoro_count,
+                           interventi_attesa_count=interventi_attesa_count)
 
 @app.route("/login", methods=["GET", "POST"])
 @app.route("/login.html", methods=["GET", "POST"])
@@ -519,15 +408,15 @@ def login():
             user = cur.fetchone()
             cur.close()
             conn.close()
-
+            
             if user and check_password_hash(user['password'], password):
                 session['username'] = user['username']
                 session['is_admin'] = user['is_admin']
-
+                
                 for k in user.keys():
                     if k.startswith('puo_'):
                         session[k] = user.get(k, 1)
-
+                        
                 registra_log("Accesso effettuato al sistema")
                 return redirect(url_for('index'))
             else:
@@ -554,8 +443,8 @@ def registra():
                 cur = conn.cursor()
                 hashed_pw = generate_password_hash(password)
                 cur.execute("""
-                    INSERT INTO utenti (username, password, is_admin, puo_vedere_magazzino, puo_aggiungere_prodotti, puo_modificare_prodotti, puo_caricare_scaricare, puo_eliminare, puo_vedere_pesante, puo_vedere_manutenzione, puo_aprire_manutenzioni, puo_gestire_interventi, puo_assegnare_manutenzioni, puo_eliminare_interventi, puo_vedere_manutenzioni_esterne, puo_vedere_storico_manutenzioni, puo_eliminare_storico, puo_gestire_fornitori, puo_importare_fornitori, puo_gestire_documenti, puo_eliminare_documenti, puo_vedere_promemoria, puo_assegnare_promemoria, puo_vedere_report_ore, puo_gestire_nastri, puo_gestire_agenda)
-                    VALUES (%s, %s, 0, 1, 1, 1, 1, 0, 1, 1, 1, 1, 1, 0, 1, 1, 0, 1, 1, 1, 0, 1, 0, 1, 1, 0);
+                    INSERT INTO utenti (username, password, is_admin, puo_vedere_magazzino, puo_aggiungere_prodotti, puo_modificare_prodotti, puo_caricare_scaricare, puo_eliminare, puo_vedere_pesante, puo_vedere_manutenzione, puo_aprire_manutenzioni, puo_gestire_interventi, puo_assegnare_manutenzioni, puo_eliminare_interventi, puo_vedere_manutenzioni_esterne, puo_vedere_storico_manutenzioni, puo_eliminare_storico, puo_gestire_fornitori, puo_importare_fornitori, puo_gestire_documenti, puo_eliminare_documenti, puo_vedere_promemoria, puo_assegnare_promemoria, puo_vedere_report_ore)
+                    VALUES (%s, %s, 0, 1, 1, 1, 1, 0, 1, 1, 1, 1, 1, 0, 1, 1, 0, 1, 1, 1, 0, 1, 0, 1);
                 """, (username, hashed_pw))
                 conn.commit()
                 cur.close()
@@ -567,303 +456,7 @@ def registra():
                 flash("Username già esistente o errore di registrazione.", "error")
     return render_template("registra.html")
 
-@app.route("/agenda", methods=["GET", "POST"])
-@app.route("/agenda.html", methods=["GET", "POST"])
-def agenda():
-    if not (session.get('is_admin') or session.get('puo_gestire_agenda', 0)):
-        flash("Non hai i permessi per accedere all'Agenda.", "error")
-        return redirect(url_for('index'))
-
-    username_corrente = session.get('username')
-    is_admin = session.get('is_admin')
-
-    conn = get_db_connection()
-    cur = conn.cursor()
-
-    if request.method == "POST":
-        titolo = request.form.get("titolo")
-        descrizione = request.form.get("descrizione", "")
-        data_scadenza = request.form.get("data_scadenza", "").strip() or None
-        
-        fornitore_input = request.form.get("fornitore_input", "").strip()
-        fornitore_id = None
-
-        if fornitore_input:
-            cur.execute("SELECT id FROM fornitori WHERE LOWER(nome_azienda) = LOWER(%s);", (fornitore_input,))
-            f_esistente = cur.fetchone()
-            if f_esistente:
-                fornitore_id = f_esistente['id']
-            else:
-                cur.execute("""
-                    INSERT INTO fornitori (nome_azienda, settore_note) 
-                    VALUES (%s, 'Inserita da Agenda') 
-                    RETURNING id;
-                """, (fornitore_input,))
-                res_f = cur.fetchone()
-                fornitore_id = res_f['id'] if res_f else None
-
-        utenti_selezionati = request.form.getlist("utenti_visibili[]")
-        if "Tutti" in utenti_selezionati:
-            utenti_visibili = "Tutti"
-        elif utenti_selezionati:
-            utenti_visibili = ",".join(utenti_selezionati)
-        else:
-            utenti_visibili = username_corrente
-
-        if titolo:
-            cur.execute("""
-                INSERT INTO agenda (titolo, descrizione, data_scadenza, fornitore_id, utenti_visibili, creato_da)
-                VALUES (%s, %s, %s, %s, %s, %s);
-            """, (titolo, descrizione, data_scadenza, fornitore_id, utenti_visibili, username_corrente))
-            conn.commit()
-
-            # INVIO NOTIFICHE PUSH PER AGENDA
-            if utenti_visibili == "Tutti":
-                cur.execute("SELECT username FROM utenti;")
-                tutti_utenti = cur.fetchall()
-                for u in tutti_utenti:
-                    dest = u['username']
-                    if dest != username_corrente:
-                        crea_notifica(
-                            destinatario=dest,
-                            titolo="📅 Nuova Attività in Agenda",
-                            messaggio=f"Nuova attività assegnata a tutti: {titolo}",
-                            link="/agenda"
-                        )
-            else:
-                for u_target in utenti_selezionati:
-                    dest = u_target.strip()
-                    if dest and dest != username_corrente:
-                        crea_notifica(
-                            destinatario=dest,
-                            titolo="📅 Nuova Attività in Agenda",
-                            messaggio=f"Ti è stata assegnata una nuova attività: {titolo}",
-                            link="/agenda"
-                        )
-
-            registra_log(f"Creata attività in agenda: {titolo}")
-            flash("Attività aggiunta all'agenda con successo!", "success")
-        return redirect(url_for("agenda"))
-
-    cur.execute("SELECT id, nome_azienda FROM fornitori ORDER BY nome_azienda ASC;")
-    fornitori_list = cur.fetchall()
-
-    cur.execute("SELECT username FROM utenti ORDER BY username ASC;")
-    utenti_list = cur.fetchall()
-
-    if is_admin:
-        cur.execute("""
-            SELECT a.*, f.nome_azienda 
-            FROM agenda a 
-            LEFT JOIN fornitori f ON a.fornitore_id = f.id 
-            ORDER BY a.id DESC;
-        """)
-    else:
-        cur.execute("""
-            SELECT a.*, f.nome_azienda 
-            FROM agenda a 
-            LEFT JOIN fornitori f ON a.fornitore_id = f.id 
-            WHERE a.utenti_visibili = 'Tutti' 
-               OR a.utenti_visibili LIKE %s 
-               OR a.creato_da = %s 
-            ORDER BY a.id DESC;
-        """, (f"%{username_corrente}%", username_corrente))
-
-    lista_attivita = cur.fetchall()
-    cur.close()
-    conn.close()
-
-    return render_template("agenda.html", 
-                           attivita=lista_attivita, 
-                           fornitori=fornitori_list, 
-                           utenti=utenti_list)
-
-@app.route("/completa_agenda/<int:agenda_id>", methods=["POST"])
-def completa_agenda(agenda_id):
-    if not (session.get('is_admin') or session.get('puo_gestire_agenda', 0)):
-        flash("Permesso negato.", "error")
-        return redirect(url_for('agenda'))
-    try:
-        conn = get_db_connection()
-        cur = conn.cursor()
-        cur.execute("DELETE FROM agenda WHERE id = %s;", (agenda_id,))
-        conn.commit()
-        cur.close()
-        conn.close()
-        registra_log(f"Completata ed eliminata attività dall'agenda (ID: {agenda_id})")
-        flash("Attività completata e rimossa dall'agenda!", "success")
-    except Exception as e:
-        flash(f"Errore durante l'aggiornamento: {e}", "error")
-
-    return redirect(url_for("agenda"))
-
-@app.route("/elimina_agenda/<int:agenda_id>", methods=["POST"])
-def elimina_agenda(agenda_id):
-    if not session.get('is_admin'):
-        flash("Solo l'amministratore può eliminare le voci dall'agenda.", "error")
-        return redirect(url_for("agenda"))
-    conn = get_db_connection()
-    cur = conn.cursor()
-    cur.execute("DELETE FROM agenda WHERE id = %s;", (agenda_id,))
-    conn.commit()
-    cur.close()
-    conn.close()
-    flash("Attività eliminata dall'agenda.", "success")
-    return redirect(url_for("agenda"))
-
-@app.route("/nastri", methods=["GET", "POST"])
-@app.route("/nastri.html", methods=["GET", "POST"])
-def nastri():
-    if not (session.get('is_admin') or session.get('puo_gestire_nastri', 1)):
-        flash("Accesso non autorizzato.", "error")
-        return redirect(url_for('index'))
-
-    sezione_filtro = request.args.get("sezione", "Tutte")
-    conn = get_db_connection()
-    cur = conn.cursor()
-
-    if request.method == "POST":
-        codice_sap = request.form.get("codice_sap", "")
-        numero = request.form.get("numero", "")
-        stato = request.form.get("stato", "aperto")
-        misura = request.form.get("misura", "")
-        tipo = request.form.get("tipo", "")
-        sezione_impianto = request.form.get("sezione_impianto", "COMPOSIZIONE")
-        utilizzo = request.form.get("utilizzo", "")
-        misura_nastro_finito = request.form.get("misura_nastro_finito", "")
-        tipo_di_riduttore = request.form.get("tipo_di_riduttore", "")
-        tipo_di_motore = request.form.get("tipo_di_motore", "")
-        note = request.form.get("note", "")
-        tappeto_presente = True if request.form.get("tappeto_presente", "1") == "1" else False
-
-        cur.execute("""
-            INSERT INTO nastri (codice_sap, numero, stato, misura, tipo, sezione_impianto, utilizzo, misura_nastro_finito, tipo_di_riduttore, tipo_di_motore, note, tappeto_presente)
-            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s);
-        """, (codice_sap, numero, stato, misura, tipo, sezione_impianto, utilizzo, misura_nastro_finito, tipo_di_riduttore, tipo_di_motore, note, tappeto_presente))
-        conn.commit()
-        registra_log(f"Aggiunto nastro - {sezione_impianto} N° {numero}")
-        flash("Nastro aggiunto con successo!", "success")
-        return redirect(url_for("nastri", sezione=sezione_filtro))
-
-    query = "SELECT * FROM nastri WHERE 1=1"
-    params = []
-    if sezione_filtro != "Tutte":
-        query += " AND sezione_impianto = %s"
-        params.append(sezione_filtro)
-    query += " ORDER BY sezione_impianto ASC, id ASC;"
-    cur.execute(query, tuple(params))
-    lista_nastri = cur.fetchall()
-
-    cur.execute("SELECT DISTINCT sezione_impianto FROM nastri WHERE sezione_impianto IS NOT NULL ORDER BY sezione_impianto ASC;")
-    sezioni_disponibili = [r['sezione_impianto'] for r in cur.fetchall()]
-
-    cur.close()
-    conn.close()
-    return render_template("nastri.html", nastri=lista_nastri, sezioni_disponibili=sezioni_disponibili, sezione_filtro=sezione_filtro)
-
-@app.route("/toggle_tappeto/<int:nastro_id>", methods=["POST"])
-def toggle_tappeto(nastro_id):
-    if not (session.get('is_admin') or session.get('puo_gestire_nastri', 1)):
-        flash("Permesso negato.", "error")
-        return redirect(url_for('nastri'))
-
-    try:
-        conn = get_db_connection()
-        cur = conn.cursor()
-        cur.execute("UPDATE nastri SET tappeto_presente = NOT COALESCE(tappeto_presente, TRUE) WHERE id = %s;", (nastro_id,))
-        conn.commit()
-        cur.close()
-        conn.close()
-        flash("Stato presenza tappeto aggiornato con successo!", "success")
-    except Exception as e:
-        flash(f"Errore aggiornamento tappeto: {e}", "error")
-
-    return redirect(url_for('nastri'))
-
-@app.route("/stampa_nastri")
-@app.route("/stampa_nastri.html")
-def stampa_nastri():
-    if not (session.get('is_admin') or session.get('puo_gestire_nastri', 1)):
-        flash("Accesso non autorizzato.", "error")
-        return redirect(url_for('index'))
-
-    sezione_filtro = request.args.get("sezione", "Tutte")
-    conn = get_db_connection()
-    cur = conn.cursor()
-
-    query = "SELECT * FROM nastri WHERE 1=1"
-    params = []
-    if sezione_filtro != "Tutte":
-        query += " AND sezione_impianto = %s"
-        params.append(sezione_filtro)
-    query += " ORDER BY sezione_impianto ASC, id ASC;"
-    cur.execute(query, tuple(params))
-    lista_nastri = cur.fetchall()
-
-    cur.close()
-    conn.close()
-
-    return render_template("stampa_nastri.html", 
-                           nastri=lista_nastri, 
-                           sezione_filtro=sezione_filtro,
-                           data_stampa=datetime.now().strftime("%d/%m/%Y %H:%M"))
-
-@app.route("/modifica_nastro/<int:nastro_id>", methods=["POST"])
-def modifica_nastro(nastro_id):
-    try:
-        conn = get_db_connection()
-        cur = conn.cursor()
-        cur.execute("""
-            UPDATE nastri 
-            SET codice_sap = %s, numero = %s, stato = %s, misura = %s, tipo = %s, 
-                sezione_impianto = %s, utilizzo = %s, misura_nastro_finito = %s, 
-                tipo_di_riduttore = %s, tipo_di_motore = %s, note = %s
-            WHERE id = %s;
-        """, (
-            request.form.get("codice_sap"), request.form.get("numero"), request.form.get("stato"),
-            request.form.get("misura"), request.form.get("tipo"), request.form.get("sezione_impianto"),
-            request.form.get("utilizzo"), request.form.get("misura_nastro_finito"),
-            request.form.get("tipo_di_riduttore"), request.form.get("tipo_di_motore"),
-            request.form.get("note"), nastro_id
-        ))
-        conn.commit()
-        cur.close()
-        conn.close()
-        flash("Nastro aggiornato!", "success")
-    except Exception as e:
-        flash(f"Errore: {e}", "error")
-    return redirect(url_for("nastri"))
-
-@app.route("/elimina_nastro/<int:nastro_id>", methods=["POST"])
-def elimina_nastro(nastro_id):
-    try:
-        conn = get_db_connection()
-        cur = conn.cursor()
-        cur.execute("DELETE FROM nastri WHERE id = %s;", (nastro_id,))
-        conn.commit()
-        cur.close()
-        conn.close()
-        flash("Nastro eliminato.", "success")
-    except Exception as e:
-        flash(f"Errore: {e}", "error")
-    return redirect(url_for("nastri"))
-
-@app.route("/esporta_nastri_csv")
-def esporta_nastri_csv():
-    conn = get_db_connection()
-    cur = conn.cursor()
-    cur.execute("SELECT codice_sap, numero, stato, misura, tipo, sezione_impianto, utilizzo, misura_nastro_finito, tipo_di_riduttore, tipo_di_motore, note, tappeto_presente FROM nastri ORDER BY sezione_impianto ASC;")
-    righe = cur.fetchall()
-    cur.close()
-    conn.close()
-
-    output = io.StringIO()
-    writer = csv.writer(output)
-    writer.writerow(['Codice SAP', 'Numero', 'Stato', 'Misura', 'Tipo', 'Sezione', 'Utilizzo', 'Misura Finito', 'Riduttore', 'Motore', 'Note', 'Tappeto Presente'])
-    for r in righe:
-        writer.writerow(list(r.values()))
-    return Response(output.getvalue(), mimetype="text/csv", headers={"Content-disposition": "attachment; filename=Magazzino_Nastri_OMG.csv"})
-
+# --- PANNELLO PERMESSI ADMIN & LOGS ---
 @app.route("/admin_utenti")
 @app.route("/admin_utenti.html")
 def admin_utenti():
@@ -877,12 +470,12 @@ def admin_utenti():
         cur = conn.cursor()
         cur.execute("SELECT * FROM utenti ORDER BY username ASC;")
         utenti = cur.fetchall()
-
+        
         cur.execute("DELETE FROM log_attivita WHERE data_ora < NOW() - INTERVAL '30 days';")
         conn.commit()
         cur.execute("SELECT * FROM log_attivita ORDER BY data_ora DESC LIMIT 100;")
         logs = cur.fetchall()
-
+        
         cur.close()
         conn.close()
     except Exception as e:
@@ -957,47 +550,58 @@ def elimina_utente(user_id):
         flash(f"Errore eliminazione utente: {e}", "error")
     return redirect(url_for('admin_utenti'))
 
+# --- CAMBI SERIE & API ULTIMA BOTTIGLIA ---
+@app.route("/api/ultima_bottiglia/<forno>/<linea>")
+def ultima_bottiglia(forno, linea):
+    try:
+        conn = get_db_connection()
+        cur = conn.cursor()
+        cur.execute("""
+            SELECT bottiglia_nuova, nome_bottiglia, num_bottiglie_tempera_nuova, num_bottiglie_tempera 
+            FROM cambi_serie 
+            WHERE forno = %s AND linea = %s 
+            ORDER BY id DESC LIMIT 1;
+        """, (forno, linea))
+        ultimo = cur.fetchone()
+        cur.close()
+        conn.close()
+        
+        if ultimo:
+            return jsonify({
+                "bottiglia": ultimo.get('bottiglia_nuova') or ultimo.get('nome_bottiglia') or "",
+                "tempera": ultimo.get('num_bottiglie_tempera_nuova') if ultimo.get('num_bottiglie_tempera_nuova') is not None else (ultimo.get('num_bottiglie_tempera') or 0)
+            })
+        return jsonify({"bottiglia": "", "tempera": 0})
+    except Exception as e:
+        print(f"Errore API ultima bottiglia: {e}")
+        return jsonify({"bottiglia": "", "tempera": 0})
+
 @app.route("/cambi_serie", methods=["GET", "POST"])
 @app.route("/cambi_serie.html", methods=["GET", "POST"])
 def cambi_serie():
     forno_filtro = request.args.get("forno", "Tutti")
-    settimana_filtro = request.args.get("settimana", "").strip()
+    settimana_filtro = request.args.get("settimana", "")
 
     conn = get_db_connection()
     cur = conn.cursor()
-
+    
     query = "SELECT * FROM cambi_serie WHERE 1=1"
     params = []
 
     if forno_filtro != "Tutti":
         query += " AND forno = %s"
         params.append(forno_filtro)
-
+    
     if settimana_filtro:
-        query += " AND TO_CHAR(data_cambio::DATE, 'IYYY-\"W\"IW') = %s"
+        query += " AND TO_CHAR(data_cambio::DATE, 'IYYY-IW') = %s"
         params.append(settimana_filtro)
 
-    query += " ORDER BY data_cambio::DATE ASC, id ASC;"
+    query += " ORDER BY data_cambio DESC, id DESC;"
     cur.execute(query, tuple(params))
-    record_serie_raw = cur.fetchall()
-
+    record_serie = cur.fetchall()
+    
     cur.close()
     conn.close()
-
-    giorni_it = ['Lunedì', 'Martedì', 'Mercoledì', 'Giovedì', 'Venerdì', 'Sabato', 'Domenica']
-    
-    record_serie = []
-    for r in record_serie_raw:
-        row = dict(r)
-        giorno_str = ""
-        if row.get('data_cambio'):
-            try:
-                dt = datetime.strptime(str(row['data_cambio']).strip(), '%Y-%m-%d')
-                giorno_str = giorni_it[dt.weekday()]
-            except Exception:
-                giorno_str = ""
-        row['giorno_settimana'] = giorno_str
-        record_serie.append(row)
 
     return render_template("cambi_serie.html", 
                            record_serie=record_serie, 
@@ -1009,32 +613,26 @@ def aggiungi_cambio_serie():
     forno = request.form.get("forno")
     linea = request.form.get("linea")
     data_cambio = request.form.get("data_cambio")
-    nome_bottiglia = request.form.get("nome_bottiglia", "")
     bottiglia_precedente = request.form.get("bottiglia_precedente", "")
     bottiglia_nuova = request.form.get("bottiglia_nuova", "")
     tempo_cambio = request.form.get("tempo_cambio", "")
-    altezza_paratie = request.form.get("altezza_paratie", "")
-    
     num_bottiglie_tempera_vecchia = int(request.form.get("num_bottiglie_tempera_vecchia", 0) or 0)
     num_bottiglie_tempera_nuova = int(request.form.get("num_bottiglie_tempera_nuova", 0) or 0)
-    num_bottiglie_tempera = num_bottiglie_tempera_nuova
-
-    quantita_trattamento = ""
     misura_piastrina = request.form.get("misura_piastrina", "").strip()
 
     try:
         conn = get_db_connection()
         cur = conn.cursor()
         cur.execute("""
-            INSERT INTO cambi_serie (forno, linea, data_cambio, nome_bottiglia, bottiglia_precedente, bottiglia_nuova, tempo_cambio, altezza_paratie, num_bottiglie_tempera, num_bottiglie_tempera_vecchia, num_bottiglie_tempera_nuova, quantita_trattamento, misura_piastrina)
-            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s);
-        """, (forno, linea, data_cambio, nome_bottiglia, bottiglia_precedente, bottiglia_nuova, tempo_cambio, altezza_paratie, num_bottiglie_tempera, num_bottiglie_tempera_vecchia, num_bottiglie_tempera_nuova, quantita_trattamento, misura_piastrina))
-
+            INSERT INTO cambi_serie (forno, linea, data_cambio, bottiglia_precedente, bottiglia_nuova, nome_bottiglia, tempo_cambio, num_bottiglie_tempera_vecchia, num_bottiglie_tempera_nuova, num_bottiglie_tempera, misura_piastrina)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s);
+        """, (forno, linea, data_cambio, bottiglia_precedente, bottiglia_nuova, bottiglia_nuova, tempo_cambio, num_bottiglie_tempera_vecchia, num_bottiglie_tempera_nuova, num_bottiglie_tempera_nuova, misura_piastrina))
+        
         conn.commit()
         cur.close()
         conn.close()
-
-        registra_log(f"Registrato cambio serie per {forno} Linea {linea}")
+        
+        registra_log(f"Registrato cambio serie per {forno} Linea {linea} - Montante: {bottiglia_nuova}")
         flash("Cambio serie registrato con successo!", "success")
     except Exception as e:
         flash(f"Errore durante il salvataggio del cambio serie: {e}", "error")
@@ -1046,17 +644,11 @@ def modifica_cambio_serie(id_cambio):
     forno = request.form.get("forno")
     linea = request.form.get("linea")
     data_cambio = request.form.get("data_cambio")
-    nome_bottiglia = request.form.get("nome_bottiglia", "")
     bottiglia_precedente = request.form.get("bottiglia_precedente", "")
     bottiglia_nuova = request.form.get("bottiglia_nuova", "")
     tempo_cambio = request.form.get("tempo_cambio", "")
-    altezza_paratie = request.form.get("altezza_paratie", "")
-    
     num_bottiglie_tempera_vecchia = int(request.form.get("num_bottiglie_tempera_vecchia", 0) or 0)
     num_bottiglie_tempera_nuova = int(request.form.get("num_bottiglie_tempera_nuova", 0) or 0)
-    num_bottiglie_tempera = num_bottiglie_tempera_nuova
-
-    quantita_trattamento = ""
     misura_piastrina = request.form.get("misura_piastrina", "").strip()
 
     try:
@@ -1064,20 +656,18 @@ def modifica_cambio_serie(id_cambio):
         cur = conn.cursor()
         cur.execute("""
             UPDATE cambi_serie 
-            SET forno = %s, linea = %s, data_cambio = %s, nome_bottiglia = %s, 
-                bottiglia_precedente = %s, bottiglia_nuova = %s,
-                tempo_cambio = %s, altezza_paratie = %s, 
-                num_bottiglie_tempera = %s, num_bottiglie_tempera_vecchia = %s, num_bottiglie_tempera_nuova = %s,
-                quantita_trattamento = %s, misura_piastrina = %s
+            SET forno = %s, linea = %s, data_cambio = %s, bottiglia_precedente = %s, bottiglia_nuova = %s, nome_bottiglia = %s, tempo_cambio = %s, num_bottiglie_tempera_vecchia = %s, num_bottiglie_tempera_nuova = %s, num_bottiglie_tempera = %s, misura_piastrina = %s
             WHERE id = %s;
-        """, (forno, linea, data_cambio, nome_bottiglia, bottiglia_precedente, bottiglia_nuova, tempo_cambio, altezza_paratie, num_bottiglie_tempera, num_bottiglie_tempera_vecchia, num_bottiglie_tempera_nuova, quantita_trattamento, misura_piastrina, id_cambio))
+        """, (forno, linea, data_cambio, bottiglia_precedente, bottiglia_nuova, bottiglia_nuova, tempo_cambio, num_bottiglie_tempera_vecchia, num_bottiglie_tempera_nuova, num_bottiglie_tempera_nuova, misura_piastrina, id_cambio))
+        
         conn.commit()
         cur.close()
         conn.close()
+        
         registra_log(f"Modificato cambio serie ID {id_cambio}")
         flash("Cambio serie aggiornato con successo!", "success")
     except Exception as e:
-        flash(f"Errore durante l'aggiornamento del cambio serie: {e}", "error")
+        flash(f"Errore durante l'aggiornamento: {e}", "error")
 
     return redirect(url_for("cambi_serie"))
 
@@ -1100,26 +690,24 @@ def elimina_cambio_serie(id_cambio):
 def esporta_cambi_serie_csv():
     conn = get_db_connection()
     cur = conn.cursor()
-    cur.execute("SELECT data_cambio, forno, linea, nome_bottiglia, bottiglia_precedente, bottiglia_nuova, tempo_cambio, altezza_paratie, num_bottiglie_tempera_vecchia, num_bottiglie_tempera_nuova, misura_piastrina FROM cambi_serie ORDER BY data_cambio::DATE ASC;")
+    cur.execute("SELECT data_cambio, forno, linea, bottiglia_precedente, bottiglia_nuova, nome_bottiglia, tempo_cambio, num_bottiglie_tempera_vecchia, num_bottiglie_tempera_nuova, num_bottiglie_tempera, misura_piastrina FROM cambi_serie ORDER BY data_cambio DESC;")
     righe = cur.fetchall()
     cur.close()
     conn.close()
 
     output = io.StringIO()
     writer = csv.writer(output)
-    writer.writerow(['Data Cambio', 'Forno', 'Linea', 'Nome Bottiglia', 'Bottiglia Smontante', 'Bottiglia Montante', 'Tempo Cambio', 'Altezza Paratie', 'N° Bottiglie Tempera (Vecchia)', 'N° Bottiglie Tempera (Nuova)', 'Misura Piastrina'])
+    writer.writerow(['Data Cambio', 'Forno', 'Linea', 'Bottiglia Smontante', 'Bottiglia Montante', 'Tempo Cambio', 'N° Bottiglie Tempera (Vecchia)', 'N° Bottiglie Tempera (Nuova)', 'Misura Piastrina'])
     for r in righe:
         writer.writerow([
             r.get('data_cambio', ''),
             r.get('forno', ''),
             r.get('linea', ''),
-            r.get('nome_bottiglia', ''),
-            r.get('bottiglia_precedente', ''),
+            r.get('bottiglia_precedente') or r.get('nome_bottiglia', ''),
             r.get('bottiglia_nuova', ''),
             r.get('tempo_cambio', ''),
-            r.get('altezza_paratie', ''),
             r.get('num_bottiglie_tempera_vecchia', 0),
-            r.get('num_bottiglie_tempera_nuova', 0),
+            r.get('num_bottiglie_tempera_nuova') if r.get('num_bottiglie_tempera_nuova') is not None else r.get('num_bottiglie_tempera', 0),
             r.get('misura_piastrina', '')
         ])
     return Response(
@@ -1128,6 +716,7 @@ def esporta_cambi_serie_csv():
         headers={"Content-disposition": "attachment; filename=Cambi_Serie_OMG.csv"}
     )
 
+# --- MODULO: REPORT ORE & STATISTICHE MANUTENZIONI ---
 @app.route("/report_ore")
 @app.route("/report_ore.html")
 def report_ore():
@@ -1153,7 +742,7 @@ def report_ore():
 
     conn = get_db_connection()
     cur = conn.cursor()
-
+    
     cur.execute("SELECT username FROM utenti ORDER BY username ASC;")
     utenti = cur.fetchall()
 
@@ -1186,7 +775,7 @@ def report_ore():
 
     for r in interventi:
         assegnati = [t.strip() for t in (r['assegnato_a'] or "").split(",") if t.strip()]
-
+        
         if filtro_tecnico != "Tutti" and filtro_tecnico not in assegnati:
             continue
 
@@ -1227,6 +816,7 @@ def report_ore():
                            chart_tipi_labels=chart_tipi_labels,
                            chart_tipi_values=chart_tipi_values)
 
+# --- RICHIESTE INTERVENTO MANUTENZIONE OFFICINA ---
 @app.route("/richieste_manutenzione", methods=["GET", "POST"])
 @app.route("/richieste_manutenzione.html", methods=["GET", "POST"])
 def richieste_manutenzione():
@@ -1240,10 +830,10 @@ def richieste_manutenzione():
     puo_assegnare = is_admin or session.get('puo_assegnare_manutenzioni', 1)
     puo_gestire = is_admin or session.get('puo_gestire_interventi', 1)
     puo_elimina_int = is_admin or session.get('puo_eliminare_interventi', 0)
-
+    
     conn = get_db_connection()
     cur = conn.cursor()
-
+    
     if request.method == "POST":
         if not puo_aprire:
             flash("Non hai i permessi per aprire nuove richieste di intervento.", "error")
@@ -1254,7 +844,7 @@ def richieste_manutenzione():
         descrizione = request.form.get("descrizione", "")
         priorita = request.form.get("priorita", "Media")
         tipo_guasto = request.form.get("tipo_guasto", "Meccanico")
-
+        
         tecnici_selezionati = []
         if puo_assegnare:
             tecnici_selezionati = request.form.getlist("assegnato_a[]")
@@ -1262,21 +852,21 @@ def richieste_manutenzione():
         else:
             assegnato_a = username_corrente
             tecnici_selezionati = [username_corrente]
-
+        
         allegato_nome = None
         allegato_dati = None
         file_allegato = request.files.get("allegato_foto")
         if file_allegato and file_allegato.filename:
             allegato_nome = file_allegato.filename
             allegato_dati = file_allegato.read()
-
+        
         if titolo:
             cur.execute("""
                 INSERT INTO richieste_manutenzione (titolo, impianto_macchina, descrizione, priorita, tipo_guasto, assegnato_a, creato_da, stato, allegato_nome, allegato_dati)
                 VALUES (%s, %s, %s, %s, %s, %s, %s, 'Aperta', %s, %s);
             """, (titolo, impianto_macchina, descrizione, priorita, tipo_guasto, assegnato_a, username_corrente, allegato_nome, allegato_dati))
             conn.commit()
-
+            
             for tec in tecnici_selezionati:
                 tec_clean = tec.strip()
                 if tec_clean:
@@ -1314,7 +904,7 @@ def richieste_manutenzione():
 
     cur.close()
     conn.close()
-
+    
     return render_template("richieste_manutenzione.html", 
                            richieste=richieste, 
                            lista_utenti=lista_utenti, 
@@ -1330,15 +920,15 @@ def cambia_stato_intervento(intervento_id):
     username_corrente = session.get('username')
     nuovo_stato = request.form.get("stato")
     note_lavoro = request.form.get("note_lavoro", "")
-
+    
     conn = get_db_connection()
     cur = conn.cursor()
     cur.execute("SELECT * FROM richieste_manutenzione WHERE id = %s;", (intervento_id,))
     req = cur.fetchone()
-
+    
     if req:
         now = datetime.now()
-
+        
         if nuovo_stato == 'In Lavoro':
             inizio_precedente = req.get('inizio_lavoro')
             if not inizio_precedente:
@@ -1352,13 +942,13 @@ def cambia_stato_intervento(intervento_id):
             else:
                 cur.execute("UPDATE richieste_manutenzione SET stato = %s WHERE id = %s;", (nuovo_stato, intervento_id))
             flash("Intervento avviato / ripreso!", "success")
-
+            
         elif nuovo_stato == 'In Pausa':
             inizio = req.get('inizio_lavoro')
             minuti_aggiunti = 0
             if inizio and req.get('stato') == 'In Lavoro':
                 minuti_aggiunti = int((now - inizio).total_seconds() / 60)
-
+            
             cur.execute("""
                 UPDATE richieste_manutenzione 
                 SET stato = %s, 
@@ -1367,7 +957,7 @@ def cambia_stato_intervento(intervento_id):
                 WHERE id = %s;
             """, (nuovo_stato, minuti_aggiunti, intervento_id))
             flash("Intervento messo in pausa.", "warning")
-
+            
         elif nuovo_stato == 'Attesa Ricambio':
             cur.execute("""
                 UPDATE richieste_manutenzione 
@@ -1375,18 +965,18 @@ def cambia_stato_intervento(intervento_id):
                 WHERE id = %s;
             """, (nuovo_stato, note_lavoro, intervento_id))
             flash("Intervento messo in attesa ricambio.", "warning")
-
+            
         elif nuovo_stato == 'Completata':
             inizio = req.get('inizio_lavoro')
             minuti_aggiunti = 0
             if inizio and req.get('stato') == 'In Lavoro':
                 minuti_aggiunti = int((now - inizio).total_seconds() / 60)
-
+            
             tempo_totale = req.get('tempo_lavorato_minuti', 0) + minuti_aggiunti
 
             ricambi_qr_list = request.form.getlist("ricambio_qr[]")
             ricambi_qta_list = request.form.getlist("ricambio_qta[]")
-
+            
             for qr, qta_str in zip(ricambi_qr_list, ricambi_qta_list):
                 if qr and qta_str and int(qta_str) > 0:
                     qta = int(qta_str)
@@ -1408,7 +998,7 @@ def cambia_stato_intervento(intervento_id):
                     note_lavoro = COALESCE(NULLIF(%s, ''), note_lavoro) 
                 WHERE id = %s;
             """, (nuovo_stato, now, tempo_totale, note_lavoro, intervento_id))
-
+            
             creato_da = req.get('creato_da')
             if creato_da and creato_da != username_corrente:
                 crea_notifica(
@@ -1417,15 +1007,15 @@ def cambia_stato_intervento(intervento_id):
                     messaggio=f"L'intervento su {req.get('impianto_macchina')} è stato completato da {username_corrente}.",
                     link="/richieste_manutenzione"
                 )
-
+                
             flash("Intervento completato e chiuso con successo!", "success")
-
+            
         elif nuovo_stato == 'Riassegna':
             if session.get('is_admin') or session.get('puo_assegnare_manutenzioni', 1):
                 tecnici_nuovi = request.form.getlist("nuovi_assegnatari[]")
                 nuova_lista = ", ".join(tecnici_nuovi) if tecnici_nuovi else ""
                 cur.execute("UPDATE richieste_manutenzione SET assegnato_a = %s WHERE id = %s;", (nuova_lista, intervento_id))
-
+                
                 for tec in tecnici_nuovi:
                     tec_clean = tec.strip()
                     if tec_clean:
@@ -1439,7 +1029,7 @@ def cambia_stato_intervento(intervento_id):
 
         conn.commit()
         registra_log(f"Aggiornato intervento ID {intervento_id} (Stato: {nuovo_stato})")
-
+        
     cur.close()
     conn.close()
     return redirect(url_for("richieste_manutenzione"))
@@ -1482,7 +1072,7 @@ def elimina_intervento(intervento_id):
     if not (session.get('is_admin') or session.get('puo_eliminare_interventi')):
         flash("Permesso negato per eliminare gli interventi.", "error")
         return redirect(url_for("richieste_manutenzione"))
-
+        
     conn = get_db_connection()
     cur = conn.cursor()
     cur.execute("DELETE FROM richieste_manutenzione WHERE id = %s;", (intervento_id,))
@@ -1493,6 +1083,7 @@ def elimina_intervento(intervento_id):
     flash("Intervento eliminato.", "success")
     return redirect(url_for("richieste_manutenzione"))
 
+# --- GESTIONE PROMEMORIA ---
 @app.route("/promemoria", methods=["GET", "POST"])
 @app.route("/promemoria.html", methods=["GET", "POST"])
 def promemoria():
@@ -1506,28 +1097,28 @@ def promemoria():
 
     conn = get_db_connection()
     cur = conn.cursor()
-
+    
     if request.method == "POST":
         titolo = request.form.get("titolo")
         descrizione = request.form.get("descrizione", "")
         data_scadenza = request.form.get("data_scadenza", "")
         priorita = request.form.get("priorita", "Media")
         ricorrenza = request.form.get("ricorrenza", "Nessuna")
-
+        
         if is_admin or puo_assegnare:
             assegnato_a = request.form.get("assegnato_a")
             if not assegnato_a:
                 assegnato_a = username_corrente
         else:
             assegnato_a = username_corrente
-
+        
         if titolo:
             cur.execute("""
-                INSERT INTO promemoria (titolo, descrizione, data_scadenza, priorita, ricorrenza, assegnato_a, notificato_anticipo, notificato_oggi)
-                VALUES (%s, %s, %s, %s, %s, %s, FALSE, FALSE);
+                INSERT INTO promemoria (titolo, descrizione, data_scadenza, priorita, ricorrenza, assegnato_a)
+                VALUES (%s, %s, %s, %s, %s, %s);
             """, (titolo, descrizione, data_scadenza, priorita, ricorrenza, assegnato_a))
             conn.commit()
-
+            
             if assegnato_a and assegnato_a != username_corrente:
                 crea_notifica(
                     destinatario=assegnato_a,
@@ -1535,11 +1126,11 @@ def promemoria():
                     messaggio=f"Ti è stato assegnato un promemoria: {titolo}",
                     link="/promemoria"
                 )
-
+                
             registra_log(f"Creato promemoria: {titolo} per utente {assegnato_a}")
             flash("Promemoria aggiunto con successo!", "success")
         return redirect(url_for("promemoria"))
-
+        
     lista_utenti = []
     if is_admin or puo_assegnare:
         cur.execute("SELECT username FROM utenti ORDER BY username ASC;")
@@ -1555,7 +1146,7 @@ def promemoria():
     lista_promemoria = cur.fetchall()
     cur.close()
     conn.close()
-
+    
     return render_template("promemoria.html", 
                            promemoria=lista_promemoria, 
                            lista_utenti=lista_utenti, 
@@ -1567,15 +1158,15 @@ def completa_promemoria(promemoria_id):
     cur = conn.cursor()
     cur.execute("SELECT * FROM promemoria WHERE id = %s;", (promemoria_id,))
     p = cur.fetchone()
-
+    
     if p:
         ricorrenza = p.get('ricorrenza', 'Nessuna')
         data_attuale_str = p.get('data_scadenza')
-
+        
         if ricorrenza and ricorrenza != 'Nessuna' and data_attuale_str:
             try:
                 dt_scadenza = datetime.strptime(data_attuale_str, '%Y-%m-%d')
-
+                
                 if ricorrenza == 'Giorno':
                     nuova_dt = dt_scadenza + timedelta(days=1)
                 elif ricorrenza == 'Settimana':
@@ -1589,25 +1180,25 @@ def completa_promemoria(promemoria_id):
                     nuova_dt = dt_scadenza.replace(year=dt_scadenza.year + 1)
                 else:
                     nuova_dt = dt_scadenza
-
+                
                 nuova_data_str = nuova_dt.strftime('%Y-%m-%d')
-
+                
                 cur.execute("""
                     UPDATE promemoria 
-                    SET data_scadenza = %s, completato = FALSE, notificato_anticipo = FALSE, notificato_oggi = FALSE 
+                    SET data_scadenza = %s, completato = FALSE 
                     WHERE id = %s;
                 """, (nuova_data_str, promemoria_id))
-
+                
                 registra_log(f"Avanzata scadenza promemoria '{p['titolo']}' al {nuova_data_str} ({ricorrenza})")
                 flash(f"Promemoria completato! Prossima scadenza impostata al {nuova_data_str}.", "success")
-
+                
             except Exception as e:
                 cur.execute("UPDATE promemoria SET completato = NOT completato WHERE id = %s;", (promemoria_id,))
         else:
             cur.execute("UPDATE promemoria SET completato = NOT completato WHERE id = %s;", (promemoria_id,))
-
+            
         conn.commit()
-
+    
     cur.close()
     conn.close()
     return redirect(url_for("promemoria"))
@@ -1624,6 +1215,7 @@ def elimina_promemoria(promemoria_id):
     flash("Promemoria eliminato.", "success")
     return redirect(url_for("promemoria"))
 
+# --- GESTIONE FORNITORI E CONTATTI ---
 @app.route("/fornitori", methods=["GET", "POST"])
 @app.route("/fornitori.html", methods=["GET", "POST"])
 def fornitori():
@@ -1781,7 +1373,7 @@ def elimina_fornitore(fornitore_id):
 def importa_intelligente():
     if request.method == "GET":
         return redirect(url_for("fornitori"))
-
+        
     if not (session.get('is_admin') or session.get('puo_importare_fornitori', 1)):
         flash("Permesso negato per l'importazione.", "error")
         return redirect(url_for("fornitori"))
@@ -1805,13 +1397,13 @@ def importa_intelligente():
         else:
             flash("Formato file non supportato.", "error")
             return redirect(url_for("fornitori"))
-
+        
         conn = get_db_connection()
         cur = conn.cursor()
         count_fornitori = 0
         count_tecnici = 0
         current_fornitore_id = None
-
+        
         for _, row in df.iterrows():
             valori = [str(val).strip() for val in row.values if pd.notna(val) and str(val).strip() != 'nan']
             if not valori:
@@ -1820,7 +1412,7 @@ def importa_intelligente():
             has_double_space = bool(re.search(r'\s{2,}', col1_raw))
             words = col1_raw.split()
             first_word = words[0] if words else ''
-
+            
             is_company = False
             if has_double_space:
                 is_company = True
@@ -1840,7 +1432,7 @@ def importa_intelligente():
                 indirizzo = valori[2] if len(valori) > 2 else ''
                 telefono = next((v for v in valori if re.search(r'\d{3}', v) and not '@' in v), '')
                 email = next((v for v in valori if '@' in v), '')
-
+                
                 cur.execute("SELECT id FROM fornitori WHERE LOWER(nome_azienda) = LOWER(%s);", (nome_azienda,))
                 f_res = cur.fetchone()
                 if f_res:
@@ -1868,7 +1460,7 @@ def importa_intelligente():
                     telefono = next((v for v in valori if re.search(r'\d{3}', v) and not '@' in v), '')
                     email = next((v for v in valori if '@' in v), '')
                     mansione = valori[1] if len(valori) > 1 and valori[1] != telefono and valori[1] != email else ''
-
+                    
                     cur.execute("""
                         SELECT id FROM contatti_tecnici 
                         WHERE fornitore_id = %s AND LOWER(nome) = LOWER(%s);
@@ -1897,7 +1489,7 @@ def esporta_fornitori_csv():
     fornitori_list = cur.fetchall()
     cur.close()
     conn.close()
-
+    
     output = io.StringIO()
     writer = csv.writer(output)
     writer.writerow(['Nome Azienda', 'Settore / Note', 'Indirizzo', 'P.IVA', 'Telefono', 'Email'])
@@ -1916,6 +1508,7 @@ def esporta_fornitori_csv():
         headers={"Content-disposition": "attachment; filename=Fornitori_Gestionale_OMG.csv"}
     )
 
+# --- GESTIONE DOCUMENTI ---
 @app.route("/documenti", defaults={"cartella_id": None}, methods=["GET", "POST"])
 @app.route("/documenti/<int:cartella_id>", methods=["GET", "POST"])
 @app.route("/documenti.html", defaults={"cartella_id": None}, methods=["GET", "POST"])
@@ -1963,7 +1556,7 @@ def documenti(cartella_id):
                 conn.commit()
                 registra_log(f"Caricato file: {nome_file}")
                 flash("File caricato con successo!", "success")
-
+                
         cur.close()
         conn.close()
         return redirect(url_for("documenti", cartella_id=cartella_id) if cartella_id else url_for("documenti"))
@@ -2032,7 +1625,7 @@ def elimina_cartella(cartella_id):
     conn.close()
     registra_log(f"Eliminata cartella documenti ID {cartella_id}")
     flash("Cartella eliminata con successo.", "success")
-
+    
     if parent_id:
         return redirect(url_for("documenti", cartella_id=parent_id))
     return redirect(url_for("documenti"))
@@ -2055,11 +1648,12 @@ def elimina_file(file_id):
     conn.close()
     registra_log(f"Eliminato file ID {file_id}")
     flash("File eliminato con successo.", "success")
-
+    
     if cartella_id:
         return redirect(url_for("documenti", cartella_id=cartella_id))
     return redirect(url_for("documenti"))
 
+# --- ALTRE ROTTE GESTIONALE E ESPORTAZIONI CSV ---
 @app.route("/esportazioni")
 @app.route("/esportazioni.html")
 def esportazioni():
@@ -2078,7 +1672,7 @@ def esporta_inventario():
     prodotti = cur.fetchall()
     cur.close()
     conn.close()
-
+    
     output = io.StringIO()
     writer = csv.writer(output)
     writer.writerow(['QR Code', 'Nome Articolo', 'SAP', 'Quantita', 'Posizione', 'Peso', 'Magazzino Pesante'])
@@ -2092,7 +1686,7 @@ def esporta_inventario():
             p.get('peso', ''), 
             'Si' if p.get('magazzino_pesante') else 'No'
         ])
-
+    
     return Response(
         output.getvalue(),
         mimetype="text/csv",
@@ -2107,7 +1701,7 @@ def esporta_interventi():
     richieste = cur.fetchall()
     cur.close()
     conn.close()
-
+    
     output = io.StringIO()
     writer = csv.writer(output)
     writer.writerow(['ID', 'Titolo', 'Macchina', 'Priorità', 'Tipo Guasto', 'Stato', 'Assegnato A', 'Creato Da', 'Inizio', 'Fine', 'Minuti Lavorati', 'Note', 'Data Creazione'])
@@ -2127,7 +1721,7 @@ def esporta_interventi():
             r.get('note_lavoro', ''), 
             r.get('creato_il', '')
         ])
-
+    
     return Response(
         output.getvalue(),
         mimetype="text/csv",
@@ -2256,7 +1850,7 @@ def esporta_pesante():
             p.get('posizione', ''), 
             p.get('peso', '')
         ])
-
+    
     return Response(
         output.getvalue(),
         mimetype="text/csv",
@@ -2371,7 +1965,6 @@ def stampa_bolla(qr_code):
 
 @app.route("/carico", methods=["GET", "POST"])
 @app.route("/carico.html", methods=["GET", "POST"])
-@app.route("/carica_prodotto", methods=["GET", "POST"], endpoint="carica_prodotto")
 def carico():
     if not (session.get('is_admin') or session.get('puo_caricare_scaricare', 1)):
         flash("Permesso negato per il carico.", "error")
@@ -2394,7 +1987,6 @@ def carico():
 
 @app.route("/scarico", methods=["GET", "POST"])
 @app.route("/scarico.html", methods=["GET", "POST"])
-@app.route("/scarica_prodotto", methods=["GET", "POST"], endpoint="scarica_prodotto")
 def scarico():
     if not (session.get('is_admin') or session.get('puo_caricare_scaricare', 1)):
         flash("Permesso negato per lo scarico.", "error")
@@ -2511,13 +2103,13 @@ def aggiungi_prodotto():
     try:
         conn = get_db_connection()
         cur = conn.cursor()
-
+        
         if not qr_code:
             cur.execute("SELECT COUNT(*) + 1 as next_id FROM prodotti;")
             res_id = cur.fetchone()
             next_num = res_id['next_id'] if res_id else 1
             qr_code = f"OMG-{next_num:04d}"
-
+            
             while True:
                 cur.execute("SELECT id FROM prodotti WHERE qr_code = %s;", (qr_code,))
                 if not cur.fetchone():
@@ -2565,7 +2157,7 @@ def manda_manutenzione(qr_code):
         cur = conn.cursor()
         cur.execute("SELECT * FROM prodotti WHERE qr_code = %s;", (qr_code,))
         prod = cur.fetchone()
-
+        
         cur.execute("""
             UPDATE prodotti 
             SET quantita = GREATEST(0, quantita - %s),
@@ -2579,7 +2171,7 @@ def manda_manutenzione(qr_code):
                 note_manutenzione = %s
             WHERE qr_code = %s;
         """, (quantita_manutenzione, cliente_manutenzione, quantita_manutenzione, data_spedizione, data_riconsegna, vettore, ordine_amministrativo, note_manutenzione, qr_code))
-
+        
         if prod:
             cur.execute("""
                 INSERT INTO storico_manutenzioni (nome_prodotto, qr_code, sap, cliente, quantita, data_spedizione, data_riconsegna, vettore, ordine_amministrativo, note)
