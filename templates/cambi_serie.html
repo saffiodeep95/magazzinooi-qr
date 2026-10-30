@@ -161,10 +161,10 @@
                             <tr>
                                 <th>Data Cambio</th>
                                 <th>Forno / Linea</th>
-                                <th>Nome Bottiglia</th>
+                                <th>Bottiglia Precedente / Nuova</th>
                                 <th>Tempo Cambio</th>
                                 <th>Altezza Paratie</th>
-                                <th>N° Bottiglie Tempera</th>
+                                <th>Bottiglie Tempera (Vecchia / Nuova)</th>
                                 <th>Q.tà Trattamento</th>
                                 <th class="no-print text-end">Azioni</th>
                             </tr>
@@ -186,10 +186,22 @@
                                     <span class="fw-bold text-dark">{{ r.forno }}</span><br>
                                     <span class="badge bg-secondary font-monospace">Linea {{ r.linea or '-' }}</span>
                                 </td>
-                                <td class="fw-bold text-primary fs-5">{{ r.nome_bottiglia }}</td>
+                                <td>
+                                    {% if r.bottiglia_precedente or r.bottiglia_nuova %}
+                                        <small class="text-muted d-block"><i class="fa-solid fa-arrow-rotate-left me-1"></i> Prima: <strong>{{ r.bottiglia_precedente or '-' }}</strong></small>
+                                        <span class="text-success fw-bold"><i class="fa-solid fa-arrow-right me-1"></i> Nuova: {{ r.bottiglia_nuova or '-' }}</span>
+                                    {% else %}
+                                        <span class="fw-bold text-primary fs-5">{{ r.nome_bottiglia or '-' }}</span>
+                                    {% endif %}
+                                </td>
                                 <td><span class="badge bg-secondary fs-6">{{ r.tempo_cambio or '-' }}</span></td>
                                 <td>{{ r.altezza_paratie or '-' }}</td>
-                                <td><span class="badge bg-info text-dark fs-6">{{ r.num_bottiglie_tempera }} pz</span></td>
+                                <td>
+                                    <div class="d-flex flex-column gap-1">
+                                        <small class="text-muted"><i class="fa-solid fa-box-archive me-1"></i> Vecchia: <strong>{{ r.num_bottiglie_tempera_vecchia or 0 }} pz</strong></small>
+                                        <span class="badge bg-info text-dark fs-6 text-start" style="width: fit-content;"><i class="fa-solid fa-boxes-packing me-1"></i> Nuova: {{ r.num_bottiglie_tempera_nuova or r.num_bottiglie_tempera or 0 }} pz</span>
+                                    </div>
+                                </td>
                                 <td>{{ r.quantita_trattamento or '-' }}</td>
                                 <td class="no-print text-end">
                                     <button class="btn btn-sm btn-outline-primary me-1" data-bs-toggle="modal" data-bs-target="#modalModificaCambio{{ r.id }}" title="Modifica">
@@ -231,10 +243,17 @@
                                                     <input type="date" class="form-control" name="data_cambio" value="{{ r.data_cambio }}" required>
                                                 </div>
 
-                                                <div class="mb-3">
-                                                    <label class="form-label fw-bold">Nome Bottiglia *</label>
-                                                    <input type="text" class="form-control" name="nome_bottiglia" value="{{ r.nome_bottiglia }}" required>
+                                                <div class="row">
+                                                    <div class="col-md-6 mb-3">
+                                                        <label class="form-label fw-bold text-muted">Bottiglia Precedente</label>
+                                                        <input type="text" class="form-control" name="bottiglia_precedente" value="{{ r.bottiglia_precedente or r.nome_bottiglia }}" placeholder="Es. Articolo vecchio...">
+                                                    </div>
+                                                    <div class="col-md-6 mb-3">
+                                                        <label class="form-label fw-bold text-success">Bottiglia Nuova (In Produzione)</label>
+                                                        <input type="text" class="form-control" name="bottiglia_nuova" value="{{ r.bottiglia_nuova }}" placeholder="Es. Articolo nuovo...">
+                                                    </div>
                                                 </div>
+
                                                 <div class="row">
                                                     <div class="col-md-6 mb-3">
                                                         <label class="form-label">Tempo Cambio</label>
@@ -245,15 +264,21 @@
                                                         <input type="text" class="form-control" name="altezza_paratie" value="{{ r.altezza_paratie }}">
                                                     </div>
                                                 </div>
+
                                                 <div class="row">
                                                     <div class="col-md-6 mb-3">
-                                                        <label class="form-label">N° Bottiglie in Tempera</label>
-                                                        <input type="number" class="form-control" name="num_bottiglie_tempera" value="{{ r.num_bottiglie_tempera }}" min="0">
+                                                        <label class="form-label text-muted fw-bold">N° Bottiglie Tempera (Precedente)</label>
+                                                        <input type="number" class="form-control" name="num_bottiglie_tempera_vecchia" value="{{ r.num_bottiglie_tempera_vecchia or 0 }}" min="0">
                                                     </div>
                                                     <div class="col-md-6 mb-3">
-                                                        <label class="form-label">Quantità Trattamento</label>
-                                                        <input type="text" class="form-control" name="quantita_trattamento" value="{{ r.quantita_trattamento }}">
+                                                        <label class="form-label text-primary fw-bold">N° Bottiglie Tempera (Montante)</label>
+                                                        <input type="number" class="form-control" name="num_bottiglie_tempera_nuova" value="{{ r.num_bottiglie_tempera_nuova or r.num_bottiglie_tempera or 0 }}" min="0">
                                                     </div>
+                                                </div>
+
+                                                <div class="mb-3">
+                                                    <label class="form-label">Quantità Trattamento</label>
+                                                    <input type="text" class="form-control" name="quantita_trattamento" value="{{ r.quantita_trattamento }}">
                                                 </div>
                                             </div>
                                             <div class="modal-footer">
@@ -306,10 +331,17 @@
                             <input type="date" class="form-control" name="data_cambio" required>
                         </div>
 
-                        <div class="mb-3">
-                            <label class="form-label fw-bold">Nome Bottiglia *</label>
-                            <input type="text" class="form-control" name="nome_bottiglia" placeholder="Es. Bordolese 75cl..." required>
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label fw-bold text-muted">Bottiglia Precedente</label>
+                                <input type="text" class="form-control" name="bottiglia_precedente" placeholder="Es. Articolo smontato...">
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label fw-bold text-success">Bottiglia Nuova (In Produzione)</label>
+                                <input type="text" class="form-control" name="bottiglia_nuova" placeholder="Es. Articolo montante..." required>
+                            </div>
                         </div>
+
                         <div class="row">
                             <div class="col-md-6 mb-3">
                                 <label class="form-label">Tempo Cambio</label>
@@ -320,15 +352,21 @@
                                 <input type="text" class="form-control" name="altezza_paratie" placeholder="Es. 120 mm">
                             </div>
                         </div>
+
                         <div class="row">
                             <div class="col-md-6 mb-3">
-                                <label class="form-label">N° Bottiglie in Tempera</label>
-                                <input type="number" class="form-control" name="num_bottiglie_tempera" value="0" min="0">
+                                <label class="form-label text-muted fw-bold">N° Bottiglie Tempera (Precedente)</label>
+                                <input type="number" class="form-control" name="num_bottiglie_tempera_vecchia" value="0" min="0">
                             </div>
                             <div class="col-md-6 mb-3">
-                                <label class="form-label">Quantità Trattamento</label>
-                                <input type="text" class="form-control" name="quantita_trattamento" placeholder="Es. 5000 pz">
+                                <label class="form-label text-primary fw-bold">N° Bottiglie Tempera (Montante)</label>
+                                <input type="number" class="form-control" name="num_bottiglie_tempera_nuova" value="0" min="0">
                             </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label">Quantità Trattamento</label>
+                            <input type="text" class="form-control" name="quantita_trattamento" placeholder="Es. 5000 pz">
                         </div>
                     </div>
                     <div class="modal-footer">
