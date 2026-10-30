@@ -161,11 +161,11 @@
                             <tr>
                                 <th>Data Cambio</th>
                                 <th>Forno / Linea</th>
-                                <th>Bottiglia Precedente / Nuova</th>
+                                <th>Bottiglia Smontante / Montante</th>
                                 <th>Tempo Cambio</th>
                                 <th>Altezza Paratie</th>
                                 <th>Bottiglie Tempera (Vecchia / Nuova)</th>
-                                <th>Q.tà Trattamento</th>
+                                <th>Misura Piastrina</th>
                                 <th class="no-print text-end">Azioni</th>
                             </tr>
                         </thead>
@@ -188,8 +188,8 @@
                                 </td>
                                 <td>
                                     {% if r.bottiglia_precedente or r.bottiglia_nuova %}
-                                        <small class="text-muted d-block"><i class="fa-solid fa-arrow-rotate-left me-1"></i> Prima: <strong>{{ r.bottiglia_precedente or '-' }}</strong></small>
-                                        <span class="text-success fw-bold"><i class="fa-solid fa-arrow-right me-1"></i> Nuova: {{ r.bottiglia_nuova or '-' }}</span>
+                                        <small class="text-muted d-block"><i class="fa-solid fa-arrow-rotate-left me-1"></i> Smontante: <strong>{{ r.bottiglia_precedente or '-' }}</strong></small>
+                                        <span class="text-success fw-bold"><i class="fa-solid fa-arrow-right me-1"></i> Montante: {{ r.bottiglia_nuova or '-' }}</span>
                                     {% else %}
                                         <span class="fw-bold text-primary fs-5">{{ r.nome_bottiglia or '-' }}</span>
                                     {% endif %}
@@ -202,7 +202,7 @@
                                         <span class="badge bg-info text-dark fs-6 text-start" style="width: fit-content;"><i class="fa-solid fa-boxes-packing me-1"></i> Nuova: {{ r.num_bottiglie_tempera_nuova or r.num_bottiglie_tempera or 0 }} pz</span>
                                     </div>
                                 </td>
-                                <td>{{ r.quantita_trattamento or '-' }}</td>
+                                <td><span class="fw-bold text-primary">{{ r.misura_piastrina or '-' }}</span></td>
                                 <td class="no-print text-end">
                                     <button class="btn btn-sm btn-outline-primary me-1" data-bs-toggle="modal" data-bs-target="#modalModificaCambio{{ r.id }}" title="Modifica">
                                         <i class="fa-solid fa-pen-to-square"></i>
@@ -245,12 +245,12 @@
 
                                                 <div class="row">
                                                     <div class="col-md-6 mb-3">
-                                                        <label class="form-label fw-bold text-muted">Bottiglia Precedente</label>
-                                                        <input type="text" class="form-control" name="bottiglia_precedente" value="{{ r.bottiglia_precedente or r.nome_bottiglia }}" placeholder="Es. Articolo vecchio...">
+                                                        <label class="form-label fw-bold text-muted">Bottiglia Smontante</label>
+                                                        <input type="text" class="form-control" name="bottiglia_precedente" value="{{ r.bottiglia_precedente or r.nome_bottiglia }}" placeholder="Es. Articolo smontante...">
                                                     </div>
                                                     <div class="col-md-6 mb-3">
-                                                        <label class="form-label fw-bold text-success">Bottiglia Nuova (In Produzione)</label>
-                                                        <input type="text" class="form-control" name="bottiglia_nuova" value="{{ r.bottiglia_nuova }}" placeholder="Es. Articolo nuovo...">
+                                                        <label class="form-label fw-bold text-success">Bottiglia Montante</label>
+                                                        <input type="text" class="form-control" name="bottiglia_nuova" value="{{ r.bottiglia_nuova }}" placeholder="Es. Articolo montante...">
                                                     </div>
                                                 </div>
 
@@ -277,8 +277,8 @@
                                                 </div>
 
                                                 <div class="mb-3">
-                                                    <label class="form-label">Quantità Trattamento</label>
-                                                    <input type="text" class="form-control" name="quantita_trattamento" value="{{ r.quantita_trattamento }}">
+                                                    <label class="form-label fw-bold">Misura Piastrina</label>
+                                                    <input type="text" class="form-control" name="misura_piastrina" value="{{ r.misura_piastrina or '' }}" placeholder="Es. 150x80 mm">
                                                 </div>
                                             </div>
                                             <div class="modal-footer">
@@ -333,11 +333,11 @@
 
                         <div class="row">
                             <div class="col-md-6 mb-3">
-                                <label class="form-label fw-bold text-muted">Bottiglia Precedente (Autocompilata)</label>
+                                <label class="form-label fw-bold text-muted">Bottiglia Smontante (Autocompilata)</label>
                                 <input type="text" class="form-control bg-light" name="bottiglia_precedente" placeholder="Caricamento automatico..." readonly>
                             </div>
                             <div class="col-md-6 mb-3">
-                                <label class="form-label fw-bold text-success">Bottiglia Nuova (In Produzione)</label>
+                                <label class="form-label fw-bold text-success">Bottiglia Montante</label>
                                 <input type="text" class="form-control" name="bottiglia_nuova" placeholder="Es. Articolo montante..." required>
                             </div>
                         </div>
@@ -365,8 +365,8 @@
                         </div>
 
                         <div class="mb-3">
-                            <label class="form-label">Quantità Trattamento</label>
-                            <input type="text" class="form-control" name="quantita_trattamento" placeholder="Es. 5000 pz">
+                            <label class="form-label fw-bold">Misura Piastrina</label>
+                            <input type="text" class="form-control" name="misura_piastrina" placeholder="Es. 150x80 mm">
                         </div>
                     </div>
                     <div class="modal-footer">
