@@ -1,5 +1,5 @@
 # ========================================================================
-# Gestionale OMG Application - System with Push Notifications & Ore Report
+# Gestionale OMG Application - System with Push Notifications & Agenda
 # Copyright (c) 2026 Marco Pavan. All Rights Reserved.
 # Designed & Developed by Marco Pavan
 # ========================================================================
@@ -477,6 +477,14 @@ def registra():
             except Exception as e:
                 flash("Username già esistente o errore di registrazione.", "error")
     return render_template("registra.html")
+
+# --- PANNELLO AGENDA ---
+@app.route("/agenda")
+@app.route("/agenda.html")
+def agenda():
+    if not session.get('username'):
+        return redirect(url_for('login'))
+    return render_template("agenda.html")
 
 # --- PANNELLO PERMESSI ADMIN & LOGS ---
 @app.route("/admin_utenti")
