@@ -1,5 +1,5 @@
 # ========================================================================
-# Gestionale OMG Application - System with Push Notifications & Agenda
+# Gestionale OMG Application - System with Push Notifications & Ore Report
 # Copyright (c) 2026 Marco Pavan. All Rights Reserved.
 # Designed & Developed by Marco Pavan
 # ========================================================================
@@ -244,14 +244,10 @@ def init_db():
                 linea VARCHAR(50),
                 data_cambio VARCHAR(50),
                 nome_bottiglia VARCHAR(255),
-                bottiglia_precedente VARCHAR(255),
-                bottiglia_nuova VARCHAR(255),
                 tempo_cambio VARCHAR(50),
+                altezza_paratie VARCHAR(50),
                 num_bottiglie_tempera INT DEFAULT 0,
-                num_bottiglie_tempera_vecchia INT DEFAULT 0,
-                num_bottiglie_tempera_nuova INT DEFAULT 0,
                 quantita_trattamento VARCHAR(50),
-                misura_piastrina VARCHAR(50),
                 creato_il TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             );
         """)
@@ -268,16 +264,6 @@ def init_db():
             );
         """)
         
-        colonne_cambi_serie = [
-            ("bottiglia_precedente", "VARCHAR(255)"),
-            ("bottiglia_nuova", "VARCHAR(255)"),
-            ("num_bottiglie_tempera_vecchia", "INT DEFAULT 0"),
-            ("num_bottiglie_tempera_nuova", "INT DEFAULT 0"),
-            ("misura_piastrina", "VARCHAR(50)")
-        ]
-        for c_col, c_type in colonne_cambi_serie:
-            cur.execute(f"ALTER TABLE cambi_serie ADD COLUMN IF NOT EXISTS {c_col} {c_type};")
-
         permessi_lista = [
             ("puo_vedere_magazzino", "INT DEFAULT 1"),
             ("puo_aggiungere_prodotti", "INT DEFAULT 1"),
@@ -478,13 +464,69 @@ def registra():
                 flash("Username già esistente o errore di registrazione.", "error")
     return render_template("registra.html")
 
-# --- PANNELLO AGENDA ---
-@app.route("/agenda")
-@app.route("/agenda.html")
-def agenda():
-    if not session.get('username'):
-        return redirect(url_for('login'))
-    return render_template("agenda.html")
+# --- MODULO NASTRI ---
+@app.route("/nastri")
+@app.route("/nastri.html")
+def nastri():
+    if not (session.get('is_admin') or session.get('puo_vedere_magazzino', 1)):
+        flash("Accesso al modulo Nastri non autorizzato.", "error")
+        return redirect(url_for('index'))
+    lista_nastri = []
+    try:
+        conn = get_db_connection()
+        cur = conn.cursor()
+        cur.execute("SELECT * FROM nastri ORDER BY nome ASC;")
+        lista_nastri = cur.fetchall()
+        cur.close()
+        conn.close()
+    except Exception as e:
+        print(f"Errore caricamento nastri: {e}")
+    return render_template("nastri.html", nastri=lista_nastri)
+
+@app.route("/aggiungi_nastro", methods=["POST"])
+def aggiungi_nastro():
+    if not (session.get('is_admin') or session.get('puo_aggiungere_prodotti', 1)):
+        flash("Permesso negato.", "error")
+        return redirect(url_for("nastri"))
+    codice = request.form.get("codice", "")
+    nome = request.form.get("nome")
+    posizione = request.form.get("posizione", "")
+    stato = request.form.get("stato", "In Uso")
+    note = request.form.get("note", "")
+    if nome:
+        try:
+            conn = get_db_connection()
+            cur = conn.cursor()
+            cur.execute("""
+                INSERT INTO nastri (codice, nome, posizione, stato, note)
+                VALUES (%s, %s, %s, %s, %s);
+            """, (codice, nome, posizione, stato, note))
+            conn.commit()
+            cur.close()
+            conn.close()
+            registra_log(f"Aggiunto nastro: {nome}")
+            flash("Nastro aggiunto con successo!", "success")
+        except Exception as e:
+            flash(f"Errore aggiunta nastro: {e}", "error")
+    return redirect(url_for("nastri"))
+
+@app.route("/elimina_nastro/<int:nastro_id>", methods=["POST"])
+def elimina_nastro(nastro_id):
+    if not (session.get('is_admin') or session.get('puo_eliminare', 0)):
+        flash("Permesso negato per eliminare i nastri.", "error")
+        return redirect(url_for("nastri"))
+    try:
+        conn = get_db_connection()
+        cur = conn.cursor()
+        cur.execute("DELETE FROM nastri WHERE id = %s;", (nastro_id,))
+        conn.commit()
+        cur.close()
+        conn.close()
+        registra_log(f"Eliminato nastro ID {nastro_id}")
+        flash("Nastro eliminato con successo.", "success")
+    except Exception as e:
+        flash(f"Errore eliminazione nastro: {e}", "error")
+    return redirect(url_for("nastri"))
 
 # --- PANNELLO PERMESSI ADMIN & LOGS ---
 @app.route("/admin_utenti")
@@ -580,51 +622,7 @@ def elimina_utente(user_id):
         flash(f"Errore eliminazione utente: {e}", "error")
     return redirect(url_for('admin_utenti'))
 
-# --- GESTIONE NASTRI ---
-@app.route("/nastri")
-@app.route("/nastri.html")
-def nastri():
-    if not (session.get('is_admin') or session.get('puo_vedere_magazzino', 1)):
-        flash("Accesso al modulo Nastri non autorizzato.", "error")
-        return redirect(url_for('index'))
-    lista_nastri = []
-    try:
-        conn = get_db_connection()
-        cur = conn.cursor()
-        cur.execute("SELECT * FROM nastri ORDER BY nome ASC;")
-        lista_nastri = cur.fetchall()
-        cur.close()
-        conn.close()
-    except Exception as e:
-        print(f"Errore caricamento nastri: {e}")
-    return render_template("nastri.html", nastri=lista_nastri)
-
-# --- CAMBI SERIE & API ULTIMA BOTTIGLIA ---
-@app.route("/api/ultima_bottiglia/<forno>/<linea>")
-def ultima_bottiglia(forno, linea):
-    try:
-        conn = get_db_connection()
-        cur = conn.cursor()
-        cur.execute("""
-            SELECT bottiglia_nuova, nome_bottiglia, num_bottiglie_tempera_nuova, num_bottiglie_tempera 
-            FROM cambi_serie 
-            WHERE forno = %s AND linea = %s 
-            ORDER BY id DESC LIMIT 1;
-        """, (forno, linea))
-        ultimo = cur.fetchone()
-        cur.close()
-        conn.close()
-        
-        if ultimo:
-            return jsonify({
-                "bottiglia": ultimo.get('bottiglia_nuova') or ultimo.get('nome_bottiglia') or "",
-                "tempera": ultimo.get('num_bottiglie_tempera_nuova') if ultimo.get('num_bottiglie_tempera_nuova') is not None else (ultimo.get('num_bottiglie_tempera') or 0)
-            })
-        return jsonify({"bottiglia": "", "tempera": 0})
-    except Exception as e:
-        print(f"Errore API ultima bottiglia: {e}")
-        return jsonify({"bottiglia": "", "tempera": 0})
-
+# --- CAMBI SERIE ---
 @app.route("/cambi_serie", methods=["GET", "POST"])
 @app.route("/cambi_serie.html", methods=["GET", "POST"])
 def cambi_serie():
@@ -662,61 +660,28 @@ def aggiungi_cambio_serie():
     forno = request.form.get("forno")
     linea = request.form.get("linea")
     data_cambio = request.form.get("data_cambio")
-    bottiglia_precedente = request.form.get("bottiglia_precedente", "")
-    bottiglia_nuova = request.form.get("bottiglia_nuova", "")
+    nome_bottiglia = request.form.get("nome_bottiglia")
     tempo_cambio = request.form.get("tempo_cambio", "")
-    num_bottiglie_tempera_vecchia = int(request.form.get("num_bottiglie_tempera_vecchia", 0) or 0)
-    num_bottiglie_tempera_nuova = int(request.form.get("num_bottiglie_tempera_nuova", 0) or 0)
-    misura_piastrina = request.form.get("misura_piastrina", "").strip()
+    altezza_paratie = request.form.get("altezza_paratie", "")
+    num_bottiglie_tempera = int(request.form.get("num_bottiglie_tempera", 0) or 0)
+    quantita_trattamento = request.form.get("quantita_trattamento", "")
 
     try:
         conn = get_db_connection()
         cur = conn.cursor()
         cur.execute("""
-            INSERT INTO cambi_serie (forno, linea, data_cambio, bottiglia_precedente, bottiglia_nuova, nome_bottiglia, tempo_cambio, num_bottiglie_tempera_vecchia, num_bottiglie_tempera_nuova, num_bottiglie_tempera, misura_piastrina)
-            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s);
-        """, (forno, linea, data_cambio, bottiglia_precedente, bottiglia_nuova, bottiglia_nuova, tempo_cambio, num_bottiglie_tempera_vecchia, num_bottiglie_tempera_nuova, num_bottiglie_tempera_nuova, misura_piastrina))
+            INSERT INTO cambi_serie (forno, linea, data_cambio, nome_bottiglia, tempo_cambio, altezza_paratie, num_bottiglie_tempera, quantita_trattamento)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s);
+        """, (forno, linea, data_cambio, nome_bottiglia, tempo_cambio, altezza_paratie, num_bottiglie_tempera, quantita_trattamento))
         
         conn.commit()
         cur.close()
         conn.close()
         
-        registra_log(f"Registrato cambio serie per {forno} Linea {linea} - Montante: {bottiglia_nuova}")
+        registra_log(f"Registrato cambio serie per {forno} Linea {linea} - {nome_bottiglia}")
         flash("Cambio serie registrato con successo!", "success")
     except Exception as e:
         flash(f"Errore durante il salvataggio del cambio serie: {e}", "error")
-
-    return redirect(url_for("cambi_serie"))
-
-@app.route("/modifica_cambio_serie/<int:id_cambio>", methods=["POST"])
-def modifica_cambio_serie(id_cambio):
-    forno = request.form.get("forno")
-    linea = request.form.get("linea")
-    data_cambio = request.form.get("data_cambio")
-    bottiglia_precedente = request.form.get("bottiglia_precedente", "")
-    bottiglia_nuova = request.form.get("bottiglia_nuova", "")
-    tempo_cambio = request.form.get("tempo_cambio", "")
-    num_bottiglie_tempera_vecchia = int(request.form.get("num_bottiglie_tempera_vecchia", 0) or 0)
-    num_bottiglie_tempera_nuova = int(request.form.get("num_bottiglie_tempera_nuova", 0) or 0)
-    misura_piastrina = request.form.get("misura_piastrina", "").strip()
-
-    try:
-        conn = get_db_connection()
-        cur = conn.cursor()
-        cur.execute("""
-            UPDATE cambi_serie 
-            SET forno = %s, linea = %s, data_cambio = %s, bottiglia_precedente = %s, bottiglia_nuova = %s, nome_bottiglia = %s, tempo_cambio = %s, num_bottiglie_tempera_vecchia = %s, num_bottiglie_tempera_nuova = %s, num_bottiglie_tempera = %s, misura_piastrina = %s
-            WHERE id = %s;
-        """, (forno, linea, data_cambio, bottiglia_precedente, bottiglia_nuova, bottiglia_nuova, tempo_cambio, num_bottiglie_tempera_vecchia, num_bottiglie_tempera_nuova, num_bottiglie_tempera_nuova, misura_piastrina, id_cambio))
-        
-        conn.commit()
-        cur.close()
-        conn.close()
-        
-        registra_log(f"Modificato cambio serie ID {id_cambio}")
-        flash("Cambio serie aggiornato con successo!", "success")
-    except Exception as e:
-        flash(f"Errore durante l'aggiornamento: {e}", "error")
 
     return redirect(url_for("cambi_serie"))
 
@@ -739,25 +704,24 @@ def elimina_cambio_serie(id_cambio):
 def esporta_cambi_serie_csv():
     conn = get_db_connection()
     cur = conn.cursor()
-    cur.execute("SELECT data_cambio, forno, linea, bottiglia_precedente, bottiglia_nuova, nome_bottiglia, tempo_cambio, num_bottiglie_tempera_vecchia, num_bottiglie_tempera_nuova, num_bottiglie_tempera, misura_piastrina FROM cambi_serie ORDER BY data_cambio DESC;")
+    cur.execute("SELECT data_cambio, forno, linea, nome_bottiglia, tempo_cambio, altezza_paratie, num_bottiglie_tempera, quantita_trattamento FROM cambi_serie ORDER BY data_cambio DESC;")
     righe = cur.fetchall()
     cur.close()
     conn.close()
 
     output = io.StringIO()
     writer = csv.writer(output)
-    writer.writerow(['Data Cambio', 'Forno', 'Linea', 'Bottiglia Smontante', 'Bottiglia Montante', 'Tempo Cambio', 'N° Bottiglie Tempera (Vecchia)', 'N° Bottiglie Tempera (Nuova)', 'Misura Piastrina'])
+    writer.writerow(['Data Cambio', 'Forno', 'Linea', 'Nome Bottiglia', 'Tempo Cambio', 'Altezza Paratie', 'N° Bottiglie Tempera', 'Quantità Trattamento'])
     for r in righe:
         writer.writerow([
             r.get('data_cambio', ''),
             r.get('forno', ''),
             r.get('linea', ''),
-            r.get('bottiglia_precedente') or r.get('nome_bottiglia', ''),
-            r.get('bottiglia_nuova', ''),
+            r.get('nome_bottiglia', ''),
             r.get('tempo_cambio', ''),
-            r.get('num_bottiglie_tempera_vecchia', 0),
-            r.get('num_bottiglie_tempera_nuova') if r.get('num_bottiglie_tempera_nuova') is not None else r.get('num_bottiglie_tempera', 0),
-            r.get('misura_piastrina', '')
+            r.get('altezza_paratie', ''),
+            r.get('num_bottiglie_tempera', 0),
+            r.get('quantita_trattamento', '')
         ])
     return Response(
         output.getvalue(),
