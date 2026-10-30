@@ -3,51 +3,92 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Agenda Attività - Gestionale OMG</title>
+    <title>Gestionale OMG - Agenda</title>
+    <!-- Bootstrap CSS -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- FontAwesome per le icone -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <style>
-        .navbar-nav .nav-link {
-            font-size: 0.82rem;
-            padding-left: 0.4rem !important;
-            padding-right: 0.4rem !important;
-            white-space: nowrap;
-        }
-    </style>
 </head>
 <body class="bg-light">
+
     <!-- Navbar principale -->
     <nav class="navbar navbar-expand-lg navbar-dark bg-dark shadow-sm">
-        <div class="container-fluid px-2">
-            <a class="navbar-brand fw-bold fs-6" href="{{ url_for('index') }}"><i class="fas fa-industry me-1"></i>Gestionale OMG</a>
+        <div class="container-fluid">
+            <a class="navbar-brand fw-bold" href="{{ url_for('index') }}"><i class="fa-solid fa-industry me-2"></i>Gestionale OMG</a>
             <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
                 <span class="navbar-toggler-icon"></span>
             </button>
             <div class="collapse navbar-collapse" id="navbarNav">
-                <ul class="navbar-nav me-auto mb-2 mb-lg-0">
-                    <li class="nav-item"><a class="nav-link" href="{{ url_for('index') }}"><i class="fas fa-boxes me-1"></i>Magazzino</a></li>
-                    <li class="nav-item"><a class="nav-link" href="{{ url_for('nastri') }}"><i class="fas fa-stream me-1"></i>Nastri</a></li>
-                    {% if session.get('is_admin') or session.get('puo_gestire_agenda', 0) %}
-                    <li class="nav-item"><a class="nav-link active" href="{{ url_for('agenda') }}"><i class="fas fa-calendar-alt me-1"></i>Agenda</a></li>
+                <ul class="navbar-nav me-auto">
+                    <li class="nav-item"><a class="nav-link" href="{{ url_for('index') }}"><i class="fa-solid fa-boxes-stacked me-1"></i> Magazzino</a></li>
+                    
+                    {% if session.get('is_admin') or session.get('puo_vedere_pesante', 1) %}
+                    <li class="nav-item"><a class="nav-link" href="{{ url_for('magazzino_pesante') }}"><i class="fa-solid fa-weight-scale me-1"></i> Magazzino Pesante</a></li>
                     {% endif %}
-                    <li class="nav-item"><a class="nav-link" href="{{ url_for('richieste_manutenzione') }}"><i class="fas fa-tools me-1"></i>Manutenzione</a></li>
-                    <li class="nav-item"><a class="nav-link" href="{{ url_for('report_ore') }}"><i class="fas fa-clock me-1"></i>Report Ore</a></li>
-                    <li class="nav-item"><a class="nav-link" href="{{ url_for('cambi_serie') }}"><i class="fas fa-exchange-alt me-1"></i>Cambi Serie</a></li>
-                    <li class="nav-item"><a class="nav-link" href="{{ url_for('promemoria') }}"><i class="fas fa-bell me-1"></i>Promemoria</a></li>
-                    <li class="nav-item"><a class="nav-link" href="{{ url_for('fornitori') }}"><i class="fas fa-address-book me-1"></i>Fornitori</a></li>
-                    <li class="nav-item"><a class="nav-link" href="{{ url_for('documenti') }}"><i class="fas fa-folder-open me-1"></i>Documenti</a></li>
-                    <li class="nav-item"><a class="nav-link" href="{{ url_for('esportazioni') }}"><i class="fas fa-file-export me-1"></i>Esportazioni</a></li>
+
+                    {% if session.get('is_admin') or session.get('puo_vedere_manutenzioni_esterne', 1) %}
+                    <li class="nav-item"><a class="nav-link" href="{{ url_for('manutenzioni') }}"><i class="fa-solid fa-wrench me-1"></i> Manutenzioni Esterne</a></li>
+                    {% endif %}
+
+                    {% if session.get('is_admin') or session.get('puo_vedere_manutenzione', 1) %}
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('richieste_manutenzione') }}">
+                            <i class="fa-solid fa-clipboard-list me-1"></i> Officina
+                        </a>
+                    </li>
+                    {% endif %}
+
+                    <li class="nav-item"><a class="nav-link" href="{{ url_for('cambi_serie') }}"><i class="fa-solid fa-arrows-rotate me-1"></i> Cambi Serie</a></li>
+
+                    {% if session.get('is_admin') or session.get('puo_vedere_promemoria', 1) %}
+                    <li class="nav-item"><a class="nav-link" href="{{ url_for('promemoria') }}"><i class="fa-solid fa-calendar-check me-1"></i> Promemoria</a></li>
+                    {% endif %}
+
+                    {% if session.get('is_admin') or session.get('puo_gestire_fornitori', 1) %}
+                    <li class="nav-item"><a class="nav-link" href="{{ url_for('fornitori') }}"><i class="fa-solid fa-address-book me-1"></i> Fornitori</a></li>
+                    {% endif %}
+
+                    {% if session.get('is_admin') or session.get('puo_gestire_documenti', 1) %}
+                    <li class="nav-item"><a class="nav-link" href="{{ url_for('documenti') }}"><i class="fa-solid fa-folder-open me-1"></i> Documenti</a></li>
+                    {% endif %}
+
+                    {% if session.get('is_admin') or session.get('puo_vedere_report_ore', 1) %}
+                    <li class="nav-item"><a class="nav-link" href="{{ url_for('report_ore') }}"><i class="fa-solid fa-chart-pie me-1"></i> Report Ore</a></li>
+                    {% endif %}
+
+                    <li class="nav-item"><a class="nav-link active" href="{{ url_for('agenda') }}"><i class="fa-solid fa-calendar-days me-1"></i> Agenda</a></li>
+
                     {% if session.get('is_admin') %}
-                    <li class="nav-item"><a class="nav-link text-warning" href="{{ url_for('admin_utenti') }}"><i class="fas fa-user-shield me-1"></i>Admin</a></li>
+                    <li class="nav-item"><a class="nav-link" href="{{ url_for('admin_utenti') }}"><i class="fa-solid fa-users-gear me-1"></i> Admin</a></li>
                     {% endif %}
                 </ul>
-                <ul class="navbar-nav align-items-center">
+
+                <!-- Profilo Utente & Notifiche Push -->
+                <ul class="navbar-nav ms-auto align-items-center">
+                    <!-- Dropdown Notifiche -->
+                    <li class="nav-item dropdown me-3">
+                        <a class="nav-link text-light position-relative" href="#" id="dropdownNotifiche" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                            <i class="fa-solid fa-bell fa-lg"></i>
+                            <span id="badgeNotifiche" class="position-absolute top-25 start-100 translate-middle badge rounded-pill bg-danger" style="display: none; font-size: 0.65rem;">0</span>
+                        </a>
+                        <ul class="dropdown-menu dropdown-menu-end shadow" aria-labelledby="dropdownNotifiche" style="width: 320px; max-height: 400px; overflow-y: auto;" id="listaNotificheContainer">
+                            <li class="dropdown-header d-flex justify-content-between align-items-center bg-dark text-white py-2">
+                                <span><i class="fa-solid fa-bell me-1"></i> Notifiche</span>
+                                <button class="btn btn-sm btn-outline-light py-0 px-2" style="font-size: 0.75rem;" onclick="segnaTutteLette()">Lette tutte</button>
+                            </li>
+                            <li><hr class="dropdown-divider my-0"></li>
+                            <div id="contenutoNotificheDinamico">
+                                <li class="dropdown-item text-center text-muted py-3">Caricamento...</li>
+                            </div>
+                        </ul>
+                    </li>
+
                     <li class="nav-item dropdown">
-                        <a class="nav-link dropdown-toggle text-light px-2" href="#" role="button" data-bs-toggle="dropdown">
-                            <i class="fas fa-user-circle me-1"></i>{{ session.get('username', 'Utente') }}
+                        <a class="nav-link dropdown-toggle text-light" href="#" role="button" data-bs-toggle="dropdown">
+                            <i class="fa-solid fa-user-circle me-1"></i> {{ session.get('username', 'Utente') }}
                         </a>
                         <ul class="dropdown-menu dropdown-menu-end">
-                            <li><a class="dropdown-item" href="{{ url_for('logout') }}"><i class="fas fa-sign-out-alt me-2"></i>Esci</a></li>
+                            <li><a class="dropdown-item text-danger" href="{{ url_for('logout') }}"><i class="fa-solid fa-right-from-bracket me-1"></i> Logout</a></li>
                         </ul>
                     </li>
                 </ul>
@@ -55,8 +96,9 @@
         </div>
     </nav>
 
+    <!-- Contenuto principale -->
     <div class="container my-4">
-        <!-- Notifiche e Flash Messages -->
+
         {% with messages = get_flashed_messages(with_categories=true) %}
             {% if messages %}
                 {% for category, message in messages %}
@@ -68,56 +110,75 @@
             {% endif %}
         {% endwith %}
 
-        <div class="d-flex justify-content-between align-items-center mb-4">
-            <h2><i class="fas fa-calendar-alt me-2"></i>Agenda Attività e Fornitori</h2>
-            <button class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#modalNuovaAttivita">
-                <i class="fas fa-plus-circle me-1"></i>Nuova Attività
+        <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
+            <h2><i class="fa-solid fa-calendar-days me-2 text-primary"></i>Agenda Attività & Fornitori</h2>
+            <button class="btn btn-dark" data-bs-toggle="modal" data-bs-target="#modalNuovaAttivita">
+                <i class="fa-solid fa-plus me-1"></i> Nuova Attività Agenda
             </button>
         </div>
 
-        <!-- Tabella Attività -->
+        <!-- TABELLA ATTIVITÀ -->
         <div class="card shadow-sm">
-            <div class="card-body p-0">
+            <div class="card-header bg-dark text-white d-flex justify-content-between align-items-center py-3">
+                <h5 class="mb-0"><i class="fa-solid fa-list-check me-2"></i>Elenco Attività in Agenda</h5>
+                <span class="badge bg-secondary fs-6">{{ attivita|length }} in programma</span>
+            </div>
+            <div class="card-body">
                 <div class="table-responsive">
-                    <table class="table table-hover mb-0 align-middle">
+                    <table class="table table-hover align-middle">
                         <thead class="table-light">
                             <tr>
-                                <th style="width: 80px;" class="text-center">Fatto</th>
+                                <th>Scadenza</th>
                                 <th>Titolo / Descrizione</th>
-                                <th>Ditta Fornitrice</th>
-                                <th>Visibile A</th>
-                                <th>Creato Da</th>
-                                <th style="width: 80px;" class="text-center">Azioni</th>
+                                <th>Fornitore Collegato</th>
+                                <th>Visibile A / Assegnato</th>
+                                <th>Inserito Da</th>
+                                <th class="text-end">Azioni</th>
                             </tr>
                         </thead>
                         <tbody>
                             {% for a in attivita %}
                             <tr>
-                                <td class="text-center">
-                                    <form action="{{ url_for('completa_agenda', agenda_id=a.id) }}" method="POST" class="d-inline" onsubmit="return confirm('Segnare come completata e rimuovere dall\'agenda?');">
-                                        <button type="submit" class="btn btn-sm btn-outline-success" title="Segna come completato e rimuovi">
-                                            <i class="fas fa-check"></i>
-                                        </button>
-                                    </form>
+                                <td>
+                                    {% if a.data_scadenza %}
+                                        <span class="badge bg-primary fs-6 font-monospace">{{ a.data_scadenza }}</span>
+                                    {% else %}
+                                        <span class="text-muted">-</span>
+                                    {% endif %}
                                 </td>
                                 <td>
-                                    <strong class="d-block">{{ a.titolo }}</strong>
-                                    <small class="text-muted">{{ a.descrizione or '' }}</small>
+                                    <span class="fw-bold text-dark fs-6">{{ a.titolo }}</span>
+                                    {% if a.descrizione %}
+                                        <p class="text-muted mb-0 small">{{ a.descrizione }}</p>
+                                    {% endif %}
                                 </td>
-                                <td><span class="badge bg-info text-dark">{{ a.nome_azienda or 'Nessuna ditta' }}</span></td>
-                                <td><small class="badge bg-secondary">{{ a.utenti_visibili or 'Solo Creatore / Admin' }}</small></td>
-                                <td><small>{{ a.creato_da or '-' }}</small></td>
-                                <td class="text-center">
+                                <td>
+                                    {% if a.nome_azienda %}
+                                        <a href="{{ url_for('fornitori') }}" class="badge bg-info text-dark text-decoration-none p-2 fs-6">
+                                            <i class="fa-solid fa-building me-1"></i> {{ a.nome_azienda }}
+                                        </a>
+                                    {% else %}
+                                        <span class="text-muted">-</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    <span class="badge bg-secondary font-monospace">{{ a.utenti_visibili or 'Tutti' }}</span>
+                                </td>
+                                <td><small class="text-muted fw-bold">{{ a.creato_da or '-' }}</small></td>
+                                <td class="text-end">
+                                    <form action="{{ url_for('completa_agenda', agenda_id=a.id) }}" method="POST" onsubmit="return confirm('Segnare come completata e rimuovere questa attività?');" class="d-inline">
+                                        <button type="submit" class="btn btn-sm btn-success" title="Completata / Elimina"><i class="fa-solid fa-check me-1"></i> Fatto</button>
+                                    </form>
                                     {% if session.get('is_admin') %}
-                                    <form action="{{ url_for('elimina_agenda', agenda_id=a.id) }}" method="POST" class="d-inline" onsubmit="return confirm('Eliminare questa voce dall\'agenda?');">
-                                        <button type="submit" class="btn btn-sm btn-outline-danger" title="Elimina"><i class="fas fa-trash"></i></button>
+                                    <form action="{{ url_for('elimina_agenda', agenda_id=a.id) }}" method="POST" onsubmit="return confirm('Eliminare questa attività?');" class="d-inline">
+                                        <button type="submit" class="btn btn-sm btn-outline-danger" title="Elimina"><i class="fa-solid fa-trash-can"></i></button>
                                     </form>
                                     {% endif %}
                                 </td>
                             </tr>
                             {% else %}
                             <tr>
-                                <td colspan="6" class="text-center py-4 text-muted">Nessuna attività presente nell'agenda.</td>
+                                <td colspan="6" class="text-center text-muted py-4">Nessuna attività presente in agenda.</td>
                             </tr>
                             {% endfor %}
                         </tbody>
@@ -127,61 +188,163 @@
         </div>
     </div>
 
-    <!-- Modale Nuova Attività -->
+    <!-- MODALE NUOVA ATTIVITÀ AGENDA -->
     <div class="modal fade" id="modalNuovaAttivita" tabindex="-1">
         <div class="modal-dialog">
             <div class="modal-content">
                 <form action="{{ url_for('agenda') }}" method="POST">
                     <div class="modal-header bg-dark text-white">
-                        <h5 class="modal-title"><i class="fas fa-calendar-plus me-2"></i>Nuova Attività in Agenda</h5>
+                        <h5 class="modal-title"><i class="fa-solid fa-calendar-plus me-1"></i> Nuova Attività in Agenda</h5>
                         <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
                     </div>
-                    <div class="modal-body">
+                    <div class="modal-body text-start">
                         <div class="mb-3">
-                            <label class="form-label">Titolo Attività *</label>
-                            <input type="text" class="form-control" name="titolo" required placeholder="Es. Verifica materiali da fornitore">
+                            <label class="form-label fw-bold">Titolo Attività *</label>
+                            <input type="text" class="form-control" name="titolo" placeholder="Es. Manutenzione straordinaria fornitore..." required>
                         </div>
+
                         <div class="mb-3">
-                            <label class="form-label">Descrizione / Dettagli</label>
-                            <textarea class="form-control" name="descrizione" rows="3" placeholder="Specificare cosa fare..."></textarea>
+                            <label class="form-label fw-bold">Descrizione / Note</label>
+                            <textarea class="form-control" name="descrizione" rows="3" placeholder="Dettagli attività..."></textarea>
                         </div>
+
                         <div class="mb-3">
-                            <label class="form-label">Ditta Fornitrice (Seleziona o scrivi)</label>
-                            <input class="form-control" list="listaFornitori" name="fornitore_input" placeholder="Digita o seleziona una ditta...">
-                            <datalist id="listaFornitori">
+                            <label class="form-label fw-bold">Data Scadenza / Promemoria</label>
+                            <input type="date" class="form-control" name="data_scadenza">
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">Collega Fornitore (opzionale)</label>
+                            <input type="text" class="form-control" name="fornitore_input" list="fornitoriList" placeholder="Scrivi o seleziona azienda...">
+                            <datalist id="fornitoriList">
                                 {% for f in fornitori %}
                                 <option value="{{ f.nome_azienda }}">
                                 {% endfor %}
                             </datalist>
-                            <small class="text-muted">Puoi scegliere una ditta esistente o scriverne una nuova liberamente.</small>
                         </div>
+
                         <div class="mb-3">
-                            <label class="form-label fw-bold text-primary">Chi può vedere questa attività?</label>
-                            <div class="form-check">
-                                <input class="form-check-input" type="checkbox" name="utenti_visibili[]" value="Tutti" id="checkTutti">
-                                <label class="form-check-label fw-bold" for="checkTutti">Tutti gli utenti</label>
-                            </div>
-                            <hr class="my-2">
-                            <div class="text-muted small mb-2">Seleziona gli utenti specifici che possono vederla:</div>
-                            <div style="max-height: 120px; overflow-y: auto;" class="border p-2 rounded bg-white">
+                            <label class="form-label fw-bold"><i class="fa-solid fa-users me-1"></i> Assegna a / Visibile a</label>
+                            <div class="border rounded p-2 bg-light" style="max-height: 150px; overflow-y: auto;">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" name="utenti_visibili[]" value="Tutti" id="checkTutti" checked>
+                                    <label class="form-check-label fw-bold text-primary" for="checkTutti">Tutti gli utenti</label>
+                                </div>
+                                <hr class="my-1">
                                 {% for u in utenti %}
                                 <div class="form-check">
-                                    <input class="form-check-input" type="checkbox" name="utenti_visibili[]" value="{{ u.username }}" id="user_{{ u.username }}">
-                                    <label class="form-check-label" for="user_{{ u.username }}">{{ u.username }}</label>
+                                    <input class="form-check-input check-utente" type="checkbox" name="utenti_visibili[]" value="{{ u.username }}" id="user_{{ u.id }}">
+                                    <label class="form-check-label" for="user_{{ u.id }}">{{ u.username }}</label>
                                 </div>
                                 {% endfor %}
                             </div>
+                            <small class="text-muted">Selezionando utenti specifici, riceveranno una notifica push dedicata.</small>
                         </div>
                     </div>
                     <div class="modal-footer">
                         <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annulla</button>
-                        <button type="submit" class="btn btn-success">Salva in Agenda</button>
+                        <button type="submit" class="btn btn-primary">Salva in Agenda</button>
                     </div>
                 </form>
             </div>
         </div>
     </div>
 
+    <!-- Bootstrap JS & Script Notifiche -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+    document.addEventListener("DOMContentLoaded", function() {
+        const checkTutti = document.getElementById("checkTutti");
+        const checkUtenti = document.querySelectorAll(".check-utente");
+
+        if (checkTutti) {
+            checkTutti.addEventListener("change", function() {
+                if (this.checked) {
+                    checkUtenti.forEach(cb => cb.checked = false);
+                }
+            });
+        }
+
+        checkUtenti.forEach(cb => {
+            cb.addEventListener("change", function() {
+                if (this.checked && checkTutti) {
+                    checkTutti.checked = false;
+                }
+            });
+        });
+
+        caricaNotifiche();
+        setInterval(caricaNotifiche, 30000);
+    });
+
+    async function caricaNotifiche() {
+        try {
+            const response = await fetch('/api/notifiche');
+            const notifiche = await response.json();
+            
+            const container = document.getElementById('contenutoNotificheDinamico');
+            const badge = document.getElementById('badgeNotifiche');
+            
+            if (!container || !badge) return;
+
+            let nonLette = notifiche.filter(n => !n.letta).length;
+
+            if (nonLette > 0) {
+                badge.textContent = nonLette;
+                badge.style.display = 'inline-block';
+            } else {
+                badge.style.display = 'none';
+            }
+
+            if (notifiche.length === 0) {
+                container.innerHTML = '<li class="dropdown-item text-center text-muted py-3">Nessuna notifica</li>';
+                return;
+            }
+
+            let html = '';
+            notifiche.forEach(n => {
+                const bgClass = n.letta ? 'bg-white' : 'bg-light border-start border-primary border-4';
+                html += `
+                    <li>
+                        <a class="dropdown-item py-2 px-3 text-wrap ${bgClass} border-bottom" href="${n.link || '#'}" onclick="gestisciClickNotifica(${n.id}, '${n.link || ''}')">
+                            <div class="d-flex justify-content-between">
+                                <strong class="text-dark" style="font-size: 0.85rem;">${n.titolo}</strong>
+                                <small class="text-muted" style="font-size: 0.7rem;">${new Date(n.creato_il).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</small>
+                            </div>
+                            <p class="mb-0 text-muted small" style="font-size: 0.8rem;">${n.messaggio}</p>
+                        </a>
+                    </li>
+                `;
+            });
+            container.innerHTML = html;
+        } catch (e) {
+            console.error("Errore caricamento notifiche:", e);
+        }
+    }
+
+    async function gestisciClickNotifica(id, link) {
+        try {
+            await fetch(/api/notifiche/segna_letta/${id}, { method: 'POST' });
+        } catch (e) {
+            console.error("Errore segna letta:", e);
+        }
+        if (link) {
+            window.location.href = link;
+        }
+    }
+
+    async function segnaTutteLette() {
+        try {
+            await fetch('/api/notifiche/elimina', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({})
+            });
+            caricaNotifiche();
+        } catch (e) {
+            console.error("Errore pulizia notifiche:", e);
+        }
+    }
+    </script>
 </body>
 </html>
