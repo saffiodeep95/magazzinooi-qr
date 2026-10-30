@@ -418,6 +418,33 @@ def api_elimina_notifiche():
     except Exception as e:
         return jsonify({"status": "error", "message": str(e)})
 
+# API per recuperare l'ultima bottiglia registrata su una linea (Autocompilazione)
+@app.route("/api/ultima_bottiglia/<forno>/<linea>")
+def api_ultima_bottiglia(forno, linea):
+    try:
+        conn = get_db_connection()
+        cur = conn.cursor()
+        cur.execute("""
+            SELECT bottiglia_nuova, num_bottiglie_tempera_nuova 
+            FROM cambi_serie 
+            WHERE forno = %s AND linea = %s 
+            ORDER BY data_cambio DESC, id DESC 
+            LIMIT 1;
+        """, (forno, linea))
+        res = cur.fetchone()
+        cur.close()
+        conn.close()
+        
+        if res:
+            return jsonify({
+                "bottiglia": res.get('bottiglia_nuova', ''),
+                "tempera": res.get('num_bottiglie_tempera_nuova', 0)
+            })
+    except Exception as e:
+        print(f"Errore API ultima bottiglia: {e}")
+    
+    return jsonify({"bottiglia": "", "tempera": 0})
+
 @app.route("/")
 @app.route("/index")
 @app.route("/index.html")
@@ -965,7 +992,6 @@ def aggiungi_cambio_serie():
     
     num_bottiglie_tempera_vecchia = int(request.form.get("num_bottiglie_tempera_vecchia", 0) or 0)
     num_bottiglie_tempera_nuova = int(request.form.get("num_bottiglie_tempera_nuova", 0) or 0)
-    # Per retrocompatibilità salviamo anche la somma o la nuova nel vecchio campo
     num_bottiglie_tempera = num_bottiglie_tempera_nuova
 
     quantita_trattamento = request.form.get("quantita_trattamento", "")
