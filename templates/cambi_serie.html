@@ -305,7 +305,7 @@
             selectLinea.appendChild(opt);
         });
 
-        // Carica i dati della bottiglia precedente per la prima linea disponibile
+        // Carica i dati della bottiglia precedente per la linea selezionata
         caricaDatiPrecedenti();
     }
 
@@ -339,8 +339,14 @@
             });
     }
 
-    // Inizializza le tendine all'apertura della pagina
+    // Inizializza le tendine all'apertura della modale Bootstrap e al caricamento del DOM
     document.addEventListener("DOMContentLoaded", function() {
+        const modalNuovoCambio = document.getElementById('modalNuovoCambio');
+        if (modalNuovoCambio) {
+            modalNuovoCambio.addEventListener('shown.bs.modal', function () {
+                aggiornaLineeEAutocompila();
+            });
+        }
         try { 
             aggiornaLineeEAutocompila(); 
         } catch(e) {
