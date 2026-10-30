@@ -77,7 +77,6 @@ def controlla_scadenze_promemoria():
             
             titolo_p = p.get('titolo', 'Promemoria')
             
-            # Notifica 1 giorno prima
             if oggi == un_giorno_prima and not p.get('notificato_anticipo', False):
                 crea_notifica(
                     destinatario=destinatario,
@@ -88,7 +87,6 @@ def controlla_scadenze_promemoria():
                 cur.execute("UPDATE promemoria SET notificato_anticipo = TRUE WHERE id = %s;", (p['id'],))
                 conn.commit()
             
-            # Notifica lo stesso giorno (oggi)
             if oggi == dt_scadenza and not p.get('notificato_oggi', False):
                 crea_notifica(
                     destinatario=destinatario,
@@ -333,14 +331,22 @@ def init_db():
                 linea VARCHAR(50),
                 data_cambio VARCHAR(50),
                 nome_bottiglia VARCHAR(255),
+                bottiglia_precedente VARCHAR(255),
+                bottiglia_nuova VARCHAR(255),
                 tempo_cambio VARCHAR(50),
                 altezza_paratie VARCHAR(50),
                 num_bottiglie_tempera INT DEFAULT 0,
+                num_bottiglie_tempera_vecchia INT DEFAULT 0,
+                num_bottiglie_tempera_nuova INT DEFAULT 0,
                 quantita_trattamento VARCHAR(50),
                 misura_piastrina VARCHAR(100),
                 creato_il TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             );
         """)
+        cur.execute("ALTER TABLE cambi_serie ADD COLUMN IF NOT EXISTS bottiglia_precedente VARCHAR(255);")
+        cur.execute("ALTER TABLE cambi_serie ADD COLUMN IF NOT EXISTS bottiglia_nuova VARCHAR(255);")
+        cur.execute("ALTER TABLE cambi_serie ADD COLUMN IF NOT EXISTS num_bottiglie_tempera_vecchia INT DEFAULT 0;")
+        cur.execute("ALTER TABLE cambi_serie ADD COLUMN IF NOT EXISTS num_bottiglie_tempera_nuova INT DEFAULT 0;")
 
         conn.commit()
         cur.close()
@@ -898,7 +904,7 @@ def elimina_utente(user_id):
         flash(f"Errore eliminazione utente: {e}", "error")
     return redirect(url_for('admin_utenti'))
 
-# --- CAMBI SERIE (Ordinati per data cambio dal 4 al 6 - ASC) ---
+# --- CAMBI SERIE (Ordinati dal 4 al 6 - ASC) ---
 @app.route("/cambi_serie", methods=["GET", "POST"])
 @app.route("/cambi_serie.html", methods=["GET", "POST"])
 def cambi_serie():
@@ -919,7 +925,6 @@ def cambi_serie():
         query += " AND TO_CHAR(data_cambio::DATE, 'IYYY-\"W\"IW') = %s"
         params.append(settimana_filtro)
 
-    # Ordinamento per data_cambio crescente (dal 4 al 6)
     query += " ORDER BY data_cambio::DATE ASC, id ASC;"
     cur.execute(query, tuple(params))
     record_serie_raw = cur.fetchall()
@@ -952,10 +957,17 @@ def aggiungi_cambio_serie():
     forno = request.form.get("forno")
     linea = request.form.get("linea")
     data_cambio = request.form.get("data_cambio")
-    nome_bottiglia = request.form.get("nome_bottiglia")
+    nome_bottiglia = request.form.get("nome_bottiglia", "")
+    bottiglia_precedente = request.form.get("bottiglia_precedente", "")
+    bottiglia_nuova = request.form.get("bottiglia_nuova", "")
     tempo_cambio = request.form.get("tempo_cambio", "")
     altezza_paratie = request.form.get("altezza_paratie", "")
-    num_bottiglie_tempera = int(request.form.get("num_bottiglie_tempera", 0) or 0)
+    
+    num_bottiglie_tempera_vecchia = int(request.form.get("num_bottiglie_tempera_vecchia", 0) or 0)
+    num_bottiglie_tempera_nuova = int(request.form.get("num_bottiglie_tempera_nuova", 0) or 0)
+    # Per retrocompatibilità salviamo anche la somma o la nuova nel vecchio campo
+    num_bottiglie_tempera = num_bottiglie_tempera_nuova
+
     quantita_trattamento = request.form.get("quantita_trattamento", "")
     misura_piastrina = request.form.get("misura_piastrina", "").strip()
 
@@ -963,15 +975,15 @@ def aggiungi_cambio_serie():
         conn = get_db_connection()
         cur = conn.cursor()
         cur.execute("""
-            INSERT INTO cambi_serie (forno, linea, data_cambio, nome_bottiglia, tempo_cambio, altezza_paratie, num_bottiglie_tempera, quantita_trattamento, misura_piastrina)
-            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s);
-        """, (forno, linea, data_cambio, nome_bottiglia, tempo_cambio, altezza_paratie, num_bottiglie_tempera, quantita_trattamento, misura_piastrina))
+            INSERT INTO cambi_serie (forno, linea, data_cambio, nome_bottiglia, bottiglia_precedente, bottiglia_nuova, tempo_cambio, altezza_paratie, num_bottiglie_tempera, num_bottiglie_tempera_vecchia, num_bottiglie_tempera_nuova, quantita_trattamento, misura_piastrina)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s);
+        """, (forno, linea, data_cambio, nome_bottiglia, bottiglia_precedente, bottiglia_nuova, tempo_cambio, altezza_paratie, num_bottiglie_tempera, num_bottiglie_tempera_vecchia, num_bottiglie_tempera_nuova, quantita_trattamento, misura_piastrina))
 
         conn.commit()
         cur.close()
         conn.close()
 
-        registra_log(f"Registrato cambio serie per {forno} Linea {linea} - {nome_bottiglia}")
+        registra_log(f"Registrato cambio serie per {forno} Linea {linea}")
         flash("Cambio serie registrato con successo!", "success")
     except Exception as e:
         flash(f"Errore durante il salvataggio del cambio serie: {e}", "error")
@@ -983,10 +995,16 @@ def modifica_cambio_serie(id_cambio):
     forno = request.form.get("forno")
     linea = request.form.get("linea")
     data_cambio = request.form.get("data_cambio")
-    nome_bottiglia = request.form.get("nome_bottiglia")
+    nome_bottiglia = request.form.get("nome_bottiglia", "")
+    bottiglia_precedente = request.form.get("bottiglia_precedente", "")
+    bottiglia_nuova = request.form.get("bottiglia_nuova", "")
     tempo_cambio = request.form.get("tempo_cambio", "")
     altezza_paratie = request.form.get("altezza_paratie", "")
-    num_bottiglie_tempera = int(request.form.get("num_bottiglie_tempera", 0) or 0)
+    
+    num_bottiglie_tempera_vecchia = int(request.form.get("num_bottiglie_tempera_vecchia", 0) or 0)
+    num_bottiglie_tempera_nuova = int(request.form.get("num_bottiglie_tempera_nuova", 0) or 0)
+    num_bottiglie_tempera = num_bottiglie_tempera_nuova
+
     quantita_trattamento = request.form.get("quantita_trattamento", "")
     misura_piastrina = request.form.get("misura_piastrina", "").strip()
 
@@ -996,10 +1014,12 @@ def modifica_cambio_serie(id_cambio):
         cur.execute("""
             UPDATE cambi_serie 
             SET forno = %s, linea = %s, data_cambio = %s, nome_bottiglia = %s, 
-                tempo_cambio = %s, altezza_paratie = %s, num_bottiglie_tempera = %s, 
+                bottiglia_precedente = %s, bottiglia_nuova = %s,
+                tempo_cambio = %s, altezza_paratie = %s, 
+                num_bottiglie_tempera = %s, num_bottiglie_tempera_vecchia = %s, num_bottiglie_tempera_nuova = %s,
                 quantita_trattamento = %s, misura_piastrina = %s
             WHERE id = %s;
-        """, (forno, linea, data_cambio, nome_bottiglia, tempo_cambio, altezza_paratie, num_bottiglie_tempera, quantita_trattamento, misura_piastrina, id_cambio))
+        """, (forno, linea, data_cambio, nome_bottiglia, bottiglia_precedente, bottiglia_nuova, tempo_cambio, altezza_paratie, num_bottiglie_tempera, num_bottiglie_tempera_vecchia, num_bottiglie_tempera_nuova, quantita_trattamento, misura_piastrina, id_cambio))
         conn.commit()
         cur.close()
         conn.close()
@@ -1029,23 +1049,26 @@ def elimina_cambio_serie(id_cambio):
 def esporta_cambi_serie_csv():
     conn = get_db_connection()
     cur = conn.cursor()
-    cur.execute("SELECT data_cambio, forno, linea, nome_bottiglia, tempo_cambio, altezza_paratie, num_bottiglie_tempera, quantita_trattamento, misura_piastrina FROM cambi_serie ORDER BY data_cambio::DATE ASC;")
+    cur.execute("SELECT data_cambio, forno, linea, nome_bottiglia, bottiglia_precedente, bottiglia_nuova, tempo_cambio, altezza_paratie, num_bottiglie_tempera_vecchia, num_bottiglie_tempera_nuova, quantita_trattamento, misura_piastrina FROM cambi_serie ORDER BY data_cambio::DATE ASC;")
     righe = cur.fetchall()
     cur.close()
     conn.close()
 
     output = io.StringIO()
     writer = csv.writer(output)
-    writer.writerow(['Data Cambio', 'Forno', 'Linea', 'Nome Bottiglia', 'Tempo Cambio', 'Altezza Paratie', 'N° Bottiglie Tempera', 'Quantità Trattamento', 'Misura Piastrina'])
+    writer.writerow(['Data Cambio', 'Forno', 'Linea', 'Nome Bottiglia', 'Bottiglia Precedente', 'Bottiglia Nuova', 'Tempo Cambio', 'Altezza Paratie', 'N° Bottiglie Tempera (Vecchia)', 'N° Bottiglie Tempera (Nuova)', 'Quantità Trattamento', 'Misura Piastrina'])
     for r in righe:
         writer.writerow([
             r.get('data_cambio', ''),
             r.get('forno', ''),
             r.get('linea', ''),
             r.get('nome_bottiglia', ''),
+            r.get('bottiglia_precedente', ''),
+            r.get('bottiglia_nuova', ''),
             r.get('tempo_cambio', ''),
             r.get('altezza_paratie', ''),
-            r.get('num_bottiglie_tempera', 0),
+            r.get('num_bottiglie_tempera_vecchia', 0),
+            r.get('num_bottiglie_tempera_nuova', 0),
             r.get('quantita_trattamento', ''),
             r.get('misura_piastrina', '')
         ])
