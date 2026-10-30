@@ -333,8 +333,8 @@
 
                         <div class="row">
                             <div class="col-md-6 mb-3">
-                                <label class="form-label fw-bold text-muted">Bottiglia Precedente</label>
-                                <input type="text" class="form-control" name="bottiglia_precedente" placeholder="Es. Articolo smontato...">
+                                <label class="form-label fw-bold text-muted">Bottiglia Precedente (Autocompilata)</label>
+                                <input type="text" class="form-control bg-light" name="bottiglia_precedente" placeholder="Caricamento automatico..." readonly>
                             </div>
                             <div class="col-md-6 mb-3">
                                 <label class="form-label fw-bold text-success">Bottiglia Nuova (In Produzione)</label>
@@ -356,7 +356,7 @@
                         <div class="row">
                             <div class="col-md-6 mb-3">
                                 <label class="form-label text-muted fw-bold">N° Bottiglie Tempera (Precedente)</label>
-                                <input type="number" class="form-control" name="num_bottiglie_tempera_vecchia" value="0" min="0">
+                                <input type="number" class="form-control bg-light" name="num_bottiglie_tempera_vecchia" value="0" min="0" readonly>
                             </div>
                             <div class="col-md-6 mb-3">
                                 <label class="form-label text-primary fw-bold">N° Bottiglie Tempera (Montante)</label>
@@ -396,10 +396,34 @@
             opt.textContent = "Linea " + linea;
             selectLinea.appendChild(opt);
         });
+        caricaUltimaBottiglia();
+    }
+
+    async function caricaUltimaBottiglia() {
+        const forno = document.getElementById("selectForno").value;
+        const linea = document.getElementById("selectLinea").value;
+        
+        if (!forno || !linea) return;
+
+        try {
+            const response = await fetch(/api/ultima_bottiglia/${encodeURIComponent(forno)}/${encodeURIComponent(linea)});
+            const data = await response.json();
+            
+            const inputPrec = document.querySelector('#modalNuovoCambio input[name="bottiglia_precedente"]');
+            const inputTemperaVecchia = document.querySelector('#modalNuovoCambio input[name="num_bottiglie_tempera_vecchia"]');
+            
+            if (inputPrec) inputPrec.value = data.bottiglia || "";
+            if (inputTemperaVecchia) inputTemperaVecchia.value = data.tempera || 0;
+        } catch (e) {
+            console.error("Errore recupero ultima bottiglia:", e);
+        }
     }
 
     document.addEventListener("DOMContentLoaded", function() {
-        try { aggiornaLineeModal(); } catch(e){}
+        try { 
+            aggiornaLineeModal(); 
+            document.getElementById("selectLinea").addEventListener("change", caricaUltimaBottiglia);
+        } catch(e){}
     });
     </script>
 </body>
