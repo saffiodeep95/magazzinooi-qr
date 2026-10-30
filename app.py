@@ -259,10 +259,17 @@ def init_db():
         cur.execute("""
             CREATE TABLE IF NOT EXISTS nastri (
                 id SERIAL PRIMARY KEY,
-                codice VARCHAR(255) UNIQUE,
-                nome VARCHAR(255) NOT NULL,
-                posizione VARCHAR(255),
-                stato VARCHAR(50) DEFAULT 'In Uso',
+                codice_sap VARCHAR(255),
+                numero VARCHAR(255),
+                nome VARCHAR(255),
+                sezione_impianto VARCHAR(255),
+                misura VARCHAR(255),
+                tipo VARCHAR(255),
+                utilizzo VARCHAR(255),
+                misura_nastro_finito VARCHAR(255),
+                tipo_di_riduttore VARCHAR(255),
+                tipo_di_motore VARCHAR(255),
+                tappeto_presente BOOLEAN DEFAULT TRUE,
                 note TEXT,
                 creato_il TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             );
@@ -585,24 +592,173 @@ def elimina_utente(user_id):
         flash(f"Errore eliminazione utente: {e}", "error")
     return redirect(url_for('admin_utenti'))
 
-# --- GESTIONE NASTRI ---
-@app.route("/nastri")
-@app.route("/nastri.html")
+# --- GESTIONE NASTRI E TAPPETI ---
+@app.route("/nastri", methods=["GET", "POST"])
+@app.route("/nastri.html", methods=["GET", "POST"])
 def nastri():
     if not (session.get('is_admin') or session.get('puo_vedere_magazzino', 1)):
         flash("Accesso al modulo Nastri non autorizzato.", "error")
         return redirect(url_for('index'))
-    lista_nastri = []
+
+    conn = get_db_connection()
+    cur = conn.cursor()
+
+    if request.method == "POST":
+        codice_sap = request.form.get("codice_sap", "").strip()
+        numero = request.form.get("numero", "").strip()
+        sezione_impianto = request.form.get("sezione_impianto", "COMPOSIZIONE").strip()
+        misura = request.form.get("misura", "").strip()
+        tipo = request.form.get("tipo", "").strip()
+        utilizzo = request.form.get("utilizzo", "").strip()
+        misura_nastro_finito = request.form.get("misura_nastro_finito", "").strip()
+        tipo_di_riduttore = request.form.get("tipo_di_riduttore", "").strip()
+        tipo_di_motore = request.form.get("tipo_di_motore", "").strip()
+        tappeto_presente = True if request.form.get("tappeto_presente", "1") == "1" else False
+        note = request.form.get("note", "").strip()
+        nome = f"Nastro {numero} - {sezione_impianto}"
+
+        try:
+            cur.execute("""
+                INSERT INTO nastri (codice_sap, numero, nome, sezione_impianto, misura, tipo, utilizzo, misura_nastro_finito, tipo_di_riduttore, tipo_di_motore, tappeto_presente, note)
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s);
+            """, (codice_sap, numero, nome, sezione_impianto, misura, tipo, utilizzo, misura_nastro_finito, tipo_di_riduttore, tipo_di_motore, tappeto_presente, note))
+            conn.commit()
+            registra_log(f"Aggiunto nuovo nastro: {numero} ({sezione_impianto})")
+            flash("Nastro aggiunto con successo!", "success")
+        except Exception as e:
+            flash(f"Errore durante l'inserimento del nastro: {e}", "error")
+        
+        cur.close()
+        conn.close()
+        return redirect(url_for("nastri"))
+
+    sezione_filtro = request.args.get("sezione", "Tutte")
+
+    cur.execute("SELECT DISTINCT sezione_impianto FROM nastri WHERE sezione_impianto IS NOT NULL AND sezione_impianto != '' ORDER BY sezione_impianto ASC;")
+    sezioni_disponibili = [r['sezione_impianto'] for r in cur.fetchall()]
+
+    if sezione_filtro != "Tutte":
+        cur.execute("SELECT * FROM nastri WHERE sezione_impianto = %s ORDER BY numero ASC, id DESC;", (sezione_filtro,))
+    else:
+        cur.execute("SELECT * FROM nastri ORDER BY sezione_impianto ASC, numero ASC;")
+    
+    lista_nastri = cur.fetchall()
+    cur.close()
+    conn.close()
+
+    return render_template("nastri.html", nastri=lista_nastri, sezioni_disponibili=sezioni_disponibili, sezione_filtro=sezione_filtro)
+
+@app.route("/toggle_tappeto/<int:nastro_id>", methods=["POST"])
+def toggle_tappeto(nastro_id):
     try:
         conn = get_db_connection()
         cur = conn.cursor()
-        cur.execute("SELECT * FROM nastri ORDER BY nome ASC;")
-        lista_nastri = cur.fetchall()
+        cur.execute("SELECT tappeto_presente FROM nastri WHERE id = %s;", (nastro_id,))
+        res = cur.fetchone()
+        if res:
+            nuovo_stato = not (res.get('tappeto_presente') if res.get('tappeto_presente') is not None else True)
+            cur.execute("UPDATE nastri SET tappeto_presente = %s WHERE id = %s;", (nuovo_stato, nastro_id))
+            conn.commit()
+            registra_log(f"Aggiornato stato tappeto ID {nastro_id} a {nuovo_stato}")
         cur.close()
         conn.close()
     except Exception as e:
-        print(f"Errore caricamento nastri: {e}")
-    return render_template("nastri.html", nastri=lista_nastri)
+        flash(f"Errore cambio stato tappeto: {e}", "error")
+    return redirect(url_for("nastri"))
+
+@app.route("/modifica_nastro/<int:nastro_id>", methods=["POST"])
+def modifica_nastro(nastro_id):
+    codice_sap = request.form.get("codice_sap", "").strip()
+    numero = request.form.get("numero", "").strip()
+    sezione_impianto = request.form.get("sezione_impianto", "").strip()
+    misura = request.form.get("misura", "").strip()
+    tipo = request.form.get("tipo", "").strip()
+    utilizzo = request.form.get("utilizzo", "").strip()
+    misura_nastro_finito = request.form.get("misura_nastro_finito", "").strip()
+    tipo_di_riduttore = request.form.get("tipo_di_riduttore", "").strip()
+    tipo_di_motore = request.form.get("tipo_di_motore", "").strip()
+    note = request.form.get("note", "").strip()
+
+    try:
+        conn = get_db_connection()
+        cur = conn.cursor()
+        cur.execute("""
+            UPDATE nastri 
+            SET codice_sap = %s, numero = %s, sezione_impianto = %s, misura = %s, tipo = %s, utilizzo = %s, misura_nastro_finito = %s, tipo_di_riduttore = %s, tipo_di_motore = %s, note = %s
+            WHERE id = %s;
+        """, (codice_sap, numero, sezione_impianto, misura, tipo, utilizzo, misura_nastro_finito, tipo_di_riduttore, tipo_di_motore, note, nastro_id))
+        conn.commit()
+        cur.close()
+        conn.close()
+        registra_log(f"Modificato nastro ID {nastro_id}")
+        flash("Nastro aggiornato con successo!", "success")
+    except Exception as e:
+        flash(f"Errore aggiornamento nastro: {e}", "error")
+    return redirect(url_for("nastri"))
+
+@app.route("/elimina_nastro/<int:nastro_id>", methods=["POST"])
+def elimina_nastro(nastro_id):
+    if not (session.get('is_admin') or session.get('puo_eliminare', 0)):
+        flash("Permesso negato per eliminare i nastri.", "error")
+        return redirect(url_for("nastri"))
+    try:
+        conn = get_db_connection()
+        cur = conn.cursor()
+        cur.execute("DELETE FROM nastri WHERE id = %s;", (nastro_id,))
+        conn.commit()
+        cur.close()
+        conn.close()
+        registra_log(f"Eliminato nastro ID {nastro_id}")
+        flash("Nastro eliminato con successo.", "success")
+    except Exception as e:
+        flash(f"Errore eliminazione nastro: {e}", "error")
+    return redirect(url_for("nastri"))
+
+@app.route("/esporta_nastri_csv")
+def esporta_nastri_csv():
+    conn = get_db_connection()
+    cur = conn.cursor()
+    cur.execute("SELECT codice_sap, numero, sezione_impianto, misura, tipo, utilizzo, misura_nastro_finito, tipo_di_riduttore, tipo_di_motore, tappeto_presente, note FROM nastri ORDER BY sezione_impianto ASC, numero ASC;")
+    nastri_list = cur.fetchall()
+    cur.close()
+    conn.close()
+
+    output = io.StringIO()
+    writer = csv.writer(output)
+    writer.writerow(['Codice SAP', 'Numero', 'Sezione Impianto', 'Misura', 'Tipo', 'Utilizzo', 'Misura Finito', 'Riduttore', 'Motore', 'Tappeto Presente', 'Note'])
+    for n in nastri_list:
+        writer.writerow([
+            n.get('codice_sap', ''),
+            n.get('numero', ''),
+            n.get('sezione_impianto', ''),
+            n.get('misura', ''),
+            n.get('tipo', ''),
+            n.get('utilizzo', ''),
+            n.get('misura_nastro_finito', ''),
+            n.get('tipo_di_riduttore', ''),
+            n.get('tipo_di_motore', ''),
+            'Presente' if n.get('tappeto_presente', True) else 'Assente',
+            n.get('note', '')
+        ])
+    return Response(
+        output.getvalue(),
+        mimetype="text/csv",
+        headers={"Content-disposition": "attachment; filename=Magazzino_Nastri_OMG.csv"}
+    )
+
+@app.route("/stampa_nastri")
+def stampa_nastri():
+    sezione = request.args.get("sezione", "Tutte")
+    conn = get_db_connection()
+    cur = conn.cursor()
+    if sezione != "Tutte":
+        cur.execute("SELECT * FROM nastri WHERE sezione_impianto = %s ORDER BY numero ASC;", (sezione,))
+    else:
+        cur.execute("SELECT * FROM nastri ORDER BY sezione_impianto ASC, numero ASC;")
+    lista = cur.fetchall()
+    cur.close()
+    conn.close()
+    return render_template("stampa_nastri.html", nastri=lista, sezione=sezione)
 
 # --- PANNELLO AGENDA ---
 @app.route("/agenda", methods=["GET", "POST"])
