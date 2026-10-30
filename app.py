@@ -347,6 +347,7 @@ def init_db():
         cur.execute("ALTER TABLE cambi_serie ADD COLUMN IF NOT EXISTS bottiglia_nuova VARCHAR(255);")
         cur.execute("ALTER TABLE cambi_serie ADD COLUMN IF NOT EXISTS num_bottiglie_tempera_vecchia INT DEFAULT 0;")
         cur.execute("ALTER TABLE cambi_serie ADD COLUMN IF NOT EXISTS num_bottiglie_tempera_nuova INT DEFAULT 0;")
+        cur.execute("ALTER TABLE cambi_serie ADD COLUMN IF NOT EXISTS misura_piastrina VARCHAR(100);")
 
         conn.commit()
         cur.close()
@@ -418,7 +419,6 @@ def api_elimina_notifiche():
     except Exception as e:
         return jsonify({"status": "error", "message": str(e)})
 
-# API per recuperare l'ultima bottiglia registrata su una linea (Autocompilazione)
 @app.route("/api/ultima_bottiglia/<forno>/<linea>")
 def api_ultima_bottiglia(forno, linea):
     try:
@@ -563,7 +563,6 @@ def registra():
                 flash("Username già esistente o errore di registrazione.", "error")
     return render_template("registra.html")
 
-# --- AGENDA & ATTIVITÀ FORNITORI ---
 @app.route("/agenda", methods=["GET", "POST"])
 @app.route("/agenda.html", methods=["GET", "POST"])
 def agenda():
@@ -683,7 +682,6 @@ def elimina_agenda(agenda_id):
     flash("Attività eliminata dall'agenda.", "success")
     return redirect(url_for("agenda"))
 
-# --- MAGAZZINO NASTRI & TAPPETI ---
 @app.route("/nastri", methods=["GET", "POST"])
 @app.route("/nastri.html", methods=["GET", "POST"])
 def nastri():
@@ -837,7 +835,6 @@ def esporta_nastri_csv():
         writer.writerow(list(r.values()))
     return Response(output.getvalue(), mimetype="text/csv", headers={"Content-disposition": "attachment; filename=Magazzino_Nastri_OMG.csv"})
 
-# --- PANNELLO PERMESSI ADMIN & LOGS ---
 @app.route("/admin_utenti")
 @app.route("/admin_utenti.html")
 def admin_utenti():
@@ -931,7 +928,6 @@ def elimina_utente(user_id):
         flash(f"Errore eliminazione utente: {e}", "error")
     return redirect(url_for('admin_utenti'))
 
-# --- CAMBI SERIE (Ordinati dal 4 al 6 - ASC) ---
 @app.route("/cambi_serie", methods=["GET", "POST"])
 @app.route("/cambi_serie.html", methods=["GET", "POST"])
 def cambi_serie():
@@ -994,7 +990,7 @@ def aggiungi_cambio_serie():
     num_bottiglie_tempera_nuova = int(request.form.get("num_bottiglie_tempera_nuova", 0) or 0)
     num_bottiglie_tempera = num_bottiglie_tempera_nuova
 
-    quantita_trattamento = request.form.get("quantita_trattamento", "")
+    quantita_trattamento = ""
     misura_piastrina = request.form.get("misura_piastrina", "").strip()
 
     try:
@@ -1031,7 +1027,7 @@ def modifica_cambio_serie(id_cambio):
     num_bottiglie_tempera_nuova = int(request.form.get("num_bottiglie_tempera_nuova", 0) or 0)
     num_bottiglie_tempera = num_bottiglie_tempera_nuova
 
-    quantita_trattamento = request.form.get("quantita_trattamento", "")
+    quantita_trattamento = ""
     misura_piastrina = request.form.get("misura_piastrina", "").strip()
 
     try:
@@ -1075,14 +1071,14 @@ def elimina_cambio_serie(id_cambio):
 def esporta_cambi_serie_csv():
     conn = get_db_connection()
     cur = conn.cursor()
-    cur.execute("SELECT data_cambio, forno, linea, nome_bottiglia, bottiglia_precedente, bottiglia_nuova, tempo_cambio, altezza_paratie, num_bottiglie_tempera_vecchia, num_bottiglie_tempera_nuova, quantita_trattamento, misura_piastrina FROM cambi_serie ORDER BY data_cambio::DATE ASC;")
+    cur.execute("SELECT data_cambio, forno, linea, nome_bottiglia, bottiglia_precedente, bottiglia_nuova, tempo_cambio, altezza_paratie, num_bottiglie_tempera_vecchia, num_bottiglie_tempera_nuova, misura_piastrina FROM cambi_serie ORDER BY data_cambio::DATE ASC;")
     righe = cur.fetchall()
     cur.close()
     conn.close()
 
     output = io.StringIO()
     writer = csv.writer(output)
-    writer.writerow(['Data Cambio', 'Forno', 'Linea', 'Nome Bottiglia', 'Bottiglia Precedente', 'Bottiglia Nuova', 'Tempo Cambio', 'Altezza Paratie', 'N° Bottiglie Tempera (Vecchia)', 'N° Bottiglie Tempera (Nuova)', 'Quantità Trattamento', 'Misura Piastrina'])
+    writer.writerow(['Data Cambio', 'Forno', 'Linea', 'Nome Bottiglia', 'Bottiglia Smontante', 'Bottiglia Montante', 'Tempo Cambio', 'Altezza Paratie', 'N° Bottiglie Tempera (Vecchia)', 'N° Bottiglie Tempera (Nuova)', 'Misura Piastrina'])
     for r in righe:
         writer.writerow([
             r.get('data_cambio', ''),
@@ -1095,7 +1091,6 @@ def esporta_cambi_serie_csv():
             r.get('altezza_paratie', ''),
             r.get('num_bottiglie_tempera_vecchia', 0),
             r.get('num_bottiglie_tempera_nuova', 0),
-            r.get('quantita_trattamento', ''),
             r.get('misura_piastrina', '')
         ])
     return Response(
@@ -1104,7 +1099,6 @@ def esporta_cambi_serie_csv():
         headers={"Content-disposition": "attachment; filename=Cambi_Serie_OMG.csv"}
     )
 
-# --- MODULO: REPORT ORE & STATISTICHE MANUTENZIONI ---
 @app.route("/report_ore")
 @app.route("/report_ore.html")
 def report_ore():
@@ -1204,7 +1198,6 @@ def report_ore():
                            chart_tipi_labels=chart_tipi_labels,
                            chart_tipi_values=chart_tipi_values)
 
-# --- RICHIESTE INTERVENTO MANUTENZIONE OFFICINA ---
 @app.route("/richieste_manutenzione", methods=["GET", "POST"])
 @app.route("/richieste_manutenzione.html", methods=["GET", "POST"])
 def richieste_manutenzione():
@@ -1471,7 +1464,6 @@ def elimina_intervento(intervento_id):
     flash("Intervento eliminato.", "success")
     return redirect(url_for("richieste_manutenzione"))
 
-# --- GESTIONE PROMEMORIA ---
 @app.route("/promemoria", methods=["GET", "POST"])
 @app.route("/promemoria.html", methods=["GET", "POST"])
 def promemoria():
@@ -1603,7 +1595,6 @@ def elimina_promemoria(promemoria_id):
     flash("Promemoria eliminato.", "success")
     return redirect(url_for("promemoria"))
 
-# --- GESTIONE FORNITORI E CONTATTI ---
 @app.route("/fornitori", methods=["GET", "POST"])
 @app.route("/fornitori.html", methods=["GET", "POST"])
 def fornitori():
@@ -1896,7 +1887,6 @@ def esporta_fornitori_csv():
         headers={"Content-disposition": "attachment; filename=Fornitori_Gestionale_OMG.csv"}
     )
 
-# --- GESTIONE DOCUMENTI ---
 @app.route("/documenti", defaults={"cartella_id": None}, methods=["GET", "POST"])
 @app.route("/documenti/<int:cartella_id>", methods=["GET", "POST"])
 @app.route("/documenti.html", defaults={"cartella_id": None}, methods=["GET", "POST"])
@@ -2041,7 +2031,6 @@ def elimina_file(file_id):
         return redirect(url_for("documenti", cartella_id=cartella_id))
     return redirect(url_for("documenti"))
 
-# --- ALTRE ROTTE GESTIONALE E ESPORTAZIONI CSV ---
 @app.route("/esportazioni")
 @app.route("/esportazioni.html")
 def esportazioni():
