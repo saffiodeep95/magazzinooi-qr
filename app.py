@@ -268,7 +268,6 @@ def init_db():
             );
         """)
         
-        # Aggiornamento colonne mancanti se la tabella cambi_serie era già stata creata in precedenza
         colonne_cambi_serie = [
             ("bottiglia_precedente", "VARCHAR(255)"),
             ("bottiglia_nuova", "VARCHAR(255)"),
