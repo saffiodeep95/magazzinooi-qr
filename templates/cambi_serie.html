@@ -218,7 +218,7 @@
                         <div class="row">
                             <div class="col-md-6 mb-3">
                                 <label class="form-label fw-bold">Seleziona Forno *</label>
-                                <select class="form-select" name="forno" id="selectForno" onchange="aggiornaLineeModal()" required>
+                                <select class="form-select" name="forno" id="selectForno" onchange="gestisciCambioForno()" required>
                                     <option value="Forno 1">Forno 1</option>
                                     <option value="Forno 3">Forno 3</option>
                                     <option value="Forno 4">Forno 4</option>
@@ -288,6 +288,7 @@
         "Forno 4": ["41", "42"]
     };
 
+    // 1. Popola la tendina delle linee in modo puramente sincrono e sicuro
     function aggiornaLineeModal() {
         const selectForno = document.getElementById("selectForno");
         const selectLinea = document.getElementById("selectLinea");
@@ -297,54 +298,63 @@
         const forno = selectForno.value;
         selectLinea.innerHTML = "";
         
-        (lineePerForno[forno] || []).forEach(function(linea) {
+        const linee = lineePerForno[forno] || [];
+        for (let i = 0; i < linee.length; i++) {
             const opt = document.createElement("option");
-            opt.value = linea;
-            opt.textContent = "Linea " + linea;
+            opt.value = linee[i];
+            opt.textContent = "Linea " + linee[i];
             selectLinea.appendChild(opt);
-        });
+        }
+    }
 
-        // Carica i dati non appena cambiano le linee
+    // 2. Chiamata quando l'utente cambia il forno
+    function gestisciCambioForno() {
+        aggiornaLineeModal();
         caricaDatiPrecedenti();
     }
 
+    // 3. Recupera i dati storici senza mai bloccare la UI
     function caricaDatiPrecedenti() {
         const selectForno = document.getElementById("selectForno");
         const selectLinea = document.getElementById("selectLinea");
         
-        if (!selectForno || !selectLinea) return;
-
-        const forno = selectForno.value;
-        const linea = selectLinea.value;
-        
         const inputSmontante = document.getElementById("bottiglia_precedente");
         const inputTemperaVecchia = document.getElementById("num_bottiglie_tempera_vecchia");
 
-        if (!forno || !linea) return;
+        if (!selectForno || !selectLinea || !selectLinea.value) return;
+
+        const forno = selectForno.value;
+        const linea = selectLinea.value;
 
         if (inputSmontante) inputSmontante.value = "Caricamento...";
 
-        fetch(/api/ultima_bottiglia/${encodeURIComponent(forno)}/${encodeURIComponent(linea)})
-            .then(response => response.json())
-            .then(data => {
-                if (inputSmontante) inputSmontante.value = data.bottiglia || "Nessuna precedente";
-                if (inputTemperaVecchia) inputTemperaVecchia.value = data.tempera || 0;
-            })
-            .catch(err => {
-                console.error("Errore recupero ultima bottiglia:", err);
-                if (inputSmontante) inputSmontante.value = "-";
-                if (inputTemperaVecchia) inputTemperaVecchia.value = 0;
-            });
+        try {
+            fetch('/api/ultima_bottiglia/' + encodeURIComponent(forno) + '/' + encodeURIComponent(linea))
+                .then(function(res) { return res.json(); })
+                .then(function(data) {
+                    if (inputSmontante) inputSmontante.value = data.bottiglia || "Nessuna precedente";
+                    if (inputTemperaVecchia) inputTemperaVecchia.value = data.tempera || 0;
+                })
+                .catch(function(err) {
+                    console.error("Errore recupero API:", err);
+                    if (inputSmontante) inputSmontante.value = "-";
+                    if (inputTemperaVecchia) inputTemperaVecchia.value = 0;
+                });
+        } catch (e) {
+            console.error("Eccezione durante la richiesta:", e);
+        }
     }
 
-    // Assicura l'aggiornamento corretto non appena si apre la modale su qualsiasi dispositivo
+    // Inizializzazione garantita all'apertura della modale Bootstrap
     document.addEventListener("DOMContentLoaded", function() {
         const modalNuovoCambio = document.getElementById('modalNuovoCambio');
         if (modalNuovoCambio) {
             modalNuovoCambio.addEventListener('shown.bs.modal', function () {
-                aggiornaLineeModal();
+                gestisciCambioForno();
             });
         }
+        // Esecuzione immediata di sicurezza
+        try { gestisciCambioForno(); } catch(e){}
     });
     </script>
 </body>
