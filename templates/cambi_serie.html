@@ -148,7 +148,7 @@
             </div>
         </div>
 
-        <!-- TABELLA CAMBI SERIE CON DOPPIA BOTTIGLIA (SMONTANTE / MONTANTE) -->
+        <!-- TABELLA -->
         <div class="card shadow-sm">
             <div class="card-header bg-dark text-white d-flex justify-content-between align-items-center py-3">
                 <h5 class="mb-0"><i class="fa-solid fa-table-list me-2"></i>Elenco Cambi Serie</h5>
@@ -218,7 +218,7 @@
                         <div class="row">
                             <div class="col-md-6 mb-3">
                                 <label class="form-label fw-bold">Seleziona Forno *</label>
-                                <select class="form-select" name="forno" id="selectForno" onchange="aggiornaLineeEAutocompila()" required>
+                                <select class="form-select" name="forno" id="selectForno" onchange="cambiaForno()" required>
                                     <option value="Forno 1">Forno 1</option>
                                     <option value="Forno 3">Forno 3</option>
                                     <option value="Forno 4">Forno 4</option>
@@ -281,76 +281,66 @@
     <!-- Bootstrap JS -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script>
-    // Mappatura esatta delle macchine per forno
+    // Mappatura esatta delle macchine per forno richiesta
     const lineePerForno = {
         "Forno 1": ["11", "12", "13"],
         "Forno 3": ["31", "32", "33", "34"],
         "Forno 4": ["41", "42"]
     };
 
-    function aggiornaLineeEAutocompila() {
-        const fornoSelect = document.getElementById("selectForno");
+    function aggiornaLineeModal() {
+        const forno = document.getElementById("selectForno").value;
         const selectLinea = document.getElementById("selectLinea");
         
-        if (!fornoSelect || !selectLinea) return;
-
-        const forno = fornoSelect.value;
         selectLinea.innerHTML = "";
-
-        // Popola la tendina della linea in base al forno
         (lineePerForno[forno] || []).forEach(function(linea) {
             const opt = document.createElement("option");
             opt.value = linea;
             opt.textContent = "Linea " + linea;
             selectLinea.appendChild(opt);
         });
+    }
 
-        // Dopo aver popolato le linee, carica subito l'ultima bottiglia per la prima linea disponibile
+    function cambiaForno() {
+        aggiornaLineeModal();
         caricaDatiPrecedenti();
     }
 
     function caricaDatiPrecedenti() {
-        const fornoSelect = document.getElementById("selectForno");
-        const selectLinea = document.getElementById("selectLinea");
+        const forno = document.getElementById("selectForno").value;
+        const linea = document.getElementById("selectLinea").value;
         
         const inputSmontante = document.getElementById("bottiglia_precedente");
         const inputTemperaVecchia = document.getElementById("num_bottiglie_tempera_vecchia");
 
-        if (!fornoSelect || !selectLinea) return;
-
-        const forno = fornoSelect.value;
-        const linea = selectLinea.value;
-
         if (!forno || !linea) return;
 
-        if (inputSmontante) inputSmontante.value = "Caricamento...";
+        inputSmontante.value = "Caricamento...";
 
-        // Interroga l'API backend per recuperare l'ultimo cambio serie su questo forno e linea
         fetch(/api/ultima_bottiglia/${encodeURIComponent(forno)}/${encodeURIComponent(linea)})
             .then(response => response.json())
             .then(data => {
-                if (inputSmontante) inputSmontante.value = data.bottiglia || "Nessuna precedente";
-                if (inputTemperaVecchia) inputTemperaVecchia.value = data.tempera || 0;
+                inputSmontante.value = data.bottiglia || "Nessuna precedente";
+                inputTemperaVecchia.value = data.tempera || 0;
             })
             .catch(err => {
                 console.error("Errore recupero ultima bottiglia:", err);
-                if (inputSmontante) inputSmontante.value = "-";
-                if (inputTemperaVecchia) inputTemperaVecchia.value = 0;
+                inputSmontante.value = "-";
+                inputTemperaVecchia.value = 0;
             });
     }
 
-    // Forza il caricamento iniziale e l'aggiornamento all'apertura della modale
+    // Inizializzazione pulita all'apertura della modale
     document.addEventListener("DOMContentLoaded", function() {
         const modalNuovoCambio = document.getElementById('modalNuovoCambio');
         if (modalNuovoCambio) {
             modalNuovoCambio.addEventListener('shown.bs.modal', function () {
-                aggiornaLineeEAutocompila();
+                aggiornaLineeModal();
+                caricaDatiPrecedenti();
             });
         }
-        
-        // Esecuzione immediata all'avvio
         try { 
-            aggiornaLineeEAutocompila(); 
+            aggiornaLineeModal(); 
         } catch(e) {}
     });
     </script>
