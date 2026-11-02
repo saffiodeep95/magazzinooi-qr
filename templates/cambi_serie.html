@@ -6,7 +6,7 @@
     <title>Gestionale OMG - Cambi Serie</title>
     <!-- Bootstrap CSS -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <!-- FontAwesome -->
+    <!-- FontAwesome per le icone -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     
     <style>
@@ -161,10 +161,11 @@
                             <tr>
                                 <th>Data Cambio</th>
                                 <th>Forno / Linea</th>
-                                <th>Smontante / Montante</th>
+                                <th>Nome Bottiglia</th>
                                 <th>Tempo Cambio</th>
-                                <th>N° Bottiglie Tempera (V / N)</th>
-                                <th>Misura Piastrina</th>
+                                <th>Altezza Paratie</th>
+                                <th>N° Bottiglie Tempera</th>
+                                <th>Q.tà Trattamento</th>
                                 <th class="no-print text-end">Azioni</th>
                             </tr>
                         </thead>
@@ -176,17 +177,11 @@
                                     <span class="fw-bold text-dark">{{ r.forno }}</span><br>
                                     <span class="badge bg-secondary font-monospace">Linea {{ r.linea or '-' }}</span>
                                 </td>
-                                <td>
-                                    <div class="small text-muted"><i class="fa-solid fa-arrow-right-from-bracket me-1"></i>{{ r.bottiglia_precedente or r.nome_bottiglia or '-' }}</div>
-                                    <div class="fw-bold text-primary fs-6"><i class="fa-solid fa-arrow-right-to-bracket me-1"></i>{{ r.bottiglia_nuova or r.nome_bottiglia or '-' }}</div>
-                                </td>
+                                <td class="fw-bold text-primary fs-5">{{ r.nome_bottiglia }}</td>
                                 <td><span class="badge bg-secondary fs-6">{{ r.tempo_cambio or '-' }}</span></td>
-                                <td>
-                                    <span class="badge bg-secondary fs-6">{{ r.num_bottiglie_tempera_vecchia or 0 }} pz</span>
-                                    <i class="fa-solid fa-arrow-right mx-1 text-muted"></i>
-                                    <span class="badge bg-info text-dark fs-6">{{ r.num_bottiglie_tempera_nuova if r.num_bottiglie_tempera_nuova is not none else (r.num_bottiglie_tempera or 0) }} pz</span>
-                                </td>
-                                <td>{{ r.misura_piastrina or '-' }}</td>
+                                <td>{{ r.altezza_paratie or '-' }}</td>
+                                <td><span class="badge bg-info text-dark fs-6">{{ r.num_bottiglie_tempera }} pz</span></td>
+                                <td>{{ r.quantita_trattamento or '-' }}</td>
                                 <td class="no-print text-end">
                                     <form action="{{ url_for('elimina_cambio_serie', id_cambio=r.id) }}" method="POST" onsubmit="return confirm('Eliminare questo cambio serie?');" class="d-inline">
                                         <button type="submit" class="btn btn-sm btn-outline-danger" title="Elimina"><i class="fa-solid fa-trash-can"></i></button>
@@ -195,7 +190,7 @@
                             </tr>
                             {% else %}
                             <tr>
-                                <td colspan="7" class="text-center text-muted py-4">Nessun cambio serie trovato.</td>
+                                <td colspan="8" class="text-center text-muted py-4">Nessun cambio serie trovato.</td>
                             </tr>
                             {% endfor %}
                         </tbody>
@@ -205,9 +200,9 @@
         </div>
     </div>
 
-    <!-- MODALE NUOVO CAMBIO SERIE -->
+    <!-- MODALE NUOVO CAMBIO -->
     <div class="modal fade" id="modalNuovoCambio" tabindex="-1">
-        <div class="modal-dialog modal-lg">
+        <div class="modal-dialog">
             <div class="modal-content">
                 <form action="{{ url_for('aggiungi_cambio_serie') }}" method="POST">
                     <div class="modal-header bg-dark text-white">
@@ -218,20 +213,15 @@
                         <div class="row">
                             <div class="col-md-6 mb-3">
                                 <label class="form-label fw-bold">Seleziona Forno *</label>
-                                <!-- onchange diretto per forzare l'aggiornamento su qualsiasi dispositivo -->
-                                <select class="form-select" name="forno" id="selectForno" onchange="aggiornaLinee()" required>
-                                    <option value="Forno 1" selected>Forno 1</option>
+                                <select class="form-select" name="forno" id="selectForno" onchange="aggiornaLineeModal()" required>
+                                    <option value="Forno 1">Forno 1</option>
                                     <option value="Forno 3">Forno 3</option>
                                     <option value="Forno 4">Forno 4</option>
                                 </select>
                             </div>
                             <div class="col-md-6 mb-3">
                                 <label class="form-label fw-bold">Linea / Macchina *</label>
-                                <select class="form-select" name="linea" id="selectLinea" onchange="caricaDatiPrecedenti()" required>
-                                    <option value="11">Linea 11</option>
-                                    <option value="12">Linea 12</option>
-                                    <option value="13">Linea 13</option>
-                                </select>
+                                <select class="form-select" name="linea" id="selectLinea" required></select>
                             </div>
                         </div>
 
@@ -240,38 +230,29 @@
                             <input type="date" class="form-control" name="data_cambio" required>
                         </div>
 
-                        <div class="row">
-                            <div class="col-md-6 mb-3">
-                                <label class="form-label fw-bold text-secondary">Bottiglia Smontante (Autocompilata)</label>
-                                <input type="text" class="form-control bg-light" name="bottiglia_precedente" id="bottiglia_precedente" readonly placeholder="Caricamento automatico...">
-                            </div>
-                            <div class="col-md-6 mb-3">
-                                <label class="form-label fw-bold text-primary">Bottiglia Montante *</label>
-                                <input type="text" class="form-control" name="bottiglia_nuova" placeholder="Es. Bordolese 75cl..." required>
-                            </div>
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">Nome Bottiglia *</label>
+                            <input type="text" class="form-control" name="nome_bottiglia" placeholder="Es. Bordolese 75cl..." required>
                         </div>
-
                         <div class="row">
-                            <div class="col-md-12 mb-3">
+                            <div class="col-md-6 mb-3">
                                 <label class="form-label">Tempo Cambio</label>
                                 <input type="text" class="form-control" name="tempo_cambio" placeholder="Es. 45 min">
                             </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Altezza Paratie</label>
+                                <input type="text" class="form-control" name="altezza_paratie" placeholder="Es. 120 mm">
+                            </div>
                         </div>
-
                         <div class="row">
                             <div class="col-md-6 mb-3">
-                                <label class="form-label text-secondary">N° Bottiglie Tempera (Precedente - Autocompilata)</label>
-                                <input type="number" class="form-control bg-light" name="num_bottiglie_tempera_vecchia" id="num_bottiglie_tempera_vecchia" readonly value="0">
+                                <label class="form-label">N° Bottiglie in Tempera</label>
+                                <input type="number" class="form-control" name="num_bottiglie_tempera" value="0" min="0">
                             </div>
                             <div class="col-md-6 mb-3">
-                                <label class="form-label text-primary">N° Bottiglie Tempera (Montante)</label>
-                                <input type="number" class="form-control" name="num_bottiglie_tempera_nuova" value="0" min="0">
+                                <label class="form-label">Quantità Trattamento</label>
+                                <input type="text" class="form-control" name="quantita_trattamento" placeholder="Es. 5000 pz">
                             </div>
-                        </div>
-
-                        <div class="mb-3">
-                            <label class="form-label">Misura Piastrina</label>
-                            <input type="text" class="form-control" name="misura_piastrina" placeholder="Es. 150x80 mm">
                         </div>
                     </div>
                     <div class="modal-footer">
@@ -283,74 +264,32 @@
         </div>
     </div>
 
-    <!-- Bootstrap JS -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script>
-    // Mappatura esatta richiesta: Forno 1 (11,12,13), Forno 3 (31,32,33,34), Forno 4 (41,42)
+    // Mappatura esatta aggiornata con le macchine richieste:
+    // Forno 1 -> 11, 12, 13
+    // Forno 3 -> 31, 32, 33, 34
+    // Forno 4 -> 41, 42
     const lineePerForno = {
         "Forno 1": ["11", "12", "13"],
         "Forno 3": ["31", "32", "33", "34"],
         "Forno 4": ["41", "42"]
     };
 
-    function aggiornaLinee() {
-        const fornoSelect = document.getElementById("selectForno");
+    function aggiornaLineeModal() {
+        const forno = document.getElementById("selectForno").value;
         const selectLinea = document.getElementById("selectLinea");
-        
-        if (!fornoSelect || !selectLinea) return;
-
-        const forno = fornoSelect.value;
         selectLinea.innerHTML = "";
-
-        // Popola la tendina delle linee in base al forno selezionato
         (lineePerForno[forno] || []).forEach(function(linea) {
             const opt = document.createElement("option");
             opt.value = linea;
             opt.textContent = "Linea " + linea;
             selectLinea.appendChild(opt);
         });
-
-        // Carica i dati della bottiglia precedente
-        caricaDatiPrecedenti();
     }
 
-    function caricaDatiPrecedenti() {
-        const fornoSelect = document.getElementById("selectForno");
-        const selectLinea = document.getElementById("selectLinea");
-        
-        const inputSmontante = document.getElementById("bottiglia_precedente");
-        const inputTemperaVecchia = document.getElementById("num_bottiglie_tempera_vecchia");
-
-        if (!fornoSelect || !selectLinea) return;
-
-        const forno = fornoSelect.value;
-        const linea = selectLinea.value;
-
-        if (!forno || !linea) return;
-
-        if (inputSmontante) inputSmontante.value = "Caricamento...";
-
-        fetch(/api/ultima_bottiglia/${encodeURIComponent(forno)}/${encodeURIComponent(linea)})
-            .then(response => response.json())
-            .then(data => {
-                if (inputSmontante) inputSmontante.value = data.bottiglia || "Nessuna precedente";
-                if (inputTemperaVecchia) inputTemperaVecchia.value = data.tempera || 0;
-            })
-            .catch(err => {
-                console.error("Errore recupero ultima bottiglia:", err);
-                if (inputSmontante) inputSmontante.value = "-";
-                if (inputTemperaVecchia) inputTemperaVecchia.value = 0;
-            });
-    }
-
-    // Aggiorna le linee non appena si apre la modale
     document.addEventListener("DOMContentLoaded", function() {
-        const modalNuovoCambio = document.getElementById('modalNuovoCambio');
-        if (modalNuovoCambio) {
-            modalNuovoCambio.addEventListener('shown.bs.modal', function () {
-                aggiornaLinee();
-            });
-        }
+        try { aggiornaLineeModal(); } catch(e){}
     });
     </script>
 </body>
