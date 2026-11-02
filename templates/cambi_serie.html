@@ -219,14 +219,18 @@
                             <div class="col-md-6 mb-3">
                                 <label class="form-label fw-bold">Seleziona Forno *</label>
                                 <select class="form-select" name="forno" id="selectForno" onchange="aggiornaLineeEAutocompila()" required>
-                                    <option value="Forno 1">Forno 1</option>
+                                    <option value="Forno 1" selected>Forno 1</option>
                                     <option value="Forno 3">Forno 3</option>
                                     <option value="Forno 4">Forno 4</option>
                                 </select>
                             </div>
                             <div class="col-md-6 mb-3">
                                 <label class="form-label fw-bold">Linea / Macchina *</label>
-                                <select class="form-select" name="linea" id="selectLinea" onchange="caricaDatiPrecedenti()" required></select>
+                                <select class="form-select" name="linea" id="selectLinea" onchange="caricaDatiPrecedenti()" required>
+                                    <option value="11">Linea 11</option>
+                                    <option value="12">Linea 12</option>
+                                    <option value="13">Linea 13</option>
+                                </select>
                             </div>
                         </div>
 
@@ -281,10 +285,10 @@
     <!-- Bootstrap JS -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script>
-    // Mappatura esatta delle linee per ogni forno richiesta
+    // Mappatura aggiornata con Forno 3 (31, 32, 33, 34), Forno 1 (11, 12, 13) e Forno 4 (41, 42)
     const lineePerForno = {
         "Forno 1": ["11", "12", "13"],
-        "Forno 3": ["31", "32", "34", "35"],
+        "Forno 3": ["31", "32", "33", "34"],
         "Forno 4": ["41", "42"]
     };
 
@@ -305,7 +309,6 @@
             selectLinea.appendChild(opt);
         });
 
-        // Carica i dati della bottiglia precedente per la linea selezionata
         caricaDatiPrecedenti();
     }
 
@@ -325,7 +328,6 @@
 
         if (inputSmontante) inputSmontante.value = "Caricamento...";
 
-        // Chiamata API per recuperare l'ultima bottiglia registrata su quel forno e linea
         fetch(/api/ultima_bottiglia/${encodeURIComponent(forno)}/${encodeURIComponent(linea)})
             .then(response => response.json())
             .then(data => {
@@ -339,7 +341,6 @@
             });
     }
 
-    // Inizializza le tendine all'apertura della modale Bootstrap e al caricamento del DOM
     document.addEventListener("DOMContentLoaded", function() {
         const modalNuovoCambio = document.getElementById('modalNuovoCambio');
         if (modalNuovoCambio) {
@@ -349,9 +350,7 @@
         }
         try { 
             aggiornaLineeEAutocompila(); 
-        } catch(e) {
-            console.error(e);
-        }
+        } catch(e) {}
     });
     </script>
 </body>
