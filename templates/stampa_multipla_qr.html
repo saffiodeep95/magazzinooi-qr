@@ -2,8 +2,9 @@
 <html lang="it">
 <head>
     <meta charset="UTF-8">
-    <title>Stampa Multipla QR Code - Gestionale OMG</title>
+    <title>Gestionale OMG - Stampa QR Code Selezionati</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     <style>
         @media print {
@@ -13,9 +14,12 @@
                 border: 1px solid #999 !important;
                 page-break-inside: avoid;
             }
+            .etichetta-multipla input[type="checkbox"] {
+                display: none !important;
+            }
         }
         .etichetta-multipla {
-            width: 220px;
+            width: 210px;
             border: 1px solid #ddd;
             border-radius: 6px;
             background: #fff;
@@ -30,19 +34,27 @@
 <body class="bg-light py-4">
 
     <div class="container">
-        <div class="d-flex justify-content-between align-items-center mb-4 no-print">
-            <h3>Stampa Multipla Etichette QR</h3>
-            <div>
-                <button onclick="window.print()" class="btn btn-primary"><i class="fas fa-print"></i> Stampa Tutte</button>
-                <a href="{{ url_for('index') }}" class="btn btn-outline-secondary">Torna al Magazzino</a>
+        <!-- Barra superiore con i controlli e i pulsanti di selezione -->
+        <div class="d-flex justify-content-between align-items-center mb-4 p-3 bg-white shadow-sm rounded no-print flex-wrap gap-2">
+            <h4 class="mb-0"><i class="fas fa-print me-2"></i>Stampa QR Code</h4>
+            <div class="d-flex gap-2 flex-wrap">
+                <button type="button" class="btn btn-primary btn-sm" onclick="selezionaTutti(true)"><i class="fas fa-check-square me-1"></i> Seleziona Tutti</button>
+                <button type="button" class="btn btn-secondary btn-sm" onclick="selezionaTutti(false)"><i class="fas fa-square me-1"></i> Deseleziona Tutti</button>
+                <button type="button" class="btn btn-success btn-sm" onclick="stampaSelezionati()"><i class="fas fa-print me-1"></i> Stampa Selezionati</button>
+                <a href="{{ url_for('index') }}" class="btn btn-outline-dark btn-sm"><i class="fas fa-home me-1"></i> Home</a>
             </div>
         </div>
 
-        <!-- Griglia delle etichette -->
+        <!-- Griglia delle etichette con checkbox -->
         <div class="text-center">
             {% for p in prodotti %}
-            <div class="etichetta-multipla shadow-sm">
-                <h6 class="fw-bold text-dark text-truncate mb-1" style="font-size: 0.9rem;" title="{{ p.nome }}">{{ p.nome }}</h6>
+            <div class="etichetta-multipla shadow-sm position-relative">
+                <!-- Checkbox di selezione in alto a sinistra -->
+                <div class="position-absolute top-0 start-0 m-2 no-print">
+                    <input class="form-check-input qr-checkbox" type="checkbox" value="{{ p.qr_code }}" checked style="transform: scale(1.2);">
+                </div>
+
+                <h6 class="fw-bold text-dark text-truncate mb-1 mt-2 px-3" style="font-size: 0.9rem;" title="{{ p.nome }}">{{ p.nome }}</h6>
                 <div class="text-muted" style="font-size: 0.75rem;">SAP: {{ p.sap if p.sap else '-' }}</div>
                 
                 <div class="qr-box my-2 d-flex justify-content-center" data-qr="{{ p.qr_code }}"></div>
@@ -59,21 +71,49 @@
         </div>
     </div>
 
-    <!-- Script di generazione dinamica per tutti i QR code multipli -->
+    <!-- Script per gestire la selezione multipla e la stampa filtrata -->
     <script>
         document.addEventListener("DOMContentLoaded", function() {
+            // Genera tutti i QR code all'avvio
             document.querySelectorAll('.qr-box').forEach(function(el) {
                 let code = el.getAttribute('data-qr');
                 new QRCode(el, {
                     text: code,
-                    width: 90,
-                    height: 90,
+                    width: 85,
+                    height: 85,
                     colorDark: "#000000",
                     colorLight: "#ffffff",
                     correctLevel: QRCode.CorrectLevel.H
                 });
             });
         });
+
+        function selezionaTutti(stato) {
+            document.querySelectorAll('.qr-checkbox').forEach(function(cb) {
+                cb.checked = stato;
+            });
+        }
+
+        function stampaSelezionati() {
+            // Nasconde temporaneamente le etichette non spuntate prima di lanciare la stampa
+            document.querySelectorAll('.etichetta-multipla').forEach(function(card) {
+                let cb = card.querySelector('.qr-checkbox');
+                if (cb && !cb.checked) {
+                    card.style.display = 'none';
+                } else {
+                    card.style.display = 'inline-block';
+                }
+            });
+
+            window.print();
+
+            // Ripristina la visualizzazione di tutte le etichette dopo la stampa
+            setTimeout(function() {
+                document.querySelectorAll('.etichetta-multipla').forEach(function(card) {
+                    card.style.display = 'inline-block';
+                });
+            }, 500);
+        }
     </script>
 </body>
 </html>
