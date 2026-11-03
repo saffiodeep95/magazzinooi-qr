@@ -252,6 +252,8 @@ def init_db():
                 num_bottiglie_tempera_nuova INT DEFAULT 0,
                 quantita_trattamento VARCHAR(50),
                 misura_piastrina VARCHAR(50),
+                misura_piastrina_vecchia VARCHAR(50),
+                misura_piastrina_nuova VARCHAR(50),
                 creato_il TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             );
         """)
@@ -293,7 +295,9 @@ def init_db():
             ("bottiglia_nuova", "VARCHAR(255)"),
             ("num_bottiglie_tempera_vecchia", "INT DEFAULT 0"),
             ("num_bottiglie_tempera_nuova", "INT DEFAULT 0"),
-            ("misura_piastrina", "VARCHAR(50)")
+            ("misura_piastrina", "VARCHAR(50)"),
+            ("misura_piastrina_vecchia", "VARCHAR(50)"),
+            ("misura_piastrina_nuova", "VARCHAR(50)")
         ]
         for c_col, c_type in colonne_cambi_serie:
             cur.execute(f"ALTER TABLE cambi_serie ADD COLUMN IF NOT EXISTS {c_col} {c_type};")
@@ -424,7 +428,8 @@ def index():
             if not is_pesante:
                 prodotti.append(p)
             soglia = p.get('soglia_minima', 3) or 3
-            if p.get('quantita', 0) <= soglia:
+            # MODIFICA SOGLIA MINIMA: l'allarme scatta quando la giacenza è <= (soglia impostata - 1)
+            if p.get('quantita', 0) <= (soglia - 1):
                 prodotti_sotto_soglia.append(p)
     except Exception as e:
         print(f"Errore index: {e}")
@@ -866,7 +871,7 @@ def ultima_bottiglia(forno, linea):
         conn = get_db_connection()
         cur = conn.cursor()
         cur.execute("""
-            SELECT bottiglia_nuova, nome_bottiglia, num_bottiglie_tempera_nuova, num_bottiglie_tempera 
+            SELECT bottiglia_nuova, nome_bottiglia, num_bottiglie_tempera_nuova, num_bottiglie_tempera, misura_piastrina_nuova, misura_piastrina
             FROM cambi_serie 
             WHERE forno = %s AND linea = %s 
             ORDER BY id DESC LIMIT 1;
@@ -878,12 +883,13 @@ def ultima_bottiglia(forno, linea):
         if ultimo:
             return jsonify({
                 "bottiglia": ultimo.get('bottiglia_nuova') or ultimo.get('nome_bottiglia') or "",
-                "tempera": ultimo.get('num_bottiglie_tempera_nuova') if ultimo.get('num_bottiglie_tempera_nuova') is not None else (ultimo.get('num_bottiglie_tempera') or 0)
+                "tempera": ultimo.get('num_bottiglie_tempera_nuova') if ultimo.get('num_bottiglie_tempera_nuova') is not None else (ultimo.get('num_bottiglie_tempera') or 0),
+                "misura_piastrina": ultimo.get('misura_piastrina_nuova') or ultimo.get('misura_piastrina') or ""
             })
-        return jsonify({"bottiglia": "", "tempera": 0})
+        return jsonify({"bottiglia": "", "tempera": 0, "misura_piastrina": ""})
     except Exception as e:
         print(f"Errore API ultima bottiglia: {e}")
-        return jsonify({"bottiglia": "", "tempera": 0})
+        return jsonify({"bottiglia": "", "tempera": 0, "misura_piastrina": ""})
 
 @app.route("/cambi_serie", methods=["GET", "POST"])
 @app.route("/cambi_serie.html", methods=["GET", "POST"])
@@ -927,15 +933,16 @@ def aggiungi_cambio_serie():
     tempo_cambio = request.form.get("tempo_cambio", "")
     num_bottiglie_tempera_vecchia = int(request.form.get("num_bottiglie_tempera_vecchia", 0) or 0)
     num_bottiglie_tempera_nuova = int(request.form.get("num_bottiglie_tempera_nuova", 0) or 0)
-    misura_piastrina = request.form.get("misura_piastrina", "").strip()
+    misura_piastrina_vecchia = request.form.get("misura_piastrina_vecchia", "").strip()
+    misura_piastrina_nuova = request.form.get("misura_piastrina_nuova", "").strip()
 
     try:
         conn = get_db_connection()
         cur = conn.cursor()
         cur.execute("""
-            INSERT INTO cambi_serie (forno, linea, data_cambio, bottiglia_precedente, bottiglia_nuova, nome_bottiglia, tempo_cambio, num_bottiglie_tempera_vecchia, num_bottiglie_tempera_nuova, num_bottiglie_tempera, misura_piastrina)
-            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s);
-        """, (forno, linea, data_cambio, bottiglia_precedente, bottiglia_nuova, bottiglia_nuova, tempo_cambio, num_bottiglie_tempera_vecchia, num_bottiglie_tempera_nuova, num_bottiglie_tempera_nuova, misura_piastrina))
+            INSERT INTO cambi_serie (forno, linea, data_cambio, bottiglia_precedente, bottiglia_nuova, nome_bottiglia, tempo_cambio, num_bottiglie_tempera_vecchia, num_bottiglie_tempera_nuova, num_bottiglie_tempera, misura_piastrina, misura_piastrina_vecchia, misura_piastrina_nuova)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s);
+        """, (forno, linea, data_cambio, bottiglia_precedente, bottiglia_nuova, bottiglia_nuova, tempo_cambio, num_bottiglie_tempera_vecchia, num_bottiglie_tempera_nuova, num_bottiglie_tempera_nuova, misura_piastrina_nuova, misura_piastrina_vecchia, misura_piastrina_nuova))
         
         conn.commit()
         cur.close()
@@ -958,16 +965,17 @@ def modifica_cambio_serie(id_cambio):
     tempo_cambio = request.form.get("tempo_cambio", "")
     num_bottiglie_tempera_vecchia = int(request.form.get("num_bottiglie_tempera_vecchia", 0) or 0)
     num_bottiglie_tempera_nuova = int(request.form.get("num_bottiglie_tempera_nuova", 0) or 0)
-    misura_piastrina = request.form.get("misura_piastrina", "").strip()
+    misura_piastrina_vecchia = request.form.get("misura_piastrina_vecchia", "").strip()
+    misura_piastrina_nuova = request.form.get("misura_piastrina_nuova", "").strip()
 
     try:
         conn = get_db_connection()
         cur = conn.cursor()
         cur.execute("""
             UPDATE cambi_serie 
-            SET forno = %s, linea = %s, data_cambio = %s, bottiglia_precedente = %s, bottiglia_nuova = %s, nome_bottiglia = %s, tempo_cambio = %s, num_bottiglie_tempera_vecchia = %s, num_bottiglie_tempera_nuova = %s, num_bottiglie_tempera = %s, misura_piastrina = %s
+            SET forno = %s, linea = %s, data_cambio = %s, bottiglia_precedente = %s, bottiglia_nuova = %s, nome_bottiglia = %s, tempo_cambio = %s, num_bottiglie_tempera_vecchia = %s, num_bottiglie_tempera_nuova = %s, num_bottiglie_tempera = %s, misura_piastrina = %s, misura_piastrina_vecchia = %s, misura_piastrina_nuova = %s
             WHERE id = %s;
-        """, (forno, linea, data_cambio, bottiglia_precedente, bottiglia_nuova, bottiglia_nuova, tempo_cambio, num_bottiglie_tempera_vecchia, num_bottiglie_tempera_nuova, num_bottiglie_tempera_nuova, misura_piastrina, id_cambio))
+        """, (forno, linea, data_cambio, bottiglia_precedente, bottiglia_nuova, bottiglia_nuova, tempo_cambio, num_bottiglie_tempera_vecchia, num_bottiglie_tempera_nuova, num_bottiglie_tempera_nuova, misura_piastrina_nuova, misura_piastrina_vecchia, misura_piastrina_nuova, id_cambio))
         
         conn.commit()
         cur.close()
@@ -999,14 +1007,14 @@ def elimina_cambio_serie(id_cambio):
 def esporta_cambi_serie_csv():
     conn = get_db_connection()
     cur = conn.cursor()
-    cur.execute("SELECT data_cambio, forno, linea, bottiglia_precedente, bottiglia_nuova, nome_bottiglia, tempo_cambio, num_bottiglie_tempera_vecchia, num_bottiglie_tempera_nuova, num_bottiglie_tempera, misura_piastrina FROM cambi_serie ORDER BY data_cambio DESC;")
+    cur.execute("SELECT data_cambio, forno, linea, bottiglia_precedente, bottiglia_nuova, nome_bottiglia, tempo_cambio, num_bottiglie_tempera_vecchia, num_bottiglie_tempera_nuova, num_bottiglie_tempera, misura_piastrina, misura_piastrina_vecchia, misura_piastrina_nuova FROM cambi_serie ORDER BY data_cambio DESC;")
     righe = cur.fetchall()
     cur.close()
     conn.close()
 
     output = io.StringIO()
     writer = csv.writer(output)
-    writer.writerow(['Data Cambio', 'Forno', 'Linea', 'Bottiglia Smontante', 'Bottiglia Montante', 'Tempo Cambio', 'N° Bottiglie Tempera (Vecchia)', 'N° Bottiglie Tempera (Nuova)', 'Misura Piastrina'])
+    writer.writerow(['Data Cambio', 'Forno', 'Linea', 'Bottiglia Smontante', 'Bottiglia Montante', 'Tempo Cambio', 'N° Bottiglie Tempera (Vecchia)', 'N° Bottiglie Tempera (Nuova)', 'Piastrina Uscente', 'Piastrina Entrante'])
     for r in righe:
         writer.writerow([
             r.get('data_cambio', ''),
@@ -1017,7 +1025,8 @@ def esporta_cambi_serie_csv():
             r.get('tempo_cambio', ''),
             r.get('num_bottiglie_tempera_vecchia', 0),
             r.get('num_bottiglie_tempera_nuova') if r.get('num_bottiglie_tempera_nuova') is not None else r.get('num_bottiglie_tempera', 0),
-            r.get('misura_piastrina', '')
+            r.get('misura_piastrina_vecchia') or r.get('misura_piastrina', ''),
+            r.get('misura_piastrina_nuova') or r.get('misura_piastrina', '')
         ])
     return Response(
         output.getvalue(),
