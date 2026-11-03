@@ -58,7 +58,7 @@
             <h2>Magazzino Principale</h2>
             <div>
                 <a href="{{ url_for('scanner_globale') }}" class="btn btn-secondary btn-sm"><i class="fas fa-qrcode"></i> Scanner QR</a>
-                <a href="{{ url_for('stampa_tutti_qr') }}" class="btn btn-secondary btn-sm"><i class="fas fa-print"></i> Stampa QR</a>
+                <a href="{{ url_for('stampa_multipla_qr') }}" class="btn btn-secondary btn-sm"><i class="fas fa-print"></i> Stampa QR</a>
                 <a href="{{ url_for('carico') }}" class="btn btn-success btn-sm"><i class="fas fa-plus"></i> Carico</a>
                 <a href="{{ url_for('scarico') }}" class="btn btn-danger btn-sm"><i class="fas fa-minus"></i> Scarico</a>
                 <button type="button" class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#modalNuovoArticolo">
@@ -81,7 +81,7 @@
                             <tr>
                                 <th>QR Code</th>
                                 <th>Nome Articolo</th>
-                                <th>Ubicazione</th> <!-- Sostituito Codice SAP con Ubicazione -->
+                                <th>Ubicazione</th>
                                 <th>Quantità</th>
                                 <th class="text-end">Azioni</th>
                             </tr>
@@ -91,7 +91,7 @@
                             <tr>
                                 <td><code>{{ p.qr_code }}</code></td>
                                 <td><strong>{{ p.nome }}</strong></td>
-                                <td>{{ p.posizione if p.posizione else '-' }}</td> <!-- Mostra l'ubicazione -->
+                                <td>{{ p.posizione if p.posizione else '-' }}</td>
                                 <td>
                                     {% set soglia = p.soglia_minima if p.soglia_minima is not none else 3 %}
                                     {% if p.quantita <= (soglia - 1) %}
@@ -121,7 +121,7 @@
         </div>
     </div>
 
-    <!-- Modal Nuovo Articolo -->
+    <!-- Modal Nuovo Articolo (con campo QR Code ripristinato) -->
     <div class="modal fade" id="modalNuovoArticolo" tabindex="-1">
         <div class="modal-dialog">
             <div class="modal-content">
@@ -131,6 +131,10 @@
                         <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                     </div>
                     <div class="modal-body">
+                        <div class="mb-3">
+                            <label class="form-label">QR Code (Lascia vuoto per generazione automatica)</label>
+                            <input type="text" class="form-control" name="qr_code" placeholder="Es. OMG-0005 o lascia vuoto">
+                        </div>
                         <div class="mb-3">
                             <label class="form-label">Nome Articolo *</label>
                             <input type="text" class="form-control" name="nome" required>
