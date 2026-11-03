@@ -2,61 +2,82 @@
 <html lang="it">
 <head>
     <meta charset="UTF-8">
-    <title>Stampa QR Code - {{ prodotto.nome }}</title>
+    <title>Stampa Etichetta - {{ prodotto.nome }}</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     <style>
         @media print {
-            .no-print { display: none !important; }
-            body { background: white !important; }
-            .qr-label { border: none !important; box-shadow: none !important; width: 100% !important; margin: 0 !important; }
-        }
-        .qr-label {
-            width: 380px;
-            border: 2px solid #000;
-            border-radius: 10px;
-            padding: 20px;
-            margin: 30px auto;
-            text-align: center;
-            background: #fff;
+            .no-print {
+                display: none !important;
+            }
+            body {
+                background-color: white !important;
+            }
+            .card {
+                border: none !important;
+                box-shadow: none !important;
+            }
         }
     </style>
 </head>
-<body class="bg-light">
+<body class="bg-light py-5">
 
-    <div class="container text-center my-4 no-print">
-        <button onclick="window.print()" class="btn btn-success btn-lg shadow fw-bold">
-            <i class="fas fa-print me-2"></i>Stampa Etichetta QR
-        </button>
-        <a href="{{ url_for('gestisci_prodotto', qr_code=prodotto.qr_code) }}" class="btn btn-secondary btn-lg shadow ms-2 fw-bold">
-            <i class="fas fa-arrow-left me-2"></i>Torna alla Scheda
-        </a>
+    <div class="container text-center">
+        <div class="card shadow mx-auto p-4" style="max-width: 450px;">
+            <h3 class="mb-3 text-primary">{{ prodotto.nome }}</h3>
+            
+            <!-- Contenitore QR Code -->
+            <div id="qrcode" class="d-flex justify-content-center my-3"></div>
+            <p class="font-monospace text-muted fw-bold mb-3">{{ prodotto.qr_code }}</p>
+            
+            <hr>
+
+            <!-- Tutti i dati dell'articolo scritti in dettaglio -->
+            <div class="text-start mb-4">
+                <ul class="list-group list-group-flush">
+                    <li class="list-group-item d-flex justify-content-between">
+                        <span><strong>Codice SAP:</strong></span>
+                        <span>{{ prodotto.sap if prodotto.sap else '-' }}</span>
+                    </li>
+                    <li class="list-group-item d-flex justify-content-between">
+                        <span><strong>Ubicazione:</strong></span>
+                        <span>{{ prodotto.posizione if prodotto.posizione else '-' }}</span>
+                    </li>
+                    <li class="list-group-item d-flex justify-content-between">
+                        <span><strong>Quantità:</strong></span>
+                        <span class="badge bg-secondary">{{ prodotto.quantita }}</span>
+                    </li>
+                    <li class="list-group-item d-flex justify-content-between">
+                        <span><strong>Peso:</strong></span>
+                        <span>{{ prodotto.peso if prodotto.peso else '-' }}</span>
+                    </li>
+                    <li class="list-group-item d-flex justify-content-between">
+                        <span><strong>Magazzino Pesante:</strong></span>
+                        <span>{{ 'Sì' if prodotto.magazzino_pesante else 'No' }}</span>
+                    </li>
+                </ul>
+            </div>
+
+            <!-- Pulsanti di controllo (nascosti in stampa) -->
+            <div class="d-grid gap-2 no-print">
+                <button onclick="window.print()" class="btn btn-primary"><i class="fas fa-print"></i> Stampa Etichetta</button>
+                <a href="{{ url_for('index') }}" class="btn btn-outline-secondary">Torna alla Dashboard</a>
+            </div>
+        </div>
     </div>
 
-    <div class="qr-label shadow-sm">
-        <h4 class="fw-bold mb-1 text-dark">{{ prodotto.nome }}</h4>
-        <p class="text-muted mb-2 small">SAP: {{ prodotto.sap or 'N/D' }}</p>
-        
-        <!-- QR Code generato via API -->
-        <div class="my-3">
-            <img src="https://api.qrserver.com/v1/create-qr-code/?size=170x170&data={{ prodotto.qr_code }}" alt="QR Code" class="img-fluid">
-        </div>
-
-        <h5 class="fw-bold text-dark mb-2">Codice: {{ prodotto.qr_code }}</h5>
-        
-        <hr class="my-2">
-        
-        <!-- MATRICOLA E STATO STAMPATI SULL'ETICHETTA -->
-        <div class="text-start small px-2">
-            <div class="d-flex justify-content-between mb-1">
-                <span><strong>Matricola (S/N):</strong></span>
-                <span class="text-primary fw-bold">{{ prodotto.matricola or 'Non specificata' }}</span>
-            </div>
-            <div class="d-flex justify-content-between">
-                <span><strong>Stato Pezzo:</strong></span>
-                <span class="badge bg-secondary">{{ prodotto.stato_pezzo or 'Nuovo' }}</span>
-            </div>
-        </div>
-    </div>
-
+    <!-- Generatore automatico del QR code tramite libreria qrcode.js -->
+    <script>
+        document.addEventListener("DOMContentLoaded", function() {
+            new QRCode(document.getElementById("qrcode"), {
+                text: "{{ prodotto.qr_code }}",
+                width: 160,
+                height: 160,
+                colorDark: "#000000",
+                colorLight: "#ffffff",
+                correctLevel: QRCode.CorrectLevel.H
+            });
+        });
+    </script>
 </body>
 </html>
