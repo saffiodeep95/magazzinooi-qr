@@ -2,130 +2,78 @@
 <html lang="it">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Stampa QR Code Selezionati</title>
+    <title>Stampa Multipla QR Code - Gestionale OMG</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     <style>
-        body { font-family: sans-serif; margin: 0; padding: 10px; background: white; color: #000; }
-        .no-print { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; padding: 10px; background: #f8fafc; border-bottom: 1px solid #e2e8f0; flex-wrap: wrap; gap: 10px; }
-        .btn { background: #4f46e5; color: white; padding: 8px 14px; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; text-decoration: none; display: inline-block; font-size: 0.9rem; }
-        
-        .grid-container {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
-            gap: 10px;
-            page-break-inside: avoid;
+        @media print {
+            .no-print { display: none !important; }
+            body { background: white !important; }
+            .etichetta-multipla {
+                border: 1px solid #999 !important;
+                page-break-inside: avoid;
+            }
         }
-        .qr-card {
-            border: 1px dashed #cbd5e1;
-            padding: 8px;
-            text-align: center;
+        .etichetta-multipla {
+            width: 220px;
+            border: 1px solid #ddd;
             border-radius: 6px;
             background: #fff;
-            break-inside: avoid;
-            position: relative;
-        }
-        .qr-card h4 { font-size: 0.85rem; margin: 4px 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-        .qr-card p { font-size: 0.72rem; margin: 2px 0; color: #475569; }
-        
-        .qr-checkbox {
-            position: absolute;
-            top: 6px;
-            left: 6px;
-            transform: scale(1.3);
-            cursor: pointer;
-        }
-
-        .qr-code-text { 
-            font-family: monospace; 
-            font-size: 0.75rem; 
-            color: #1e293b; 
-            font-weight: bold; 
-            user-select: text;
-            -webkit-user-select: text;
-            background: #f1f5f9;
-            padding: 2px 6px;
-            border-radius: 3px;
+            padding: 10px;
+            text-align: center;
             display: inline-block;
-        }
-        
-        .qrcode-container { display: flex; justify-content: center; margin: 4px 0; }
-        .qrcode-container canvas, .qrcode-container img { width: 85px !important; height: 85px !important; }
-
-        @media print {
-            .no-print, .qr-checkbox { display: none !important; }
-            body { padding: 0; }
-            .grid-container { gap: 6px; }
-            .qr-card { border: 1px solid #000; padding: 4px; }
-            /* Nasconde gli elementi non selezionati durante la stampa */
-            .qr-card.no-print-card { display: none !important; }
-            .qr-code-text { background: none; padding: 0; }
+            vertical-align: top;
+            margin: 8px;
         }
     </style>
 </head>
-<body>
+<body class="bg-light py-4">
 
-    <div class="no-print">
-        <h1>🖨️ Stampa QR Code</h1>
-        <div>
-            <button onclick="selezionaTutti(true)" class="btn" style="background: #0284c7;">✅ Seleziona Tutti</button>
-            <button onclick="selezionaTutti(false)" class="btn" style="background: #64748b;">❌ Deseleziona Tutti</button>
-            <button onclick="avviaStampaSelezionati()" class="btn" style="background: #10b981; margin-left: 10px;">🖨️ Stampa Selezionati</button>
-            <a href="{{ url_for('index') }}" class="btn" style="background: #475569; margin-left: 10px;">← Home</a>
+    <div class="container">
+        <div class="d-flex justify-content-between align-items-center mb-4 no-print">
+            <h3>Stampa Multipla Etichette QR</h3>
+            <div>
+                <button onclick="window.print()" class="btn btn-primary"><i class="fas fa-print"></i> Stampa Tutte</button>
+                <a href="{{ url_for('index') }}" class="btn btn-outline-secondary">Torna al Magazzino</a>
+            </div>
+        </div>
+
+        <!-- Griglia delle etichette -->
+        <div class="text-center">
+            {% for p in prodotti %}
+            <div class="etichetta-multipla shadow-sm">
+                <h6 class="fw-bold text-dark text-truncate mb-1" style="font-size: 0.9rem;" title="{{ p.nome }}">{{ p.nome }}</h6>
+                <div class="text-muted" style="font-size: 0.75rem;">SAP: {{ p.sap if p.sap else '-' }}</div>
+                
+                <div class="qr-box my-2 d-flex justify-content-center" data-qr="{{ p.qr_code }}"></div>
+                <div class="font-monospace fw-bold small">{{ p.qr_code }}</div>
+                
+                <div class="mt-2 pt-1 border-top text-start" style="font-size: 0.75rem;">
+                    <div><strong>Ubicazione:</strong> {{ p.posizione if p.posizione else '-' }}</div>
+                    <div><strong>Quantità:</strong> <span class="badge bg-secondary">{{ p.quantita }}</span></div>
+                </div>
+            </div>
+            {% else %}
+            <p class="text-muted">Nessun articolo disponibile per la stampa.</p>
+            {% endfor %}
         </div>
     </div>
 
-    <div class="grid-container">
-        {% for p in prodotti %}
-        <div class="qr-card" id="card-{{ loop.index }}">
-            <input type="checkbox" class="qr-checkbox" checked onchange="aggiornaVisibilitaCard({{ loop.index }}, this.checked)">
-            <h4>{{ p.nome }}</h4>
-            <div class="qrcode-container" id="qr-print-{{ loop.index }}" data-code="{{ p.qr_code }}"></div>
-            <p><span class="qr-code-text">{{ p.qr_code }}</span></p>
-            {% if p.sap %}<p>SAP: {{ p.sap }}</p>{% endif %}
-            <p style="font-weight: bold; color: #2563eb; font-size: 0.75rem;">📍 {{ p.posizione if p.posizione else 'Nessuna posizione' }}</p>
-        </div>
-        {% endfor %}
-    </div>
-
+    <!-- Script di generazione dinamica per tutti i QR code multipli -->
     <script>
         document.addEventListener("DOMContentLoaded", function() {
-            document.querySelectorAll(".qrcode-container").forEach(function(el) {
-                let code = el.getAttribute("data-code");
-                if(code) {
-                    new QRCode(el, {
-                        text: code,
-                        width: 85,
-                        height: 85,
-                        colorDark: "#000000",
-                        colorLight: "#ffffff",
-                        correctLevel: QRCode.CorrectLevel.H
-                    });
-                }
+            document.querySelectorAll('.qr-box').forEach(function(el) {
+                let code = el.getAttribute('data-qr');
+                new QRCode(el, {
+                    text: code,
+                    width: 90,
+                    height: 90,
+                    colorDark: "#000000",
+                    colorLight: "#ffffff",
+                    correctLevel: QRCode.CorrectLevel.H
+                });
             });
         });
-
-        function aggiornaVisibilitaCard(index, isChecked) {
-            let card = document.getElementById('card-' + index);
-            if (isChecked) {
-                card.classList.remove('no-print-card');
-            } else {
-                card.classList.add('no-print-card');
-            }
-        }
-
-        function selezionaTutti(stato) {
-            let checkboxes = document.querySelectorAll('.qr-checkbox');
-            checkboxes.forEach((cb, idx) => {
-                cb.checked = stato;
-                aggiornaVisibilitaCard(idx + 1, stato);
-            });
-        }
-
-        function avviaStampaSelezionati() {
-            window.print();
-        }
     </script>
-
 </body>
 </html>
