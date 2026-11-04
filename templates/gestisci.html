@@ -4,11 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Gestione Articolo - Gestionale OMG</title>
-    <!-- Bootstrap CSS -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <!-- FontAwesome per le icone -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <!-- Libreria per generare il QR Code -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     <style>
         body { background-color: #f8fafc; font-family: 'Segoe UI', Tahoma, sans-serif; }
@@ -25,7 +22,7 @@
 
     <!-- Navbar -->
     <nav class="navbar navbar-expand-lg navbar-dark bg-dark sticky-top">
-        <div class="container-fluidpx-3">
+        <div class="container-fluid px-3">
             <a class="navbar-brand fw-bold fs-5 text-white" href="{{ url_for('index') }}">
                 <i class="fas fa-industry text-warning me-2"></i>OMG <span class="fw-normal opacity-75">/ Gestione</span>
             </a>
@@ -39,7 +36,6 @@
 
     <div class="container my-4">
         
-        <!-- Notifiche Flash -->
         {% with messages = get_flashed_messages(with_categories=true) %}
           {% if messages %}
             {% for category, message in messages %}
@@ -55,7 +51,7 @@
             <!-- COLONNA SINISTRA: Modifica principale e Manutenzione -->
             <div class="col-lg-8 col-md-12">
                 
-                <!-- CARD MODIFICA ARTICOLO (Ora con campo Quantità) -->
+                <!-- CARD MODIFICA ARTICOLO -->
                 <div class="card shadow-sm">
                     <div class="card-header bg-primary text-white py-3">
                         <h5 class="mb-0"><i class="fas fa-pen-to-square me-2"></i>Modifica Articolo: {{ prodotto.nome }}</h5>
@@ -64,15 +60,15 @@
                         <form action="{{ url_for('aggiorna_prodotto', qr_code=prodotto.qr_code) }}" method="POST">
                             <div class="mb-3">
                                 <label class="form-label label-text fw-bold">Nome Articolo *</label>
-                                <input type="text" class="form-control" name="nome" value="{{ prodotto.nome }}" required placeholder="Nome o descrizione articolo">
+                                <input type="text" class="form-control" name="nome" value="{{ prodotto.nome }}" required placeholder="Nome o descrizione articolo" oninput="formattaTitleCase(this)">
                             </div>
                             <div class="row">
                                 <div class="col-md-6 mb-3">
                                     <label class="form-label label-text fw-bold">Codice SAP</label>
-                                    <input type="text" class="form-control" name="sap" value="{{ prodotto.sap }}" placeholder="Codice SAP opzionale">
+                                    <input type="text" class="form-control" name="sap" value="{{ prodotto.sap }}" placeholder="Codice SAP opzionale" oninput="this.value = this.value.toUpperCase();">
                                 </div>
                                 
-                                <!-- * NUOVO CAMPO: MODIFICA QUANTITÀ ATTUALE * -->
+                                <!-- CAMPO MODIFICA QUANTITÀ ATTUALE -->
                                 <div class="col-md-6 mb-3">
                                     <label class="form-label label-text fw-bold text-primary">Quantità Attuale in Magazzino *</label>
                                     <div class="input-group">
@@ -85,7 +81,7 @@
                             <div class="row">
                                 <div class="col-md-6 mb-3">
                                     <label class="form-label label-text fw-bold">Ubicazione / Posizione</label>
-                                    <input type="text" class="form-control" name="posizione" value="{{ prodotto.posizione }}" placeholder="Es. Scaffale A2">
+                                    <input type="text" class="form-control" name="posizione" value="{{ prodotto.posizione }}" placeholder="Es. Scaffale A2" oninput="this.value = this.value.toUpperCase();">
                                 </div>
                                 <div class="col-md-6 mb-3">
                                     <label class="form-label label-text fw-bold">Peso</label>
@@ -144,7 +140,7 @@
                                     </div>
                                     <div class="col-md-6 mb-3">
                                         <label class="form-label label-text fw-bold">Vettore / Corriere</label>
-                                        <input type="text" class="form-control" name="vettore" placeholder="Nome corriere">
+                                        <input type="text" class="form-control" name="vettore" placeholder="Nome corriere" oninput="formattaTitleCase(this)">
                                     </div>
                                 </div>
                                 <div class="row">
@@ -159,7 +155,7 @@
                                 </div>
                                 <div class="form-check mb-3">
                                     <input class="form-check-input" type="checkbox" name="ordine_amministrativo" value="1" id="ordineAdmin">
-                                    <label class="form-check-label label-val" for="ordineAdmin small">Richiede Ordine Amministrativo</label>
+                                    <label class="form-check-label label-val" for="ordineAdmin">Richiede Ordine Amministrativo</label>
                                 </div>
                                 <div class="mb-3">
                                     <label class="form-label label-text fw-bold">Note Manutenzione</label>
@@ -189,7 +185,6 @@
                 <div class="card shadow-sm text-center">
                     <div class="card-body p-4">
                         <h6 class="text-muted fw-bold mb-3">QR Code Identificativo</h6>
-                        <!-- Contenitore in cui viene generato il QR grafico -->
                         <div id="qrcode" class="d-flex justify-content-center my-3 p-1"></div>
                         <p class="font-monospace fw-bold fs-5 text-dark mb-3 bg-light py-1 px-3 rounded-pill d-inline-block">{{ prodotto.qr_code }}</p>
                         
@@ -201,7 +196,7 @@
                     </div>
                 </div>
 
-                <!-- CARD AZIONI RAPIDE SCORTE (Pezzi) -->
+                <!-- CARD AZIONI RAPIDE SCORTE -->
                 <div class="card shadow-sm">
                     <div class="card-header bg-dark text-white py-2">
                         <h6 class="mb-0 fs-6"><i class="fas fa-bolt me-2 text-warning"></i>Azioni Rapide Pezzi</h6>
@@ -256,8 +251,14 @@
         </div>
     </div>
 
-    <!-- Script JavaScript per generare il QR code identificativo -->
     <script>
+        function formattaTitleCase(input) {
+            let cursorPosition = input.selectionStart;
+            let val = input.value;
+            input.value = val.replace(/\b\w/g, function(l) { return l.toUpperCase(); });
+            input.setSelectionRange(cursorPosition, cursorPosition);
+        }
+
         document.addEventListener("DOMContentLoaded", function() {
             if ("{{ prodotto.qr_code }}") {
                 new QRCode(document.getElementById("qrcode"), {
