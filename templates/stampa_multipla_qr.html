@@ -15,114 +15,91 @@
         @media print {
             .no-print { display: none !important; }
             body { background: white !important; padding: 0 !important; margin: 0 !important; }
-            .griglia-etichette {
+            #areaStampa {
                 display: flex !important;
                 flex-wrap: wrap !important;
                 justify-content: flex-start !important;
-                gap: 6mm !important;
+                gap: 5mm !important;
             }
-            .etichetta-multipla {
-                border: 1px dashed #666 !important;
+            .etichetta-stampa {
+                border: 1px dashed #444 !important;
                 box-shadow: none !important;
                 page-break-inside: avoid !important;
                 margin: 0 !important;
                 width: 62mm !important;
                 padding: 6px !important;
-            }
-            /* Quando stampiamo, rendiamo visibili tutte le copie nascoste calcolate dalla quantità */
-            .copia-stampa {
-                display: inline-block !important;
+                background: #fff !important;
+                text-align: center !important;
             }
         }
-        .etichetta-multipla {
+        .etichetta-schermo {
             width: 210px;
             border: 1px solid #ddd;
-            border-radius: 6px;
+            border-radius: 8px;
             background: #fff;
-            padding: 8px;
+            padding: 10px;
             text-align: center;
             display: inline-block;
             vertical-align: top;
             margin: 6px;
         }
-        /* Le copie extra per la stampa restano nascoste a schermo per mantenere pulito l'elenco */
-        .copia-stampa {
-            display: none;
-        }
     </style>
 </head>
 <body class="bg-light py-3">
 
-    <div class="container-fluid px-4">
-        <!-- Controls Bar -->
-        <div class="d-flex justify-content-between align-items-center mb-3 p-3 bg-white shadow-sm rounded no-print flex-wrap gap-2">
-            <h5 class="mb-0 fw-bold"><i class="fas fa-print me-2 text-primary"></i>Stampa QR Code (Ordinata)</h5>
+    <div class="container-fluid px-4 no-print">
+        <!-- Barra di Controllo (Schermo) -->
+        <div class="d-flex justify-content-between align-items-center mb-3 p-3 bg-white shadow-sm rounded flex-wrap gap-2">
+            <h5 class="mb-0 fw-bold text-dark"><i class="fas fa-print me-2 text-primary"></i>Stampa QR Code per Pezzo</h5>
             <div class="d-flex gap-2 flex-wrap">
                 <button type="button" class="btn btn-primary btn-sm" onclick="selezionaTutti(true)"><i class="fas fa-check-square me-1"></i> Seleziona Tutti</button>
                 <button type="button" class="btn btn-secondary btn-sm" onclick="selezionaTutti(false)"><i class="fas fa-square me-1"></i> Deseleziona Tutti</button>
-                <button type="button" class="btn btn-success btn-sm" onclick="stampaSelezionati()"><i class="fas fa-print me-1"></i> Stampa Selezionati</button>
+                <button type="button" class="btn btn-success btn-sm fw-bold" onclick="avviaStampa()"><i class="fas fa-print me-1"></i> Stampa Selezionati</button>
                 <a href="{{ url_for('index') }}" class="btn btn-outline-dark btn-sm"><i class="fas fa-home me-1"></i> Home</a>
             </div>
         </div>
 
-        <!-- Griglia Etichette (A schermo vedi UN solo QR per articolo in modo ordinato) -->
-        <div class="griglia-etichette text-center">
+        <!-- ELENCO ORDINATO A SCHERMO (UN SOLO BOX PER ARTICOLO) -->
+        <div class="text-center">
             {% for p in prodotti %}
-            <div class="etichetta-multipla shadow-sm position-relative" data-quantita="{{ p.quantita if p.quantita > 0 else 1 }}">
-                <div class="position-absolute top-0 start-0 m-1 no-print">
-                    <input class="form-check-input qr-checkbox" type="checkbox" value="{{ p.qr_code }}" checked style="transform: scale(1.1);">
+            <div class="etichetta-schermo shadow-sm position-relative" id="card-schermo-{{ p.qr_code }}">
+                <div class="position-absolute top-0 start-0 m-2">
+                    <input class="form-check-input qr-checkbox" type="checkbox" value="{{ p.qr_code }}" data-nome="{{ p.nome }}" data-posizione="{{ p.posizione or '-' }}" data-quantita="{{ p.quantita if p.quantita > 0 else 1 }}" checked style="transform: scale(1.2); cursor: pointer;">
                 </div>
 
-                <!-- Nome Articolo Leggibile per intero -->
-                <h6 class="fw-bold text-dark text-wrap text-break mb-2 mt-2 px-1" style="font-size: 0.82rem; line-height: 1.15;">{{ p.nome }}</h6>
+                <!-- Nome Articolo per intero -->
+                <h6 class="fw-bold text-dark text-wrap text-break mb-2 mt-2 px-1" style="font-size: 0.85rem; line-height: 1.2;">{{ p.nome }}</h6>
                 
-                <div class="qr-box my-1 d-flex justify-content-center" data-qr="{{ p.qr_code }}"></div>
-                <div class="font-monospace fw-bold text-dark" style="font-size: 0.75rem;">{{ p.qr_code }}</div>
+                <div class="qr-preview my-2 d-flex justify-content-center" data-qr="{{ p.qr_code }}"></div>
+                <div class="font-monospace fw-bold text-dark small mb-2">{{ p.qr_code }}</div>
                 
-                <!-- Ubicazione e indicazione rapida dei pezzi -->
-                <div class="mt-1 pt-1 border-top d-flex justify-content-between px-1" style="font-size: 0.75rem;">
-                    <span class="text-muted">Ubicazione: <strong>{{ p.posizione if p.posizione else '-' }}</strong></span>
-                    <span class="badge bg-secondary">Pz: {{ p.quantita }}</span>
+                <div class="pt-2 border-top d-flex justify-content-between align-items-center px-1" style="font-size: 0.75rem;">
+                    <span class="text-muted">Ubicazione: <strong class="text-dark">{{ p.posizione if p.posizione else '-' }}</strong></span>
+                    <span class="badge bg-primary fs-6">{{ p.quantita }} pz</span>
                 </div>
             </div>
-
-            <!-- Copie duplicate invisibili a schermo ma pronte a comparire solo sulla carta in base alla quantità -->
-            {% set nr_copie = p.quantita if p.quantita > 1 else 0 %}
-            {% if nr_copie > 0 %}
-                {% for i in range(nr_copie - 1) %}
-                <div class="etichetta-multipla copia-stampa shadow-sm position-relative" data-qr-copia="{{ p.qr_code }}">
-                    <h6 class="fw-bold text-dark text-wrap text-break mb-2 mt-2 px-1" style="font-size: 0.82rem; line-height: 1.15;">{{ p.nome }}</h6>
-                    <div class="qr-box-copia my-1 d-flex justify-content-center" data-qr="{{ p.qr_code }}"></div>
-                    <div class="font-monospace fw-bold text-dark" style="font-size: 0.75rem;">{{ p.qr_code }}</div>
-                    <div class="mt-1 pt-1 border-top d-flex justify-content-between px-1" style="font-size: 0.75rem;">
-                        <span class="text-muted">Ubicazione: <strong>{{ p.posizione if p.posizione else '-' }}</strong></span>
-                        <span class="badge bg-secondary">Pz: {{ p.quantita }}</span>
-                    </div>
-                </div>
-                {% endfor %}
-            {% endif %}
-            
             {% else %}
             <p class="text-muted">Nessun articolo disponibile per la stampa.</p>
             {% endfor %}
         </div>
     </div>
 
+    <!-- AREA DI STAMPA DINAMICA (GENERATE SOLO IN FASE DI STAMPA) -->
+    <div id="areaStampa" class="d-none d-print-flex"></div>
+
     <script>
         document.addEventListener("DOMContentLoaded", function() {
-            // Genera i QR code sia per le card principali che per le copie di stampa nascoste
-            document.querySelectorAll('.qr-box, .qr-box-copia').forEach(function(el) {
+            // Genera la preview grafica del QR code per la schermata
+            document.querySelectorAll('.qr-preview').forEach(function(el) {
                 let code = el.getAttribute('data-qr');
-                if(code && !el.hasChildNodes()) {
-                    new QRCode(el, {
-                        text: code,
-                        width: 75,
-                        height: 75,
-                        colorDark: "#000000",
-                        colorLight: "#ffffff",
-                        correctLevel: QRCode.CorrectLevel.H
-                    });
-                }
+                new QRCode(el, {
+                    text: code,
+                    width: 80,
+                    height: 80,
+                    colorDark: "#000000",
+                    colorLight: "#ffffff",
+                    correctLevel: QRCode.CorrectLevel.H
+                });
             });
         });
 
@@ -132,42 +109,54 @@
             });
         }
 
-        function stampaSelezionati() {
-            // Nasconde le card principali i cui checkbox non sono spuntati
-            document.querySelectorAll('.etichetta-multipla:not(.copia-stampa)').forEach(function(card) {
-                let cb = card.querySelector('.qr-checkbox');
-                let qrCodeVal = cb ? cb.value : '';
-                
-                if (cb && !cb.checked) {
-                    card.style.display = 'none';
-                    // Nasconde anche le relative copie di stampa di quell'articolo
-                    document.querySelectorAll('.copia-stampa').forEach(function(copia) {
-                        if(copia.querySelector('.qr-box-copia').getAttribute('data-qr') === qrCodeVal) {
-                            copia.style.display = 'none';
-                        }
-                    });
-                } else {
-                    card.style.display = 'inline-block';
-                    // Mostra le relative copie in stampa
-                    document.querySelectorAll('.copia-stampa').forEach(function(copia) {
-                        if(copia.querySelector('.qr-box-copia').getAttribute('data-qr') === qrCodeVal) {
-                            copia.style.display = 'inline-block';
-                        }
+        function avviaStampa() {
+            const areaStampa = document.getElementById('areaStampa');
+            areaStampa.innerHTML = ''; // Pulisce precedenti etichette di stampa
+
+            const checkboxes = document.querySelectorAll('.qr-checkbox:checked');
+
+            if (checkboxes.length === 0) {
+                alert("Seleziona almeno un articolo da stampare!");
+                return;
+            }
+
+            // Per ogni articolo selezionato, genera N etichette pari al numero di pezzi
+            checkboxes.forEach(function(cb) {
+                const qrCode = cb.value;
+                const nome = cb.getAttribute('data-nome');
+                const posizione = cb.getAttribute('data-posizione');
+                const quantita = parseInt(cb.getAttribute('data-quantita')) || 1;
+
+                for (let i = 0; i < quantita; i++) {
+                    let divEtichetta = document.createElement('div');
+                    divEtichetta.className = 'etichetta-stampa';
+                    divEtichetta.innerHTML = `
+                        <h6 style="font-weight: bold; color: #000; font-size: 0.82rem; line-height: 1.15; word-wrap: break-word; margin-bottom: 4px;">${nome}</h6>
+                        <div class="qr-print-box" style="display: flex; justify-content: center; margin: 4px 0;"></div>
+                        <div style="font-family: monospace; font-weight: bold; font-size: 0.75rem; color: #000;">${qrCode}</div>
+                        <div style="margin-top: 4px; padding-top: 3px; border-top: 1px solid #ccc; font-size: 0.75rem; color: #333;">
+                            Ubicazione: <strong>${posizione}</strong>
+                        </div>
+                    `;
+                    areaStampa.appendChild(divEtichetta);
+
+                    // Genera subito il codice QR grafico nella nuova etichetta
+                    let qrBox = divEtichetta.querySelector('.qr-print-box');
+                    new QRCode(qrBox, {
+                        text: qrCode,
+                        width: 75,
+                        height: 75,
+                        colorDark: "#000000",
+                        colorLight: "#ffffff",
+                        correctLevel: QRCode.CorrectLevel.H
                     });
                 }
             });
 
-            window.print();
-
-            // Ripristina la visualizzazione pulita a schermo dopo la stampa
+            // Avvia la stampa
             setTimeout(function() {
-                document.querySelectorAll('.etichetta-multipla:not(.copia-stampa)').forEach(function(card) {
-                    card.style.display = 'inline-block';
-                });
-                document.querySelectorAll('.copia-stampa').forEach(function(copia) {
-                    copia.style.display = 'none';
-                });
-            }, 500);
+                window.print();
+            }, 300);
         }
     </script>
 </body>
