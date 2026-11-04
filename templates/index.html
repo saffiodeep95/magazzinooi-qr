@@ -78,7 +78,6 @@
 
                 <!-- Sezione Destra Navbar: Notifiche e Utente -->
                 <ul class="navbar-nav align-items-center">
-                    <!-- Dropdown Notifiche -->
                     <li class="nav-item dropdown me-3">
                         <a class="nav-link text-light position-relative px-2" href="#" id="notificheDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
                             <i class="fas fa-bell fa-lg"></i>
@@ -98,7 +97,6 @@
                         </ul>
                     </li>
 
-                    <!-- Utente Loggato -->
                     <li class="nav-item dropdown">
                         <a class="nav-link dropdown-toggle text-light px-2 d-flex align-items-center gap-1" href="#" role="button" data-bs-toggle="dropdown">
                             <i class="fas fa-user-circle fa-lg text-warning"></i>
@@ -114,7 +112,6 @@
     </nav>
 
     <div class="container my-4">
-        <!-- Notifiche Flash -->
         {% with messages = get_flashed_messages(with_categories=true) %}
             {% if messages %}
                 {% for category, message in messages %}
@@ -215,7 +212,7 @@
         </div>
     </div>
 
-    <!-- Modale Nuovo Articolo -->
+    <!-- Modale Nuovo Articolo con Title Case Automatico -->
     <div class="modal fade" id="modalNuovoProdotto" tabindex="-1">
         <div class="modal-dialog">
             <div class="modal-content border-0 shadow">
@@ -227,15 +224,16 @@
                     <div class="modal-body p-4">
                         <div class="mb-3">
                             <label class="form-label small fw-bold text-muted">QR Code (Lascia vuoto per generazione automatica)</label>
-                            <input type="text" class="form-control" name="qr_code" placeholder="Es. OMG-0001">
+                            <input type="text" class="form-control" name="qr_code" placeholder="Es. OMG-0001" oninput="this.value = this.value.toUpperCase();">
                         </div>
                         <div class="mb-3">
                             <label class="form-label small fw-bold text-muted">Nome Articolo *</label>
-                            <input type="text" class="form-control" name="nome" required placeholder="Nome o descrizione articolo">
+                            <!-- Formattazione dinamica: Prima Lettera Maiuscola -->
+                            <input type="text" class="form-control" name="nome" required placeholder="Nome o descrizione articolo" oninput="formattaTitleCase(this)">
                         </div>
                         <div class="mb-3">
                             <label class="form-label small fw-bold text-muted">Codice SAP</label>
-                            <input type="text" class="form-control" name="sap" placeholder="Codice SAP opzionale">
+                            <input type="text" class="form-control" name="sap" placeholder="Codice SAP opzionale" oninput="this.value = this.value.toUpperCase();">
                         </div>
                         <div class="row">
                             <div class="col-md-6 mb-3">
@@ -249,7 +247,7 @@
                         </div>
                         <div class="mb-3">
                             <label class="form-label small fw-bold text-muted">Posizione in Magazzino</label>
-                            <input type="text" class="form-control" name="posizione" placeholder="Es. Scaffale A3">
+                            <input type="text" class="form-control" name="posizione" placeholder="Es. Scaffale A3" oninput="this.value = this.value.toUpperCase();">
                         </div>
                     </div>
                     <div class="modal-footer bg-light">
@@ -263,22 +261,23 @@
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script>
-        // Funzione per filtrare la tabella del magazzino in tempo reale
+        // Converte in tempo reale la prima lettera di ogni parola in MAIUSCOLO
+        function formattaTitleCase(input) {
+            let cursorPosition = input.selectionStart;
+            let val = input.value;
+            input.value = val.replace(/\b\w/g, function(l) { return l.toUpperCase(); });
+            input.setSelectionRange(cursorPosition, cursorPosition);
+        }
+
         function filtraTabellaMagazzino() {
             const input = document.getElementById('inputRicercaMagazzino').value.toLowerCase();
             const righe = document.querySelectorAll('.riga-articolo');
-            
             righe.forEach(riga => {
                 const testoRiga = riga.innerText.toLowerCase();
-                if (testoRiga.includes(input)) {
-                    riga.style.display = "";
-                } else {
-                    riga.style.display = "none";
-                }
+                riga.style.display = testoRiga.includes(input) ? "" : "none";
             });
         }
 
-        // Caricamento notifiche
         function caricaNotifiche() {
             fetch('/api/notifiche')
                 .then(response => response.json())
@@ -286,7 +285,6 @@
                     const container = document.getElementById('listaNotificheContainer');
                     const badge = document.getElementById('badgeNotifiche');
                     container.innerHTML = '';
-                    
                     let nonLette = data.filter(n => !n.letta).length;
                     if (nonLette > 0) {
                         badge.innerText = nonLette;
@@ -294,17 +292,14 @@
                     } else {
                         badge.style.display = 'none';
                     }
-
                     if (data.length === 0) {
                         container.innerHTML = '<li class="dropdown-item text-center text-muted small py-3">Nessuna notifica presente</li>';
                         return;
                     }
-
                     data.forEach(n => {
                         let li = document.createElement('li');
                         li.className = 'dropdown-item py-2 border-bottom ' + (n.letta ? 'bg-white text-muted' : 'bg-light fw-bold');
                         li.style.whiteSpace = 'normal';
-                        
                         let bottoneElimina = n.letta ? `
                             <button class="btn btn-sm btn-outline-danger py-0 px-1 border-0" title="Elimina notifica" onclick="eliminaSingolaNotifica(${n.id}, true, event)">
                                 <i class="fas fa-times"></i>
@@ -312,7 +307,6 @@
                         ` : `
                             <span class="badge bg-warning text-dark" style="font-size: 0.6rem;" title="Da aprire">Nuova</span>
                         `;
-
                         li.innerHTML = `
                             <div class="d-flex justify-content-between align-items-start gap-2">
                                 <a href="${n.link || '#'}" class="text-decoration-none text-dark flex-grow-1" onclick="cliccaNotifica(${n.id}, '${n.link || '#'}', event)">
@@ -326,18 +320,14 @@
                         container.appendChild(li);
                     });
                 })
-                .catch(err => console.error("Errore caricamento notifiche:", err));
+                .catch(err => console.error("Errore notifiche:", err));
         }
 
         function cliccaNotifica(id, link, event) {
             event.preventDefault();
             fetch('/api/notifiche/segna_letta/' + id, { method: 'POST' })
-                .then(() => {
-                    window.location.href = link;
-                })
-                .catch(() => {
-                    window.location.href = link;
-                });
+                .then(() => { window.location.href = link; })
+                .catch(() => { window.location.href = link; });
         }
 
         function eliminaNotificheLette() {
