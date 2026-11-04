@@ -29,8 +29,9 @@
                 width: 62mm !important;
                 padding: 6px !important;
             }
-            .etichetta-multipla input[type="checkbox"] {
-                display: none !important;
+            /* Quando stampiamo, rendiamo visibili tutte le copie nascoste calcolate dalla quantità */
+            .copia-stampa {
+                display: inline-block !important;
             }
         }
         .etichetta-multipla {
@@ -44,6 +45,10 @@
             vertical-align: top;
             margin: 6px;
         }
+        /* Le copie extra per la stampa restano nascoste a schermo per mantenere pulito l'elenco */
+        .copia-stampa {
+            display: none;
+        }
     </style>
 </head>
 <body class="bg-light py-3">
@@ -51,7 +56,7 @@
     <div class="container-fluid px-4">
         <!-- Controls Bar -->
         <div class="d-flex justify-content-between align-items-center mb-3 p-3 bg-white shadow-sm rounded no-print flex-wrap gap-2">
-            <h5 class="mb-0 fw-bold"><i class="fas fa-print me-2 text-primary"></i>Stampa Etichette QR (1 per pezzo)</h5>
+            <h5 class="mb-0 fw-bold"><i class="fas fa-print me-2 text-primary"></i>Stampa QR Code (Ordinata)</h5>
             <div class="d-flex gap-2 flex-wrap">
                 <button type="button" class="btn btn-primary btn-sm" onclick="selezionaTutti(true)"><i class="fas fa-check-square me-1"></i> Seleziona Tutti</button>
                 <button type="button" class="btn btn-secondary btn-sm" onclick="selezionaTutti(false)"><i class="fas fa-square me-1"></i> Deseleziona Tutti</button>
@@ -60,29 +65,43 @@
             </div>
         </div>
 
-        <!-- Griglia Etichette -->
+        <!-- Griglia Etichette (A schermo vedi UN solo QR per articolo in modo ordinato) -->
         <div class="griglia-etichette text-center">
             {% for p in prodotti %}
-                {% set nr_copie = p.quantita if p.quantita > 0 else 1 %}
-                {% for i in range(nr_copie) %}
-                <div class="etichetta-multipla shadow-sm position-relative">
-                    <div class="position-absolute top-0 start-0 m-1 no-print">
-                        <input class="form-check-input qr-checkbox" type="checkbox" value="{{ p.qr_code }}" checked style="transform: scale(1.1);">
-                    </div>
+            <div class="etichetta-multipla shadow-sm position-relative" data-quantita="{{ p.quantita if p.quantita > 0 else 1 }}">
+                <div class="position-absolute top-0 start-0 m-1 no-print">
+                    <input class="form-check-input qr-checkbox" type="checkbox" value="{{ p.qr_code }}" checked style="transform: scale(1.1);">
+                </div>
 
-                    <!-- Nome Articolo Leggibile per intero -->
+                <!-- Nome Articolo Leggibile per intero -->
+                <h6 class="fw-bold text-dark text-wrap text-break mb-2 mt-2 px-1" style="font-size: 0.82rem; line-height: 1.15;">{{ p.nome }}</h6>
+                
+                <div class="qr-box my-1 d-flex justify-content-center" data-qr="{{ p.qr_code }}"></div>
+                <div class="font-monospace fw-bold text-dark" style="font-size: 0.75rem;">{{ p.qr_code }}</div>
+                
+                <!-- Ubicazione e indicazione rapida dei pezzi -->
+                <div class="mt-1 pt-1 border-top d-flex justify-content-between px-1" style="font-size: 0.75rem;">
+                    <span class="text-muted">Ubicazione: <strong>{{ p.posizione if p.posizione else '-' }}</strong></span>
+                    <span class="badge bg-secondary">Pz: {{ p.quantita }}</span>
+                </div>
+            </div>
+
+            <!-- Copie duplicate invisibili a schermo ma pronte a comparire solo sulla carta in base alla quantità -->
+            {% set nr_copie = p.quantita if p.quantita > 1 else 0 %}
+            {% if nr_copie > 0 %}
+                {% for i in range(nr_copie - 1) %}
+                <div class="etichetta-multipla copia-stampa shadow-sm position-relative" data-qr-copia="{{ p.qr_code }}">
                     <h6 class="fw-bold text-dark text-wrap text-break mb-2 mt-2 px-1" style="font-size: 0.82rem; line-height: 1.15;">{{ p.nome }}</h6>
-                    
-                    <div class="qr-box my-1 d-flex justify-content-center" data-qr="{{ p.qr_code }}"></div>
+                    <div class="qr-box-copia my-1 d-flex justify-content-center" data-qr="{{ p.qr_code }}"></div>
                     <div class="font-monospace fw-bold text-dark" style="font-size: 0.75rem;">{{ p.qr_code }}</div>
-                    
-                    <!-- Mostra solo l'Ubicazione -->
-                    <div class="mt-1 pt-1 border-top text-center" style="font-size: 0.75rem;">
-                        <span class="text-muted me-1">Ubicazione:</span>
-                        <strong class="text-dark">{{ p.posizione if p.posizione else '-' }}</strong>
+                    <div class="mt-1 pt-1 border-top d-flex justify-content-between px-1" style="font-size: 0.75rem;">
+                        <span class="text-muted">Ubicazione: <strong>{{ p.posizione if p.posizione else '-' }}</strong></span>
+                        <span class="badge bg-secondary">Pz: {{ p.quantita }}</span>
                     </div>
                 </div>
                 {% endfor %}
+            {% endif %}
+            
             {% else %}
             <p class="text-muted">Nessun articolo disponibile per la stampa.</p>
             {% endfor %}
@@ -91,16 +110,19 @@
 
     <script>
         document.addEventListener("DOMContentLoaded", function() {
-            document.querySelectorAll('.qr-box').forEach(function(el) {
+            // Genera i QR code sia per le card principali che per le copie di stampa nascoste
+            document.querySelectorAll('.qr-box, .qr-box-copia').forEach(function(el) {
                 let code = el.getAttribute('data-qr');
-                new QRCode(el, {
-                    text: code,
-                    width: 75,
-                    height: 75,
-                    colorDark: "#000000",
-                    colorLight: "#ffffff",
-                    correctLevel: QRCode.CorrectLevel.H
-                });
+                if(code && !el.hasChildNodes()) {
+                    new QRCode(el, {
+                        text: code,
+                        width: 75,
+                        height: 75,
+                        colorDark: "#000000",
+                        colorLight: "#ffffff",
+                        correctLevel: QRCode.CorrectLevel.H
+                    });
+                }
             });
         });
 
@@ -111,20 +133,39 @@
         }
 
         function stampaSelezionati() {
-            document.querySelectorAll('.etichetta-multipla').forEach(function(card) {
+            // Nasconde le card principali i cui checkbox non sono spuntati
+            document.querySelectorAll('.etichetta-multipla:not(.copia-stampa)').forEach(function(card) {
                 let cb = card.querySelector('.qr-checkbox');
+                let qrCodeVal = cb ? cb.value : '';
+                
                 if (cb && !cb.checked) {
                     card.style.display = 'none';
+                    // Nasconde anche le relative copie di stampa di quell'articolo
+                    document.querySelectorAll('.copia-stampa').forEach(function(copia) {
+                        if(copia.querySelector('.qr-box-copia').getAttribute('data-qr') === qrCodeVal) {
+                            copia.style.display = 'none';
+                        }
+                    });
                 } else {
                     card.style.display = 'inline-block';
+                    // Mostra le relative copie in stampa
+                    document.querySelectorAll('.copia-stampa').forEach(function(copia) {
+                        if(copia.querySelector('.qr-box-copia').getAttribute('data-qr') === qrCodeVal) {
+                            copia.style.display = 'inline-block';
+                        }
+                    });
                 }
             });
 
             window.print();
 
+            // Ripristina la visualizzazione pulita a schermo dopo la stampa
             setTimeout(function() {
-                document.querySelectorAll('.etichetta-multipla').forEach(function(card) {
+                document.querySelectorAll('.etichetta-multipla:not(.copia-stampa)').forEach(function(card) {
                     card.style.display = 'inline-block';
+                });
+                document.querySelectorAll('.copia-stampa').forEach(function(copia) {
+                    copia.style.display = 'none';
                 });
             }, 500);
         }
