@@ -13,9 +13,56 @@
         .card { border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); }
         .table-hover tbody tr:hover { background-color: #f1f3f5; }
         .badge-forno { font-size: 0.9rem; padding: 0.5em 0.8em; }
+
+        /* Ottimizzazione avanzata per la STAMPA A TUTTO SCHERMO */
         @media print {
-            .btn, form, .navbar, .modal { display: none !important; }
-            .card { border: none !important; box-shadow: none !important; }
+            /* Nasconde elementi superflui per la stampa */
+            .navbar, .btn, form, .modal, .card-header, .d-flex, .alert {
+                display: none !important;
+            }
+            /* Rimuove margini e sfondi del body e container per occupare l'intero foglio */
+            body {
+                background-color: white !important;
+                color: black !important;
+                margin: 0 !important;
+                padding: 0 !important;
+            }
+            .container {
+                max-width: 100% !important;
+                width: 100% !important;
+                margin: 0 !important;
+                padding: 0 !important;
+            }
+            /* Espande la card e la tabella a pieno formato */
+            .card {
+                border: none !important;
+                box-shadow: none !important;
+                margin: 0 !important;
+            }
+            .card-body {
+                padding: 0 !important;
+            }
+            .table-responsive {
+                overflow: visible !important;
+            }
+            table {
+                width: 100% !important;
+                font-size: 11pt !important;
+                border-collapse: collapse !important;
+            }
+            th, td {
+                padding: 8px !important;
+                border-bottom: 1px solid #ddd !important;
+            }
+            /* Aggiunge un'intestazione pulita solo sulla carta stampata */
+            .print-header {
+                display: block !important;
+                text-align: center;
+                margin-bottom: 20px;
+            }
+        }
+        .print-header {
+            display: none;
         }
     </style>
 </head>
@@ -39,6 +86,12 @@
     </nav>
 
     <div class="container my-4">
+
+        <!-- Intestazione visibile solo in stampa -->
+        <div class="print-header">
+            <h2>Gestionale OMG — Storico Cambi Serie Forni</h2>
+            <p class="text-muted">Report generato il {{ current_date }}</p>
+        </div>
 
         <!-- Flash Messages -->
         {% with messages = get_flashed_messages(with_categories=true) %}
@@ -109,7 +162,7 @@
                                 <th>Tempo Cambio</th>
                                 <th>Tempera (Vecchia / Nuova)</th>
                                 <th>Piastrina</th>
-                                <th class="text-end">Azioni</th>
+                                <th class="text-end d-print-none">Azioni</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -129,7 +182,7 @@
                                         <span class="text-success fw-bold" title="Tempra Nuova">{{ r.num_bottiglie_tempera_nuova if r.num_bottiglie_tempera_nuova is defined and r.num_bottiglie_tempera_nuova is not none else (r.num_bottiglie_tempera or 0) }}</span>
                                     </td>
                                     <td><span class="badge bg-light text-dark border">{{ r.misura_piastrina or '-' }}</span></td>
-                                    <td class="text-end">
+                                    <td class="text-end d-print-none">
                                         <!-- Pulsante Modifica -->
                                         <button class="btn btn-sm btn-outline-primary" data-bs-toggle="modal" data-bs-target="#modalModifica{{ r.id }}" title="Modifica">
                                             <i class="fas fa-edit"></i>
