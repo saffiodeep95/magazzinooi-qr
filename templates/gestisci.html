@@ -9,49 +9,23 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     <style>
         body { background-color: #f8fafc; font-family: 'Segoe UI', Tahoma, sans-serif; }
-        .navbar { background: linear-gradient(135deg, #1e293b, #0f172a) !important; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+        .navbar { background: linear-gradient(135deg, #1e293b, #0f172a) !important; }
         .card { border: none; border-radius: 12px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); margin-bottom: 20px; }
-        .card-header { border-radius: 12px 12px 0 0 !important; font-weight: 600; }
-        .label-val { font-weight: 600; color: #1e293b; }
-        .label-text { color: #64748b; font-size: 0.9rem; }
         #qrcode img { border: 4px solid #fff; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
-        .input-group-text { background-color: #f1f5f9; color: #64748b; }
     </style>
 </head>
 <body class="bg-light">
 
-    <!-- Navbar -->
     <nav class="navbar navbar-expand-lg navbar-dark bg-dark sticky-top">
         <div class="container-fluid px-3">
-            <a class="navbar-brand fw-bold fs-5 text-white" href="{{ url_for('index') }}">
-                <i class="fas fa-industry text-warning me-2"></i>OMG <span class="fw-normal opacity-75">/ Gestione</span>
-            </a>
-            <div class="ms-auto">
-                <a href="{{ url_for('index') }}" class="btn btn-outline-light btn-sm">
-                    <i class="fas fa-arrow-left me-1"></i> Torna al Magazzino
-                </a>
-            </div>
+            <a class="navbar-brand fw-bold fs-5 text-white" href="{{ url_for('index') }}"><i class="fas fa-industry text-warning me-2"></i>OMG <span class="fw-normal opacity-75">/ Gestione</span></a>
+            <div class="ms-auto"><a href="{{ url_for('index') }}" class="btn btn-outline-light btn-sm"><i class="fas fa-arrow-left me-1"></i> Torna al Magazzino</a></div>
         </div>
     </nav>
 
     <div class="container my-4">
-        
-        {% with messages = get_flashed_messages(with_categories=true) %}
-          {% if messages %}
-            {% for category, message in messages %}
-              <div class="alert alert-{{ 'danger' if category == 'error' else 'success' }} alert-dismissible fade show shadow-sm border-0" role="alert" style="border-radius: 10px;">
-                {{ message }}
-                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-              </div>
-            {% endfor %}
-          {% endif %}
-        {% endwith %}
-
         <div class="row">
-            <!-- COLONNA SINISTRA: Modifica principale e Manutenzione -->
             <div class="col-lg-8 col-md-12">
-                
-                <!-- CARD MODIFICA ARTICOLO -->
                 <div class="card shadow-sm">
                     <div class="card-header bg-primary text-white py-3">
                         <h5 class="mb-0"><i class="fas fa-pen-to-square me-2"></i>Modifica Articolo: {{ prodotto.nome }}</h5>
@@ -59,192 +33,57 @@
                     <div class="card-body p-4">
                         <form action="{{ url_for('aggiorna_prodotto', qr_code=prodotto.qr_code) }}" method="POST">
                             <div class="mb-3">
-                                <label class="form-label label-text fw-bold">Nome Articolo *</label>
-                                <input type="text" class="form-control" name="nome" value="{{ prodotto.nome }}" required placeholder="Nome o descrizione articolo" oninput="formattaTitleCase(this)">
+                                <label class="form-label fw-bold">Nome Articolo *</label>
+                                <input type="text" class="form-control" name="nome" value="{{ prodotto.nome }}" required>
                             </div>
                             <div class="row">
                                 <div class="col-md-6 mb-3">
-                                    <label class="form-label label-text fw-bold">Codice SAP</label>
-                                    <input type="text" class="form-control" name="sap" value="{{ prodotto.sap }}" placeholder="Codice SAP opzionale" oninput="this.value = this.value.toUpperCase();">
+                                    <label class="form-label fw-bold">Codice SAP</label>
+                                    <input type="text" class="form-control" name="sap" value="{{ prodotto.sap }}">
                                 </div>
-                                
-                                <!-- CAMPO MODIFICA QUANTITÀ ATTUALE -->
                                 <div class="col-md-6 mb-3">
-                                    <label class="form-label label-text fw-bold text-primary">Quantità Attuale in Magazzino *</label>
-                                    <div class="input-group">
-                                        <span class="input-group-text"><i class="fas fa-boxes text-primary"></i></span>
-                                        <input type="number" class="form-control fw-bold border-primary" name="quantita" value="{{ prodotto.quantita }}" min="0" required style="background-color: #f0f9ff; color: #0369a1;">
-                                    </div>
-                                    <div class="form-text text-muted small">Cambia questo numero per correggere la giacenza totale.</div>
+                                    <label class="form-label fw-bold text-primary">Quantità Attuale *</label>
+                                    <input type="number" class="form-control fw-bold border-primary" name="quantita" value="{{ prodotto.quantita }}" min="0" required>
                                 </div>
                             </div>
                             <div class="row">
                                 <div class="col-md-6 mb-3">
-                                    <label class="form-label label-text fw-bold">Ubicazione / Posizione</label>
-                                    <input type="text" class="form-control" name="posizione" value="{{ prodotto.posizione }}" placeholder="Es. Scaffale A2" oninput="this.value = this.value.toUpperCase();">
+                                    <label class="form-label fw-bold">Ubicazione / Scaffale</label>
+                                    <input type="text" class="form-control" name="posizione" value="{{ prodotto.posizione }}" list="listaUbicazioni" placeholder="Seleziona o scrivi...">
+                                    <datalist id="listaUbicazioni">
+                                        {% for u in ubicazioni_disponibili %}
+                                        <option value="{{ u }}">
+                                        {% endfor %}
+                                    </datalist>
                                 </div>
                                 <div class="col-md-6 mb-3">
-                                    <label class="form-label label-text fw-bold">Peso</label>
-                                    <input type="text" class="form-control" name="peso" value="{{ prodotto.peso }}" placeholder="Es. 10 Kg">
+                                    <label class="form-label fw-bold">Peso</label>
+                                    <input type="text" class="form-control" name="peso" value="{{ prodotto.peso }}">
                                 </div>
                             </div>
                             <div class="mb-3">
-                                <label class="form-label label-text fw-bold">Soglia Minima Allerta Scorte</label>
-                                <input type="number" class="form-control" name="soglia_minima" value="{{ prodotto.soglia_minima if prodotto.soglia_minima is not none else 3 }}" min="1">
+                                <label class="form-label fw-bold">Soglia Minima Allerta</label>
+                                <input type="number" class="form-control" name="soglia_minima" value="{{ prodotto.soglia_minima or 3 }}" min="1">
                             </div>
-                            <div class="form-check form-switch mb-4">
-                                <input class="form-check-input" type="checkbox" name="magazzino_pesante" value="1" id="pesanteCheck" {% if prodotto.magazzino_pesante %}checked{% endif %}>
-                                <label class="form-check-label label-val ms-2" for="pesanteCheck">
-                                    Articolo in Magazzino Pesante
-                                </label>
-                            </div>
-                            <button type="submit" class="btn btn-primary w-100 py-2 fs-6 fw-bold"><i class="fas fa-save me-2"></i> Salva Modifiche</button>
+                            <button type="submit" class="btn btn-primary w-100 py-2 fw-bold"><i class="fas fa-save me-2"></i> Salva Modifiche</button>
                         </form>
                     </div>
                 </div>
-
-                <!-- CARD GESTIONE MANUTENZIONE ESTERNA -->
-                <div class="card shadow-sm">
-                    <div class="card-header bg-secondary text-white py-3">
-                        <h5 class="mb-0"><i class="fas fa-tools me-2"></i>Gestione Manutenzione Esterna</h5>
-                    </div>
-                    <div class="card-body p-4">
-                        {% if prodotto.in_manutenzione %}
-                            <div class="alert alert-warning mb-4 shadow-sm border-0" style="border-radius: 10px;">
-                                <h6 class="fw-bold mb-1"><i class="fas fa-exclamation-triangle me-2"></i>Attualmente in Manutenzione Esterna</h6>
-                                <div class="small">
-                                    <span class="fw-bold">Cliente:</span> {{ prodotto.cliente_manutenzione }}<br>
-                                    <span class="fw-bold">Quantità inviata:</span> {{ prodotto.quantita_manutenzione }} pz<br>
-                                    <span class="fw-bold">Spedizione:</span> {{ prodotto.data_spedizione or '-' }} | <span class="fw-bold">Riconsegna prevista:</span> {{ prodotto.data_riconsegna or '-' }}<br>
-                                    <span class="fw-bold">Vettore:</span> {{ prodotto.vettore or '-' }}
-                                </div>
-                            </div>
-                            <form action="{{ url_for('ripristina_magazzino', qr_code=prodotto.qr_code) }}" method="POST">
-                                <button type="submit" class="btn btn-success w-100 py-2 fw-bold"><i class="fas fa-rotate-left me-2"></i> Rientra Articolo in Magazzino</button>
-                            </form>
-                        {% else %}
-                            <form action="{{ url_for('manda_manutenzione', qr_code=prodotto.qr_code) }}" method="POST">
-                                <div class="mb-3">
-                                    <label class="form-label label-text fw-bold">Cliente / Fornitore Manutenzione</label>
-                                    <select class="form-select" name="cliente_manutenzione" required>
-                                        <option value="">Seleziona fornitore...</option>
-                                        {% for f in fornitori %}
-                                        <option value="{{ f.nome_azienda }}">{{ f.nome_azienda }}</option>
-                                        {% endfor %}
-                                    </select>
-                                </div>
-                                <div class="row">
-                                    <div class="col-md-6 mb-3">
-                                        <label class="form-label label-text fw-bold">Quantità da Inviare</label>
-                                        <input type="number" class="form-control" name="quantita_manutenzione" value="1" min="1" max="{{ prodotto.quantita }}" required>
-                                    </div>
-                                    <div class="col-md-6 mb-3">
-                                        <label class="form-label label-text fw-bold">Vettore / Corriere</label>
-                                        <input type="text" class="form-control" name="vettore" placeholder="Nome corriere" oninput="formattaTitleCase(this)">
-                                    </div>
-                                </div>
-                                <div class="row">
-                                    <div class="col-md-6 mb-3">
-                                        <label class="form-label label-text fw-bold">Data Spedizione</label>
-                                        <input type="date" class="form-control" name="data_spedizione">
-                                    </div>
-                                    <div class="col-md-6 mb-3">
-                                        <label class="form-label label-text fw-bold">Data Prevista Riconsegna</label>
-                                        <input type="date" class="form-control" name="data_riconsegna">
-                                    </div>
-                                </div>
-                                <div class="form-check mb-3">
-                                    <input class="form-check-input" type="checkbox" name="ordine_amministrativo" value="1" id="ordineAdmin">
-                                    <label class="form-check-label label-val" for="ordineAdmin">Richiede Ordine Amministrativo</label>
-                                </div>
-                                <div class="mb-3">
-                                    <label class="form-label label-text fw-bold">Note Manutenzione</label>
-                                    <textarea class="form-control" name="note_manutenzione" rows="2" placeholder="Note facoltative..."></textarea>
-                                </div>
-                                <button type="submit" class="btn btn-warning w-100 text-dark py-2 fw-bold"><i class="fas fa-paper-plane me-2"></i> Invia in Manutenzione Esterna</button>
-                            </form>
-                        {% endif %}
-                    </div>
-                </div>
-
-                <!-- Sezione Eliminazione (solo admin) -->
-                {% if session.get('is_admin') %}
-                <div class="card shadow-sm border-danger mb-5">
-                    <div class="card-body p-3 text-end bg-light" style="border-radius: 12px;">
-                        <form action="{{ url_for('elimina_prodotto', qr_code=prodotto.qr_code) }}" method="POST" onsubmit="return confirm('Sei sicuro di voler eliminare definitivamente questo articolo?');">
-                            <button type="submit" class="btn btn-outline-danger btn-sm px-3"><i class="fas fa-trash-can me-1"></i> Elimina Articolo</button>
-                        </form>
-                    </div>
-                </div>
-                {% endif %}
             </div>
 
-            <!-- COLONNA DESTRA: QR, Azioni Rapide, Riepilogo -->
             <div class="col-lg-4 col-md-12">
-                <!-- CARD QR CODE -->
                 <div class="card shadow-sm text-center">
                     <div class="card-body p-4">
                         <h6 class="text-muted fw-bold mb-3">QR Code Identificativo</h6>
-                        <div id="qrcode" class="d-flex justify-content-center my-3 p-1"></div>
+                        <div id="qrcode" class="d-flex justify-content-center my-3"></div>
                         <p class="font-monospace fw-bold fs-5 text-dark mb-3 bg-light py-1 px-3 rounded-pill d-inline-block">{{ prodotto.qr_code }}</p>
-                        
-                        <div class="d-grid gap-2 mt-3">
-                            <a href="{{ url_for('stampa_singolo_qr', qr_code=prodotto.qr_code) }}" class="btn btn-outline-dark btn-sm w-100">
-                                <i class="fas fa-print me-1"></i> Stampa Etichetta Singola
+                        {% if prodotto.posizione %}
+                        <div class="mt-2">
+                            <a href="{{ url_for('qr_scaffale', ubicazione=prodotto.posizione) }}" class="btn btn-outline-dark btn-sm w-100">
+                                <i class="fas fa-warehouse me-1"></i> Apri QR Scaffale Master
                             </a>
                         </div>
-                    </div>
-                </div>
-
-                <!-- CARD AZIONI RAPIDE SCORTE -->
-                <div class="card shadow-sm">
-                    <div class="card-header bg-dark text-white py-2">
-                        <h6 class="mb-0 fs-6"><i class="fas fa-bolt me-2 text-warning"></i>Azioni Rapide Pezzi</h6>
-                    </div>
-                    <div class="card-body p-3">
-                        <div class="row g-2">
-                            <div class="col-6">
-                                <form action="{{ url_for('carico') }}" method="POST">
-                                    <input type="hidden" name="qr_code" value="{{ prodotto.qr_code }}">
-                                    <input type="hidden" name="quantita" value="1">
-                                    <button type="submit" class="btn btn-success w-100 fw-bold"><i class="fas fa-plus me-1"></i> +1 PZ</button>
-                                </form>
-                            </div>
-                            <div class="col-6">
-                                <form action="{{ url_for('scarico') }}" method="POST">
-                                    <input type="hidden" name="qr_code" value="{{ prodotto.qr_code }}">
-                                    <input type="hidden" name="quantita" value="1">
-                                    <button type="submit" class="btn btn-danger w-100 fw-bold"><i class="fas fa-minus me-1"></i> -1 PZ</button>
-                                </form>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- CARD RIEPILOGO STATO -->
-                <div class="card shadow-sm">
-                    <div class="card-body p-4">
-                        <h6 class="fw-bold text-secondary mb-3"><i class="fas fa-info-circle me-1"></i> Riepilogo Stato Articolo</h6>
-                        <ul class="list-group list-group-flush small">
-                            <li class="list-group-item d-flex justify-content-between p-2">
-                                <span class="label-text">Ubicazione:</span>
-                                <span class="label-val">{{ prodotto.posizione if prodotto.posizione else '-' }}</span>
-                            </li>
-                            <li class="list-group-item d-flex justify-content-between p-2">
-                                <span class="label-text">Codice SAP:</span>
-                                <span class="label-val">{{ prodotto.sap if prodotto.sap else '-' }}</span>
-                            </li>
-                            <li class="list-group-item d-flex justify-content-between p-2 align-items-center">
-                                <span class="label-text text-dark fw-bold fs-6">Quantità Attuale:</span>
-                                <span class="badge bg-secondary fs-6 rounded-pill px-3">{{ prodotto.quantita }} pz</span>
-                            </li>
-                            <li class="list-group-item d-flex justify-content-between p-2">
-                                <span class="label-text">In Manutenzione Esterna:</span>
-                                <span class="label-val {{ 'text-warning fw-bold' if prodotto.in_manutenzione else 'text-success' }}">
-                                    {{ 'Sì' if prodotto.in_manutenzione else 'No' }}
-                                </span>
-                            </li>
-                        </ul>
+                        {% endif %}
                     </div>
                 </div>
             </div>
@@ -252,26 +91,16 @@
     </div>
 
     <script>
-        function formattaTitleCase(input) {
-            let cursorPosition = input.selectionStart;
-            let val = input.value;
-            input.value = val.replace(/\b\w/g, function(l) { return l.toUpperCase(); });
-            input.setSelectionRange(cursorPosition, cursorPosition);
-        }
-
         document.addEventListener("DOMContentLoaded", function() {
-            if ("{{ prodotto.qr_code }}") {
-                new QRCode(document.getElementById("qrcode"), {
-                    text: "{{ prodotto.qr_code }}",
-                    width: 150,
-                    height: 150,
-                    colorDark: "#000000",
-                    colorLight: "#ffffff",
-                    correctLevel: QRCode.CorrectLevel.H
-                });
-            }
+            new QRCode(document.getElementById("qrcode"), {
+                text: "{{ prodotto.qr_code }}",
+                width: 150,
+                height: 150,
+                colorDark: "#000000",
+                colorLight: "#ffffff",
+                correctLevel: QRCode.CorrectLevel.H
+            });
         });
     </script>
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>
