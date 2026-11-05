@@ -334,7 +334,6 @@ def init_db():
                 VALUES (%s, %s, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1);
             """, ('admin', hashed_pw))
         else:
-            # Forza i privilegi admin sull'utente admin esistente per sicurezza
             cur.execute("""
                 UPDATE utenti 
                 SET is_admin = 1, 
