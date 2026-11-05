@@ -998,17 +998,17 @@ def cambi_serie():
     dt_lunedì = None
     dt_domenica = None
 
-    # Parsing super robusto della settimana ISO (es. 2026-W44)
+    # Parsing ultra-robusto e nativo della settimana ISO (es. 2026-W46)
     if settimana_filtro:
         try:
             parts = settimana_filtro.split('-W')
             if len(parts) == 2:
                 anno = int(parts[0])
                 settimana = int(parts[1])
-                dt_lunedì = datetime.strptime(f'{anno}-W{settimana:02d}-1', "%Y-W%V-%u").date()
-                dt_domenica = dt_lunedì + timedelta(days=6)
+                dt_lunedì = datetime.fromisocalendar(anno, settimana, 1).date()
+                dt_domenica = datetime.fromisocalendar(anno, settimana, 7).date()
         except Exception as ex:
-            print(f"Errore parsing settimana: {ex}")
+            print(f"Errore parsing settimana ISO: {ex}")
 
     for r in tutti_record:
         aggiungi = True
