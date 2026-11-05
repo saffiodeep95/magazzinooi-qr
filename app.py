@@ -389,7 +389,6 @@ def index():
         cur.execute("SELECT * FROM prodotti ORDER BY nome ASC;")
         tutti = cur.fetchall()
 
-        # Estrae le ubicazioni uniche dal database per la tendina autocompilante
         cur.execute("SELECT DISTINCT posizione FROM prodotti WHERE posizione IS NOT NULL AND posizione != '' ORDER BY posizione ASC;")
         ubicazioni_disponibili = [r['posizione'] for r in cur.fetchall()]
         
@@ -1042,10 +1041,41 @@ def stampa_bolla(qr_code):
 
 @app.route("/carico", methods=["GET", "POST"])
 def carico():
+    if request.method == "POST":
+        qr_code = request.form.get("qr_code")
+        quantita = int(request.form.get("quantita", 1))
+        if qr_code:
+            conn = get_db_connection()
+            cur = conn.cursor()
+            cur.execute("UPDATE prodotti SET quantita = quantita + %s WHERE qr_code = %s;", (quantita, qr_code))
+            conn.commit()
+            cur.close()
+            conn.close()
+            registra_log(f"Carico di +{quantita} pz su QR: {qr_code}")
+            flash(f"Carico di {quantita} pz effettuato!", "success")
+            return redirect(url_for("gestisci_prodotto", qr_code=qr_code))
     return render_template("carico.html")
 
 @app.route("/scarico", methods=["GET", "POST"])
 def scarico():
+    if request.method == "POST":
+        qr_code = request.form.get("qr_code")
+        quantita_da_scaricare = int(request.form.get("quantita", 1))
+        if qr_code:
+            conn = get_db_connection()
+            cur = conn.cursor()
+            cur.execute("SELECT * FROM prodotti WHERE qr_code = %s;", (qr_code,))
+            prodotto = cur.fetchone()
+            if prodotto:
+                qta_iniziale = prodotto['quantita']
+                nuova_quantita = max(0, qta_iniziale - quantita_da_scaricare)
+                cur.execute("UPDATE prodotti SET quantita = %s WHERE qr_code = %s;", (nuova_quantita, qr_code))
+                conn.commit()
+                registra_log(f"Scarico di -{quantita_da_scaricare} pz su QR: {qr_code}")
+                flash(f"Scarico di {quantita_da_scaricare} pz effettuato!", "success")
+            cur.close()
+            conn.close()
+            return redirect(url_for("gestisci_prodotto", qr_code=qr_code))
     return render_template("scarico.html")
 
 @app.route("/scanner_globale")
@@ -1113,24 +1143,65 @@ def aggiungi_prodotto():
 
 @app.route("/manda_manutenzione/<qr_code>", methods=["POST"])
 def manda_manutenzione(qr_code):
+    cliente = request.form.get("cliente_manutenzione")
+    qta = int(request.form.get("quantita_manutenzione", 1))
+    try:
+        conn = get_db_connection()
+        cur = conn.cursor()
+        cur.execute("SELECT * FROM prodotti WHERE qr_code = %s;", (qr_code,))
+        prod = cur.fetchone()
+        cur.execute("""
+            UPDATE prodotti 
+            SET quantita = GREATEST(0, quantita - %s), in_manutenzione = TRUE, cliente_manutenzione = %s, quantita_manutenzione = %s, data_spedizione = %s, data_riconsegna = %s, vettore = %s, ordine_amministrativo = %s, note_manutenzione = %s
+            WHERE qr_code = %s;
+        """, (qta, cliente, qta, request.form.get("data_spedizione"), request.form.get("data_riconsegna"), request.form.get("vettore"), True if request.form.get("ordine_amministrativo") else False, request.form.get("note_manutenzione"), qr_code))
+        if prod:
+            cur.execute("""
+                INSERT INTO storico_manutenzioni (nome_prodotto, qr_code, sap, cliente, quantita, data_spedizione, data_riconsegna, vettore, ordine_amministrativo, note)
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s);
+            """, (prod['nome'], qr_code, prod['sap'], cliente, qta, request.form.get("data_spedizione"), request.form.get("data_riconsegna"), request.form.get("vettore"), True if request.form.get("ordine_amministrativo") else False, request.form.get("note_manutenzione")))
+        conn.commit()
+        cur.close()
+        conn.close()
+        flash("Articolo inviato in manutenzione!", "success")
+    except Exception as e:
+        flash(f"Errore: {e}", "error")
     return redirect(url_for("gestisci_prodotto", qr_code=qr_code))
 
 @app.route("/ripristina_magazzino/<qr_code>", methods=["POST"])
 def ripristina_magazzino(qr_code):
+    try:
+        conn = get_db_connection()
+        cur = conn.cursor()
+        cur.execute("""
+            UPDATE prodotti 
+            SET quantita = quantita + quantita_manutenzione, in_manutenzione = FALSE, cliente_manutenzione = NULL, quantita_manutenzione = 0, data_spedizione = NULL, data_riconsegna = NULL, vettore = NULL, ordine_amministrativo = FALSE, note_manutenzione = NULL
+            WHERE qr_code = %s;
+        """, (qr_code,))
+        conn.commit()
+        cur.close()
+        conn.close()
+        flash("Articolo rientrato in magazzino!", "success")
+    except Exception as e:
+        flash(f"Errore: {e}", "error")
     return redirect(url_for("gestisci_prodotto", qr_code=qr_code))
 
 @app.route("/elimina/<qr_code>", methods=["POST"])
+@app.route("/elimina", methods=["POST"])
 def elimina_prodotto(qr_code=None):
     if not qr_code:
         qr_code = request.form.get("qr_code")
     if qr_code:
-        conn = get_db_connection()
-        cur = conn.cursor()
-        cur.execute("DELETE FROM prodotti WHERE qr_code = %s;", (qr_code,))
-        conn.commit()
-        cur.close()
-        conn.close()
-        flash("Articolo eliminato.", "success")
+        try:
+            conn = get_db_connection()
+            cur = conn.cursor()
+            cur.execute("DELETE FROM prodotti WHERE qr_code = %s;", (qr_code,))
+            conn.commit()
+            cur.close()
+            conn.close()
+            flash("Articolo eliminato con successo!", "success")
+        except Exception as e:
+            flash(f"Errore durante l'eliminazione: {e}", "error")
     return redirect(url_for("index"))
 
 if __name__ == "__main__":
