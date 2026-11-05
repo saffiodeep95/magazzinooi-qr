@@ -45,7 +45,7 @@ def crea_notifica(destinatario, titolo, messaggio, link=""):
         cur.execute("""
             INSERT INTO notifiche (destinatario, titolo, messaggio, link)
             VALUES (%s, %s, %s, %s);
-        """, (destinatario, titolo, messaggio, link))
+        """, (destinatario.strip(), titolo, messaggio, link))
         conn.commit()
         cur.close()
         conn.close()
@@ -374,7 +374,7 @@ def api_notifiche():
     cur.execute("""
         SELECT id, titolo, messaggio, link, letta, creato_il 
         FROM notifiche 
-        WHERE destinatario = %s 
+        WHERE LOWER(TRIM(destinatario)) = LOWER(TRIM(%s)) 
         ORDER BY creato_il DESC LIMIT 15;
     """, (username,))
     notifiche = cur.fetchall()
@@ -388,7 +388,7 @@ def api_segna_lette():
     if username:
         conn = get_db_connection()
         cur = conn.cursor()
-        cur.execute("UPDATE notifiche SET letta = TRUE WHERE destinatario = %s;", (username,))
+        cur.execute("UPDATE notifiche SET letta = TRUE WHERE LOWER(TRIM(destinatario)) = LOWER(TRIM(%s));", (username,))
         conn.commit()
         cur.close()
         conn.close()
@@ -400,7 +400,7 @@ def api_segna_letta(notifica_id):
     if username:
         conn = get_db_connection()
         cur = conn.cursor()
-        cur.execute("UPDATE notifiche SET letta = TRUE WHERE id = %s AND destinatario = %s;", (notifica_id, username))
+        cur.execute("UPDATE notifiche SET letta = TRUE WHERE id = %s AND LOWER(TRIM(destinatario)) = LOWER(TRIM(%s));", (notifica_id, username))
         conn.commit()
         cur.close()
         conn.close()
@@ -419,9 +419,9 @@ def api_elimina_notifiche():
     cur = conn.cursor()
     
     if notifica_id:
-        cur.execute("DELETE FROM notifiche WHERE id = %s AND destinatario = %s AND letta = TRUE;", (notifica_id, username))
+        cur.execute("DELETE FROM notifiche WHERE id = %s AND LOWER(TRIM(destinatario)) = LOWER(TRIM(%s)) AND letta = TRUE;", (notifica_id, username))
     else:
-        cur.execute("DELETE FROM notifiche WHERE destinatario = %s AND letta = TRUE;", (username,))
+        cur.execute("DELETE FROM notifiche WHERE LOWER(TRIM(destinatario)) = LOWER(TRIM(%s)) AND letta = TRUE;", (username,))
         
     conn.commit()
     cur.close()
@@ -814,7 +814,7 @@ def stampa_nastri():
     conn.close()
     return render_template("stampa_nastri.html", nastri=lista, sezione=sezione)
 
-# --- PANNELLO AGENDA ---
+# --- PANNELLO AGENDA CON CORREZIONE NOTIFICHE ---
 @app.route("/agenda", methods=["GET", "POST"])
 @app.route("/agenda.html", methods=["GET", "POST"])
 def agenda():
@@ -845,6 +845,7 @@ def agenda():
                 conn.commit()
                 
                 try:
+                    # Invia notifiche a tutti se "Tutti" è selezionato o se la lista è vuota
                     if "Tutti" in utenti_selezionati or not utenti_selezionati:
                         cur.execute("SELECT username FROM utenti WHERE username != %s;", (username_corrente,))
                         altri_utenti = cur.fetchall()
@@ -856,6 +857,7 @@ def agenda():
                                 link="/agenda"
                             )
                     else:
+                        # Invia notifiche solo ai tecnici selezionati
                         for tec in utenti_selezionati:
                             tec_clean = tec.strip()
                             if tec_clean and tec_clean != username_corrente:
@@ -866,10 +868,10 @@ def agenda():
                                     link="/agenda"
                                 )
                 except Exception as notif_err:
-                    print(f"Errore invio notifiche agenda (ignorato): {notif_err}")
+                    print(f"Errore invio notifiche agenda: {notif_err}")
 
                 registra_log(f"Creata attività in agenda: {titolo}")
-                flash("Attività aggiunta in agenda con successo!", "success")
+                flash("Attività aggiunta in agenda e notifiche inviate!", "success")
         except Exception as e:
             conn.rollback()
             flash(f"Errore durante il salvataggio in agenda: {e}", "error")
@@ -934,7 +936,7 @@ def elimina_agenda(agenda_id):
         flash(f"Errore eliminazione: {e}", "error")
     return redirect(url_for("agenda"))
 
-# --- CAMBI SERIE & API ULTIMA BOTTIGLIA ---
+# --- CAMBI SERIE & API ULTIMA BOTTIGLIA (FILTRO SETTIMANA AGGIORNATO) ---
 @app.route("/api/ultima_bottiglia/<forno>/<linea>")
 def ultima_bottiglia(forno, linea):
     try:
@@ -977,8 +979,19 @@ def cambi_serie():
         params.append(forno_filtro)
     
     if settimana_filtro:
-        query += " AND TO_CHAR(data_cambio::DATE, 'IYYY-IW') = %s"
-        params.append(settimana_filtro)
+        # Supporto robusto per il formato anno-settimana (es. 2026-W45 o 2026-W05)
+        try:
+            parts = settimana_filtro.split("-W")
+            if len(parts) == 2:
+                anno = int(parts[0])
+                settimana = int(parts[1])
+                # Calcola la data di inizio (lunedì) e fine (domenica) della settimana ISO
+                d = datetime.strptime(f'{anno}-W{settimana}-1', "%Y-W%V-%u")
+                d_fine = d + timedelta(days=6)
+                query += " AND data_cambio::DATE BETWEEN %s AND %s"
+                params.extend([d.strftime('%Y-%m-%d'), d_fine.strftime('%Y-%m-%d')])
+        except Exception as ex:
+            print(f"Errore parsing settimana: {ex}")
 
     query += " ORDER BY data_cambio DESC, id DESC;"
     cur.execute(query, tuple(params))
