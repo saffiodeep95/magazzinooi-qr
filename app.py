@@ -288,6 +288,9 @@ def init_db():
             );
         """)
         
+        # Patch automatica per assicurare che la colonna nome_azienda esista nella tabella agenda
+        cur.execute("ALTER TABLE agenda ADD COLUMN IF NOT EXISTS nome_azienda VARCHAR(255);")
+
         colonne_cambi_serie = [
             ("bottiglia_precedente", "VARCHAR(255)"),
             ("bottiglia_nuova", "VARCHAR(255)"),
