@@ -62,17 +62,17 @@
 
                             <div class="mb-3">
                                 <label class="form-label">Nome Articolo *</label>
-                                <input type="text" class="form-control" name="nome" value="{{ prodotto.nome }}" required>
+                                <input type="text" class="form-control" name="nome" value="{{ prodotto.nome }}" {% if not (session.get('is_admin') or session.get('puo_modificare_prodotti') == 1) %}disabled{% endif %} required>
                             </div>
 
                             <div class="mb-3">
                                 <label class="form-label">Codice SAP</label>
-                                <input type="text" class="form-control" name="sap" value="{{ prodotto.sap or '' }}">
+                                <input type="text" class="form-control" name="sap" value="{{ prodotto.sap or '' }}" {% if not (session.get('is_admin') or session.get('puo_modificare_prodotti') == 1) %}disabled{% endif %}>
                             </div>
 
                             <div class="mb-3">
                                 <label class="form-label">Posizione / Ubicazione</label>
-                                <input type="text" class="form-control" name="posizione" value="{{ prodotto.posizione or '' }}" list="lista_posizioni">
+                                <input type="text" class="form-control" name="posizione" value="{{ prodotto.posizione or '' }}" list="lista_posizioni" {% if not (session.get('is_admin') or session.get('puo_modificare_prodotti') == 1) %}disabled{% endif %}>
                                 <datalist id="lista_posizioni">
                                     {% for u in ubicazioni_disponibili %}
                                         <option value="{{ u }}">
@@ -82,32 +82,28 @@
 
                             <div class="mb-3">
                                 <label class="form-label">Peso</label>
-                                <input type="text" class="form-control" name="peso" value="{{ prodotto.peso or '' }}">
+                                <input type="text" class="form-control" name="peso" value="{{ prodotto.peso or '' }}" {% if not (session.get('is_admin') or session.get('puo_modificare_prodotti') == 1) %}disabled{% endif %}>
                             </div>
 
                             <div class="row">
                                 <div class="col-md-6 mb-3">
                                     <label class="form-label">Quantità Attuale</label>
-                                    <input type="number" class="form-control" name="quantita" value="{{ prodotto.quantita }}" min="0" required>
+                                    <input type="number" class="form-control" name="quantita" value="{{ prodotto.quantita }}" min="0" {% if not (session.get('is_admin') or session.get('puo_modificare_prodotti') == 1) %}disabled{% endif %} required>
                                 </div>
                                 <div class="col-md-6 mb-3">
                                     <label class="form-label">Soglia Minima (Avviso Scorta)</label>
-                                    <input type="number" class="form-control" name="soglia_minima" value="{{ prodotto.soglia_minima or 3 }}" min="0">
+                                    <input type="number" class="form-control" name="soglia_minima" value="{{ prodotto.soglia_minima or 3 }}" min="0" {% if not (session.get('is_admin') or session.get('puo_modificare_prodotti') == 1) %}disabled{% endif %}>
                                 </div>
                             </div>
 
                             <div class="mb-3 form-check">
-                                <input type="checkbox" class="form-check-input" id="magazzino_pesante" name="magazzino_pesante" value="1" {% if prodotto.magazzino_pesante == 1 or prodotto.magazzino_pesante == true %}checked{% endif %}>
+                                <input type="checkbox" class="form-check-input" id="magazzino_pesante" name="magazzino_pesante" value="1" {% if prodotto.magazzino_pesante == 1 or prodotto.magazzino_pesante == true %}checked{% endif %} {% if not (session.get('is_admin') or session.get('puo_modificare_prodotti') == 1) %}disabled{% endif %}>
                                 <label class="form-check-label" for="magazzino_pesante">Magazzino Pesante</label>
                             </div>
 
-                            <!-- VISIBILE SOLO SE ABILITATO: Modifica Prodotti -->
+                            <!-- Il pulsante Salva appare SOLO se abilitato -->
                             {% if session.get('is_admin') or session.get('puo_modificare_prodotti') == 1 %}
                                 <button type="submit" class="btn btn-primary w-100">Salva Modifiche</button>
-                            {% else %}
-                                <div class="alert alert-warning py-2 text-center mb-0" role="alert">
-                                    <small>Non hai i permessi per modificare questo articolo.</small>
-                                </div>
                             {% endif %}
                         </form>
                     </div>
