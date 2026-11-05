@@ -392,6 +392,40 @@ def api_segna_lette():
         conn.close()
     return jsonify({"status": "ok"})
 
+@app.route("/api/notifiche/segna_letta/<int:notifica_id>", methods=["POST"])
+def api_segna_letta(notifica_id):
+    username = session.get('username')
+    if username:
+        conn = get_db_connection()
+        cur = conn.cursor()
+        cur.execute("UPDATE notifiche SET letta = TRUE WHERE id = %s AND destinatario = %s;", (notifica_id, username))
+        conn.commit()
+        cur.close()
+        conn.close()
+    return jsonify({"status": "ok"})
+
+@app.route("/api/notifiche/elimina", methods=["POST"])
+def api_elimina_notifiche():
+    username = session.get('username')
+    if not username:
+        return jsonify({"status": "error", "message": "Non autorizzato"})
+    
+    dati = request.get_json() or {}
+    notifica_id = dati.get('id')
+    
+    conn = get_db_connection()
+    cur = conn.cursor()
+    
+    if notifica_id:
+        cur.execute("DELETE FROM notifiche WHERE id = %s AND destinatario = %s AND letta = TRUE;", (notifica_id, username))
+    else:
+        cur.execute("DELETE FROM notifiche WHERE destinatario = %s AND letta = TRUE;", (username,))
+        
+    conn.commit()
+    cur.close()
+    conn.close()
+    return jsonify({"status": "ok"})
+
 @app.route("/")
 @app.route("/index")
 @app.route("/index.html")
@@ -512,7 +546,6 @@ def registra():
                 flash("Username già esistente o errore di registrazione.", "error")
     return render_template("registra.html")
 
-# --- PANNELLO PERMESSI ADMIN & LOGS ---
 @app.route("/admin_utenti")
 @app.route("/admin_utenti.html")
 def admin_utenti():
@@ -774,7 +807,7 @@ def stampa_nastri():
     conn.close()
     return render_template("stampa_nastri.html", nastri=lista, sezione=sezione)
 
-# --- PANNELLO AGENDA ---
+# --- PANNELLO AGENDA (AGGIUNTO INVIO NOTIFICHE) ---
 @app.route("/agenda", methods=["GET", "POST"])
 @app.route("/agenda.html", methods=["GET", "POST"])
 def agenda():
@@ -803,7 +836,18 @@ def agenda():
             """, (titolo, descrizione, data_scadenza, nome_azienda, utenti_visibili, username_corrente))
             conn.commit()
             
-            if "Tutti" not in utenti_selezionati:
+            # Invio notifiche agli utenti assegnati in agenda
+            if "Tutti" in utenti_selezionati or not utenti_selezionati:
+                cur.execute("SELECT username FROM utenti WHERE username != %s;", (username_corrente,))
+                altri_utenti = cur.fetchall()
+                for u in altri_utenti:
+                    crea_notifica(
+                        destinatario=u['username'],
+                        titolo="📅 Nuova Attività in Agenda",
+                        messaggio=f"Nuova attività creata: {titolo}",
+                        link="/agenda"
+                    )
+            else:
                 for tec in utenti_selezionati:
                     tec_clean = tec.strip()
                     if tec_clean and tec_clean != username_corrente:
@@ -815,7 +859,7 @@ def agenda():
                         )
             
             registra_log(f"Creata attività in agenda: {titolo}")
-            flash("Attività aggiunta in agenda con successo!", "success")
+            flash("Attività aggiunta in agenda con successo e notifiche inviate!", "success")
         return redirect(url_for("agenda"))
 
     if is_admin:
@@ -1976,7 +2020,6 @@ def elimina_file(file_id):
         return redirect(url_for("documenti", cartella_id=cartella_id))
     return redirect(url_for("documenti"))
 
-# --- ALTRE ROTTE GESTIONALE E ESPORTAZIONI CSV ---
 @app.route("/esportazioni")
 @app.route("/esportazioni.html")
 def esportazioni():
@@ -2439,7 +2482,7 @@ def aggiungi_prodotto():
     flag_sezione = 1 if request.form.get("magazzino_pesante") else 0
 
     if not nome:
-        flash("Il nome dell'articolo è obbligatorio!", "error")
+        flash(" Il nome dell'articolo è obbligatorio!", "error")
         return redirect(url_for("index"))
 
     try:
