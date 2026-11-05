@@ -47,7 +47,7 @@
     </style>
 </head>
 <body>
-    <!-- Navbar principale Smart & Pulita -->
+    <!-- Navbar principale Smart & Pulita con permessi dinamici -->
     <nav class="navbar navbar-expand-lg navbar-dark sticky-top">
         <div class="container-fluid px-3">
             <a class="navbar-brand fw-bold fs-5 text-white" href="{{ url_for('index') }}">
@@ -58,19 +58,50 @@
             </button>
             <div class="collapse navbar-collapse" id="navbarNav">
                 <ul class="navbar-nav me-auto mb-2 mb-lg-0 align-lg-items-center">
+                    {% if session.get('is_admin') or session.get('puo_vedere_magazzino', 1) %}
                     <li class="nav-item"><a class="nav-link active" href="{{ url_for('index') }}"><i class="fas fa-boxes me-1"></i>Magazzino</a></li>
+                    {% endif %}
+
+                    {% if session.get('is_admin') or session.get('puo_vedere_manutenzioni_esterne', 1) %}
                     <li class="nav-item"><a class="nav-link" href="{{ url_for('manutenzioni') }}"><i class="fas fa-tools me-1"></i>Manut. Esterne</a></li>
+                    {% endif %}
+
+                    {% if session.get('is_admin') or session.get('puo_vedere_magazzino', 1) %}
                     <li class="nav-item"><a class="nav-link" href="{{ url_for('nastri') }}"><i class="fas fa-stream me-1"></i>Nastri</a></li>
+                    {% endif %}
+
                     {% if session.get('is_admin') or session.get('puo_gestire_agenda', 0) %}
                     <li class="nav-item"><a class="nav-link" href="{{ url_for('agenda') }}"><i class="fas fa-calendar-alt me-1"></i>Agenda</a></li>
                     {% endif %}
+
+                    {% if session.get('is_admin') or session.get('puo_vedere_manutenzione', 1) %}
                     <li class="nav-item"><a class="nav-link" href="{{ url_for('richieste_manutenzione') }}"><i class="fas fa-wrench me-1"></i>Officina</a></li>
+                    {% endif %}
+
+                    {% if session.get('is_admin') or session.get('puo_vedere_report_ore', 1) %}
                     <li class="nav-item"><a class="nav-link" href="{{ url_for('report_ore') }}"><i class="fas fa-clock me-1"></i>Ore</a></li>
+                    {% endif %}
+
+                    {% if session.get('is_admin') or session.get('puo_vedere_magazzino', 1) %}
                     <li class="nav-item"><a class="nav-link" href="{{ url_for('cambi_serie') }}"><i class="fas fa-exchange-alt me-1"></i>Cambi</a></li>
+                    {% endif %}
+
+                    {% if session.get('is_admin') or session.get('puo_vedere_promemoria', 1) %}
                     <li class="nav-item"><a class="nav-link" href="{{ url_for('promemoria') }}"><i class="fas fa-bell me-1"></i>Promemoria</a></li>
+                    {% endif %}
+
+                    {% if session.get('is_admin') or session.get('puo_gestire_fornitori', 1) %}
                     <li class="nav-item"><a class="nav-link" href="{{ url_for('fornitori') }}"><i class="fas fa-address-book me-1"></i>Fornitori</a></li>
+                    {% endif %}
+
+                    {% if session.get('is_admin') or session.get('puo_gestire_documenti', 1) %}
                     <li class="nav-item"><a class="nav-link" href="{{ url_for('documenti') }}"><i class="fas fa-folder-open me-1"></i>Doc</a></li>
+                    {% endif %}
+
+                    {% if session.get('is_admin') or session.get('puo_vedere_magazzino', 1) %}
                     <li class="nav-item"><a class="nav-link" href="{{ url_for('esportazioni') }}"><i class="fas fa-file-export me-1"></i>Export</a></li>
+                    {% endif %}
+
                     {% if session.get('is_admin') %}
                     <li class="nav-item"><a class="nav-link text-warning fw-bold" href="{{ url_for('admin_utenti') }}"><i class="fas fa-user-shield me-1"></i>Admin</a></li>
                     {% endif %}
@@ -123,27 +154,31 @@
             {% endif %}
         {% endwith %}
 
-        <!-- Sezione Avvisi Sotto Soglia (Soglia - 1) -->
+        <!-- Sezione Avvisi Sotto Soglia -->
         {% if prodotti_sotto_soglia %}
         <div class="alert alert-warning shadow-sm mb-4 border-0" role="alert" style="border-radius: 10px; background-color: #fef3c7; color: #92400e;">
             <h5 class="alert-heading fw-bold fs-6"><i class="fas fa-exclamation-triangle me-2"></i>Attenzione: Articoli sotto la soglia minima!</h5>
-            <p class="mb-1 small">I seguenti articoli hanno una giacenza inferiore o uguale alla soglia impostata meno 1:</p>
+            <p class="mb-1 small">I seguenti articoli hanno una giacenza inferiore o uguale alla soglia minima impostata[span_3](start_span)[span_3](end_span):</p>
             <ul class="mb-0 ps-3 small">
                 {% for p in prodotti_sotto_soglia %}
-                <li><strong>{{ p.nome }}</strong> (Ubicazione: {{ p.posizione or 'N/D' }}) — Giacenza: <span class="badge bg-danger">{{ p.quantita }} pz</span> (Soglia: {{ p.soglia_minima }})</li>
+                <li><strong>{{ p.nome }}</strong> (Codice SAP: {{ p.sap or 'N/D' }}) — Giacenza: <span class="badge bg-danger">{{ p.quantita }} pz</span> (Soglia: {{ p.soglia_minima }})[span_4](start_span)[span_4](end_span)</li>
                 {% endfor %}
             </ul>
         </div>
         {% endif %}
 
-        <!-- Intestazione e Pulsanti Azione Rapida -->
+        <!-- Intestazione e Pulsanti Azione Rapida protetti da permessi -->
         <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
             <h2 class="fw-bold text-dark fs-4 mb-0"><i class="fas fa-boxes text-primary me-2"></i>Magazzino Principale</h2>
             <div class="d-flex gap-2 flex-wrap">
                 <a href="{{ url_for('scanner_globale') }}" class="btn btn-outline-dark btn-sm shadow-sm"><i class="fas fa-qrcode me-1"></i>Scanner QR</a>
                 <a href="{{ url_for('stampa_multipla_qr') }}" class="btn btn-outline-secondary btn-sm shadow-sm"><i class="fas fa-print me-1"></i>Stampa QR</a>
+                
+                {% if session.get('is_admin') or session.get('puo_caricare_scaricare', 1) %}
                 <a href="{{ url_for('carico') }}" class="btn btn-success btn-sm shadow-sm"><i class="fas fa-plus me-1"></i>Carico</a>
                 <a href="{{ url_for('scarico') }}" class="btn btn-danger btn-sm shadow-sm"><i class="fas fa-minus me-1"></i>Scarico</a>
+                {% endif %}
+
                 {% if session.get('is_admin') or session.get('puo_aggiungere_prodotti', 1) %}
                 <button class="btn btn-primary btn-sm shadow-sm" data-bs-toggle="modal" data-bs-target="#modalNuovoProdotto">
                     <i class="fas fa-plus-circle me-1"></i>Nuovo Articolo
@@ -157,12 +192,12 @@
             <div class="card-body p-2">
                 <div class="input-group">
                     <span class="input-group-text bg-transparent border-0 ps-3"><i class="fas fa-search text-muted"></i></span>
-                    <input type="text" id="inputRicercaMagazzino" class="form-control border-0 shadow-none" placeholder="Cerca articolo per nome, ubicazione o QR code..." onkeyup="filtraTabellaMagazzino()">
+                    <input type="text" id="inputRicercaMagazzino" class="form-control border-0 shadow-none" placeholder="Cerca articolo per nome, codice SAP o QR code..." onkeyup="filtraTabellaMagazzino()">
                 </div>
             </div>
         </div>
 
-        <!-- Tabella Articoli Magazzino (Con Ubicazione al posto del SAP) -->
+        <!-- Tabella Articoli Magazzino -->
         <div class="card shadow-sm">
             <div class="card-body p-0">
                 <div class="table-responsive">
@@ -171,8 +206,9 @@
                             <tr>
                                 <th class="ps-3">QR Code</th>
                                 <th>Nome Articolo</th>
-                                <th>Ubicazione</th>
+                                <th>Codice SAP</th>
                                 <th class="text-center">Quantità</th>
+                                <th>Posizione</th>
                                 <th class="text-center pe-3">Azioni</th>
                             </tr>
                         </thead>
@@ -181,13 +217,13 @@
                             <tr class="riga-articolo">
                                 <td class="ps-3"><code>{{ p.qr_code }}</code></td>
                                 <td><strong>{{ p.nome }}</strong></td>
-                                <td>{{ p.posizione or '-' }}</td>
+                                <td class="text-muted">{{ p.sap or '-' }}</td>
                                 <td class="text-center">
-                                    {% set soglia = p.soglia_minima if p.soglia_minima is not none else 3 %}
-                                    <span class="badge px-2 py-1 {{ 'bg-danger' if p.quantita <= (soglia - 1) else 'bg-success' }}">
+                                    <span class="badge px-2 py-1 {{ 'bg-danger' if p.quantita <= (p.soglia_minima or 3) else 'bg-success' }}">
                                         {{ p.quantita }}
                                     </span>
                                 </td>
+                                <td>{{ p.posizione or '-' }}</td>
                                 <td class="text-center pe-3">
                                     <a href="{{ url_for('gestisci_prodotto', qr_code=p.qr_code) }}" class="btn btn-sm btn-outline-primary px-2 py-1 me-1" title="Gestisci / Modifica">
                                         <i class="fas fa-cog"></i>
@@ -199,7 +235,7 @@
                             </tr>
                             {% else %}
                             <tr id="rigaNessunArticolo">
-                                <td colspan="5" class="text-center py-5 text-muted">
+                                <td colspan="6" class="text-center py-5 text-muted">
                                     <i class="fas fa-box-open fa-2x mb-2 text-secondary opacity-50"></i>
                                     <p class="mb-0">Nessun articolo presente nel magazzino principale.</p>
                                 </td>
@@ -212,7 +248,7 @@
         </div>
     </div>
 
-    <!-- Modale Nuovo Articolo con Title Case Automatico -->
+    <!-- Modale Nuovo Articolo -->
     <div class="modal fade" id="modalNuovoProdotto" tabindex="-1">
         <div class="modal-dialog">
             <div class="modal-content border-0 shadow">
@@ -224,16 +260,15 @@
                     <div class="modal-body p-4">
                         <div class="mb-3">
                             <label class="form-label small fw-bold text-muted">QR Code (Lascia vuoto per generazione automatica)</label>
-                            <input type="text" class="form-control" name="qr_code" placeholder="Es. OMG-0001" oninput="this.value = this.value.toUpperCase();">
+                            <input type="text" class="form-control" name="qr_code" placeholder="Es. OMG-0001">
                         </div>
                         <div class="mb-3">
                             <label class="form-label small fw-bold text-muted">Nome Articolo *</label>
-                            <!-- Formattazione dinamica: Prima Lettera Maiuscola -->
-                            <input type="text" class="form-control" name="nome" required placeholder="Nome o descrizione articolo" oninput="formattaTitleCase(this)">
+                            <input type="text" class="form-control" name="nome" required placeholder="Nome o descrizione articolo">
                         </div>
                         <div class="mb-3">
                             <label class="form-label small fw-bold text-muted">Codice SAP</label>
-                            <input type="text" class="form-control" name="sap" placeholder="Codice SAP opzionale" oninput="this.value = this.value.toUpperCase();">
+                            <input type="text" class="form-control" name="sap" placeholder="Codice SAP opzionale">
                         </div>
                         <div class="row">
                             <div class="col-md-6 mb-3">
@@ -247,7 +282,7 @@
                         </div>
                         <div class="mb-3">
                             <label class="form-label small fw-bold text-muted">Posizione in Magazzino</label>
-                            <input type="text" class="form-control" name="posizione" placeholder="Es. Scaffale A3" oninput="this.value = this.value.toUpperCase();">
+                            <input type="text" class="form-control" name="posizione" placeholder="Es. Scaffale A3">
                         </div>
                     </div>
                     <div class="modal-footer bg-light">
@@ -261,14 +296,6 @@
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script>
-        // Converte in tempo reale la prima lettera di ogni parola in MAIUSCOLO
-        function formattaTitleCase(input) {
-            let cursorPosition = input.selectionStart;
-            let val = input.value;
-            input.value = val.replace(/\b\w/g, function(l) { return l.toUpperCase(); });
-            input.setSelectionRange(cursorPosition, cursorPosition);
-        }
-
         function filtraTabellaMagazzino() {
             const input = document.getElementById('inputRicercaMagazzino').value.toLowerCase();
             const righe = document.querySelectorAll('.riga-articolo');
@@ -320,7 +347,7 @@
                         container.appendChild(li);
                     });
                 })
-                .catch(err => console.error("Errore notifiche:", err));
+                .catch(err => console.error("Errore caricamento notifiche:", err));
         }
 
         function cliccaNotifica(id, link, event) {
