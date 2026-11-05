@@ -288,7 +288,6 @@ def init_db():
             );
         """)
         
-        # Patch automatica per assicurare che la colonna nome_azienda esista nella tabella agenda
         cur.execute("ALTER TABLE agenda ADD COLUMN IF NOT EXISTS nome_azienda VARCHAR(255);")
 
         colonne_cambi_serie = [
@@ -439,6 +438,7 @@ def index():
     interventi_aperti_count = 0
     interventi_in_lavoro_count = 0
     interventi_attesa_count = 0
+    ubicazioni_disponibili = []
     
     username = session.get('username')
     is_admin = session.get('is_admin')
@@ -450,6 +450,9 @@ def index():
         
         cur.execute("SELECT * FROM prodotti ORDER BY nome ASC;")
         tutti = cur.fetchall()
+        
+        cur.execute("SELECT DISTINCT posizione FROM prodotti WHERE posizione IS NOT NULL AND posizione != '' ORDER BY posizione ASC;")
+        ubicazioni_disponibili = [r['posizione'] for r in cur.fetchall()]
         
         if is_admin or puo_assegnare:
             cur.execute("SELECT COUNT(*) as count FROM promemoria WHERE completato = FALSE;")
@@ -486,7 +489,8 @@ def index():
                            promemoria_urgenti=promemoria_urgenti,
                            interventi_aperti_count=interventi_aperti_count,
                            interventi_in_lavoro_count=interventi_in_lavoro_count,
-                           interventi_attesa_count=interventi_attesa_count)
+                           interventi_attesa_count=interventi_attesa_count,
+                           ubicazioni_disponibili=ubicazioni_disponibili)
 
 @app.route("/login", methods=["GET", "POST"])
 @app.route("/login.html", methods=["GET", "POST"])
@@ -810,7 +814,7 @@ def stampa_nastri():
     conn.close()
     return render_template("stampa_nastri.html", nastri=lista, sezione=sezione)
 
-# --- PANNELLO AGENDA (CON NOTIFICHE PROTETTE) ---
+# --- PANNELLO AGENDA ---
 @app.route("/agenda", methods=["GET", "POST"])
 @app.route("/agenda.html", methods=["GET", "POST"])
 def agenda():
