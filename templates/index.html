@@ -3,58 +3,61 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Dashboard - Gestionale OMG</title>
+    <title>Magazzino - Gestionale OMG</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <style>
-        body { background-color: #f4f6f9; font-family: 'Segoe UI', Tahoma, sans-serif; }
-        .navbar { background: linear-gradient(135deg, #1e293b, #0f172a) !important; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); }
-        .navbar-nav .nav-link { font-size: 0.78rem; padding: 0.4rem 0.5rem !important; color: #cbd5e1 !important; border-radius: 4px; }
-        .navbar-nav .nav-link:hover, .navbar-nav .nav-link.active { color: #fff !important; background-color: rgba(255,255,255,0.1); }
-        .card { border: none; border-radius: 10px; box-shadow: 0 0.125rem 0.25rem rgba(0,0,0,0.075); }
-        .table th { font-weight: 600; color: #475569; background-color: #f8fafc !important; }
-        .table td { vertical-align: middle; }
-    </style>
 </head>
-<body>
-    <nav class="navbar navbar-expand-lg navbar-dark sticky-top">
-        <div class="container-fluid px-3">
-            <a class="navbar-brand fw-bold fs-5 text-white" href="{{ url_for('index') }}"><i class="fas fa-industry text-warning me-2"></i>OMG</a>
-            <button class="navbar-toggler border-0" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav"><span class="navbar-toggler-icon"></span></button>
+<body class="bg-light">
+
+    <!-- Navbar principale con controlli dei permessi -->
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark mb-4">
+        <div class="container-fluid">
+            <a class="navbar-brand fw-bold" href="{{ url_for('index') }}">OMG Gestionale</a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
             <div class="collapse navbar-collapse" id="navbarNav">
-                <ul class="navbar-nav me-auto mb-2 mb-lg-0">
-                    <li class="nav-item"><a class="nav-link active" href="{{ url_for('index') }}"><i class="fas fa-boxes me-1"></i>Magazzino</a></li>
-                    <li class="nav-item"><a class="nav-link" href="{{ url_for('manutenzioni') }}"><i class="fas fa-tools me-1"></i>Manut. Esterne</a></li>
-                    <li class="nav-item"><a class="nav-link" href="{{ url_for('nastri') }}"><i class="fas fa-stream me-1"></i>Nastri</a></li>
-                    <li class="nav-item"><a class="nav-link" href="{{ url_for('agenda') }}"><i class="fas fa-calendar-alt me-1"></i>Agenda</a></li>
-                    <li class="nav-item"><a class="nav-link" href="{{ url_for('richieste_manutenzione') }}"><i class="fas fa-wrench me-1"></i>Officina</a></li>
-                    <li class="nav-item"><a class="nav-link" href="{{ url_for('report_ore') }}"><i class="fas fa-clock me-1"></i>Ore</a></li>
-                    <li class="nav-item"><a class="nav-link" href="{{ url_for('cambi_serie') }}"><i class="fas fa-exchange-alt me-1"></i>Cambi</a></li>
-                    <li class="nav-item"><a class="nav-link" href="{{ url_for('promemoria') }}"><i class="fas fa-bell me-1"></i>Promemoria</a></li>
-                    <li class="nav-item"><a class="nav-link" href="{{ url_for('fornitori') }}"><i class="fas fa-address-book me-1"></i>Fornitori</a></li>
-                    <li class="nav-item"><a class="nav-link" href="{{ url_for('documenti') }}"><i class="fas fa-folder-open me-1"></i>Doc</a></li>
-                    <li class="nav-item"><a class="nav-link" href="{{ url_for('esportazioni') }}"><i class="fas fa-file-export me-1"></i>Export</a></li>
+                <ul class="navbar-nav me-auto">
+                    <li class="nav-item"><a class="nav-link active" href="{{ url_for('index') }}">Magazzino</a></li>
+                    
+                    {% if session.get('is_admin') or session.get('puo_vedere_pesante') == 1 %}
+                    <li class="nav-item"><a class="nav-link" href="{{ url_for('magazzino_pesante') }}">Magazzino Pesante</a></li>
+                    {% endif %}
+
+                    {% if session.get('is_admin') or session.get('puo_vedere_manutenzione') == 1 %}
+                    <li class="nav-item"><a class="nav-link" href="{{ url_for('richieste_manutenzione') }}">Interventi & Officina</a></li>
+                    {% endif %}
+
+                    {% if session.get('is_admin') or session.get('puo_vedere_promemoria') == 1 %}
+                    <li class="nav-item"><a class="nav-link" href="{{ url_for('promemoria') }}">Promemoria</a></li>
+                    {% endif %}
+
+                    {% if session.get('is_admin') or session.get('puo_gestire_fornitori') == 1 %}
+                    <li class="nav-item"><a class="nav-link" href="{{ url_for('fornitori') }}">Fornitori</a></li>
+                    {% endif %}
+
+                    {% if session.get('is_admin') or session.get('puo_vedere_report_ore') == 1 %}
+                    <li class="nav-item"><a class="nav-link" href="{{ url_for('report_ore') }}">Report Ore</a></li>
+                    {% endif %}
+
                     {% if session.get('is_admin') %}
-                    <li class="nav-item"><a class="nav-link text-warning fw-bold" href="{{ url_for('admin_utenti') }}"><i class="fas fa-user-shield me-1"></i>Admin</a></li>
+                    <li class="nav-item"><a class="nav-link text-warning fw-semibold" href="{{ url_for('admin_utenti') }}">Gestione Utenti</a></li>
                     {% endif %}
                 </ul>
-                <ul class="navbar-nav align-items-center">
-                    <li class="nav-item dropdown">
-                        <a class="nav-link dropdown-toggle text-light px-2" href="#" role="button" data-bs-toggle="dropdown"><i class="fas fa-user-circle fa-lg text-warning me-1"></i><span>{{ session.get('username', 'Utente') }}</span></a>
-                        <ul class="dropdown-menu dropdown-menu-end shadow border-0 mt-2">
-                            <li><a class="dropdown-item py-2 text-danger" href="{{ url_for('logout') }}"><i class="fas fa-sign-out-alt me-2"></i>Esci</a></li>
-                        </ul>
-                    </li>
-                </ul>
+                <div class="d-flex align-items-center">
+                    <span class="navbar-text text-light me-3 small">Utente: {{ session.get('username') }}</span>
+                    <a href="{{ url_for('logout') }}" class="btn btn-outline-light btn-sm">Logout</a>
+                </div>
             </div>
         </div>
     </nav>
 
-    <div class="container my-4">
+    <div class="container mb-5">
+        
+        <!-- Messaggi Flash -->
         {% with messages = get_flashed_messages(with_categories=true) %}
             {% if messages %}
                 {% for category, message in messages %}
-                    <div class="alert alert-{{ 'danger' if category == 'error' else 'success' }} alert-dismissible fade show shadow-sm border-0" role="alert">
+                    <div class="alert alert-{{ 'danger' if category == 'error' else 'success' }} alert-dismissible fade show" role="alert">
                         {{ message }}
                         <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
                     </div>
@@ -62,64 +65,72 @@
             {% endif %}
         {% endwith %}
 
-        <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
-            <h2 class="fw-bold text-dark fs-4 mb-0"><i class="fas fa-boxes text-primary me-2"></i>Magazzino Principale</h2>
-            <div class="d-flex gap-2 flex-wrap">
-                <a href="{{ url_for('scanner_globale') }}" class="btn btn-outline-dark btn-sm shadow-sm"><i class="fas fa-qrcode me-1"></i>Scanner QR</a>
-                <a href="{{ url_for('stampa_multipla_qr') }}" class="btn btn-outline-secondary btn-sm shadow-sm"><i class="fas fa-print me-1"></i>Stampa QR</a>
-                <a href="{{ url_for('carico') }}" class="btn btn-success btn-sm shadow-sm"><i class="fas fa-plus me-1"></i>Carico</a>
-                <a href="{{ url_for('scarico') }}" class="btn btn-danger btn-sm shadow-sm"><i class="fas fa-minus me-1"></i>Scarico</a>
-                <button class="btn btn-primary btn-sm shadow-sm" data-bs-toggle="modal" data-bs-target="#modalNuovoProdotto"><i class="fas fa-plus-circle me-1"></i>Nuovo Articolo</button>
+        <!-- Intestazione e Pulsanti Rapidi Superiori -->
+        <div class="row align-items-center mb-4 g-3">
+            <div class="col-12 col-md-6">
+                <h2 class="fw-bold mb-0 text-dark">Inventario Magazzino</h2>
             </div>
-        </div>
+            <div class="col-12 col-md-6 text-md-end">
+                <div class="d-flex flex-wrap gap-2 justify-content-md-end">
+                    
+                    {% if session.get('is_admin') or session.get('puo_aggiungere_prodotti') == 1 %}
+                    <button type="button" class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#modalAggiungi">
+                        ➕ Aggiungi Prodotto
+                    </button>
+                    {% endif %}
 
-        <div class="card shadow-sm mb-3">
-            <div class="card-body p-2">
-                <div class="input-group">
-                    <span class="input-group-text bg-transparent border-0 ps-3"><i class="fas fa-search text-muted"></i></span>
-                    <input type="text" id="inputRicercaMagazzino" class="form-control border-0 shadow-none" placeholder="Cerca articolo per nome, ubicazione o QR code..." onkeyup="filtraTabellaMagazzino()">
+                    {% if session.get('is_admin') or session.get('puo_caricare_scaricare') == 1 %}
+                    <a href="{{ url_for('carico') }}" class="btn btn-success btn-sm">Carico</a>
+                    <a href="{{ url_for('scarico') }}" class="btn btn-danger btn-sm">Scarico</a>
+                    {% endif %}
+
+                    <a href="{{ url_for('scanner_globale') }}" class="btn btn-dark btn-sm">📷 Scanner QR</a>
+                    <a href="{{ url_for('esporta_inventario') }}" class="btn btn-outline-secondary btn-sm">Esporta CSV</a>
                 </div>
             </div>
         </div>
 
-        <div class="card shadow-sm">
+        <!-- Tabella Prodotti -->
+        <div class="card shadow-sm border-0">
             <div class="card-body p-0">
                 <div class="table-responsive">
-                    <table class="table table-hover mb-0 align-middle" id="tabellaMagazzino">
-                        <thead class="table-light">
+                    <table class="table table-hover align-middle mb-0">
+                        <thead class="table-dark">
                             <tr>
                                 <th class="ps-3">QR Code</th>
                                 <th>Nome Articolo</th>
-                                <th>Ubicazione / Scaffale</th>
+                                <th>SAP</th>
+                                <th>Posizione</th>
                                 <th class="text-center">Quantità</th>
-                                <th class="text-center pe-3">Azioni</th>
+                                <th class="text-end pe-3">Azioni</th>
                             </tr>
                         </thead>
                         <tbody>
-                            {% for p in prodotti %}
-                            <tr class="riga-articolo">
-                                <td class="ps-3"><code>{{ p.qr_code }}</code></td>
-                                <td><strong>{{ p.nome }}</strong></td>
-                                <td>
-                                    {% if p.posizione %}
-                                    <a href="{{ url_for('qr_scaffale', ubicazione=p.posizione) }}" class="text-decoration-none fw-bold text-dark" title="Apri QR Scaffale Master">
-                                        <i class="fas fa-warehouse text-primary me-1"></i>{{ p.posizione }}
-                                    </a>
-                                    {% else %}
-                                    -
-                                    {% endif %}
-                                </td>
-                                <td class="text-center">
-                                    <span class="badge px-2 py-1 {{ 'bg-danger' if p.quantita <= (p.soglia_minima or 3) else 'bg-success' }}">{{ p.quantita }}</span>
-                                </td>
-                                <td class="text-center pe-3">
-                                    <a href="{{ url_for('gestisci_prodotto', qr_code=p.qr_code) }}" class="btn btn-sm btn-outline-primary px-2 py-1 me-1" title="Gestisci"><i class="fas fa-cog"></i></a>
-                                    <a href="{{ url_for('stampa_singolo_qr', qr_code=p.qr_code) }}" class="btn btn-sm btn-outline-secondary px-2 py-1" title="Stampa QR"><i class="fas fa-print"></i></a>
-                                </td>
-                            </tr>
+                            {% if prodotti %}
+                                {% for p in prodotti %}
+                                <tr>
+                                    <td class="ps-3 fw-semibold text-secondary">{{ p.qr_code }}</td>
+                                    <td>
+                                        <a href="{{ url_for('gestisci_prodotto', qr_code=p.qr_code) }}" class="text-decoration-none fw-bold text-primary">
+                                            {{ p.nome }}
+                                        </a>
+                                        {% if p.quantita <= (p.soglia_minima or 3) %}
+                                            <span class="badge bg-danger ms-1">Scorta Bassa</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>{{ p.sap or '-' }}</td>
+                                    <td>{{ p.posizione or '-' }}</td>
+                                    <td class="text-center fw-bold">{{ p.quantita }}</td>
+                                    <td class="text-end pe-3">
+                                        <a href="{{ url_for('gestisci_prodotto', qr_code=p.qr_code) }}" class="btn btn-sm btn-outline-primary">Gestisci</a>
+                                    </td>
+                                </tr>
+                                {% endfor %}
                             {% else %}
-                            <tr><td colspan="5" class="text-center py-5 text-muted">Nessun articolo presente.</td></tr>
-                            {% endfor %}
+                                <tr>
+                                    <td colspan="6" class="text-center py-4 text-muted">Nessun articolo presente nel magazzino.</td>
+                                </tr>
+                            {% endif %}
                         </tbody>
                     </table>
                 </div>
@@ -127,65 +138,62 @@
         </div>
     </div>
 
-    <!-- Modale Nuovo Articolo con Tendina Ubicazione Autocompilante -->
-    <div class="modal fade" id="modalNuovoProdotto" tabindex="-1">
-        <div class="modal-dialog">
+    <!-- Modal Aggiungi Prodotto (Visibile solo se autorizzato) -->
+    {% if session.get('is_admin') or session.get('puo_aggiungere_prodotti') == 1 %}
+    <div class="modal fade" id="modalAggiungi" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
             <div class="modal-content border-0 shadow">
                 <form action="{{ url_for('aggiungi_prodotto') }}" method="POST">
-                    <div class="modal-header bg-dark text-white">
-                        <h5 class="modal-title fs-6"><i class="fas fa-plus-circle me-2 text-warning"></i>Aggiungi Nuovo Articolo</h5>
-                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                    <div class="modal-header bg-primary text-white">
+                        <h5 class="modal-title fw-bold">Aggiungi Nuovo Prodotto</h5>
+                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
                     </div>
-                    <div class="modal-body p-4">
+                    <div class="modal-body">
                         <div class="mb-3">
-                            <label class="form-label small fw-bold text-muted">QR Code (Vuoto per auto-generazione)</label>
+                            <label class="form-label small fw-bold">QR Code (Lascia vuoto per generarlo automatico)</label>
                             <input type="text" class="form-control" name="qr_code" placeholder="Es. OMG-0001">
                         </div>
                         <div class="mb-3">
-                            <label class="form-label small fw-bold text-muted">Nome Articolo *</label>
-                            <input type="text" class="form-control" name="nome" required placeholder="Nome o descrizione articolo">
+                            <label class="form-label small fw-bold">Nome Articolo *</label>
+                            <input type="text" class="form-control" name="nome" required>
                         </div>
                         <div class="mb-3">
-                            <label class="form-label small fw-bold text-muted">Codice SAP</label>
-                            <input type="text" class="form-control" name="sap" placeholder="Codice SAP opzionale">
+                            <label class="form-label small fw-bold">Codice SAP</label>
+                            <input type="text" class="form-control" name="sap">
                         </div>
                         <div class="row">
-                            <div class="col-md-6 mb-3">
-                                <label class="form-label small fw-bold text-muted">Quantità Iniziale</label>
+                            <div class="col-6 mb-3">
+                                <label class="form-label small fw-bold">Quantità Iniziale</label>
                                 <input type="number" class="form-control" name="quantita" value="0" min="0">
                             </div>
-                            <div class="col-md-6 mb-3">
-                                <label class="form-label small fw-bold text-muted">Soglia Minima</label>
-                                <input type="number" class="form-control" name="soglia_minima" value="3" min="1">
+                            <div class="col-6 mb-3">
+                                <label class="form-label small fw-bold">Soglia Minima</label>
+                                <input type="number" class="form-control" name="soglia_minima" value="3" min="0">
                             </div>
                         </div>
                         <div class="mb-3">
-                            <label class="form-label small fw-bold text-muted">Posizione / Ubicazione (Seleziona o scrivi)</label>
-                            <input type="text" class="form-control" name="posizione" list="listaUbicazioni" placeholder="Es. Scaffale A1 o Armadio 2">
-                            <datalist id="listaUbicazioni">
-                                {% for u in ubicazioni_disponibili %}
-                                <option value="{{ u }}">
-                                {% endfor %}
-                            </datalist>
+                            <label class="form-label small fw-bold">Posizione / Ubicazione</label>
+                            <input type="text" class="form-control" name="posizione" placeholder="Es. Scaffale A1">
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label small fw-bold">Peso</label>
+                            <input type="text" class="form-control" name="peso" placeholder="Es. 1.2 kg">
+                        </div>
+                        <div class="mb-3 form-check">
+                            <input type="checkbox" class="form-check-input" id="magazzino_pesante_modal" name="magazzino_pesante" value="1">
+                            <label class="form-check-label text-secondary" for="magazzino_pesante_modal">Inserisci in Magazzino Pesante</label>
                         </div>
                     </div>
                     <div class="modal-footer bg-light">
                         <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Annulla</button>
-                        <button type="submit" class="btn btn-success btn-sm">Salva Articolo</button>
+                        <button type="submit" class="btn btn-primary btn-sm fw-semibold">Salva Prodotto</button>
                     </div>
                 </form>
             </div>
         </div>
     </div>
+    {% endif %}
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-    <script>
-        function filtraTabellaMagazzino() {
-            const input = document.getElementById('inputRicercaMagazzino').value.toLowerCase();
-            document.querySelectorAll('.riga-articolo').forEach(riga => {
-                riga.style.display = riga.innerText.toLowerCase().includes(input) ? "" : "none";
-            });
-        }
-    </script>
 </body>
 </html>
