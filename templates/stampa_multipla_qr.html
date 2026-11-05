@@ -10,7 +10,7 @@
     <style>
         @page {
             size: A4;
-            margin: 8mm;
+            margin: 10mm; /* Margine di sicurezza tutt'intorno al foglio A4 */
         }
         @media print {
             .no-print { display: none !important; }
@@ -19,15 +19,18 @@
                 display: flex !important;
                 flex-wrap: wrap !important;
                 justify-content: flex-start !important;
-                gap: 5mm !important;
+                align-content: flex-start !important;
+                gap: 4mm !important;
+                width: 100% !important;
             }
             .etichetta-stampa {
-                border: 1px dashed #444 !important;
+                border: 1px dashed #666 !important;
                 box-shadow: none !important;
                 page-break-inside: avoid !important;
+                break-inside: avoid !important;
                 margin: 0 !important;
-                width: 62mm !important;
-                padding: 6px !important;
+                width: 58mm !important; /* Larghezza ridotta per evitare sbordi a destra */
+                padding: 5px !important;
                 background: #fff !important;
                 text-align: center !important;
             }
@@ -59,7 +62,7 @@
             </div>
         </div>
 
-        <!-- ELENCO ORDINATO A SCHERMO (UN SOLO BOX PER ARTICOLO) -->
+        <!-- ELENCO ORDINATO A SCHERMO -->
         <div class="text-center">
             {% for p in prodotti %}
             <div class="etichetta-schermo shadow-sm position-relative" id="card-schermo-{{ p.qr_code }}">
@@ -67,7 +70,6 @@
                     <input class="form-check-input qr-checkbox" type="checkbox" value="{{ p.qr_code }}" data-nome="{{ p.nome }}" data-posizione="{{ p.posizione or '-' }}" data-quantita="{{ p.quantita if p.quantita > 0 else 1 }}" checked style="transform: scale(1.2); cursor: pointer;">
                 </div>
 
-                <!-- Nome Articolo per intero -->
                 <h6 class="fw-bold text-dark text-wrap text-break mb-2 mt-2 px-1" style="font-size: 0.85rem; line-height: 1.2;">{{ p.nome }}</h6>
                 
                 <div class="qr-preview my-2 d-flex justify-content-center" data-qr="{{ p.qr_code }}"></div>
@@ -84,18 +86,17 @@
         </div>
     </div>
 
-    <!-- AREA DI STAMPA DINAMICA (GENERATE SOLO IN FASE DI STAMPA) -->
+    <!-- AREA DI STAMPA DINAMICA -->
     <div id="areaStampa" class="d-none d-print-flex"></div>
 
     <script>
         document.addEventListener("DOMContentLoaded", function() {
-            // Genera la preview grafica del QR code per la schermata
             document.querySelectorAll('.qr-preview').forEach(function(el) {
                 let code = el.getAttribute('data-qr');
                 new QRCode(el, {
                     text: code,
-                    width: 80,
-                    height: 80,
+                    width: 75,
+                    height: 75,
                     colorDark: "#000000",
                     colorLight: "#ffffff",
                     correctLevel: QRCode.CorrectLevel.H
@@ -111,7 +112,7 @@
 
         function avviaStampa() {
             const areaStampa = document.getElementById('areaStampa');
-            areaStampa.innerHTML = ''; // Pulisce precedenti etichette di stampa
+            areaStampa.innerHTML = '';
 
             const checkboxes = document.querySelectorAll('.qr-checkbox:checked');
 
@@ -120,7 +121,6 @@
                 return;
             }
 
-            // Per ogni articolo selezionato, genera N etichette pari al numero di pezzi
             checkboxes.forEach(function(cb) {
                 const qrCode = cb.value;
                 const nome = cb.getAttribute('data-nome');
@@ -131,21 +131,20 @@
                     let divEtichetta = document.createElement('div');
                     divEtichetta.className = 'etichetta-stampa';
                     divEtichetta.innerHTML = `
-                        <h6 style="font-weight: bold; color: #000; font-size: 0.82rem; line-height: 1.15; word-wrap: break-word; margin-bottom: 4px;">${nome}</h6>
-                        <div class="qr-print-box" style="display: flex; justify-content: center; margin: 4px 0;"></div>
-                        <div style="font-family: monospace; font-weight: bold; font-size: 0.75rem; color: #000;">${qrCode}</div>
-                        <div style="margin-top: 4px; padding-top: 3px; border-top: 1px solid #ccc; font-size: 0.75rem; color: #333;">
+                        <h6 style="font-weight: bold; color: #000; font-size: 0.8rem; line-height: 1.15; word-wrap: break-word; margin-bottom: 4px;">${nome}</h6>
+                        <div class="qr-print-box" style="display: flex; justify-content: center; margin: 3px 0;"></div>
+                        <div style="font-family: monospace; font-weight: bold; font-size: 0.72rem; color: #000;">${qrCode}</div>
+                        <div style="margin-top: 3px; padding-top: 2px; border-top: 1px solid #ccc; font-size: 0.7rem; color: #333;">
                             Ubicazione: <strong>${posizione}</strong>
                         </div>
                     `;
                     areaStampa.appendChild(divEtichetta);
 
-                    // Genera subito il codice QR grafico nella nuova etichetta
                     let qrBox = divEtichetta.querySelector('.qr-print-box');
                     new QRCode(qrBox, {
                         text: qrCode,
-                        width: 75,
-                        height: 75,
+                        width: 70,
+                        height: 70,
                         colorDark: "#000000",
                         colorLight: "#ffffff",
                         correctLevel: QRCode.CorrectLevel.H
@@ -153,7 +152,6 @@
                 }
             });
 
-            // Avvia la stampa
             setTimeout(function() {
                 window.print();
             }, 300);
