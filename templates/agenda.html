@@ -21,36 +21,16 @@
             </button>
             <div class="collapse navbar-collapse" id="navbarNav">
                 <ul class="navbar-nav me-auto mb-2 mb-lg-0">
-                    <li class="nav-item">
-                        <a class="nav-link" href="{{ url_for('index') }}"><i class="fas fa-boxes me-1"></i> Magazzino</a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link" href="{{ url_for('magazzino_pesante') }}"><i class="fas fa-weight-hanging me-1"></i> Pesante</a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link" href="{{ url_for('nastri') }}"><i class="fas fa-tape me-1"></i> Nastri</a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link" href="{{ url_for('richieste_manutenzione') }}"><i class="fas fa-tools me-1"></i> Manutenzioni</a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link" href="{{ url_for('cambi_serie') }}"><i class="fas fa-sync me-1"></i> Cambi Serie</a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link" href="{{ url_for('promemoria') }}"><i class="fas fa-sticky-note me-1"></i> Promemoria</a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link active" href="{{ url_for('agenda') }}"><i class="fas fa-calendar-alt me-1"></i> Agenda</a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link" href="{{ url_for('fornitori') }}"><i class="fas fa-truck me-1"></i> Fornitori</a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link" href="{{ url_for('documenti') }}"><i class="fas fa-folder me-1"></i> Documenti</a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link" href="{{ url_for('report_ore') }}"><i class="fas fa-chart-line me-1"></i> Report Ore</a>
-                    </li>
+                    <li class="nav-item"><a class="nav-link" href="{{ url_for('index') }}"><i class="fas fa-boxes me-1"></i> Magazzino</a></li>
+                    <li class="nav-item"><a class="nav-link" href="{{ url_for('magazzino_pesante') }}"><i class="fas fa-weight-hanging me-1"></i> Pesante</a></li>
+                    <li class="nav-item"><a class="nav-link" href="{{ url_for('nastri') }}"><i class="fas fa-tape me-1"></i> Nastri</a></li>
+                    <li class="nav-item"><a class="nav-link" href="{{ url_for('richieste_manutenzione') }}"><i class="fas fa-tools me-1"></i> Manutenzioni</a></li>
+                    <li class="nav-item"><a class="nav-link" href="{{ url_for('cambi_serie') }}"><i class="fas fa-sync me-1"></i> Cambi Serie</a></li>
+                    <li class="nav-item"><a class="nav-link" href="{{ url_for('promemoria') }}"><i class="fas fa-sticky-note me-1"></i> Promemoria</a></li>
+                    <li class="nav-item"><a class="nav-link active" href="{{ url_for('agenda') }}"><i class="fas fa-calendar-alt me-1"></i> Agenda</a></li>
+                    <li class="nav-item"><a class="nav-link" href="{{ url_for('fornitori') }}"><i class="fas fa-truck me-1"></i> Fornitori</a></li>
+                    <li class="nav-item"><a class="nav-link" href="{{ url_for('documenti') }}"><i class="fas fa-folder me-1"></i> Documenti</a></li>
+                    <li class="nav-item"><a class="nav-link" href="{{ url_for('report_ore') }}"><i class="fas fa-chart-line me-1"></i> Report Ore</a></li>
                 </ul>
                 <div class="d-flex align-items-center text-white">
                     <span class="me-3 small"><i class="fas fa-user-circle me-1"></i>{{ session.get('username') }}</span>
@@ -233,7 +213,7 @@
                                 </div>
                                 {% endfor %}
                             </div>
-                            <div class="form-text small text-muted">Selezionando utenti specifici, riceveranno una notifica push dedicata.</div>
+                            <div class="form-text small text-muted">Selezionando utenti specifici (o Tutti), riceveranno una notifica push dedicata.</div>
                         </div>
 
                     </div>
