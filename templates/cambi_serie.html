@@ -14,18 +14,27 @@
         .table-hover tbody tr:hover { background-color: #f1f3f5; }
         .badge-forno { font-size: 0.9rem; padding: 0.5em 0.8em; }
 
-        /* Ottimizzazione avanzata per la STAMPA A TUTTO SCHERMO */
+        /* Nasconde l'intestazione personalizzata nella normale visualizzazione web */
+        .print-title-container {
+            display: none;
+        }
+
+        /* Configurazione pulita per la STAMPA */
         @media print {
-            /* Nasconde elementi superflui per la stampa */
-            .navbar, .btn, form, .modal, .card-header, .d-flex, .alert {
+            /* Nasconde navbar, pulsanti, form, filtri, modali e alert */
+            .navbar, .btn, form, .modal, .card-header, .d-flex, .alert, hr {
                 display: none !important;
             }
-            /* Rimuove margini e sfondi del body e container per occupare l'intero foglio */
+            /* Rimuove margini, sfondi e intestazioni automatiche del browser */
             body {
                 background-color: white !important;
                 color: black !important;
                 margin: 0 !important;
-                padding: 0 !important;
+                padding: 10mm !important;
+            }
+            @page {
+                size: auto;
+                margin: 0mm; /* Rimuove data/ora/URL automatici del browser se supportato */
             }
             .container {
                 max-width: 100% !important;
@@ -33,7 +42,18 @@
                 margin: 0 !important;
                 padding: 0 !important;
             }
-            /* Espande la card e la tabella a pieno formato */
+            /* Mostra solo il titolo pulito per la stampa */
+            .print-title-container {
+                display: block !important;
+                text-align: center;
+                margin-bottom: 25px;
+            }
+            .print-title-container h2 {
+                font-size: 22pt !important;
+                font-weight: bold !important;
+                color: #000 !important;
+            }
+            /* Adatta la card e la tabella a tutto schermo */
             .card {
                 border: none !important;
                 box-shadow: none !important;
@@ -52,17 +72,8 @@
             }
             th, td {
                 padding: 8px !important;
-                border-bottom: 1px solid #ddd !important;
+                border-bottom: 1px solid #333 !important;
             }
-            /* Aggiunge un'intestazione pulita solo sulla carta stampata */
-            .print-header {
-                display: block !important;
-                text-align: center;
-                margin-bottom: 20px;
-            }
-        }
-        .print-header {
-            display: none;
         }
     </style>
 </head>
@@ -87,10 +98,10 @@
 
     <div class="container my-4">
 
-        <!-- Intestazione visibile solo in stampa -->
-        <div class="print-header">
-            <h2>Gestionale OMG — Storico Cambi Serie Forni</h2>
-            <p class="text-muted">Report generato il {{ current_date }}</p>
+        <!-- TITOLO PULITO VISIBILE SOLO IN STAMPA -->
+        <div class="print-title-container">
+            <h2>Cambi Serie {% if settimana_filtro %}- Settimana {{ settimana_filtro }}{% else %}- Storico Generale{% endif %}</h2>
+            {% if forno_filtro != 'Tutti' %}<h5 class="text-secondary">Filtro: {{ forno_filtro }}</h5>{% endif %}
         </div>
 
         <!-- Flash Messages -->
