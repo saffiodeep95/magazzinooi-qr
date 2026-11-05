@@ -807,7 +807,7 @@ def stampa_nastri():
     conn.close()
     return render_template("stampa_nastri.html", nastri=lista, sezione=sezione)
 
-# --- PANNELLO AGENDA (AGGIUNTO INVIO NOTIFICHE) ---
+# --- PANNELLO AGENDA (CON NOTIFICHE PROTETTE) ---
 @app.route("/agenda", methods=["GET", "POST"])
 @app.route("/agenda.html", methods=["GET", "POST"])
 def agenda():
@@ -821,45 +821,55 @@ def agenda():
     cur = conn.cursor()
     
     if request.method == "POST":
-        titolo = request.form.get("titolo")
-        descrizione = request.form.get("descrizione", "")
-        data_scadenza = request.form.get("data_scadenza", "")
-        nome_azienda = request.form.get("fornitore_input", "")
-        utenti_selezionati = request.form.getlist("utenti_visibili[]")
-        
-        utenti_visibili = ", ".join(utenti_selezionati) if utenti_selezionati else "Tutti"
-        
-        if titolo:
-            cur.execute("""
-                INSERT INTO agenda (titolo, descrizione, data_scadenza, nome_azienda, utenti_visibili, creato_da)
-                VALUES (%s, %s, %s, %s, %s, %s);
-            """, (titolo, descrizione, data_scadenza, nome_azienda, utenti_visibili, username_corrente))
-            conn.commit()
+        try:
+            titolo = request.form.get("titolo")
+            descrizione = request.form.get("descrizione", "")
+            data_scadenza = request.form.get("data_scadenza", "")
+            nome_azienda = request.form.get("fornitore_input", "")
+            utenti_selezionati = request.form.getlist("utenti_visibili[]")
             
-            # Invio notifiche agli utenti assegnati in agenda
-            if "Tutti" in utenti_selezionati or not utenti_selezionati:
-                cur.execute("SELECT username FROM utenti WHERE username != %s;", (username_corrente,))
-                altri_utenti = cur.fetchall()
-                for u in altri_utenti:
-                    crea_notifica(
-                        destinatario=u['username'],
-                        titolo="📅 Nuova Attività in Agenda",
-                        messaggio=f"Nuova attività creata: {titolo}",
-                        link="/agenda"
-                    )
-            else:
-                for tec in utenti_selezionati:
-                    tec_clean = tec.strip()
-                    if tec_clean and tec_clean != username_corrente:
-                        crea_notifica(
-                            destinatario=tec_clean,
-                            titolo="📅 Nuova Attività in Agenda",
-                            messaggio=f"Ti è stata assegnata un'attività: {titolo}",
-                            link="/agenda"
-                        )
+            utenti_visibili = ", ".join(utenti_selezionati) if utenti_selezionati else "Tutti"
             
-            registra_log(f"Creata attività in agenda: {titolo}")
-            flash("Attività aggiunta in agenda con successo e notifiche inviate!", "success")
+            if titolo:
+                cur.execute("""
+                    INSERT INTO agenda (titolo, descrizione, data_scadenza, nome_azienda, utenti_visibili, creato_da)
+                    VALUES (%s, %s, %s, %s, %s, %s);
+                """, (titolo, descrizione, data_scadenza, nome_azienda, utenti_visibili, username_corrente))
+                conn.commit()
+                
+                try:
+                    if "Tutti" in utenti_selezionati or not utenti_selezionati:
+                        cur.execute("SELECT username FROM utenti WHERE username != %s;", (username_corrente,))
+                        altri_utenti = cur.fetchall()
+                        for u in altri_utenti:
+                            crea_notifica(
+                                destinatario=u['username'],
+                                titolo="📅 Nuova Attività in Agenda",
+                                messaggio=f"Nuova attività creata: {titolo}",
+                                link="/agenda"
+                            )
+                    else:
+                        for tec in utenti_selezionati:
+                            tec_clean = tec.strip()
+                            if tec_clean and tec_clean != username_corrente:
+                                crea_notifica(
+                                    destinatario=tec_clean,
+                                    titolo="📅 Nuova Attività in Agenda",
+                                    messaggio=f"Ti è stata assegnata un'attività: {titolo}",
+                                    link="/agenda"
+                                )
+                except Exception as notif_err:
+                    print(f"Errore invio notifiche agenda (ignorato): {notif_err}")
+
+                registra_log(f"Creata attività in agenda: {titolo}")
+                flash("Attività aggiunta in agenda con successo!", "success")
+        except Exception as e:
+            conn.rollback()
+            flash(f"Errore durante il salvataggio in agenda: {e}", "error")
+            print(f"Errore POST agenda: {e}")
+        
+        cur.close()
+        conn.close()
         return redirect(url_for("agenda"))
 
     if is_admin:
@@ -2482,7 +2492,7 @@ def aggiungi_prodotto():
     flag_sezione = 1 if request.form.get("magazzino_pesante") else 0
 
     if not nome:
-        flash(" Il nome dell'articolo è obbligatorio!", "error")
+        flash("Il nome dell'articolo è obbligatorio!", "error")
         return redirect(url_for("index"))
 
     try:
