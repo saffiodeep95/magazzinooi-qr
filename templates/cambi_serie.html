@@ -119,7 +119,7 @@
                                     <td><code>{{ r.tempo_cambio or '-' }}</code></td>
                                     <td>
                                         <span class="text-danger" title="Tempra Vecchia">{{ r.num_bottiglie_tempera_vecchia or 0 }}</span> / 
-                                        <span class="text-success fw-bold" title="Tempra Nuova">{{ r.num_bottiglie_tempera_nuova if r.num_bottiglie_tempera_nuova is not None else (r.num_bottiglie_tempera or 0) }}</span>
+                                        <span class="text-success fw-bold" title="Tempra Nuova">{{ r.num_bottiglie_tempera_nuova if r.num_bottiglie_tempera_nuova is defined and r.num_bottiglie_tempera_nuova is not none else (r.num_bottiglie_tempera or 0) }}</span>
                                     </td>
                                     <td><span class="badge bg-light text-dark border">{{ r.misura_piastrina or '-' }}</span></td>
                                     <td class="text-end">
