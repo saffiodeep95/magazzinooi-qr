@@ -165,7 +165,7 @@
             </div>
         </div>
 
-        <!-- Tabella Articoli Magazzino (Con Ubicazione ripristinata) -->
+        <!-- Tabella Articoli Magazzino -->
         <div class="card shadow-sm">
             <div class="card-body p-0">
                 <div class="table-responsive">
@@ -224,7 +224,7 @@
         </div>
     </div>
 
-    <!-- Modale Nuovo Articolo -->
+    <!-- Modale Nuovo Articolo (Con Autocompletamento Ubicazioni) -->
     <div class="modal fade" id="modalNuovoProdotto" tabindex="-1">
         <div class="modal-dialog">
             <div class="modal-content border-0 shadow">
@@ -258,7 +258,12 @@
                         </div>
                         <div class="mb-3">
                             <label class="form-label small fw-bold text-muted">Posizione / Ubicazione in Magazzino</label>
-                            <input type="text" class="form-control" name="posizione" placeholder="Es. Scaffale A3">
+                            <input type="text" class="form-control" name="posizione" list="lista_ubicazioni" placeholder="Es. Scaffale A3 o seleziona esistente...">
+                            <datalist id="lista_ubicazioni">
+                                {% for ub in ubicazioni_disponibili %}
+                                    <option value="{{ ub }}">
+                                {% endfor %}
+                            </datalist>
                         </div>
                         <div class="mb-3">
                             <label class="form-label small fw-bold text-muted">Peso</label>
