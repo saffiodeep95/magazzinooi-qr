@@ -984,7 +984,6 @@ def cambi_serie():
     query = "SELECT * FROM cambi_serie WHERE 1=1"
     params = []
 
-    # Supporto per i forni specifici: Forno 1, Forno 3, Forno 4
     if forno_filtro != "Tutti":
         query += " AND forno = %s"
         params.append(forno_filtro)
@@ -995,17 +994,17 @@ def cambi_serie():
     cur.close()
     conn.close()
 
-    # Filtro della settimana perfezionato con parsing sicuro in memoria
     record_serie = []
     dt_lunedì = None
     dt_domenica = None
 
+    # Parsing super robusto della settimana ISO (es. 2026-W44)
     if settimana_filtro:
         try:
-            match = re.search(r'(\d{4})-W(\d{2})', settimana_filtro)
-            if match:
-                anno = int(match.group(1))
-                settimana = int(match.group(2))
+            parts = settimana_filtro.split('-W')
+            if len(parts) == 2:
+                anno = int(parts[0])
+                settimana = int(parts[1])
                 dt_lunedì = datetime.strptime(f'{anno}-W{settimana:02d}-1', "%Y-W%V-%u").date()
                 dt_domenica = dt_lunedì + timedelta(days=6)
         except Exception as ex:
