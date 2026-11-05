@@ -52,6 +52,18 @@ def crea_notifica(destinatario, titolo, messaggio, link=""):
     except Exception as e:
         print(f"Errore inserimento notifica: {e}")
 
+def parse_data_flessibile(data_str):
+    """Funzione di supporto per convertire qualsiasi formato di data in un oggetto date Python"""
+    if not data_str:
+        return None
+    s = str(data_str).split()[0].strip()
+    for fmt in ('%Y-%m-%d', '%d/%m/%Y', '%d-%m-%Y', '%Y/%m/%d'):
+        try:
+            return datetime.strptime(s, fmt).date()
+        except ValueError:
+            continue
+    return None
+
 def init_db():
     if not DATABASE_URL:
         print("DATABASE_URL non impostata!")
@@ -845,7 +857,6 @@ def agenda():
                 conn.commit()
                 
                 try:
-                    # Invia notifiche a tutti se "Tutti" è selezionato o se la lista è vuota
                     if "Tutti" in utenti_selezionati or not utenti_selezionati:
                         cur.execute("SELECT username FROM utenti WHERE username != %s;", (username_corrente,))
                         altri_utenti = cur.fetchall()
@@ -857,7 +868,6 @@ def agenda():
                                 link="/agenda"
                             )
                     else:
-                        # Invia notifiche solo ai tecnici selezionati
                         for tec in utenti_selezionati:
                             tec_clean = tec.strip()
                             if tec_clean and tec_clean != username_corrente:
@@ -936,7 +946,7 @@ def elimina_agenda(agenda_id):
         flash(f"Errore eliminazione: {e}", "error")
     return redirect(url_for("agenda"))
 
-# --- CAMBI SERIE & API ULTIMA BOTTIGLIA (FILTRO SETTIMANA AGGIORNATO) ---
+# --- CAMBI SERIE & API ULTIMA BOTTIGLIA (FORNI 1, 3, 4 E FILTRO SETTIMANA PERFEZIONATO) ---
 @app.route("/api/ultima_bottiglia/<forno>/<linea>")
 def ultima_bottiglia(forno, linea):
     try:
@@ -966,7 +976,7 @@ def ultima_bottiglia(forno, linea):
 @app.route("/cambi_serie.html", methods=["GET", "POST"])
 def cambi_serie():
     forno_filtro = request.args.get("forno", "Tutti")
-    settimana_filtro = request.args.get("settimana", "")
+    settimana_filtro = request.args.get("settimana", "").strip()
 
     conn = get_db_connection()
     cur = conn.cursor()
@@ -974,31 +984,46 @@ def cambi_serie():
     query = "SELECT * FROM cambi_serie WHERE 1=1"
     params = []
 
+    # Supporto per i forni specifici: Forno 1, Forno 3, Forno 4
     if forno_filtro != "Tutti":
         query += " AND forno = %s"
         params.append(forno_filtro)
-    
-    if settimana_filtro:
-        # Supporto robusto per il formato anno-settimana (es. 2026-W45 o 2026-W05)
-        try:
-            parts = settimana_filtro.split("-W")
-            if len(parts) == 2:
-                anno = int(parts[0])
-                settimana = int(parts[1])
-                # Calcola la data di inizio (lunedì) e fine (domenica) della settimana ISO
-                d = datetime.strptime(f'{anno}-W{settimana}-1', "%Y-W%V-%u")
-                d_fine = d + timedelta(days=6)
-                query += " AND data_cambio::DATE BETWEEN %s AND %s"
-                params.extend([d.strftime('%Y-%m-%d'), d_fine.strftime('%Y-%m-%d')])
-        except Exception as ex:
-            print(f"Errore parsing settimana: {ex}")
 
     query += " ORDER BY data_cambio DESC, id DESC;"
     cur.execute(query, tuple(params))
-    record_serie = cur.fetchall()
-    
+    tutti_record = cur.fetchall()
     cur.close()
     conn.close()
+
+    # Filtro della settimana perfezionato con parsing sicuro in memoria
+    record_serie = []
+    dt_lunedì = None
+    dt_domenica = None
+
+    if settimana_filtro:
+        try:
+            match = re.search(r'(\d{4})-W(\d{2})', settimana_filtro)
+            if match:
+                anno = int(match.group(1))
+                settimana = int(match.group(2))
+                dt_lunedì = datetime.strptime(f'{anno}-W{settimana:02d}-1', "%Y-W%V-%u").date()
+                dt_domenica = dt_lunedì + timedelta(days=6)
+        except Exception as ex:
+            print(f"Errore parsing settimana: {ex}")
+
+    for r in tutti_record:
+        aggiungi = True
+        if settimana_filtro and dt_lunedì and dt_domenica:
+            db_data_val = r.get('data_cambio', '')
+            dt_cambio = parse_data_flessibile(db_data_val)
+            if dt_cambio:
+                if not (dt_lunedì <= dt_cambio <= dt_domenica):
+                    aggiungi = False
+            else:
+                aggiungi = False
+        
+        if aggiungi:
+            record_serie.append(r)
 
     return render_template("cambi_serie.html", 
                            record_serie=record_serie, 
