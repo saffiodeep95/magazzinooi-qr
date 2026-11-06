@@ -1,4 +1,19 @@
-<!DOCTYPE html>
+[14:55, 06/11/2026] Marco Pavan: <!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gestionale OMG - {{ titolo_sezione }}</title>
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- FontAwesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        body { background-color: #f8f9fa; }
+        .card { border: none; border-radius: 10px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); }
+        .table-hover tbody tr:hover { background-color: rgba(13, 110, 253, 0.03); }
+        .badge-user { background-color: #e9ecef; color: #495057; fon…
+[15:07, 06/11/2026] Marco Pavan: <!DOCTYPE html>
 <html lang="it">
 <head>
     <meta charset="UTF-8">
@@ -6,67 +21,29 @@
     <title>Gestionale OMG - Home & Magazzino</title>
     <!-- Bootstrap CSS -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <!-- FontAwesome Icons -->
+    <!-- FontAwesome -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
-        body {
-            background-color: #f8fafc;
-            font-size: 0.92rem;
-        }
-        .navbar {
-            background-color: #0f172a;
-            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-        }
-        .navbar-brand, .nav-link {
-            color: #e2e8f0 !important;
-        }
-        .nav-link:hover {
-            color: #ffffff !important;
-        }
-        .card-counter {
-            border: none;
-            border-radius: 8px;
-            padding: 15px;
-            background-color: #ffffff;
-            box-shadow: 0 1px 3px rgba(0,0,0,0.05);
-            transition: transform 0.15s ease;
-        }
-        .card-counter:hover {
-            transform: translateY(-2px);
-        }
-        .notification-dropdown {
-            width: 300px;
-            max-height: 380px;
-            overflow-y: auto;
-            border-radius: 8px;
-        }
-        .badge-notification {
-            position: absolute;
-            top: 4px;
-            right: 4px;
-            font-size: 0.6rem;
-        }
-        .card {
-            border: none;
-            border-radius: 8px;
-            box-shadow: 0 1px 3px rgba(0,0,0,0.05);
-        }
-        .table th {
-            font-weight: 600;
-            color: #475569;
-            background-color: #f1f5f9 !important;
-        }
+        body { background-color: #f4f6f9; }
+        .navbar { background-color: #1a252f; }
+        .card-dash { border: none; border-radius: 12px; box-shadow: 0 4px 10px rgba(0,0,0,0.04); transition: transform 0.2s; }
+        .card-dash:hover { transform: translateY(-3px); }
+        .table-container { background: #ffffff; border-radius: 12px; box-shadow: 0 4px 10px rgba(0,0,0,0.04); }
+        .badge-notification { position: absolute; top: 4px; right: 4px; font-size: 0.65rem; }
+        .notification-dropdown { width: 320px; max-height: 400px; overflow-y: auto; }
     </style>
 </head>
 <body>
 
-    <!-- NAVBAR PRINCIPALE MINIMAL -->
-    <nav class="navbar navbar-expand-lg navbar-dark mb-3 sticky-top py-2">
+    <!-- NAVBAR RESPONSIVE COMPLETA -->
+    <nav class="navbar navbar-expand-lg navbar-dark mb-4 sticky-top shadow-sm py-2">
         <div class="container-fluid px-3">
-            <a class="navbar-brand fw-bold fs-6" href="{{ url_for('index') }}">
+            <a class="navbar-brand fw-bold fs-6 text-white" href="{{ url_for('index') }}">
                 <i class="fa-solid fa-boxes-stacked me-2 text-primary"></i>Gestionale OMG
             </a>
-            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+            
+            <!-- Pulsante Hamburger per Mobile -->
+            <button class="navbar-toggler border-0 shadow-none" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
                 <span class="navbar-toggler-icon"></span>
             </button>
             
@@ -106,6 +83,12 @@
                     <li class="nav-item">
                         <a class="nav-link" href="{{ url_for('agenda') }}"><i class="fa-solid fa-calendar-days me-1"></i> Agenda</a>
                     </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('omd') }}"><i class="fa-solid fa-screwdriver-wrench me-1"></i> OMD</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('lavori_interni') }}"><i class="fa-solid fa-gears me-1"></i> Lavori Interni</a>
+                    </li>
                     {% if session.get('is_admin') or session.get('puo_gestire_fornitori', 1) %}
                     <li class="nav-item">
                         <a class="nav-link" href="{{ url_for('fornitori') }}"><i class="fa-solid fa-building me-1"></i> Fornitori</a>
@@ -128,14 +111,14 @@
                     {% endif %}
                 </ul>
 
-                <ul class="navbar-nav ms-auto align-items-center">
-                    <!-- NOTIFICHE -->
-                    <li class="nav-item dropdown me-2 position-relative">
-                        <a class="nav-link position-relative px-2" href="#" id="notificheDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
-                            <i class="fa-solid fa-bell"></i>
+                <ul class="navbar-nav ms-auto align-items-lg-center flex-row">
+                    <!-- DROPDOWN NOTIFICHE -->
+                    <li class="nav-item dropdown me-3 position-relative">
+                        <a class="nav-link position-relative px-2 text-white" href="#" id="notificheDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                            <i class="fa-solid fa-bell fs-5"></i>
                             <span class="badge rounded-pill bg-danger badge-notification" id="notificheCount" style="display: none;">0</span>
                         </a>
-                        <div class="dropdown-menu dropdown-menu-end notification-dropdown p-2 shadow-sm" aria-labelledby="notificheDropdown" id="notificheMenu">
+                        <div class="dropdown-menu dropdown-menu-end notification-dropdown p-2 shadow-sm" aria-labelledby="notificheDropdown">
                             <div class="d-flex justify-content-between align-items-center mb-2 pb-2 border-bottom">
                                 <h6 class="m-0 fw-bold fs-6"><i class="fa-solid fa-bell me-1"></i> Notifiche</h6>
                                 <button class="btn btn-sm btn-link text-danger p-0 text-decoration-none small" onclick="eliminaTutteNotifiche()">Elimina lette</button>
@@ -146,9 +129,9 @@
                         </div>
                     </li>
 
-                    <!-- UTENTE E LOGOUT -->
+                    <!-- MENU UTENTE -->
                     <li class="nav-item dropdown">
-                        <a class="nav-link dropdown-toggle fw-semibold small" href="#" id="userDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                        <a class="nav-link dropdown-toggle fw-semibold small text-white" href="#" id="userDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
                             <i class="fa-solid fa-circle-user me-1"></i> {{ session.get('username') }}
                         </a>
                         <ul class="dropdown-menu dropdown-menu-end shadow-sm small" aria-labelledby="userDropdown">
@@ -163,150 +146,183 @@
     </nav>
 
     <!-- CONTENUTO PRINCIPALE -->
-    <div class="container-fluid px-3">
+    <div class="container-fluid px-4 py-2">
 
         <!-- MESSAGGI FLASH -->
         {% with messages = get_flashed_messages(with_categories=true) %}
-          {% if messages %}
-            {% for category, message in messages %}
-              <div class="alert alert-{{ 'danger' if category == 'error' else 'success' }} alert-dismissible fade show py-2 small shadow-sm" role="alert">
-                {{ message }}
-                <button type="button" class="btn-close py-2" data-bs-dismiss="alert" aria-label="Close"></button>
-              </div>
-            {% endfor %}
-          {% endif %}
+            {% if messages %}
+                {% for category, message in messages %}
+                    <div class="alert alert-{{ 'danger' if category == 'error' else 'success' }} alert-dismissible fade show shadow-sm" role="alert">
+                        {{ message }}
+                        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                    </div>
+                {% endfor %}
+            {% endif %}
         {% endwith %}
 
-        <!-- DASHBOARD CONTATORI -->
-        <div class="row g-2 mb-3">
-            <div class="col-md-3">
-                <div class="card-counter border-start border-primary border-3">
+        <!-- DASHBOARD STATISTICHE -->
+        <div class="row g-3 mb-4">
+            <div class="col-6 col-md-3">
+                <div class="card card-dash p-3 border-start border-primary border-4">
                     <div class="d-flex justify-content-between align-items-center">
                         <div>
-                            <span class="text-muted small d-block">Articoli Magazzino</span>
-                            <h4 class="fw-bold mb-0 text-primary">{{ prodotti | length }}</h4>
+                            <div class="text-muted small fw-semibold">Articoli Magazzino</div>
+                            <div class="fs-4 fw-bold text-dark">{{ prodotti|length }}</div>
                         </div>
-                        <i class="fa-solid fa-boxes-stacked fa-xl text-primary opacity-25"></i>
+                        <div class="fs-2 text-primary opacity-50"><i class="fa-solid fa-boxes-stacked"></i></div>
                     </div>
                 </div>
             </div>
-            <div class="col-md-3">
-                <div class="card-counter border-start border-warning border-3">
+
+            <div class="col-6 col-md-3">
+                <div class="card card-dash p-3 border-start border-warning border-4">
                     <div class="d-flex justify-content-between align-items-center">
                         <div>
-                            <span class="text-muted small d-block">Interventi Aperti</span>
-                            <h4 class="fw-bold mb-0 text-warning">{{ interventi_aperti_count }}</h4>
+                            <div class="text-muted small fw-semibold">Interventi Aperti</div>
+                            <div class="fs-4 fw-bold text-dark">{{ interventi_aperti_count }}</div>
                         </div>
-                        <i class="fa-solid fa-screwdriver-wrench fa-xl text-warning opacity-25"></i>
+                        <div class="fs-2 text-warning opacity-50"><i class="fa-solid fa-screwdriver-wrench"></i></div>
                     </div>
                 </div>
             </div>
-            <div class="col-md-3">
-                <div class="card-counter border-start border-info border-3">
+
+            <div class="col-6 col-md-3">
+                <div class="card card-dash p-3 border-start border-info border-4">
                     <div class="d-flex justify-content-between align-items-center">
                         <div>
-                            <span class="text-muted small d-block">In Lavoro / Attesa</span>
-                            <h4 class="fw-bold mb-0 text-info">{{ interventi_in_lavoro_count + interventi_attesa_count }}</h4>
+                            <div class="text-muted small fw-semibold">In Lavoro / Attesa</div>
+                            <div class="fs-4 fw-bold text-dark">{{ interventi_in_lavoro_count + interventi_attesa_count }}</div>
                         </div>
-                        <i class="fa-solid fa-clock-rotate-left fa-xl text-info opacity-25"></i>
+                        <div class="fs-2 text-info opacity-50"><i class="fa-solid fa-spinner"></i></div>
                     </div>
                 </div>
             </div>
-            <div class="col-md-3">
-                <div class="card-counter border-start border-danger border-3">
+
+            <div class="col-6 col-md-3">
+                <div class="card card-dash p-3 border-start border-danger border-4">
                     <div class="d-flex justify-content-between align-items-center">
                         <div>
-                            <span class="text-muted small d-block">Sotto Soglia Minima</span>
-                            <h4 class="fw-bold mb-0 text-danger">{{ prodotti_sotto_soglia | length }}</h4>
+                            <div class="text-muted small fw-semibold">Sotto Soglia Minima</div>
+                            <div class="fs-4 fw-bold text-dark">{{ prodotti_sotto_soglia|length }}</div>
                         </div>
-                        <i class="fa-solid fa-triangle-exclamation fa-xl text-danger opacity-25"></i>
+                        <div class="fs-2 text-danger opacity-50"><i class="fa-solid fa-triangle-exclamation"></i></div>
                     </div>
                 </div>
             </div>
         </div>
 
-        <!-- BARRA AZIONI E RICERCA -->
-        <div class="card mb-3">
-            <div class="card-body py-2 px-3">
-                <div class="row g-2 align-items-center">
-                    <div class="col-md-5">
-                        <input type="text" id="searchInput" class="form-control form-control-sm" placeholder="Cerca articolo, SAP o posizione...">
+        <!-- BARRA STRUMENTI & AZIONI RAPIDE -->
+        <div class="card shadow-sm p-3 mb-4 border-0">
+            <div class="row g-2 align-items-center">
+                <div class="col-12 col-md-5">
+                    <div class="input-group">
+                        <span class="input-group-text bg-white border-end-0"><i class="fa-solid fa-magnifying-glass text-muted"></i></span>
+                        <input type="text" id="searchInput" class="form-control border-start-0 ps-0" placeholder="Cerca articolo, SAP o posizione..." onkeyup="filtraTabella()">
                     </div>
-                    <div class="col-md-7 text-md-end">
-                        {% if session.get('is_admin') or session.get('puo_aggiungere_prodotti', 1) %}
-                        <button class="btn btn-sm btn-success me-1" data-bs-toggle="modal" data-bs-target="#modalNuovoProdotto">
-                            <i class="fa-solid fa-plus me-1"></i> Nuovo
-                        </button>
-                        {% endif %}
-                        {% if session.get('is_admin') or session.get('puo_caricare_scaricare', 1) %}
-                        <a href="{{ url_for('carico') }}" class="btn btn-sm btn-primary me-1"><i class="fa-solid fa-arrow-down me-1"></i> Carico</a>
-                        <a href="{{ url_for('scarico') }}" class="btn btn-sm btn-warning me-1 text-dark"><i class="fa-solid fa-arrow-up me-1"></i> Scarico</a>
-                        {% endif %}
-                        <a href="{{ url_for('scanner_globale') }}" class="btn btn-sm btn-secondary me-1"><i class="fa-solid fa-qrcode me-1"></i> Scanner</a>
-                        <a href="{{ url_for('stampa_multipla_qr') }}" class="btn btn-sm btn-outline-dark" title="Stampa QR Multipli"><i class="fa-solid fa-print me-1"></i> Stampa QR</a>
-                    </div>
+                </div>
+                <div class="col-12 col-md-7 text-md-end d-flex flex-wrap gap-2 justify-content-md-end">
+                    {% if session.get('is_admin') or session.get('puo_aggiungere_prodotti', 1) %}
+                    <button class="btn btn-primary btn-sm px-3 fw-semibold" data-bs-toggle="modal" data-bs-target="#modalAggiungiProdotto">
+                        <i class="fa-solid fa-plus me-1"></i> Nuovo
+                    </button>
+                    {% endif %}
+                    {% if session.get('is_admin') or session.get('puo_caricare_scaricare', 1) %}
+                    <a href="{{ url_for('carico') }}" class="btn btn-success btn-sm px-3 fw-semibold">
+                        <i class="fa-solid fa-arrow-down me-1"></i> Carico
+                    </a>
+                    <a href="{{ url_for('scarico') }}" class="btn btn-warning btn-sm px-3 fw-semibold text-dark">
+                        <i class="fa-solid fa-arrow-up me-1"></i> Scarico
+                    </a>
+                    {% endif %}
+                    <a href="{{ url_for('scanner_globale') }}" class="btn btn-dark btn-sm px-3 fw-semibold">
+                        <i class="fa-solid fa-qrcode me-1"></i> Scanner
+                    </a>
+                    <a href="{{ url_for('stampa_multipla_qr') }}" class="btn btn-outline-secondary btn-sm px-3 fw-semibold">
+                        <i class="fa-solid fa-print me-1"></i> Stampa QR
+                    </a>
                 </div>
             </div>
         </div>
 
-        <!-- TABELLA PRODOTTI MAGAZZINO -->
-        <div class="card mb-4">
-            <div class="card-header bg-white py-2 px-3 border-bottom">
-                <h6 class="m-0 fw-bold text-dark"><i class="fa-solid fa-list me-2 text-secondary"></i> Inventario Magazzino Principale</h6>
+        <!-- TABELLA INVENTARIO MAGAZZINO PRINCIPALE -->
+        <div class="table-container p-3">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <h5 class="fw-bold m-0 text-dark"><i class="fa-solid fa-list me-2 text-primary"></i>Inventario Magazzino Principale</h5>
             </div>
+
             <div class="table-responsive">
-                <table class="table table-hover align-middle mb-0 small" id="prodottiTable">
+                <table class="table table-hover align-middle mb-0" id="tablaProdotti">
                     <thead class="table-light">
                         <tr>
-                            <th class="py-2">QR Code</th>
-                            <th class="py-2">Nome Articolo</th>
-                            <th class="py-2">Codice SAP</th>
-                            <th class="py-2">Posizione / QR Scaffale</th>
-                            <th class="py-2">Giacenza</th>
-                            <th class="py-2">Soglia</th>
-                            <th class="text-end py-2">Azioni</th>
+                            <th>QR Code</th>
+                            <th>Nome Articolo</th>
+                            <th>Codice SAP</th>
+                            <th>Posizione / QR Scaffale</th>
+                            <th class="text-center">Giacenza</th>
+                            <th class="text-center">Soglia</th>
+                            <th class="text-end">Azioni</th>
                         </tr>
                     </thead>
                     <tbody>
-                        {% for p in prodotti %}
-                        <tr class="{{ 'table-danger' if p.quantita <= p.soglia_minima else '' }}">
-                            <td class="fw-bold">{{ p.qr_code }}</td>
-                            <td>{{ p.nome }}</td>
-                            <td>{{ p.sap or '-' }}</td>
-                            <td>
-                                {% if p.posizione %}
-                                    <a href="{{ url_for('qr_scaffale', ubicazione=p.posizione) }}" class="badge bg-secondary text-decoration-none py-1 px-2" title="Genera QR Scaffale per questa ubicazione">
-                                        <i class="fa-solid fa-qrcode me-1"></i> {{ p.posizione }}
-                                    </a>
-                                {% else %}
-                                    <span class="text-muted">N/D</span>
-                                {% endif %}
-                            </td>
-                            <td>
-                                <span class="fw-bold {{ 'text-danger' if p.quantita <= p.soglia_minima else 'text-dark' }}">
-                                    {{ p.quantita }}
-                                </span>
-                            </td>
-                            <td>{{ p.soglia_minima }}</td>
-                            <td class="text-end">
-                                <a href="{{ url_for('gestisci_prodotto', qr_code=p.qr_code) }}" class="btn btn-sm btn-outline-primary py-0 px-2 me-1" title="Gestisci">
-                                    <i class="fa-solid fa-pen-to-square"></i>
-                                </a>
-                                <a href="{{ url_for('stampa_singolo_qr', qr_code=p.qr_code) }}" class="btn btn-sm btn-outline-dark py-0 px-2 me-1" title="Stampa QR">
-                                    <i class="fa-solid fa-qrcode"></i>
-                                </a>
-                                {% if session.get('is_admin') or session.get('puo_eliminare', 0) %}
-                                <form action="{{ url_for('elimina_prodotto', qr_code=p.qr_code) }}" method="POST" class="d-inline" onsubmit="return confirm('Sei sicuro di voler eliminare questo articolo?');">
-                                    <button type="submit" class="btn btn-sm btn-outline-danger py-0 px-2"><i class="fa-solid fa-trash"></i></button>
-                                </form>
-                                {% endif %}
-                            </td>
-                        </tr>
+                        {% if prodotti %}
+                            {% for p in prodotti %}
+                            {% set soglia = p.soglia_minima if p.soglia_minima is not none else 3 %}
+                            <tr class="{% if p.quantita <= soglia %}table-danger{% endif %}">
+                                <td>
+                                    <span class="badge bg-dark font-monospace"><i class="fa-solid fa-qrcode me-1"></i>{{ p.qr_code }}</span>
+                                </td>
+                                <td>
+                                    <strong class="text-dark">{{ p.nome }}</strong>
+                                    {% if p.peso %}
+                                        <div class="text-muted small"><i class="fa-solid fa-weight-scale me-1"></i>{{ p.peso }}</div>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if p.sap %}
+                                        <span class="badge bg-light text-dark border">{{ p.sap }}</span>
+                                    {% else %}
+                                        <span class="text-muted small">-</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if p.posizione %}
+                                        <a href="{{ url_for('qr_scaffale', ubicazione=p.posizione) }}" class="btn btn-xs btn-outline-info text-dark fw-semibold py-0 px-2" style="font-size: 0.85rem;">
+                                            <i class="fa-solid fa-location-dot me-1 text-danger"></i>{{ p.posizione }}
+                                        </a>
+                                    {% else %}
+                                        <span class="text-muted small">-</span>
+                                    {% endif %}
+                                </td>
+                                <td class="text-center">
+                                    <span class="fw-bold fs-6 {% if p.quantita <= soglia %}text-danger{% else %}text-dark{% endif %}">
+                                        {{ p.quantita }}
+                                    </span>
+                                </td>
+                                <td class="text-center">
+                                    <span class="text-muted small">{{ soglia }}</span>
+                                </td>
+                                <td class="text-end">
+                                    <div class="btn-group btn-group-sm">
+                                        <a href="{{ url_for('gestisci_prodotto', qr_code=p.qr_code) }}" class="btn btn-outline-primary" title="Gestisci / Modifica">
+                                            <i class="fa-solid fa-pen-to-square"></i>
+                                        </a>
+                                        <a href="{{ url_for('stampa_singolo_qr', qr_code=p.qr_code) }}" class="btn btn-outline-secondary" title="Stampa QR">
+                                            <i class="fa-solid fa-print"></i>
+                                        </a>
+                                        {% if session.get('is_admin') or session.get('puo_eliminare', 0) %}
+                                        <button class="btn btn-outline-danger" title="Elimina" onclick="confermaEliminazione('{{ p.qr_code }}', '{{ p.nome|replace('\'', '\\\'') }}')">
+                                            <i class="fa-solid fa-trash"></i>
+                                        </button>
+                                        {% endif %}
+                                    </div>
+                                </td>
+                            </tr>
+                            {% endfor %}
                         {% else %}
-                        <tr>
-                            <td colspan="7" class="text-center py-4 text-muted">Nessun articolo presente nel magazzino principale.</td>
-                        </tr>
-                        {% endfor %}
+                            <tr>
+                                <td colspan="7" class="text-center py-4 text-muted">Nessun articolo presente nel magazzino principale.</td>
+                            </tr>
+                        {% endif %}
                     </tbody>
                 </table>
             </div>
@@ -314,58 +330,78 @@
 
     </div>
 
-    <!-- MODALE NUOVO PRODOTTO -->
-    <div class="modal fade" id="modalNuovoProdotto" tabindex="-1" aria-labelledby="modalNuovoProdottoLabel" aria-hidden="true">
-        <div class="modal-dialog">
+    <!-- MODAL AGGIUNGI PRODOTTO -->
+    <div class="modal fade" id="modalAggiungiProdotto" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-lg">
             <div class="modal-content">
                 <form action="{{ url_for('aggiungi_prodotto') }}" method="POST">
-                    <div class="modal-header py-2">
-                        <h6 class="modal-title fw-bold" id="modalNuovoProdottoLabel"><i class="fa-solid fa-box-archive me-2"></i> Aggiungi Nuovo Articolo</h6>
+                    <div class="modal-header">
+                        <h5 class="modal-title fw-bold"><i class="fa-solid fa-plus-circle me-2 text-primary"></i>Aggiungi Nuovo Articolo</h5>
                         <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                     </div>
-                    <div class="modal-body small">
-                        <div class="mb-2">
-                            <label class="form-label fw-bold">Nome Articolo *</label>
-                            <input type="text" name="nome" class="form-control form-control-sm" required placeholder="Es. Cuscinetto SKF 6204">
-                        </div>
-                        <div class="row g-2 mb-2">
+                    <div class="modal-body">
+                        <div class="row g-3">
                             <div class="col-md-6">
-                                <label class="form-label">Codice SAP</label>
-                                <input type="text" name="sap" class="form-control form-control-sm" placeholder="Es. 104592">
+                                <label class="form-label fw-bold">QR Code (Opzionale)</label>
+                                <input type="text" class="form-control" name="qr_code" placeholder="Auto-generato se vuoto (OMG-XXXX)">
                             </div>
                             <div class="col-md-6">
-                                <label class="form-label">QR Code (Opzionale)</label>
-                                <input type="text" name="qr_code" class="form-control form-control-sm" placeholder="Auto-generato">
+                                <label class="form-label fw-bold">Codice SAP</label>
+                                <input type="text" class="form-control" name="sap" placeholder="Codice SAP">
                             </div>
-                        </div>
-                        <div class="row g-2 mb-2">
-                            <div class="col-md-4">
-                                <label class="form-label">Quantità</label>
-                                <input type="number" name="quantita" class="form-control form-control-sm" value="1" min="0">
+                            <div class="col-12">
+                                <label class="form-label fw-bold">Nome Articolo *</label>
+                                <input type="text" class="form-control" name="nome" required placeholder="Es. Riduttore Rossi, Motore...">
                             </div>
                             <div class="col-md-4">
-                                <label class="form-label">Soglia Minima</label>
-                                <input type="number" name="soglia_minima" class="form-control form-control-sm" value="3" min="0">
+                                <label class="form-label fw-bold">Quantità Iniziale</label>
+                                <input type="number" class="form-control" name="quantita" value="0" min="0">
                             </div>
                             <div class="col-md-4">
-                                <label class="form-label">Peso</label>
-                                <input type="text" name="peso" class="form-control form-control-sm" placeholder="Es. 1.2 kg">
+                                <label class="form-label fw-bold">Soglia Minima</label>
+                                <input type="number" class="form-control" name="soglia_minima" value="3" min="0">
                             </div>
-                        </div>
-                        <div class="mb-2">
-                            <label class="form-label">Posizione / Scaffale</label>
-                            <input type="text" name="posizione" class="form-control form-control-sm" placeholder="Es. Corsia 2 - Scaffale B">
-                        </div>
-                        <div class="form-check mb-1">
-                            <input class="form-check-input" type="checkbox" name="magazzino_pesante" id="magazzino_pesante_check">
-                            <label class="form-check-label fw-bold" for="magazzino_pesante_check">
-                                Destina al Magazzino Pesante
-                            </label>
+                            <div class="col-md-4">
+                                <label class="form-label fw-bold">Peso / Specifiche</label>
+                                <input type="text" class="form-control" name="peso" placeholder="Es. 15 kg, 1.5 kW">
+                            </div>
+                            <div class="col-12">
+                                <label class="form-label fw-bold">Posizione / Scaffale</label>
+                                <input type="text" class="form-control" name="posizione" placeholder="Es. M-A1-C1">
+                            </div>
+                            <div class="col-12">
+                                <div class="form-check form-switch mt-2">
+                                    <input class="form-check-input" type="checkbox" name="magazzino_pesante" id="checkPesante" value="1">
+                                    <label class="form-check-label fw-bold" for="checkPesante">Destina a Magazzino Pesante</label>
+                                </div>
+                            </div>
                         </div>
                     </div>
-                    <div class="modal-footer py-2">
-                        <button type="button" class="btn btn-sm btn-secondary" data-bs-dismiss="modal">Annulla</button>
-                        <button type="submit" class="btn btn-sm btn-success"><i class="fa-solid fa-floppy-disk me-1"></i> Salva Articolo</button>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annulla</button>
+                        <button type="submit" class="btn btn-primary"><i class="fa-solid fa-save me-1"></i> Salva Articolo</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL CONFERMA ELIMINAZIONE -->
+    <div class="modal fade" id="modalElimina" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <form action="{{ url_for('elimina_prodotto') }}" method="POST">
+                    <input type="hidden" name="qr_code" id="eliminaQrCode">
+                    <div class="modal-header">
+                        <h5 class="modal-title fw-bold text-danger"><i class="fa-solid fa-triangle-exclamation me-2"></i>Conferma Eliminazione</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body">
+                        Sei sicuro di voler eliminare definitivamente l'articolo <strong id="eliminaNomeArticolo"></strong> dal magazzino?
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annulla</button>
+                        <button type="submit" class="btn btn-danger"><i class="fa-solid fa-trash me-1"></i> Elimina</button>
                     </div>
                 </form>
             </div>
@@ -374,71 +410,65 @@
 
     <!-- Bootstrap JS Bundle -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-    
-    <!-- SCRIPT GESTIONE NOTIFICHE & RICERCA -->
+
+    <!-- SCRIPT GESTIONE TABELLA E NOTIFICHE -->
     <script>
-        // Filtro di ricerca dinamica in tabella
-        document.getElementById('searchInput').addEventListener('keyup', function() {
-            let filter = this.value.toLowerCase();
-            let rows = document.querySelectorAll('#prodottiTable tbody tr');
+        function filtraTabella() {
+            let input = document.getElementById("searchInput").value.toLowerCase();
+            let rows = document.querySelectorAll("#tablaProdotti tbody tr");
+            
             rows.forEach(row => {
                 let text = row.innerText.toLowerCase();
-                row.style.display = text.includes(filter) ? '' : 'none';
+                row.style.display = text.includes(input) ? "" : "none";
             });
-        });
+        }
 
-        // Caricamento Dinamico delle Notifiche
+        function confermaEliminazione(qr, nome) {
+            document.getElementById("eliminaQrCode").value = qr;
+            document.getElementById("eliminaNomeArticolo").innerText = nome;
+            let modal = new bootstrap.Modal(document.getElementById("modalElimina"));
+            modal.show();
+        }
+
         function caricaNotifiche() {
             fetch('/api/notifiche')
-                .then(response => response.json())
+                .then(res => res.json())
                 .then(data => {
-                    const countBadge = document.getElementById('notificheCount');
-                    const listaContainer = document.getElementById('listaNotifiche');
+                    let container = document.getElementById("listaNotifiche");
+                    let badge = document.getElementById("notificheCount");
                     
                     if (!data || data.length === 0) {
-                        countBadge.style.display = 'none';
-                        listaContainer.innerHTML = '<p class="text-muted text-center my-3 small">Nessuna notifica</p>';
+                        container.innerHTML = '<p class="text-muted text-center my-3 small">Nessuna notifica</p>';
+                        badge.style.display = 'none';
                         return;
                     }
-
-                    countBadge.innerText = data.length;
-                    countBadge.style.display = 'inline-block';
-
+                    
+                    badge.innerText = data.length;
+                    badge.style.display = 'inline-block';
+                    
                     let html = '';
                     data.forEach(n => {
-                        let linkAttr = n.link ? href="${n.link}" : 'href="#"';
                         html += `
-                            <a ${linkAttr} class="dropdown-item p-2 border-bottom text-wrap small">
-                                <div class="fw-bold text-dark">${n.titolo}</div>
-                                <div class="text-muted" style="font-size: 0.8rem;">${n.messaggio}</div>
-                            </a>
+                            <div class="p-2 border-bottom small">
+                                <div class="fw-bold text-primary">${n.titolo}</div>
+                                <div>${n.messaggio}</div>
+                                ${n.link ? <a href="${n.link}" class="btn btn-xs btn-link p-0 text-decoration-none">Apri</a> : ''}
+                            </div>
                         `;
                     });
-                    listaContainer.innerHTML = html;
+                    container.innerHTML = html;
                 })
-                .catch(err => console.error("Errore recupero notifiche:", err));
+                .catch(err => console.error(err));
         }
 
-        // Eliminazione delle notifiche al click su "Elimina lette"
         function eliminaTutteNotifiche() {
-            fetch('/api/notifiche/segna_lette', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' }
-            })
-            .then(res => res.json())
-            .then(data => {
-                if (data.status === 'ok') {
-                    document.getElementById('notificheCount').style.display = 'none';
-                    document.getElementById('listaNotifiche').innerHTML = '<p class="text-muted text-center my-3 small">Nessuna notifica</p>';
-                }
-            })
-            .catch(err => console.error("Errore durante l'eliminazione:", err));
+            fetch('/api/notifiche/segna_lette', { method: 'POST' })
+                .then(() => caricaNotifiche());
         }
 
-        // Avvio automatico all'apertura e aggiornamento ogni 15 secondi
-        document.addEventListener('DOMContentLoaded', function() {
+        document.addEventListener("DOMContentLoaded", () => {
             caricaNotifiche();
-            setInterval(caricaNotifiche, 15000);
+            setInterval(caricaNotifiche, 30000);
         });
     </script>
 </body>
