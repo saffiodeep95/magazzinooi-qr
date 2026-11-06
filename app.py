@@ -902,7 +902,7 @@ def cambi_serie():
     query = "SELECT * FROM cambi_serie WHERE 1=1"
     params = []
 
-    if forno_filtro != "Tutti":
+    if forno_filtro and forno_filtro != "Tutti":
         query += " AND forno = %s"
         params.append(forno_filtro)
     
@@ -920,7 +920,8 @@ def cambi_serie():
     return render_template("cambi_serie.html", 
                            record_serie=record_serie, 
                            forno_filtro=forno_filtro, 
-                           settimana_filtro=settimana_filtro)
+                           settimana_filtro=settimana_filtro,
+                           now_date=datetime.now().strftime('%Y-%m-%d'))
 
 @app.route("/aggiungi_cambio_serie", methods=["POST"])
 def aggiungi_cambio_serie():
