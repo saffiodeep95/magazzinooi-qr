@@ -3,385 +3,326 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Gestionale OMG - Cambi Serie</title>
-    <!-- Bootstrap CSS -->
+    <title>Cambi Serie - Gestionale OMG</title>
+    <!-- Bootstrap 5 CSS -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <!-- FontAwesome per le icone -->
+    <!-- FontAwesome Icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    
-    <style>
-        .print-title-container { display: none; }
-
-        @media print {
-            @page { size: landscape; margin: 0.8cm; }
-            .no-print, nav, .btn, form.no-print { display: none !important; }
-            body { background: white !important; color: black !important; font-size: 11pt; }
-            .container, .container-fluid { max-width: 100% !important; width: 100% !important; margin: 0 !important; padding: 0 !important; }
-            .card { border: none !important; box-shadow: none !important; }
-            .table-responsive { overflow: visible !important; display: block !important; }
-            table { width: 100% !important; border-collapse: collapse !important; }
-            th, td { padding: 6px 4px !important; font-size: 10pt !important; }
-            .badge { border: 1px solid #777 !important; color: black !important; background: transparent !important; }
-
-            .print-title-container {
-                display: block !important;
-                text-align: center;
-                margin-bottom: 20px;
-            }
-            .print-title-container h2 {
-                font-size: 20pt !important;
-                font-weight: bold !important;
-                color: #000 !important;
-            }
-        }
-    </style>
 </head>
 <body class="bg-light">
 
-    <!-- Navbar principale -->
-    <nav class="navbar navbar-expand-lg navbar-dark bg-dark shadow-sm no-print">
+    <!-- Navbar -->
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark mb-4">
         <div class="container-fluid">
-            <a class="navbar-brand fw-bold" href="{{ url_for('index') }}"><i class="fa-solid fa-industry me-2"></i>Gestionale OMG</a>
-            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
-                <span class="navbar-toggler-icon"></span>
-            </button>
-            <div class="collapse navbar-collapse" id="navbarNav">
-                <ul class="navbar-nav me-auto">
-                    <li class="nav-item"><a class="nav-link" href="{{ url_for('index') }}"><i class="fa-solid fa-boxes-stacked me-1"></i> Magazzino</a></li>
-                    
-                    {% if session.get('is_admin') or session.get('puo_vedere_pesante', 1) %}
-                    <li class="nav-item"><a class="nav-link" href="{{ url_for('magazzino_pesante') }}"><i class="fa-solid fa-weight-scale me-1"></i> Magazzino Pesante</a></li>
-                    {% endif %}
-
-                    {% if session.get('is_admin') or session.get('puo_vedere_manutenzioni_esterne', 1) %}
-                    <li class="nav-item"><a class="nav-link" href="{{ url_for('manutenzioni') }}"><i class="fa-solid fa-wrench me-1"></i> Manutenzioni Esterne</a></li>
-                    {% endif %}
-
-                    {% if session.get('is_admin') or session.get('puo_vedere_manutenzione', 1) %}
-                    <li class="nav-item">
-                        <a class="nav-link" href="{{ url_for('richieste_manutenzione') }}">
-                            <i class="fa-solid fa-clipboard-list me-1"></i> Officina
-                        </a>
-                    </li>
-                    {% endif %}
-
-                    <li class="nav-item"><a class="nav-link active" href="{{ url_for('cambi_serie') }}"><i class="fa-solid fa-arrows-rotate me-1"></i> Cambi Serie</a></li>
-
-                    {% if session.get('is_admin') or session.get('puo_vedere_promemoria', 1) %}
-                    <li class="nav-item"><a class="nav-link" href="{{ url_for('promemoria') }}"><i class="fa-solid fa-calendar-check me-1"></i> Promemoria</a></li>
-                    {% endif %}
-
-                    {% if session.get('is_admin') or session.get('puo_gestire_fornitori', 1) %}
-                    <li class="nav-item"><a class="nav-link" href="{{ url_for('fornitori') }}"><i class="fa-solid fa-address-book me-1"></i> Fornitori</a></li>
-                    {% endif %}
-
-                    {% if session.get('is_admin') or session.get('puo_gestire_documenti', 1) %}
-                    <li class="nav-item"><a class="nav-link" href="{{ url_for('documenti') }}"><i class="fa-solid fa-folder-open me-1"></i> Documenti</a></li>
-                    {% endif %}
-
-                    {% if session.get('is_admin') or session.get('puo_vedere_report_ore', 1) %}
-                    <li class="nav-item"><a class="nav-link" href="{{ url_for('report_ore') }}"><i class="fa-solid fa-chart-pie me-1"></i> Report Ore</a></li>
-                    {% endif %}
-
-                    {% if session.get('is_admin') %}
-                    <li class="nav-item"><a class="nav-link" href="{{ url_for('admin_utenti') }}"><i class="fa-solid fa-users-gear me-1"></i> Admin</a></li>
-                    {% endif %}
-                </ul>
-
-                <!-- Profilo Utente -->
-                <ul class="navbar-nav ms-auto">
-                    <li class="nav-item dropdown">
-                        <a class="nav-link dropdown-toggle text-light" href="#" role="button" data-bs-toggle="dropdown">
-                            <i class="fa-solid fa-user-circle me-1"></i> {{ session.get('username', 'Utente') }}
-                        </a>
-                        <ul class="dropdown-menu dropdown-menu-end">
-                            <li><a class="dropdown-item text-danger" href="{{ url_for('logout') }}"><i class="fa-solid fa-right-from-bracket me-1"></i> Logout</a></li>
-                        </ul>
-                    </li>
-                </ul>
+            <a class="navbar-brand" href="{{ url_for('index') }}"><i class="fa-solid fa-industry me-2"></i>Gestionale OMG</a>
+            <div class="d-flex">
+                <a href="{{ url_for('index') }}" class="btn btn-outline-light btn-sm"><i class="fa-solid fa-house me-1"></i>Home</a>
             </div>
         </div>
     </nav>
 
-    <!-- Contenuto principale -->
-    <div class="container my-4">
-
-        <!-- INTESTAZIONE SOLO PER LA STAMPA -->
-        <div class="print-title-container">
-            <h2>Cambi Serie {% if settimana_filtro %}- Settimana {{ settimana_filtro }}{% else %}- Storico Generale{% endif %}</h2>
-            {% if forno_filtro != 'Tutti' %}<h5 class="text-secondary">Filtro: {{ forno_filtro }}</h5>{% endif %}
-        </div>
-
+    <div class="container-fluid px-4">
+        
+        <!-- Flash Messages -->
         {% with messages = get_flashed_messages(with_categories=true) %}
-            {% if messages %}
-                {% for category, message in messages %}
-                    <div class="alert alert-{{ 'danger' if category == 'error' else 'success' }} alert-dismissible fade show no-print" role="alert">
-                        {{ message }}
-                        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-                    </div>
-                {% endfor %}
-            {% endif %}
+        {% if messages %}
+            {% for category, message in messages %}
+                <div class="alert alert-{{ 'danger' if category == 'error' else 'success' }} alert-dismissible fade show" role="alert">
+                    {{ message }}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                </div>
+            {% endfor %}
+        {% endif %}
         {% endwith %}
 
-        <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
-            <h2><i class="fa-solid fa-arrows-rotate me-2 text-primary"></i>Programmazione Cambi Serie</h2>
-            <div class="d-flex gap-2 no-print">
-                <a href="{{ url_for('esporta_cambi_serie_csv') }}" class="btn btn-outline-success">
-                    <i class="fa-solid fa-file-excel me-1"></i> Esporta CSV
-                </a>
-                <button onclick="window.print()" class="btn btn-outline-dark">
-                    <i class="fa-solid fa-print me-1"></i> Stampa
-                </button>
-                <button class="btn btn-dark" data-bs-toggle="modal" data-bs-target="#modalNuovoCambio">
-                    <i class="fa-solid fa-plus me-1"></i> Registra Nuovo Cambio
-                </button>
-            </div>
-        </div>
-
-        <!-- FILTRI -->
-        <div class="card shadow-sm mb-4 no-print border-primary">
-            <div class="card-body bg-white">
-                <form method="GET" action="{{ url_for('cambi_serie') }}" class="row g-3 align-items-end">
-                    <div class="col-md-4">
-                        <label class="form-label fw-bold">Filtra per Forno</label>
-                        <select name="forno" class="form-select">
-                            <option value="Tutti" {% if forno_filtro == 'Tutti' %}selected{% endif %}>Tutti i Forni</option>
-                            <option value="Forno 1" {% if forno_filtro == 'Forno 1' %}selected{% endif %}>Forno 1</option>
-                            <option value="Forno 3" {% if forno_filtro == 'Forno 3' %}selected{% endif %}>Forno 3</option>
-                            <option value="Forno 4" {% if forno_filtro == 'Forno 4' %}selected{% endif %}>Forno 4</option>
-                        </select>
-                    </div>
-                    <div class="col-md-4">
-                        <label class="form-label fw-bold">Filtra per Settimana</label>
-                        <input type="week" name="settimana" class="form-control" value="{{ settimana_filtro }}">
-                    </div>
-                    <div class="col-md-4 d-flex gap-2">
-                        <button type="submit" class="btn btn-primary flex-fill">
-                            <i class="fa-solid fa-filter me-1"></i> Filtra
-                        </button>
-                        <a href="{{ url_for('cambi_serie') }}" class="btn btn-outline-secondary" title="Reset">
-                            <i class="fa-solid fa-rotate-left"></i>
-                        </a>
-                    </div>
-                </form>
-            </div>
-        </div>
-
-        <!-- TABELLA -->
-        <div class="card shadow-sm">
-            <div class="card-header bg-dark text-white d-flex justify-content-between align-items-center py-3 no-print">
-                <h5 class="mb-0"><i class="fa-solid fa-table-list me-2"></i>Elenco Cambi Serie</h5>
-                <span class="badge bg-secondary fs-6">{{ record_serie|length }} programmazioni</span>
-            </div>
-            <div class="card-body">
-                <div class="table-responsive">
-                    <table class="table table-hover align-middle">
-                        <thead class="table-light">
-                            <tr>
-                                <th>Data Cambio</th>
-                                <th>Forno / Linea</th>
-                                <th>Smontante / Montante</th>
-                                <th>Tempo Cambio</th>
-                                <th>N° Bottiglie Tempera (V / N)</th>
-                                <th>Misura Piastrina (Uscente / Entrante)</th>
-                                <th class="no-print text-end">Azioni</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {% for r in record_serie %}
-                            <tr>
-                                <td><span class="badge bg-primary fs-6 font-monospace">{{ r.data_cambio or '-' }}</span></td>
-                                <td>
-                                    <span class="fw-bold text-dark">{{ r.forno }}</span><br>
-                                    <span class="badge bg-secondary font-monospace">Linea {{ r.linea or '-' }}</span>
-                                </td>
-                                <td>
-                                    <div class="small text-muted"><i class="fa-solid fa-arrow-right-from-bracket me-1"></i>{{ r.bottiglia_precedente or r.nome_bottiglia or '-' }}</div>
-                                    <div class="fw-bold text-primary fs-6"><i class="fa-solid fa-arrow-right-to-bracket me-1"></i>{{ r.bottiglia_nuova or r.nome_bottiglia or '-' }}</div>
-                                </td>
-                                <td><span class="badge bg-secondary fs-6">{{ r.tempo_cambio or '-' }}</span></td>
-                                <td>
-                                    <span class="badge bg-secondary fs-6">{{ r.num_bottiglie_tempera_vecchia or 0 }} pz</span>
-                                    <i class="fa-solid fa-arrow-right mx-1 text-muted"></i>
-                                    <span class="badge bg-info text-dark fs-6">{{ r.num_bottiglie_tempera_nuova if r.num_bottiglie_tempera_nuova is not none else (r.num_bottiglie_tempera or 0) }} pz</span>
-                                </td>
-                                <td>
-                                    <span class="small text-muted">{{ r.misura_piastrina_vecchia or r.misura_piastrina or '-' }}</span>
-                                    <i class="fa-solid fa-arrow-right mx-1 text-muted"></i>
-                                    <span class="fw-bold text-primary">{{ r.misura_piastrina_nuova or r.misura_piastrina or '-' }}</span>
-                                </td>
-                                <td class="no-print text-end">
-                                    <form action="{{ url_for('elimina_cambio_serie', id_cambio=r.id) }}" method="POST" onsubmit="return confirm('Eliminare questo cambio serie?');" class="d-inline">
-                                        <button type="submit" class="btn btn-sm btn-outline-danger" title="Elimina"><i class="fa-solid fa-trash-can"></i></button>
-                                    </form>
-                                </td>
-                            </tr>
-                            {% else %}
-                            <tr>
-                                <td colspan="7" class="text-center text-muted py-4">Nessun cambio serie trovato.</td>
-                            </tr>
-                            {% endfor %}
-                        </tbody>
-                    </table>
+        <div class="row mb-4">
+            <div class="col-12 d-flex justify-content-between align-items-center">
+                <h2><i class="fa-solid fa-right-left me-2"></i>Gestione Cambi Serie</h2>
+                <div>
+                    <a href="{{ url_for('esporta_cambi_serie_csv') }}" class="btn btn-success btn-sm">
+                        <i class="fa-solid fa-file-excel me-1"></i>Esporta CSV
+                    </a>
                 </div>
             </div>
         </div>
-    </div>
 
-    <!-- MODALE NUOVO CAMBIO -->
-    <div class="modal fade" id="modalNuovoCambio" tabindex="-1">
-        <div class="modal-dialog modal-lg">
-            <div class="modal-content">
-                <form action="{{ url_for('aggiungi_cambio_serie') }}" method="POST">
-                    <div class="modal-header bg-dark text-white">
-                        <h5 class="modal-title"><i class="fa-solid fa-plus-circle me-1"></i> Nuovo Cambio Serie</h5>
-                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+        <div class="row">
+            <!-- COLONNA SINISTRA: NUOVO CAMBIO SERIE -->
+            <div class="col-lg-4 mb-4">
+                <div class="card shadow-sm">
+                    <div class="card-header bg-primary text-white">
+                        <h5 class="mb-0"><i class="fa-solid fa-plus-circle me-2"></i>Nuovo Cambio Serie</h5>
                     </div>
-                    <div class="modal-body">
-                        <div class="row">
-                            <div class="col-md-6 mb-3">
-                                <label class="form-label fw-bold">Seleziona Forno *</label>
-                                <select class="form-select" name="forno" id="selectForno" onchange="gestisciCambioForno()" required>
+                    <div class="card-body">
+                        <form method="POST" action="{{ url_for('aggiungi_cambio_serie') }}" id="formNuovoCambio">
+                            
+                            <div class="mb-3">
+                                <label class="form-label fw-bold">Forno *</label>
+                                <select name="forno" id="fornoSelect" class="form-select" required onchange="aggiornaUltimaBottiglia()">
+                                    <option value="">Seleziona Forno...</option>
                                     <option value="Forno 1">Forno 1</option>
+                                    <option value="Forno 2">Forno 2</option>
                                     <option value="Forno 3">Forno 3</option>
                                     <option value="Forno 4">Forno 4</option>
                                 </select>
                             </div>
-                            <div class="col-md-6 mb-3">
-                                <label class="form-label fw-bold">Linea / Macchina *</label>
-                                <select class="form-select" name="linea" id="selectLinea" onchange="caricaDatiPrecedenti()" required></select>
-                            </div>
-                        </div>
 
-                        <div class="mb-3">
-                            <label class="form-label fw-bold">Data Effettiva Cambio Serie *</label>
-                            <input type="date" class="form-control" name="data_cambio" required>
-                        </div>
-
-                        <div class="row">
-                            <div class="col-md-6 mb-3">
-                                <label class="form-label fw-bold text-secondary">Bottiglia Smontante (Autocompilata)</label>
-                                <input type="text" class="form-control bg-light" name="bottiglia_precedente" id="bottiglia_precedente" readonly placeholder="-">
+                            <div class="mb-3">
+                                <label class="form-label fw-bold">Linea *</label>
+                                <select name="linea" id="lineaSelect" class="form-select" required onchange="aggiornaUltimaBottiglia()">
+                                    <option value="">Seleziona Linea...</option>
+                                    <option value="1">Linea 1</option>
+                                    <option value="2">Linea 2</option>
+                                    <option value="3">Linea 3</option>
+                                    <option value="4">Linea 4</option>
+                                    <option value="5">Linea 5</option>
+                                    <option value="6">Linea 6</option>
+                                </select>
                             </div>
-                            <div class="col-md-6 mb-3">
-                                <label class="form-label fw-bold text-primary">Bottiglia Montante *</label>
-                                <input type="text" class="form-control" name="bottiglia_nuova" placeholder="Es. Bordolese 75cl..." required>
-                            </div>
-                        </div>
 
-                        <div class="row">
-                            <div class="col-md-12 mb-3">
+                            <div class="mb-3">
+                                <label class="form-label fw-bold">Data Cambio *</label>
+                                <input type="date" name="data_cambio" class="form-control" required value="{{ now_date }}">
+                            </div>
+
+                            <div class="mb-3">
+                                <label class="form-label">Bottiglia Smontante (Precedente)</label>
+                                <input type="text" name="bottiglia_precedente" id="bottigliaPrecedenteInput" class="form-control" placeholder="Compilata in automatico o manuale">
+                            </div>
+
+                            <div class="mb-3">
+                                <label class="form-label fw-bold">Bottiglia Montante (Nuova) *</label>
+                                <input type="text" name="bottiglia_nuova" class="form-control" required placeholder="Nome o codice nuova bottiglia">
+                            </div>
+
+                            <div class="mb-3">
                                 <label class="form-label">Tempo Cambio</label>
-                                <input type="text" class="form-control" name="tempo_cambio" placeholder="Es. 45 min">
+                                <div class="input-group">
+                                    <input type="text" name="tempo_cambio" class="form-control" placeholder="Es. 45">
+                                    <span class="input-group-text">minuti</span>
+                                </div>
                             </div>
-                        </div>
 
-                        <div class="row">
-                            <div class="col-md-6 mb-3">
-                                <label class="form-label text-secondary">N° Bottiglie Tempera (Precedente - Autocompilata)</label>
-                                <input type="number" class="form-control bg-light" name="num_bottiglie_tempera_vecchia" id="num_bottiglie_tempera_vecchia" readonly value="0">
+                            <div class="mb-3">
+                                <label class="form-label">N° Bottiglie Tempera (Smontata)</label>
+                                <input type="number" name="num_bottiglie_tempera_vecchia" id="temperaVecchiaInput" class="form-control" value="0">
                             </div>
-                            <div class="col-md-6 mb-3">
-                                <label class="form-label text-primary">N° Bottiglie Tempera (Montante)</label>
-                                <input type="number" class="form-control" name="num_bottiglie_tempera_nuova" value="0" min="0">
-                            </div>
-                        </div>
 
-                        <div class="row">
-                            <div class="col-md-6 mb-3">
-                                <label class="form-label text-secondary">Misura Piastrina Uscente (Autocompilata)</label>
-                                <input type="text" class="form-control bg-light" name="misura_piastrina_vecchia" id="misura_piastrina_vecchia" readonly placeholder="-">
+                            <div class="mb-3">
+                                <label class="form-label">N° Bottiglie Tempera (Montata)</label>
+                                <input type="number" name="num_bottiglie_tempera_nuova" class="form-control" value="0">
                             </div>
-                            <div class="col-md-6 mb-3">
-                                <label class="form-label text-primary">Misura Piastrina Entrante *</label>
-                                <input type="text" class="form-control" name="misura_piastrina_nuova" placeholder="Es. 150x80 mm..." required>
+
+                            <div class="mb-3">
+                                <label class="form-label">Misura Piastrina</label>
+                                <input type="text" name="misura_piastrina" id="misuraPiastrinaInput" class="form-control" placeholder="Es. 12mm">
                             </div>
-                        </div>
+
+                            <button type="submit" class="btn btn-primary w-100">
+                                <i class="fa-solid fa-save me-1"></i>Registra Cambio Serie
+                            </button>
+                        </form>
                     </div>
-                    <div class="modal-footer">
-                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annulla</button>
-                        <button type="submit" class="btn btn-primary">Registra Cambio Serie</button>
+                </div>
+            </div>
+
+            <!-- COLONNA DESTRA: FILTRI E TABELLA STORICO -->
+            <div class="col-lg-8">
+                <div class="card shadow-sm mb-4">
+                    <div class="card-body">
+                        <form method="GET" action="{{ url_for('cambi_serie') }}" class="row g-3 align-items-end">
+                            <div class="col-md-4">
+                                <label class="form-label">Filtra per Forno</label>
+                                <select name="forno" class="form-select">
+                                    <option value="Tutti" {% if forno_filtro == 'Tutti' %}selected{% endif %}>Tutti i Forni</option>
+                                    <option value="Forno 1" {% if forno_filtro == 'Forno 1' %}selected{% endif %}>Forno 1</option>
+                                    <option value="Forno 2" {% if forno_filtro == 'Forno 2' %}selected{% endif %}>Forno 2</option>
+                                    <option value="Forno 3" {% if forno_filtro == 'Forno 3' %}selected{% endif %}>Forno 3</option>
+                                    <option value="Forno 4" {% if forno_filtro == 'Forno 4' %}selected{% endif %}>Forno 4</option>
+                                </select>
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label">Filtra per Settimana</label>
+                                <input type="week" name="settimana" class="form-control" value="{{ settimana_filtro }}">
+                            </div>
+                            <div class="col-md-4 d-flex gap-2">
+                                <button type="submit" class="btn btn-dark w-100">
+                                    <i class="fa-solid fa-filter me-1"></i>Filtra
+                                </button>
+                                <a href="{{ url_for('cambi_serie') }}" class="btn btn-outline-secondary" title="Reset filtri">
+                                    <i class="fa-solid fa-rotate-right"></i>
+                                </a>
+                            </div>
+                        </form>
                     </div>
-                </form>
+                </div>
+
+                <div class="card shadow-sm">
+                    <div class="card-header bg-dark text-white">
+                        <h5 class="mb-0"><i class="fa-solid fa-list me-2"></i>Storico Cambi Serie Registrati</h5>
+                    </div>
+                    <div class="card-body">
+                        {% if record_serie %}
+                            <div class="table-responsive">
+                                <table class="table table-hover align-middle">
+                                    <thead class="table-light">
+                                        <tr>
+                                            <th>Data</th>
+                                            <th>Forno / Linea</th>
+                                            <th>Bottiglie (Smont. / Mont.)</th>
+                                            <th>Tempo</th>
+                                            <th>Tempera (V / N)</th>
+                                            <th>Piastrina</th>
+                                            <th class="text-end">Azioni</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% for r in record_serie %}
+                                        <tr>
+                                            <td>{{ r.data_cambio }}</td>
+                                            <td>
+                                                <span class="badge bg-secondary">{{ r.forno }}</span>
+                                                <span class="badge bg-info text-dark">Linea {{ r.linea }}</span>
+                                            </td>
+                                            <td>
+                                                <small class="text-muted d-block">Smont: <strong>{{ r.bottiglia_precedente if r.bottiglia_precedente else (r.nome_bottiglia if r.nome_bottiglia else '-') }}</strong></small>
+                                                <small class="text-success d-block">Mont: <strong>{{ r.bottiglia_nuova if r.bottiglia_nuova else '-' }}</strong></small>
+                                            </td>
+                                            <td>
+                                                {% set tc = r.tempo_cambio | string | trim %}
+                                                {% if tc %}
+                                                    {% if 'min' in tc.lower() or 'or' in tc.lower() or 'h' in tc.lower() %}
+                                                        {{ tc }}
+                                                    {% else %}
+                                                        {{ tc }} minuti
+                                                    {% endif %}
+                                                {% else %}
+                                                    -
+                                                {% endif %}
+                                            </td>
+                                            <td>
+                                                <small class="text-muted">V: {{ r.num_bottiglie_tempera_vecchia if r.num_bottiglie_tempera_vecchia is not none else '0' }}</small><br>
+                                                <small class="text-dark fw-bold">N: {{ r.num_bottiglie_tempera_nuova if r.num_bottiglie_tempera_nuova is not none else (r.num_bottiglie_tempera if r.num_bottiglie_tempera is not none else '0') }}</small>
+                                            </td>
+                                            <td>{{ r.misura_piastrina if r.misura_piastrina else '-' }}</td>
+                                            <td class="text-end">
+                                                <!-- Pulsante Modifica -->
+                                                <button class="btn btn-sm btn-outline-primary" data-bs-toggle="modal" data-bs-target="#modaleModifica{{ r.id }}" title="Modifica">
+                                                    <i class="fa-solid fa-pen"></i>
+                                                </button>
+                                                <!-- Pulsante Elimina -->
+                                                <form action="{{ url_for('elimina_cambio_serie', id_cambio=r.id) }}" method="POST" class="d-inline" onsubmit="return confirm('Eliminare questo record di cambio serie?');">
+                                                    <button type="submit" class="btn btn-sm btn-outline-danger" title="Elimina">
+                                                        <i class="fa-solid fa-trash"></i>
+                                                    </button>
+                                                </form>
+                                            </td>
+                                        </tr>
+
+                                        <!-- MODALE DI MODIFICA PER OGNI RECORD -->
+                                        <div class="modal fade" id="modaleModifica{{ r.id }}" tabindex="-1" aria-hidden="true">
+                                            <div class="modal-dialog">
+                                                <div class="modal-content">
+                                                    <form action="{{ url_for('modifica_cambio_serie', id_cambio=r.id) }}" method="POST">
+                                                        <div class="modal-header bg-primary text-white">
+                                                            <h5 class="modal-title"><i class="fa-solid fa-pen-to-square me-2"></i>Modifica Cambio Serie</h5>
+                                                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                                                        </div>
+                                                        <div class="modal-body text-start">
+                                                            <div class="mb-3">
+                                                                <label class="form-label fw-bold">Forno</label>
+                                                                <select name="forno" class="form-select" required>
+                                                                    <option value="Forno 1" {% if r.forno == 'Forno 1' %}selected{% endif %}>Forno 1</option>
+                                                                    <option value="Forno 2" {% if r.forno == 'Forno 2' %}selected{% endif %}>Forno 2</option>
+                                                                    <option value="Forno 3" {% if r.forno == 'Forno 3' %}selected{% endif %}>Forno 3</option>
+                                                                    <option value="Forno 4" {% if r.forno == 'Forno 4' %}selected{% endif %}>Forno 4</option>
+                                                                </select>
+                                                            </div>
+                                                            <div class="mb-3">
+                                                                <label class="form-label fw-bold">Linea</label>
+                                                                <select name="linea" class="form-select" required>
+                                                                    {% for l in range(1, 7) %}
+                                                                    <option value="{{ l }}" {% if r.linea|string == l|string %}selected{% endif %}>Linea {{ l }}</option>
+                                                                    {% endfor %}
+                                                                </select>
+                                                            </div>
+                                                            <div class="mb-3">
+                                                                <label class="form-label fw-bold">Data Cambio</label>
+                                                                <input type="date" name="data_cambio" class="form-control" required value="{{ r.data_cambio }}">
+                                                            </div>
+                                                            <div class="mb-3">
+                                                                <label class="form-label">Bottiglia Smontante</label>
+                                                                <input type="text" name="bottiglia_precedente" class="form-control" value="{{ r.bottiglia_precedente if r.bottiglia_precedente else (r.nome_bottiglia if r.nome_bottiglia else '') }}">
+                                                            </div>
+                                                            <div class="mb-3">
+                                                                <label class="form-label fw-bold">Bottiglia Montante</label>
+                                                                <input type="text" name="bottiglia_nuova" class="form-control" required value="{{ r.bottiglia_nuova }}">
+                                                            </div>
+                                                            <div class="mb-3">
+                                                                <label class="form-label">Tempo Cambio</label>
+                                                                <div class="input-group">
+                                                                    <input type="text" name="tempo_cambio" class="form-control" value="{{ r.tempo_cambio }}">
+                                                                    <span class="input-group-text">minuti</span>
+                                                                </div>
+                                                            </div>
+                                                            <div class="mb-3">
+                                                                <label class="form-label">N° Bottiglie Tempera (Smontata)</label>
+                                                                <input type="number" name="num_bottiglie_tempera_vecchia" class="form-control" value="{{ r.num_bottiglie_tempera_vecchia if r.num_bottiglie_tempera_vecchia is not none else 0 }}">
+                                                            </div>
+                                                            <div class="mb-3">
+                                                                <label class="form-label">N° Bottiglie Tempera (Montata)</label>
+                                                                <input type="number" name="num_bottiglie_tempera_nuova" class="form-control" value="{{ r.num_bottiglie_tempera_nuova if r.num_bottiglie_tempera_nuova is not none else (r.num_bottiglie_tempera if r.num_bottiglie_tempera is not none else 0) }}">
+                                                            </div>
+                                                            <div class="mb-3">
+                                                                <label class="form-label">Misura Piastrina</label>
+                                                                <input type="text" name="misura_piastrina" class="form-control" value="{{ r.misura_piastrina }}">
+                                                            </div>
+                                                        </div>
+                                                        <div class="modal-footer">
+                                                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annulla</button>
+                                                            <button type="submit" class="btn btn-primary">Salva Modifiche</button>
+                                                        </div>
+                                                    </form>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
+                        {% else %}
+                            <div class="text-center py-4 text-muted">
+                                <i class="fa-solid fa-folder-open fa-3x mb-3"></i>
+                                <p>Nessun cambio serie registrato con i filtri selezionati.</p>
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
             </div>
         </div>
+
     </div>
 
-    <!-- Bootstrap JS -->
+    <!-- Bootstrap 5 JS & Script per auto-compilazione ultima bottiglia -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script>
-    const lineePerForno = {
-        "Forno 1": ["1", "2", "3", "11", "12", "13"],
-        "Forno 3": ["1", "2", "3", "4", "31", "32", "33", "34"],
-        "Forno 4": ["1", "2", "41", "42"]
-    };
-
-    function aggiornaLineeModal() {
-        const selectForno = document.getElementById("selectForno");
-        const selectLinea = document.getElementById("selectLinea");
-        
-        if (!selectForno || !selectLinea) return;
-
-        const forno = selectForno.value;
-        selectLinea.innerHTML = "";
-        
-        const linee = lineePerForno[forno] || [];
-        for (let i = 0; i < linee.length; i++) {
-            const opt = document.createElement("option");
-            opt.value = linee[i];
-            opt.textContent = "Linea " + linee[i];
-            selectLinea.appendChild(opt);
+        function aggiornaUltimaBottiglia() {
+            const forno = document.getElementById('fornoSelect').value;
+            const linea = document.getElementById('lineaSelect').value;
+            
+            if (forno && linea) {
+                fetch(/api/ultima_bottiglia/${forno}/${linea})
+                    .then(response => response.json())
+                    .then(data => {
+                        document.getElementById('bottigliaPrecedenteInput').value = data.bottiglia || '';
+                        document.getElementById('temperaVecchiaInput').value = data.tempera || 0;
+                        if (data.misura_piastrina) {
+                            document.getElementById('misuraPiastrinaInput').value = data.misura_piastrina;
+                        }
+                    })
+                    .catch(err => console.error("Errore recupero ultima bottiglia:", err));
+            }
         }
-    }
-
-    function gestisciCambioForno() {
-        aggiornaLineeModal();
-        caricaDatiPrecedenti();
-    }
-
-    function caricaDatiPrecedenti() {
-        const selectForno = document.getElementById("selectForno");
-        const selectLinea = document.getElementById("selectLinea");
-        
-        const inputSmontante = document.getElementById("bottiglia_precedente");
-        const inputTemperaVecchia = document.getElementById("num_bottiglie_tempera_vecchia");
-        const inputPiastrinaVecchia = document.getElementById("misura_piastrina_vecchia");
-
-        if (!selectForno || !selectLinea || !selectLinea.value) return;
-
-        const forno = selectForno.value;
-        const linea = selectLinea.value;
-
-        if (inputSmontante) inputSmontante.value = "Caricamento...";
-
-        try {
-            fetch('/api/ultima_bottiglia/' + encodeURIComponent(forno) + '/' + encodeURIComponent(linea))
-                .then(function(res) { return res.json(); })
-                .then(function(data) {
-                    if (inputSmontante) inputSmontante.value = data.bottiglia || "Nessuna precedente";
-                    if (inputTemperaVecchia) inputTemperaVecchia.value = data.tempera || 0;
-                    if (inputPiastrinaVecchia) inputPiastrinaVecchia.value = data.misura_piastrina || "-";
-                })
-                .catch(function(err) {
-                    console.error("Errore recupero API:", err);
-                    if (inputSmontante) inputSmontante.value = "-";
-                    if (inputTemperaVecchia) inputTemperaVecchia.value = 0;
-                    if (inputPiastrinaVecchia) inputPiastrinaVecchia.value = "-";
-                });
-        } catch (e) {
-            console.error("Eccezione durante la richiesta:", e);
-        }
-    }
-
-    document.addEventListener("DOMContentLoaded", function() {
-        const modalNuovoCambio = document.getElementById('modalNuovoCambio');
-        if (modalNuovoCambio) {
-            modalNuovoCambio.addEventListener('shown.bs.modal', function () {
-                gestisciCambioForno();
-            });
-        }
-        try { gestisciCambioForno(); } catch(e){}
-    });
     </script>
 </body>
 </html>
