@@ -1967,6 +1967,21 @@ def elimina_file(file_id):
         return redirect(url_for("documenti", cartella_id=cartella_id))
     return redirect(url_for("documenti"))
 
+# --- ROTTA QR SCAFFALE ---
+@app.route("/qr_scaffale", methods=["GET"])
+@app.route("/qr_scaffale.html", methods=["GET"])
+def qr_scaffale():
+    ubicazione = request.args.get("ubicazione", "")
+    conn = get_db_connection()
+    cur = conn.cursor()
+    prodotti = []
+    if ubicazione:
+        cur.execute("SELECT * FROM prodotti WHERE posizione ILIKE %s ORDER BY nome ASC;", (f"%{ubicazione}%",))
+        prodotti = cur.fetchall()
+    cur.close()
+    conn.close()
+    return render_template("qr_scaffale.html", prodotti=prodotti, ubicazione=ubicazione)
+
 # --- ALTRE ROTTE GESTIONALE E ESPORTAZIONI CSV ---
 @app.route("/esportazioni")
 @app.route("/esportazioni.html")
