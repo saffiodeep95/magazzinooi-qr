@@ -369,15 +369,19 @@ def api_notifiche():
 @app.route("/api/notifiche/segna_lette", methods=["POST"])
 def api_segna_lette():
     username = session.get('username')
-    if username:
+    if not username:
+        return jsonify({"status": "error", "message": "Utente non autenticato"}), 401
+    try:
         conn = get_db_connection()
         cur = conn.cursor()
-        # Elimina definitivamente le notifiche dal database quando si clicca su "Elimina lette"
         cur.execute("DELETE FROM notifiche WHERE destinatario = %s;", (username,))
         conn.commit()
         cur.close()
         conn.close()
-    return jsonify({"status": "ok"})
+        return jsonify({"status": "ok"})
+    except Exception as e:
+        print(f"Errore eliminazione notifiche: {e}")
+        return jsonify({"status": "error", "message": str(e)}), 500
 
 @app.route("/")
 @app.route("/index")
