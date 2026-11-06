@@ -27,7 +27,7 @@
             <div class="collapse navbar-collapse" id="navbarNav">
                 <ul class="navbar-nav ms-auto">
                     <li class="nav-item"><a class="nav-link" href="{{ url_for('index') }}">Home</a></li>
-                    <li class="nav-item"><a class="nav-link active" href="{{ url_for('agenda') }}">Agenda & Sezioni</a></li>
+                    <li class="nav-item"><a class="nav-link active" href="{{ url_for('agenda') }}">Agenda</a></li>
                     <li class="nav-item"><a class="nav-link text-danger" href="{{ url_for('logout') }}"><i class="fa-solid fa-right-from-bracket"></i> Esci</a></li>
                 </ul>
             </div>
@@ -53,30 +53,30 @@
                 <h2 class="fw-bold text-primary"><i class="fa-solid fa-calendar-days me-2"></i>{{ titolo_sezione }}</h2>
             </div>
             <div class="col-auto">
-                <button type="button" class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#modalNuovaAttivita">
-                    <i class="fa-solid fa-plus me-1"></i> Nuova
+                <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#modalNuovaAttivita">
+                    <i class="fa-solid fa-plus me-1"></i> Nuova Attività
                 </button>
             </div>
         </div>
 
-        <!-- LINGUETTE NAVIGAZIONE FUNZIONANTI -->
-        <div class="row g-2 mb-4">
-            <div class="col-4">
-                <a href="{{ url_for('agenda', sezione='agenda') }}" class="btn w-100 {% if sezione_corrente == 'agenda' %}btn-primary{% else %}btn-outline-primary{% endif %} py-2 fw-semibold shadow-sm">
-                    <i class="fa-solid fa-calendar-days d-block mb-1"></i> Agenda
+        <!-- LINGUETTE CLASSICHE ORIGINALI -->
+        <ul class="nav nav-pills mb-4">
+            <li class="nav-item me-2">
+                <a class="nav-link {% if sezione_corrente == 'agenda' %}active{% endif %}" href="{{ url_for('agenda', sezione='agenda') }}">
+                    <i class="fa-solid fa-calendar-days me-1"></i> Agenda
                 </a>
-            </div>
-            <div class="col-4">
-                <a href="{{ url_for('agenda', sezione='omd') }}" class="btn w-100 {% if sezione_corrente == 'omd' %}btn-primary{% else %}btn-outline-primary{% endif %} py-2 fw-semibold shadow-sm">
-                    <i class="fa-solid fa-screwdriver-wrench d-block mb-1"></i> OMD
+            </li>
+            <li class="nav-item me-2">
+                <a class="nav-link {% if sezione_corrente == 'omd' %}active{% endif %}" href="{{ url_for('agenda', sezione='omd') }}">
+                    <i class="fa-solid fa-screwdriver-wrench me-1"></i> OMD
                 </a>
-            </div>
-            <div class="col-4">
-                <a href="{{ url_for('agenda', sezione='lavori_interni') }}" class="btn w-100 {% if sezione_corrente == 'lavori_interni' %}btn-primary{% else %}btn-outline-primary{% endif %} py-2 fw-semibold shadow-sm">
-                    <i class="fa-solid fa-gears d-block mb-1"></i> Lavori Int.
+            </li>
+            <li class="nav-item">
+                <a class="nav-link {% if sezione_corrente == 'lavori_interni' %}active{% endif %}" href="{{ url_for('agenda', sezione='lavori_interni') }}">
+                    <i class="fa-solid fa-gears me-1"></i> Lavori Interni
                 </a>
-            </div>
-        </div>
+            </li>
+        </ul>
 
         <!-- Tabella Attività -->
         <div class="card shadow-sm">
