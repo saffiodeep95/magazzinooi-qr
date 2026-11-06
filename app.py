@@ -498,6 +498,18 @@ def registra():
                 flash("Username già esistente o errore di registrazione.", "error")
     return render_template("registra.html")
 
+# --- ROTTA QR SCAFFALE (AGGIUNTA PER RISOLVERE IL BUILDERROR) ---
+@app.route("/qr_scaffale/<ubicazione>")
+@app.route("/qr_scaffale.html/<ubicazione>")
+def qr_scaffale(ubicazione):
+    conn = get_db_connection()
+    cur = conn.cursor()
+    cur.execute("SELECT * FROM prodotti WHERE posizione = %s ORDER BY nome ASC;", (ubicazione,))
+    prodotti = cur.fetchall()
+    cur.close()
+    conn.close()
+    return render_template("qr_scaffale.html", ubicazione=ubicazione, prodotti=prodotti)
+
 # --- PANNELLO PERMESSI ADMIN & LOGS ---
 @app.route("/admin_utenti")
 @app.route("/admin_utenti.html")
