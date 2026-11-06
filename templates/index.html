@@ -20,7 +20,7 @@
 </head>
 <body>
 
-    <!-- NAVBAR RESPONSIVE CON SFONDO SCURO CORRETTO -->
+    <!-- NAVBAR ORIGINALE RIPRISTINATA (Senza OMD/Lavori Interni nel menu principale) -->
     <nav class="navbar navbar-expand-lg navbar-dark bg-dark mb-4 sticky-top shadow-sm py-2">
         <div class="container-fluid px-3">
             <a class="navbar-brand fw-bold fs-6 text-white" href="{{ url_for('index') }}">
@@ -67,12 +67,6 @@
                     {% endif %}
                     <li class="nav-item">
                         <a class="nav-link text-white-50" href="{{ url_for('agenda') }}"><i class="fa-solid fa-calendar-days me-1"></i> Agenda</a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link text-white-50" href="{{ url_for('omd') }}"><i class="fa-solid fa-screwdriver-wrench me-1"></i> OMD</a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link text-white-50" href="{{ url_for('lavori_interni') }}"><i class="fa-solid fa-gears me-1"></i> Lavori Interni</a>
                     </li>
                     {% if session.get('is_admin') or session.get('puo_gestire_fornitori', 1) %}
                     <li class="nav-item">
