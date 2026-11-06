@@ -283,11 +283,14 @@ def init_db():
                 data_scadenza VARCHAR(50),
                 nome_azienda VARCHAR(255),
                 utenti_visibili VARCHAR(255) DEFAULT 'Tutti',
+                sezione VARCHAR(50) DEFAULT 'agenda',
                 creato_da VARCHAR(255),
                 creato_il TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             );
         """)
         
+        cur.execute("ALTER TABLE agenda ADD COLUMN IF NOT EXISTS sezione VARCHAR(50) DEFAULT 'agenda';")
+
         colonne_cambi_serie = [
             ("bottiglia_precedente", "VARCHAR(255)"),
             ("bottiglia_nuova", "VARCHAR(255)"),
@@ -763,9 +766,23 @@ def stampa_nastri():
     conn.close()
     return render_template("stampa_nastri.html", nastri=lista, sezione=sezione)
 
+# SEZIONI AGENDA, OMD E LAVORI INTERNI
 @app.route("/agenda", methods=["GET", "POST"])
 @app.route("/agenda.html", methods=["GET", "POST"])
 def agenda():
+    return gestisci_sezioni_agenda("agenda", "Agenda")
+
+@app.route("/omd", methods=["GET", "POST"])
+@app.route("/omd.html", methods=["GET", "POST"])
+def omd():
+    return gestisci_sezioni_agenda("omd", "OMD")
+
+@app.route("/lavori_interni", methods=["GET", "POST"])
+@app.route("/lavori_interni.html", methods=["GET", "POST"])
+def lavori_interni():
+    return gestisci_sezioni_agenda("lavori_interni", "Lavori Interni")
+
+def gestisci_sezioni_agenda(codice_sezione, titolo_sezione):
     if not session.get('username'):
         return redirect(url_for('login'))
     
@@ -786,9 +803,9 @@ def agenda():
         
         if titolo:
             cur.execute("""
-                INSERT INTO agenda (titolo, descrizione, data_scadenza, nome_azienda, utenti_visibili, creato_da)
-                VALUES (%s, %s, %s, %s, %s, %s);
-            """, (titolo, descrizione, data_scadenza, nome_azienda, utenti_visibili, username_corrente))
+                INSERT INTO agenda (titolo, descrizione, data_scadenza, nome_azienda, utenti_visibili, sezione, creato_da)
+                VALUES (%s, %s, %s, %s, %s, %s, %s);
+            """, (titolo, descrizione, data_scadenza, nome_azienda, utenti_visibili, codice_sezione, username_corrente))
             conn.commit()
             
             if "Tutti" not in utenti_selezionati:
@@ -797,23 +814,23 @@ def agenda():
                     if tec_clean and tec_clean != username_corrente:
                         crea_notifica(
                             destinatario=tec_clean,
-                            titolo="📅 Nuova Attività in Agenda",
-                            messaggio=f"Ti è stata assegnata un'attività: {titolo}",
-                            link="/agenda"
+                            titolo=f"📅 Nuova Attività ({titolo_sezione})",
+                            messaggio=f"Ti è stata assegnata un'attività in {titolo_sezione}: {titolo}",
+                            link=f"/{codice_sezione}"
                         )
             
-            registra_log(f"Creata attività in agenda: {titolo}")
-            flash("Attività aggiunta in agenda con successo!", "success")
-        return redirect(url_for("agenda"))
+            registra_log(f"Creata attività in {titolo_sezione}: {titolo}")
+            flash(f"Attività aggiunta in {titolo_sezione} con successo!", "success")
+        return redirect(url_for(codice_sezione))
 
     if is_admin:
-        cur.execute("SELECT * FROM agenda ORDER BY data_scadenza ASC NULLS LAST, id DESC;")
+        cur.execute("SELECT * FROM agenda WHERE sezione = %s ORDER BY data_scadenza ASC NULLS LAST, id DESC;", (codice_sezione,))
     else:
         cur.execute("""
             SELECT * FROM agenda 
-            WHERE utenti_visibili LIKE %s OR utenti_visibili = 'Tutti' OR utenti_visibili = ''
+            WHERE sezione = %s AND (utenti_visibili LIKE %s OR utenti_visibili = 'Tutti' OR utenti_visibili = '')
             ORDER BY data_scadenza ASC NULLS LAST, id DESC;
-        """, (f"%{username_corrente}%",))
+        """, (codice_sezione, f"%{username_corrente}%"))
     
     attivita = cur.fetchall()
 
@@ -826,22 +843,32 @@ def agenda():
     cur.close()
     conn.close()
     
-    return render_template("agenda.html", attivita=attivita, utenti=utenti, fornitori=fornitori)
+    return render_template("agenda.html", 
+                           attivita=attivita, 
+                           utenti=utenti, 
+                           fornitori=fornitori, 
+                           titolo_sezione=titolo_sezione, 
+                           codice_sezione=codice_sezione)
 
 @app.route("/completa_agenda/<int:agenda_id>", methods=["POST"])
 def completa_agenda(agenda_id):
     try:
         conn = get_db_connection()
         cur = conn.cursor()
+        cur.execute("SELECT sezione FROM agenda WHERE id = %s;", (agenda_id,))
+        res = cur.fetchone()
+        sezione = res['sezione'] if res else 'agenda'
+        
         cur.execute("DELETE FROM agenda WHERE id = %s;", (agenda_id,))
         conn.commit()
         cur.close()
         conn.close()
-        registra_log(f"Completata ed eliminata attività agenda ID {agenda_id}")
-        flash("Attività completata e rimossa dall'agenda.", "success")
+        registra_log(f"Completata ed eliminata attività ID {agenda_id}")
+        flash("Attività completata e rimossa.", "success")
+        return redirect(url_for(sezione))
     except Exception as e:
         flash(f"Errore completamento attività: {e}", "error")
-    return redirect(url_for("agenda"))
+        return redirect(url_for('agenda'))
 
 @app.route("/elimina_agenda/<int:agenda_id>", methods=["POST"])
 def elimina_agenda(agenda_id):
@@ -851,15 +878,20 @@ def elimina_agenda(agenda_id):
     try:
         conn = get_db_connection()
         cur = conn.cursor()
+        cur.execute("SELECT sezione FROM agenda WHERE id = %s;", (agenda_id,))
+        res = cur.fetchone()
+        sezione = res['sezione'] if res else 'agenda'
+        
         cur.execute("DELETE FROM agenda WHERE id = %s;", (agenda_id,))
         conn.commit()
         cur.close()
         conn.close()
-        registra_log(f"Eliminata attività agenda ID {agenda_id}")
+        registra_log(f"Eliminata attività ID {agenda_id}")
         flash("Attività eliminata con successo.", "success")
+        return redirect(url_for(sezione))
     except Exception as e:
         flash(f"Errore eliminazione: {e}", "error")
-    return redirect(url_for("agenda"))
+        return redirect(url_for("agenda"))
 
 @app.route("/api/ultima_bottiglia/<forno>/<linea>")
 def ultima_bottiglia(forno, linea):
@@ -2341,7 +2373,6 @@ def scanner_globale():
             conn = get_db_connection()
             cur = conn.cursor()
             
-            # 1. Controlla se è un articolo
             cur.execute("SELECT * FROM prodotti WHERE qr_code = %s;", (codice,))
             prodotto = cur.fetchone()
             
@@ -2350,7 +2381,6 @@ def scanner_globale():
                 conn.close()
                 return redirect(url_for("gestisci_prodotto", qr_code=codice))
             
-            # 2. Controlla se è l'ubicazione di uno scaffale
             cur.execute("SELECT DISTINCT posizione FROM prodotti WHERE posizione ILIKE %s;", (f"%{codice}%",))
             pos_trovata = cur.fetchone()
             
