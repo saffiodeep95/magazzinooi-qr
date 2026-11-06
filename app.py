@@ -870,7 +870,7 @@ def elimina_agenda(agenda_id):
         flash(f"Errore eliminazione: {e}", "error")
     return redirect(url_for("agenda"))
 
-# --- CAMBI SERIE & API ULTIMA BOTTIGLIA (ORDINAMENTO CRESCENTE ASC + FILTRO SETTIMANA CORRETTO) ---
+# --- CAMBI SERIE & API ULTIMA BOTTIGLIA (ORDINAMENTO CRESCENTE ASC + FILTRO SETTIMANA RIPRISTINATO) ---
 @app.route("/api/ultima_bottiglia/<forno>/<linea>")
 def ultima_bottiglia(forno, linea):
     try:
@@ -902,7 +902,7 @@ def ultima_bottiglia(forno, linea):
 @app.route("/cambi_serie.html", methods=["GET", "POST"])
 def cambi_serie():
     forno_filtro = request.args.get("forno", "Tutti")
-    settimana_filtro = request.args.get("settimana", "").strip()
+    settimana_filtro = request.args.get("settimana", "")
 
     conn = get_db_connection()
     cur = conn.cursor()
@@ -914,20 +914,11 @@ def cambi_serie():
         query += " AND forno = %s"
         params.append(forno_filtro)
     
-    # Filtro settimana robusto per input HTML week (es. 2026-W45)
-    if settimana_filtro and "-W" in settimana_filtro:
-        try:
-            anno_str, sett_str = settimana_filtro.split("-W")
-            anno = int(anno_str)
-            settimana = int(sett_str)
-            lunedi = datetime.strptime(f"{anno}-W{settimana:02d}-1", "%Y-W%W-%w").date()
-            domenica = lunedi + timedelta(days=6)
-            
-            query += " AND data_cambio >= %s AND data_cambio <= %s"
-            params.append(lunedi.strftime("%Y-%m-%d"))
-            params.append(domenica.strftime("%Y-%m-%d"))
-        except Exception as e:
-            print(f"Errore parsing settimana: {e}")
+    if settimana_filtro:
+        # Pulisce la 'W' inviata dall'input HTML week (es. 2026-W45 -> 2026-45)
+        settimana_pulita = settimana_filtro.replace("W", "")
+        query += " AND TO_CHAR(data_cambio::DATE, 'IYYY-IW') = %s"
+        params.append(settimana_pulita)
 
     query += " ORDER BY data_cambio ASC, id ASC;"
     cur.execute(query, tuple(params))
