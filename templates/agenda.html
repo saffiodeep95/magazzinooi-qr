@@ -59,20 +59,20 @@
             </div>
         </div>
 
-        <!-- LINGUETTE NAVIGAZIONE OTTIMIZZATE ANCHE PER CELLULARE -->
+        <!-- LINGUETTE NAVIGAZIONE FUNZIONANTI -->
         <div class="row g-2 mb-4">
             <div class="col-4">
-                <a class="btn w-100 {% if sezione_corrente == 'agenda' %}btn-primary{% else %}btn-outline-primary{% endif %} py-2 fw-semibold shadow-sm" href="{{ url_for('agenda', sezione='agenda') }}">
+                <a href="{{ url_for('agenda', sezione='agenda') }}" class="btn w-100 {% if sezione_corrente == 'agenda' %}btn-primary{% else %}btn-outline-primary{% endif %} py-2 fw-semibold shadow-sm">
                     <i class="fa-solid fa-calendar-days d-block mb-1"></i> Agenda
                 </a>
             </div>
             <div class="col-4">
-                <a class="btn w-100 {% if sezione_corrente == 'omd' %}btn-primary{% else %}btn-outline-primary{% endif %} py-2 fw-semibold shadow-sm" href="{{ url_for('agenda', sezione='omd') }}">
+                <a href="{{ url_for('agenda', sezione='omd') }}" class="btn w-100 {% if sezione_corrente == 'omd' %}btn-primary{% else %}btn-outline-primary{% endif %} py-2 fw-semibold shadow-sm">
                     <i class="fa-solid fa-screwdriver-wrench d-block mb-1"></i> OMD
                 </a>
             </div>
             <div class="col-4">
-                <a class="btn w-100 {% if sezione_corrente == 'lavori_interni' %}btn-primary{% else %}btn-outline-primary{% endif %} py-2 fw-semibold shadow-sm" href="{{ url_for('agenda', sezione='lavori_interni') }}">
+                <a href="{{ url_for('agenda', sezione='lavori_interni') }}" class="btn w-100 {% if sezione_corrente == 'lavori_interni' %}btn-primary{% else %}btn-outline-primary{% endif %} py-2 fw-semibold shadow-sm">
                     <i class="fa-solid fa-gears d-block mb-1"></i> Lavori Int.
                 </a>
             </div>
