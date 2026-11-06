@@ -27,9 +27,7 @@
             <div class="collapse navbar-collapse" id="navbarNav">
                 <ul class="navbar-nav ms-auto">
                     <li class="nav-item"><a class="nav-link" href="{{ url_for('index') }}">Home</a></li>
-                    <li class="nav-item"><a class="nav-link {% if codice_sezione == 'agenda' %}active{% endif %}" href="{{ url_for('agenda') }}">Agenda</a></li>
-                    <li class="nav-item"><a class="nav-link {% if codice_sezione == 'omd' %}active{% endif %}" href="{{ url_for('omd') }}">OMD</a></li>
-                    <li class="nav-item"><a class="nav-link {% if codice_sezione == 'lavori_interni' %}active{% endif %}" href="{{ url_for('lavori_interni') }}">Lavori Interni</a></li>
+                    <li class="nav-item"><a class="nav-link active" href="{{ url_for('agenda') }}">Agenda & Sezioni</a></li>
                     <li class="nav-item"><a class="nav-link text-danger" href="{{ url_for('logout') }}"><i class="fa-solid fa-right-from-bracket"></i> Esci</a></li>
                 </ul>
             </div>
@@ -49,15 +47,34 @@
             {% endif %}
         {% endwith %}
 
-        <div class="row mb-4 align-items-center">
+        <!-- INTESTAZIONE -->
+        <div class="row mb-3 align-items-center">
             <div class="col">
                 <h2 class="fw-bold text-primary"><i class="fa-solid fa-calendar-days me-2"></i>{{ titolo_sezione }}</h2>
-                <p class="text-muted">Gestione e pianificazione attività per la sezione {{ titolo_sezione }}.</p>
             </div>
             <div class="col-auto">
-                <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#modalNuovaAttivita">
-                    <i class="fa-solid fa-plus me-1"></i> Nuova Attività
+                <button type="button" class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#modalNuovaAttivita">
+                    <i class="fa-solid fa-plus me-1"></i> Nuova
                 </button>
+            </div>
+        </div>
+
+        <!-- LINGUETTE NAVIGAZIONE OTTIMIZZATE ANCHE PER CELLULARE -->
+        <div class="row g-2 mb-4">
+            <div class="col-4">
+                <a class="btn w-100 {% if sezione_corrente == 'agenda' %}btn-primary{% else %}btn-outline-primary{% endif %} py-2 fw-semibold shadow-sm" href="{{ url_for('agenda', sezione='agenda') }}">
+                    <i class="fa-solid fa-calendar-days d-block mb-1"></i> Agenda
+                </a>
+            </div>
+            <div class="col-4">
+                <a class="btn w-100 {% if sezione_corrente == 'omd' %}btn-primary{% else %}btn-outline-primary{% endif %} py-2 fw-semibold shadow-sm" href="{{ url_for('agenda', sezione='omd') }}">
+                    <i class="fa-solid fa-screwdriver-wrench d-block mb-1"></i> OMD
+                </a>
+            </div>
+            <div class="col-4">
+                <a class="btn w-100 {% if sezione_corrente == 'lavori_interni' %}btn-primary{% else %}btn-outline-primary{% endif %} py-2 fw-semibold shadow-sm" href="{{ url_for('agenda', sezione='lavori_interni') }}">
+                    <i class="fa-solid fa-gears d-block mb-1"></i> Lavori Int.
+                </a>
             </div>
         </div>
 
@@ -111,7 +128,6 @@
                                     </td>
                                     <td><small class="text-muted">{{ item.creato_da or '-' }}</small></td>
                                     <td class="text-end">
-                                        <!-- Pulsante Completa / Elimina -->
                                         <form action="{{ url_for('completa_agenda', agenda_id=item.id) }}" method="POST" class="d-inline">
                                             <button type="submit" class="btn btn-sm btn-outline-success" title="Completata (Rimuovi)"><i class="fa-solid fa-check"></i></button>
                                         </form>
@@ -125,7 +141,7 @@
                                 {% endfor %}
                             {% else %}
                                 <tr>
-                                    <td colspan="6" class="text-center py-4 text-muted">Nessuna attività presente in {{ titolo_sezione }}.</td>
+                                    <td colspan="6" class="text-center py-4 text-muted">Nessuna attività presente in questa sezione.</td>
                                 </tr>
                             {% endif %}
                         </tbody>
@@ -139,7 +155,9 @@
     <div class="modal fade" id="modalNuovaAttivita" tabindex="-1" aria-hidden="true">
         <div class="modal-dialog modal-lg">
             <div class="modal-content">
-                <form action="{{ url_for(codice_sezione) }}" method="POST">
+                <form action="{{ url_for('agenda') }}" method="POST">
+                    <input type="hidden" name="sezione_target" value="{{ sezione_corrente }}">
+                    
                     <div class="modal-header">
                         <h5 class="modal-title"><i class="fa-solid fa-plus-circle me-2"></i>Nuova Attività - {{ titolo_sezione }}</h5>
                         <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
@@ -183,7 +201,6 @@
                                     </div>
                                 {% endfor %}
                             </div>
-                            <div class="form-text">Se non selezioni utenti specifici (o lasci "Tutti"), l'attività sarà visibile a chiunque.</div>
                         </div>
                     </div>
                     <div class="modal-footer">
