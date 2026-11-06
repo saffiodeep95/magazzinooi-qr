@@ -372,7 +372,8 @@ def api_segna_lette():
     if username:
         conn = get_db_connection()
         cur = conn.cursor()
-        cur.execute("UPDATE notifiche SET letta = TRUE WHERE destinatario = %s;", (username,))
+        # Modifica richiesta: elimina definitivamente le notifiche dal database
+        cur.execute("DELETE FROM notifiche WHERE destinatario = %s;", (username,))
         conn.commit()
         cur.close()
         conn.close()
@@ -509,7 +510,6 @@ def qr_scaffale(ubicazione):
     conn.close()
     return render_template("qr_scaffale.html", ubicazione=ubicazione, prodotti=prodotti)
 
-# --- PANNELLO PERMESSI ADMIN & LOGS ---
 @app.route("/admin_utenti")
 @app.route("/admin_utenti.html")
 def admin_utenti():
@@ -603,7 +603,6 @@ def elimina_utente(user_id):
         flash(f"Errore eliminazione utente: {e}", "error")
     return redirect(url_for('admin_utenti'))
 
-# --- GESTIONE NASTRI E TAPPETI ---
 @app.route("/nastri", methods=["GET", "POST"])
 @app.route("/nastri.html", methods=["GET", "POST"])
 def nastri():
@@ -771,7 +770,6 @@ def stampa_nastri():
     conn.close()
     return render_template("stampa_nastri.html", nastri=lista, sezione=sezione)
 
-# --- PANNELLO AGENDA ---
 @app.route("/agenda", methods=["GET", "POST"])
 @app.route("/agenda.html", methods=["GET", "POST"])
 def agenda():
@@ -870,7 +868,6 @@ def elimina_agenda(agenda_id):
         flash(f"Errore eliminazione: {e}", "error")
     return redirect(url_for("agenda"))
 
-# --- CAMBI SERIE & API ULTIMA BOTTIGLIA (ORDINAMENTO CRESCENTE ASC + FILTRO SETTIMANA RIPRISTINATO) ---
 @app.route("/api/ultima_bottiglia/<forno>/<linea>")
 def ultima_bottiglia(forno, linea):
     try:
@@ -941,7 +938,7 @@ def aggiungi_cambio_serie():
     tempo_cambio = request.form.get("tempo_cambio", "")
     num_bottiglie_tempera_vecchia = int(request.form.get("num_bottiglie_tempera_vecchia", 0) or 0)
     num_bottiglie_tempera_nuova = int(request.form.get("num_bottiglie_tempera_nuova", 0) or 0)
-    misura_piastrina = request.form.get("misura_piastrina", "").strip()
+    misura_piastrina_nuova = request.form.get("misura_piastrina_nuova", "").strip()
 
     try:
         conn = get_db_connection()
@@ -949,7 +946,7 @@ def aggiungi_cambio_serie():
         cur.execute("""
             INSERT INTO cambi_serie (forno, linea, data_cambio, bottiglia_precedente, bottiglia_nuova, nome_bottiglia, tempo_cambio, num_bottiglie_tempera_vecchia, num_bottiglie_tempera_nuova, num_bottiglie_tempera, misura_piastrina)
             VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s);
-        """, (forno, linea, data_cambio, bottiglia_precedente, bottiglia_nuova, bottiglia_nuova, tempo_cambio, num_bottiglie_tempera_vecchia, num_bottiglie_tempera_nuova, num_bottiglie_tempera_nuova, misura_piastrina))
+        """, (forno, linea, data_cambio, bottiglia_precedente, bottiglia_nuova, bottiglia_nuova, tempo_cambio, num_bottiglie_tempera_vecchia, num_bottiglie_tempera_nuova, num_bottiglie_tempera_nuova, misura_piastrina_nuova))
         
         conn.commit()
         cur.close()
@@ -972,7 +969,7 @@ def modifica_cambio_serie(id_cambio):
     tempo_cambio = request.form.get("tempo_cambio", "")
     num_bottiglie_tempera_vecchia = int(request.form.get("num_bottiglie_tempera_vecchia", 0) or 0)
     num_bottiglie_tempera_nuova = int(request.form.get("num_bottiglie_tempera_nuova", 0) or 0)
-    misura_piastrina = request.form.get("misura_piastrina", "").strip()
+    misura_piastrina_nuova = request.form.get("misura_piastrina_nuova", "").strip()
 
     try:
         conn = get_db_connection()
@@ -981,7 +978,7 @@ def modifica_cambio_serie(id_cambio):
             UPDATE cambi_serie 
             SET forno = %s, linea = %s, data_cambio = %s, bottiglia_precedente = %s, bottiglia_nuova = %s, nome_bottiglia = %s, tempo_cambio = %s, num_bottiglie_tempera_vecchia = %s, num_bottiglie_tempera_nuova = %s, num_bottiglie_tempera = %s, misura_piastrina = %s
             WHERE id = %s;
-        """, (forno, linea, data_cambio, bottiglia_precedente, bottiglia_nuova, bottiglia_nuova, tempo_cambio, num_bottiglie_tempera_vecchia, num_bottiglie_tempera_nuova, num_bottiglie_tempera_nuova, misura_piastrina, id_cambio))
+        """, (forno, linea, data_cambio, bottiglia_precedente, bottiglia_nuova, bottiglia_nuova, tempo_cambio, num_bottiglie_tempera_vecchia, num_bottiglie_tempera_nuova, num_bottiglie_tempera_nuova, misura_piastrina_nuova, id_cambio))
         
         conn.commit()
         cur.close()
@@ -1039,7 +1036,6 @@ def esporta_cambi_serie_csv():
         headers={"Content-disposition": "attachment; filename=Cambi_Serie_OMG.csv"}
     )
 
-# --- MODULO: REPORT ORE & STATISTICHE MANUTENZIONI ---
 @app.route("/report_ore")
 @app.route("/report_ore.html")
 def report_ore():
@@ -1139,7 +1135,6 @@ def report_ore():
                            chart_tipi_labels=chart_tipi_labels,
                            chart_tipi_values=chart_tipi_values)
 
-# --- RICHIESTE INTERVENTO MANUTENZIONE OFFICINA ---
 @app.route("/richieste_manutenzione", methods=["GET", "POST"])
 @app.route("/richieste_manutenzione.html", methods=["GET", "POST"])
 def richieste_manutenzione():
@@ -1406,7 +1401,6 @@ def elimina_intervento(intervento_id):
     flash("Intervento eliminato.", "success")
     return redirect(url_for("richieste_manutenzione"))
 
-# --- GESTIONE PROMEMORIA (CON RICORRENZA 6 MESI INTEGRATA) ---
 @app.route("/promemoria", methods=["GET", "POST"])
 @app.route("/promemoria.html", methods=["GET", "POST"])
 def promemoria():
@@ -1544,7 +1538,6 @@ def elimina_promemoria(promemoria_id):
     flash("Promemoria eliminato.", "success")
     return redirect(url_for("promemoria"))
 
-# --- GESTIONE FORNITORI E CONTATTI ---
 @app.route("/fornitori", methods=["GET", "POST"])
 @app.route("/fornitori.html", methods=["GET", "POST"])
 def fornitori():
@@ -1698,146 +1691,6 @@ def elimina_fornitore(fornitore_id):
     flash("Fornitore eliminato con successo.", "success")
     return redirect(url_for("fornitori"))
 
-@app.route("/importa_intelligente", methods=["GET", "POST"])
-def importa_intelligente():
-    if request.method == "GET":
-        return redirect(url_for("fornitori"))
-        
-    if not (session.get('is_admin') or session.get('puo_importare_fornitori', 1)):
-        flash("Permesso negato per l'importazione.", "error")
-        return redirect(url_for("fornitori"))
-
-    file_caricato = request.files.get("file_caricato")
-    if not file_caricato or file_caricato.filename == '':
-        flash("Nessun file selezionato.", "error")
-        return redirect(url_for("fornitori"))
-    filename = file_caricato.filename.lower()
-    try:
-        if filename.endswith(('.xlsx', '.xls')):
-            df = pd.read_excel(file_caricato)
-        elif filename.endswith(('.csv', '.txt')):
-            try:
-                stream = io.TextIOWrapper(file_caricato.stream, encoding="utf-8-sig")
-                df = pd.read_csv(stream)
-            except UnicodeDecodeError:
-                file_caricato.stream.seek(0)
-                stream = io.TextIOWrapper(file_caricato.stream, encoding="latin-1")
-                df = pd.read_csv(stream)
-        else:
-            flash("Formato file non supportato.", "error")
-            return redirect(url_for("fornitori"))
-        
-        conn = get_db_connection()
-        cur = conn.cursor()
-        count_fornitori = 0
-        count_tecnici = 0
-        current_fornitore_id = None
-        
-        for _, row in df.iterrows():
-            valori = [str(val).strip() for val in row.values if pd.notna(val) and str(val).strip() != 'nan']
-            if not valori:
-                continue
-            col1_raw = valori[0] if len(valori) > 0 else ''
-            has_double_space = bool(re.search(r'\s{2,}', col1_raw))
-            words = col1_raw.split()
-            first_word = words[0] if words else ''
-            
-            is_company = False
-            if has_double_space:
-                is_company = True
-            elif first_word.isupper() and len(first_word) > 1 and not any(c.islower() for c in first_word):
-                is_company = True
-            elif current_fornitore_id is None:
-                is_company = True
-
-            if is_company:
-                if has_double_space:
-                    parts = re.split(r'\s{2,}', col1_raw, maxsplit=1)
-                    nome_azienda = parts[0].strip()
-                    settore = parts[1].strip() if len(parts) > 1 else (valori[1] if len(valori) > 1 else '')
-                else:
-                    nome_azienda = col1_raw
-                    settore = valori[1] if len(valori) > 1 else ''
-                indirizzo = valori[2] if len(valori) > 2 else ''
-                telefono = next((v for v in valori if re.search(r'\d{3}', v) and not '@' in v), '')
-                email = next((v for v in valori if '@' in v), '')
-                
-                cur.execute("SELECT id FROM fornitori WHERE LOWER(nome_azienda) = LOWER(%s);", (nome_azienda,))
-                f_res = cur.fetchone()
-                if f_res:
-                    current_fornitore_id = f_res['id']
-                    cur.execute("""
-                        UPDATE fornitori 
-                        SET settore_note = COALESCE(NULLIF(%s, ''), settore_note),
-                            indirizzo = COALESCE(NULLIF(%s, ''), indirizzo),
-                            telefono = COALESCE(NULLIF(%s, ''), telefono),
-                            email = COALESCE(NULLIF(%s, ''), email)
-                        WHERE id = %s;
-                    """, (settore, indirizzo, telefono, email, current_fornitore_id))
-                else:
-                    cur.execute("""
-                        INSERT INTO fornitori (nome_azienda, settore_note, indirizzo, telefono, email)
-                        VALUES (%s, %s, %s, %s, %s)
-                        RETURNING id;
-                    """, (nome_azienda, settore, indirizzo, telefono, email))
-                    res = cur.fetchone()
-                    current_fornitore_id = res['id'] if res else None
-                    count_fornitori += 1
-            else:
-                if current_fornitore_id:
-                    nome_tecnico = col1_raw
-                    telefono = next((v for v in valori if re.search(r'\d{3}', v) and not '@' in v), '')
-                    email = next((v for v in valori if '@' in v), '')
-                    mansione = valori[1] if len(valori) > 1 and valori[1] != telefono and valori[1] != email else ''
-                    
-                    cur.execute("""
-                        SELECT id FROM contatti_tecnici 
-                        WHERE fornitore_id = %s AND LOWER(nome) = LOWER(%s);
-                    """, (current_fornitore_id, nome_tecnico))
-                    if not cur.fetchone():
-                        cur.execute("""
-                            INSERT INTO contatti_tecnici (fornitore_id, nome, telefono, mansione, email)
-                            VALUES (%s, %s, %s, %s, %s);
-                        """, (current_fornitore_id, nome_tecnico, telefono, mansione, email))
-                        count_tecnici += 1
-        conn.commit()
-        cur.close()
-        conn.close()
-        registra_log(f"Importazione intelligente: {count_fornitori} fornitori e {count_tecnici} tecnici.")
-        flash(f"Analisi completata! Importati {count_fornitori} fornitori e {count_tecnici} contatti tecnici.", "success")
-    except Exception as e:
-        flash(f"Errore importazione: {e}", "error")
-    return redirect(url_for("fornitori"))
-
-@app.route("/esporta_fornitori_intelligente", endpoint="esporta_fornitori_intelligente")
-@app.route("/esporta_fornitori_csv", endpoint="esporta_fornitori_csv")
-def esporta_fornitori_csv():
-    conn = get_db_connection()
-    cur = conn.cursor()
-    cur.execute("SELECT nome_azienda, settore_note, indirizzo, p_iva, telefono, email FROM fornitori ORDER BY nome_azienda ASC;")
-    fornitori_list = cur.fetchall()
-    cur.close()
-    conn.close()
-    
-    output = io.StringIO()
-    writer = csv.writer(output)
-    writer.writerow(['Nome Azienda', 'Settore / Note', 'Indirizzo', 'P.IVA', 'Telefono', 'Email'])
-    for f in fornitori_list:
-        writer.writerow([
-            f.get('nome_azienda', ''),
-            f.get('settore_note', ''),
-            f.get('indirizzo', ''),
-            f.get('p_iva', ''),
-            f.get('telefono', ''),
-            f.get('email', '')
-        ])
-    return Response(
-        output.getvalue(),
-        mimetype="text/csv",
-        headers={"Content-disposition": "attachment; filename=Fornitori_Gestionale_OMG.csv"}
-    )
-
-# --- GESTIONE DOCUMENTI ---
 @app.route("/documenti", defaults={"cartella_id": None}, methods=["GET", "POST"])
 @app.route("/documenti/<int:cartella_id>", methods=["GET", "POST"])
 @app.route("/documenti.html", defaults={"cartella_id": None}, methods=["GET", "POST"])
@@ -1982,7 +1835,6 @@ def elimina_file(file_id):
         return redirect(url_for("documenti", cartella_id=cartella_id))
     return redirect(url_for("documenti"))
 
-# --- ALTRE ROTTE GESTIONALE E ESPORTAZIONI CSV ---
 @app.route("/esportazioni")
 @app.route("/esportazioni.html")
 def esportazioni():
