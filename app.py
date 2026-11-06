@@ -503,7 +503,6 @@ def registra():
                 flash("Username già esistente o errore di registrazione.", "error")
     return render_template("registra.html")
 
-# --- PANNELLO PERMESSI ADMIN & LOGS ---
 @app.route("/admin_utenti")
 @app.route("/admin_utenti.html")
 def admin_utenti():
@@ -597,7 +596,6 @@ def elimina_utente(user_id):
         flash(f"Errore eliminazione utente: {e}", "error")
     return redirect(url_for('admin_utenti'))
 
-# --- GESTIONE NASTRI E TAPPETI ---
 @app.route("/nastri", methods=["GET", "POST"])
 @app.route("/nastri.html", methods=["GET", "POST"])
 def nastri():
@@ -765,7 +763,6 @@ def stampa_nastri():
     conn.close()
     return render_template("stampa_nastri.html", nastri=lista, sezione=sezione)
 
-# --- PANNELLO AGENDA ---
 @app.route("/agenda", methods=["GET", "POST"])
 @app.route("/agenda.html", methods=["GET", "POST"])
 def agenda():
@@ -864,7 +861,6 @@ def elimina_agenda(agenda_id):
         flash(f"Errore eliminazione: {e}", "error")
     return redirect(url_for("agenda"))
 
-# --- CAMBI SERIE & API ULTIMA BOTTIGLIA ---
 @app.route("/api/ultima_bottiglia/<forno>/<linea>")
 def ultima_bottiglia(forno, linea):
     try:
@@ -907,8 +903,9 @@ def cambi_serie():
         params.append(forno_filtro)
     
     if settimana_filtro:
+        settimana_pulita = settimana_filtro.replace("W", "")
         query += " AND TO_CHAR(data_cambio::DATE, 'IYYY-IW') = %s"
-        params.append(settimana_filtro)
+        params.append(settimana_pulita)
 
     query += " ORDER BY data_cambio DESC, id DESC;"
     cur.execute(query, tuple(params))
@@ -1031,7 +1028,6 @@ def esporta_cambi_serie_csv():
         headers={"Content-disposition": "attachment; filename=Cambi_Serie_OMG.csv"}
     )
 
-# --- MODULO: REPORT ORE & STATISTICHE MANUTENZIONI ---
 @app.route("/report_ore")
 @app.route("/report_ore.html")
 def report_ore():
@@ -1131,7 +1127,6 @@ def report_ore():
                            chart_tipi_labels=chart_tipi_labels,
                            chart_tipi_values=chart_tipi_values)
 
-# --- RICHIESTE INTERVENTO MANUTENZIONE OFFICINA ---
 @app.route("/richieste_manutenzione", methods=["GET", "POST"])
 @app.route("/richieste_manutenzione.html", methods=["GET", "POST"])
 def richieste_manutenzione():
@@ -1398,7 +1393,6 @@ def elimina_intervento(intervento_id):
     flash("Intervento eliminato.", "success")
     return redirect(url_for("richieste_manutenzione"))
 
-# --- GESTIONE PROMEMORIA ---
 @app.route("/promemoria", methods=["GET", "POST"])
 @app.route("/promemoria.html", methods=["GET", "POST"])
 def promemoria():
@@ -1530,7 +1524,6 @@ def elimina_promemoria(promemoria_id):
     flash("Promemoria eliminato.", "success")
     return redirect(url_for("promemoria"))
 
-# --- GESTIONE FORNITORI E CONTATTI ---
 @app.route("/fornitori", methods=["GET", "POST"])
 @app.route("/fornitori.html", methods=["GET", "POST"])
 def fornitori():
@@ -1823,7 +1816,6 @@ def esporta_fornitori_csv():
         headers={"Content-disposition": "attachment; filename=Fornitori_Gestionale_OMG.csv"}
     )
 
-# --- GESTIONE DOCUMENTI ---
 @app.route("/documenti", defaults={"cartella_id": None}, methods=["GET", "POST"])
 @app.route("/documenti/<int:cartella_id>", methods=["GET", "POST"])
 @app.route("/documenti.html", defaults={"cartella_id": None}, methods=["GET", "POST"])
@@ -1968,7 +1960,6 @@ def elimina_file(file_id):
         return redirect(url_for("documenti", cartella_id=cartella_id))
     return redirect(url_for("documenti"))
 
-# --- ROTTA QR SCAFFALE ---
 @app.route("/qr_scaffale", methods=["GET"])
 @app.route("/qr_scaffale.html", methods=["GET"])
 def qr_scaffale():
@@ -1983,7 +1974,6 @@ def qr_scaffale():
     conn.close()
     return render_template("qr_scaffale.html", prodotti=prodotti, ubicazione=ubicazione)
 
-# --- ALTRE ROTTE GESTIONALE E ESPORTAZIONI CSV ---
 @app.route("/esportazioni")
 @app.route("/esportazioni.html")
 def esportazioni():
