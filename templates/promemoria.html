@@ -1,4 +1,21 @@
-<!DOCTYPE html>
+[10:52, 06/11/2026] Marco Pavan: <!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gestionale OMG - Cambi Serie</title>
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- FontAwesome per le icone -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <style>
+        @media print {
+            @page { size: landscape; margin: 0.8cm; }
+            .no-print, nav, .btn, form.no-print { display: none !important; }
+            body { background: white !important; color: black !important; font-size: 11pt; }
+            .container, .contain…
+[11:43, 06/11/2026] Marco Pavan: <!DOCTYPE html>
 <html lang="it">
 <head>
     <meta charset="UTF-8">
@@ -8,26 +25,38 @@
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <!-- FontAwesome Icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        .badge-ricorrenza {
+            background-color: #e7f1ff;
+            color: #0d6efd;
+            border: 1px solid #b6d4fe;
+            font-weight: 600;
+        }
+        .tr-ricorrente {
+            border-left: 4px solid #0d6efd !important;
+        }
+    </style>
 </head>
 <body class="bg-light">
 
-    <!-- Navbar -->
-    <nav class="navbar navbar-expand-lg navbar-dark bg-dark mb-4">
+    <!-- Navbar principale -->
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark mb-4 shadow-sm">
         <div class="container-fluid">
-            <a class="navbar-brand" href="{{ url_for('index') }}"><i class="fa-solid fa-industry me-2"></i>Gestionale OMG</a>
+            <a class="navbar-brand fw-bold" href="{{ url_for('index') }}"><i class="fa-solid fa-industry me-2"></i>Gestionale OMG</a>
             <div class="d-flex">
                 <a href="{{ url_for('index') }}" class="btn btn-outline-light btn-sm"><i class="fa-solid fa-house me-1"></i>Home</a>
             </div>
         </div>
     </nav>
 
-    <div class="container">
+    <div class="container-fluid px-4">
         
         <!-- Flash Messages -->
         {% with messages = get_flashed_messages(with_categories=true) %}
         {% if messages %}
             {% for category, message in messages %}
                 <div class="alert alert-{{ 'danger' if category == 'error' else 'success' }} alert-dismissible fade show" role="alert">
+                    <i class="fa-solid {{ 'fa-triangle-exclamation' if category == 'error' else 'fa-circle-check' }} me-2"></i>
                     {{ message }}
                     <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
                 </div>
@@ -38,7 +67,7 @@
         <div class="row">
             <!-- COLONNA SINISTRA: NUOVO PROMEMORIA -->
             <div class="col-lg-4 mb-4">
-                <div class="card shadow-sm">
+                <div class="card shadow-sm border-primary">
                     <div class="card-header bg-primary text-white">
                         <h5 class="mb-0"><i class="fa-solid fa-plus-circle me-2"></i>Nuovo Promemoria</h5>
                     </div>
@@ -46,16 +75,16 @@
                         <form method="POST" action="{{ url_for('promemoria') }}">
                             <div class="mb-3">
                                 <label class="form-label fw-bold">Titolo *</label>
-                                <input type="text" name="titolo" class="form-control" required placeholder="Es. Manutenzione straordinaria">
+                                <input type="text" name="titolo" class="form-control" required placeholder="Es. Sostituzione filtri essiccatore">
                             </div>
 
                             <div class="mb-3">
                                 <label class="form-label">Descrizione / Note</label>
-                                <textarea name="descrizione" class="form-control" rows="3" placeholder="Dettagli aggiuntivi..."></textarea>
+                                <textarea name="descrizione" class="form-control" rows="3" placeholder="Codici ricambi, dettagli intervento..."></textarea>
                             </div>
 
                             <div class="mb-3">
-                                <label class="form-label fw-bold">Data Scadenza</label>
+                                <label class="form-label fw-bold">Data Prima Scadenza</label>
                                 <input type="date" name="data_scadenza" class="form-control">
                             </div>
 
@@ -70,8 +99,8 @@
                             </div>
 
                             <div class="mb-3">
-                                <label class="form-label">Ricorrenza</label>
-                                <select name="ricorrenza" class="form-select">
+                                <label class="form-label fw-bold text-primary"><i class="fa-solid fa-arrows-rotate me-1"></i>Ricorrenza</label>
+                                <select name="ricorrenza" class="form-select border-primary">
                                     <option value="Nessuna" selected>Nessuna (Una sola volta)</option>
                                     <option value="Giorno">Ogni Giorno</option>
                                     <option value="Settimana">Ogni Settimana</option>
@@ -79,13 +108,14 @@
                                     <option value="6 Mesi">Ogni 6 Mesi</option>
                                     <option value="Anno">Ogni Anno</option>
                                 </select>
+                                <div class="form-text text-muted">Quando clicchi su "Rinnova", la data scivolerà automaticamente al periodo successivo.</div>
                             </div>
 
                             {% if puo_assegnare and lista_utenti %}
                             <div class="mb-3">
                                 <label class="form-label">Assegna a Utente</label>
                                 <select name="assegnato_a" class="form-select">
-                                    <option value="">-- Me stesso / Personale --</option>
+                                    <option value="">-- Me stesso / Generale --</option>
                                     {% for u in lista_utenti %}
                                         <option value="{{ u.username }}">{{ u.username }}</option>
                                     {% endfor %}
@@ -104,8 +134,9 @@
             <!-- COLONNA DESTRA: LISTA PROMEMORIA -->
             <div class="col-lg-8">
                 <div class="card shadow-sm">
-                    <div class="card-header bg-dark text-white d-flex justify-content-between align-items-center">
+                    <div class="card-header bg-dark text-white d-flex justify-content-between align-items-center py-3">
                         <h5 class="mb-0"><i class="fa-solid fa-list-check me-2"></i>Elenco Promemoria Attivi e Scadenze</h5>
+                        <span class="badge bg-primary fs-6">{{ promemoria|length }} Totali</span>
                     </div>
                     <div class="card-body">
                         {% if promemoria %}
@@ -113,40 +144,57 @@
                                 <table class="table table-hover align-middle">
                                     <thead class="table-light">
                                         <tr>
-                                            <th>Stato</th>
-                                            <th>Titolo / Dettagli</th>
-                                            <th>Scadenza</th>
-                                            <th>Assegnato</th>
+                                            <th>Azione / Rinnovo</th>
+                                            <th>Titolo / Note</th>
+                                            <th>Scadenza Attuale</th>
                                             <th>Ricorrenza</th>
+                                            <th>Assegnato A</th>
                                             <th class="text-end">Azioni</th>
                                         </tr>
                                     </thead>
                                     <tbody>
                                         {% for p in promemoria %}
-                                        <tr class="{% if p.completato %}table-success text-muted text-decoration-line-through{% endif %}">
+                                        {% set ha_ricorrenza = p.ricorrenza and p.ricorrenza != 'Nessuna' %}
+                                        <tr class="{% if p.completato and not ha_ricorrenza %}table-success text-muted text-decoration-line-through{% endif %} {% if ha_ricorrenza %}tr-ricorrente{% endif %}">
                                             <td>
                                                 <form action="{{ url_for('completa_promemoria', promemoria_id=p.id) }}" method="POST" class="d-inline">
-                                                    <button type="submit" class="btn btn-sm {% if p.completato %}btn-success{% else %}btn-outline-secondary{% endif %}" title="Segna come completato / Avanza ricorrenza">
-                                                        <i class="fa-solid {% if p.completato %}fa-check-double{% else %}fa-check{% endif %}"></i>
-                                                    </button>
+                                                    {% if ha_ricorrenza %}
+                                                        <button type="submit" class="btn btn-sm btn-primary fw-bold px-3" title="Esegui manutenzione e sposta la scadenza in avanti ({{ p.ricorrenza }})">
+                                                            <i class="fa-solid fa-rotate-right me-1"></i> Rinnova
+                                                        </button>
+                                                    {% else %}
+                                                        <button type="submit" class="btn btn-sm {% if p.completato %}btn-success{% else %}btn-outline-secondary{% endif %}" title="Segna come completato">
+                                                            <i class="fa-solid {% if p.completato %}fa-check-double{% else %}fa-check{% endif %}"></i>
+                                                        </button>
+                                                    {% endif %}
                                                 </form>
                                             </td>
                                             <td>
-                                                <strong class="{% if not p.completato %}text-dark{% endif %}">{{ p.titolo }}</strong>
+                                                <strong class="{% if not p.completato or ha_ricorrenza %}text-dark{% endif %} fs-6">{{ p.titolo }}</strong>
                                                 {% if p.descrizione %}
-                                                    <br><small class="text-muted">{{ p.descrizione }}</small>
+                                                    <br><small class="text-muted"><i class="fa-regular fa-sticky-note me-1"></i>{{ p.descrizione }}</small>
                                                 {% endif %}
                                             </td>
                                             <td>
-                                                <span class="badge bg-{{ 'danger' if p.priorita == 'Urgente' else ('warning text-dark' if p.priorita == 'Alta' else 'secondary') }}">
-                                                    {{ p.data_scadenza if p.data_scadenza else 'Nessuna data' }}
-                                                </span>
+                                                {% if p.data_scadenza %}
+                                                    <span class="badge bg-{{ 'danger' if p.priorita == 'Urgente' else ('warning text-dark' if p.priorita == 'Alta' else 'dark') }} font-monospace fs-6">
+                                                        {{ p.data_scadenza }}
+                                                    </span>
+                                                {% else %}
+                                                    <span class="badge bg-secondary">Nessuna data</span>
+                                                {% endif %}
                                             </td>
                                             <td>
-                                                <span class="badge bg-info text-dark">{{ p.assegnato_a if p.assegnato_a else 'Generale' }}</span>
+                                                {% if ha_ricorrenza %}
+                                                    <span class="badge badge-ricorrenza px-2 py-1">
+                                                        <i class="fa-solid fa-arrows-spin me-1"></i>{{ p.ricorrenza }}
+                                                    </span>
+                                                {% else %}
+                                                    <small class="text-muted">Una tantum</small>
+                                                {% endif %}
                                             </td>
                                             <td>
-                                                <small class="text-muted"><i class="fa-solid fa-rotate me-1"></i>{{ p.ricorrenza if p.ricorrenza else 'Nessuna' }}</small>
+                                                <span class="badge bg-info text-dark"><i class="fa-solid fa-user me-1"></i>{{ p.assegnato_a if p.assegnato_a else 'Tutti' }}</span>
                                             </td>
                                             <td class="text-end">
                                                 <form action="{{ url_for('elimina_promemoria', promemoria_id=p.id) }}" method="POST" class="d-inline" onsubmit="return confirm('Eliminare definitivamente questo promemoria?');">
