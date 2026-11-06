@@ -915,7 +915,6 @@ def cambi_serie():
         params.append(forno_filtro)
     
     if settimana_filtro:
-        # Pulisce la 'W' inviata dall'input HTML week (es. 2026-W45 -> 2026-45)
         settimana_pulita = settimana_filtro.replace("W", "")
         query += " AND TO_CHAR(data_cambio::DATE, 'IYYY-IW') = %s"
         params.append(settimana_pulita)
