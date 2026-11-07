@@ -2,178 +2,295 @@
 <html lang="it">
 <head>
     <meta charset="UTF-8">
-    <title>Gestionale OMG - Permessi Utenti</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gestionale OMG - Gestione Utenti & Permessi</title>
+    <!-- Bootstrap CSS -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- FontAwesome -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
-        body { font-family: sans-serif; background: #f8fafc; color: #1e293b; }
-        .user-card { background: white; border-radius: 12px; border: 1px solid #e2e8f0; margin-bottom: 20px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); overflow: hidden; }
-        .user-header { background: #1e293b; color: white; padding: 12px 20px; display: flex; justify-content: space-between; align-items: center; }
-        .permission-group { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 10px; margin-bottom: 10px; }
-        .permission-group h6 { font-size: 0.85rem; font-weight: bold; color: #475569; margin-bottom: 8px; border-bottom: 1px solid #e2e8f0; padding-bottom: 4px; }
-        .perm-item { display: flex; justify-content: space-between; align-items: center; font-size: 0.8rem; margin-bottom: 5px; }
-        .btn-toggle { font-size: 0.7rem; padding: 2px 10px; border-radius: 4px; font-weight: bold; border: none; cursor: pointer; width: 50px; }
-        .btn-on { background: #10b981; color: white; }
-        .btn-off { background: #ef4444; color: white; }
+        body { background-color: #f8f9fa; }
+        .card { border: none; border-radius: 10px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); }
+        .table-hover tbody tr:hover { background-color: rgba(13, 110, 253, 0.03); }
     </style>
 </head>
-<body class="container py-4">
-    <div class="d-flex justify-content-between align-items-center mb-4">
-        <h1 class="h3 mb-0">⚙️ Gestionale OMG - Gestione Permessi</h1>
-        <a href="{{ url_for('index') }}" class="btn btn-secondary btn-sm"><i class="fas fa-arrow-left me-1"></i> Dashboard</a>
-    </div>
+<body>
 
-    {% with messages = get_flashed_messages(with_categories=true) %}
-      {% if messages %}
-        {% for category, message in messages %}
-          <div class="alert alert-{{ 'danger' if category == 'error' else 'success' }} alert-dismissible fade show" role="alert">
-            {{ message }}
-            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-          </div>
-        {% endfor %}
-      {% endif %}
-    {% endwith %}
-
-    <!-- Lista Utenti in formato Card -->
-    {% for u in utenti %}
-    <div class="user-card">
-        <div class="user-header">
-            <div>
-                <h5 class="mb-0"><i class="fas fa-user-circle me-2"></i>{{ u.username }}</h5>
-                <small class="text-light opacity-75">Ruolo: {% if u.is_admin %}Amministratore{% else %}Operatore{% endif %}</small>
+    <!-- Navbar principale -->
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark mb-4">
+        <div class="container-fluid">
+            <a class="navbar-brand" href="{{ url_for('index') }}"><i class="fa-solid fa-industry me-2"></i>Gestionale OMG</a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav ms-auto">
+                    <li class="nav-item"><a class="nav-link" href="{{ url_for('index') }}">Home</a></li>
+                    <li class="nav-item"><a class="nav-link active" href="{{ url_for('admin_utenti') }}">Pannello Admin</a></li>
+                    <li class="nav-item"><a class="nav-link text-danger" href="{{ url_for('logout') }}"><i class="fa-solid fa-right-from-bracket"></i> Esci</a></li>
+                </ul>
             </div>
-            <div class="d-flex gap-2 align-items-center">
-                <!-- Reset Password Form -->
-                <form action="{{ url_for('reset_password', user_id=u.id) }}" method="POST" class="d-flex gap-1">
-                    <input type="password" name="nuova_password" placeholder="Nuova Psw" class="form-control form-control-sm" style="width: 110px;" required>
-                    <button type="submit" class="btn btn-warning btn-sm text-dark fw-bold" title="Reset Password">Reset</button>
-                </form>
-                {% if u.username != 'admin' %}
-                <form action="{{ url_for('elimina_utente', user_id=u.id) }}" method="POST" onsubmit="return confirm('Eliminare definitivamente questo utente?');">
-                    <button type="submit" class="btn btn-danger btn-sm" title="Elimina Utente"><i class="fas fa-trash"></i></button>
-                </form>
-                {% endif %}
+        </div>
+    </nav>
+
+    <div class="container py-3">
+        <!-- Flash Messages -->
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                    <div class="alert alert-{{ 'danger' if category == 'error' else 'success' }} alert-dismissible fade show" role="alert">
+                        {{ message }}
+                        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                    </div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+
+        <!-- INTESTAZIONE -->
+        <div class="row mb-4 align-items-center">
+            <div class="col">
+                <h2 class="fw-bold text-primary"><i class="fa-solid fa-user-gear me-2"></i>Pannello Amministrazione & Permessi</h2>
+                <p class="text-muted m-0">Gestisci gli utenti registrati e abilita o disabilita i permessi di accesso ai vari moduli.</p>
+            </div>
+        </div>
+
+        <!-- TABELLA UTENTI & PERMESSI -->
+        <div class="card shadow-sm mb-5">
+            <div class="card-header bg-white py-3">
+                <h5 class="fw-bold m-0 text-dark"><i class="fa-solid fa-users me-2 text-primary"></i>Elenco Utenti e Permessi Moduli</h5>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Username</th>
+                                <th class="text-center">Ruolo Admin</th>
+                                <th class="text-center">Magazzino</th>
+                                <th class="text-center">Mag. Pesante</th>
+                                <th class="text-center">Officina</th>
+                                <th class="text-center">Esterne</th>
+                                <th class="text-center">Agenda</th>
+                                <th class="text-center text-primary">OMD</th>
+                                <th class="text-center text-primary">Lavori Int.</th>
+                                <th class="text-center">Fornitori</th>
+                                <th class="text-center">Documenti</th>
+                                <th class="text-center">Promemoria</th>
+                                <th class="text-center">Report Ore</th>
+                                <th class="text-end">Azioni</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% if utenti %}
+                                {% for u in utenti %}
+                                <tr>
+                                    <td>
+                                        <strong class="text-dark">{{ u.username }}</strong>
+                                        {% if u.username == 'admin' %}
+                                            <span class="badge bg-danger ms-1">Principale</span>
+                                        {% endif %}
+                                    </td>
+                                    
+                                    <!-- Admin -->
+                                    <td class="text-center">
+                                        {% if u.username != 'admin' %}
+                                        <form action="{{ url_for('toggle_permesso', user_id=u.id, campo='is_admin') }}" method="POST" class="d-inline">
+                                            <button type="submit" class="btn btn-sm {% if u.is_admin %}btn-danger{% else %}btn-outline-secondary{% endif %}" title="Cambia Ruolo Admin">
+                                                <i class="fa-solid {% if u.is_admin %}fa-shield-halved{% else %}fa-user{% endif %}"></i>
+                                            </button>
+                                        </form>
+                                        {% else %}
+                                            <span class="badge bg-danger">Admin</span>
+                                        {% endif %}
+                                    </td>
+
+                                    <!-- Magazzino -->
+                                    <td class="text-center">
+                                        <form action="{{ url_for('toggle_permesso', user_id=u.id, campo='puo_vedere_magazzino') }}" method="POST" class="d-inline">
+                                            <button type="submit" class="btn btn-sm {% if u.puo_vedere_magazzino %}btn-success{% else %}btn-outline-danger{% endif %}" title="Permesso Magazzino">
+                                                <i class="fa-solid {% if u.puo_vedere_magazzino %}fa-check{% else %}fa-xmark{% endif %}"></i>
+                                            </button>
+                                        </form>
+                                    </td>
+
+                                    <!-- Magazzino Pesante -->
+                                    <td class="text-center">
+                                        <form action="{{ url_for('toggle_permesso', user_id=u.id, campo='puo_vedere_pesante') }}" method="POST" class="d-inline">
+                                            <button type="submit" class="btn btn-sm {% if u.puo_vedere_pesante %}btn-success{% else %}btn-outline-danger{% endif %}" title="Magazzino Pesante">
+                                                <i class="fa-solid {% if u.puo_vedere_pesante %}fa-check{% else %}fa-xmark{% endif %}"></i>
+                                            </button>
+                                        </form>
+                                    </td>
+
+                                    <!-- Officina -->
+                                    <td class="text-center">
+                                        <form action="{{ url_for('toggle_permesso', user_id=u.id, campo='puo_vedere_manutenzione') }}" method="POST" class="d-inline">
+                                            <button type="submit" class="btn btn-sm {% if u.puo_vedere_manutenzione %}btn-success{% else %}btn-outline-danger{% endif %}" title="Officina">
+                                                <i class="fa-solid {% if u.puo_vedere_manutenzione %}fa-check{% else %}fa-xmark{% endif %}"></i>
+                                            </button>
+                                        </form>
+                                    </td>
+
+                                    <!-- Manutenzioni Esterne -->
+                                    <td class="text-center">
+                                        <form action="{{ url_for('toggle_permesso', user_id=u.id, campo='puo_vedere_manutenzioni_esterne') }}" method="POST" class="d-inline">
+                                            <button type="submit" class="btn btn-sm {% if u.puo_vedere_manutenzioni_esterne %}btn-success{% else %}btn-outline-danger{% endif %}" title="Esterne">
+                                                <i class="fa-solid {% if u.puo_vedere_manutenzioni_esterne %}fa-check{% else %}fa-xmark{% endif %}"></i>
+                                            </button>
+                                        </form>
+                                    </td>
+
+                                    <!-- Agenda -->
+                                    <td class="text-center">
+                                        <span class="badge bg-success"><i class="fa-solid fa-check"></i></span>
+                                    </td>
+
+                                    <!-- OMD (Nuovo Permesso) -->
+                                    <td class="text-center">
+                                        <form action="{{ url_for('toggle_permesso', user_id=u.id, campo='puo_vedere_omd') }}" method="POST" class="d-inline">
+                                            <button type="submit" class="btn btn-sm {% if u.puo_vedere_omd is not defined or u.puo_vedere_omd == 1 %}btn-primary{% else %}btn-outline-danger{% endif %}" title="Visualizzazione OMD">
+                                                <i class="fa-solid {% if u.puo_vedere_omd is not defined or u.puo_vedere_omd == 1 %}fa-check{% else %}fa-xmark{% endif %}"></i>
+                                            </button>
+                                        </form>
+                                    </td>
+
+                                    <!-- Lavori Interni (Nuovo Permesso) -->
+                                    <td class="text-center">
+                                        <form action="{{ url_for('toggle_permesso', user_id=u.id, campo='puo_vedere_lavori_interni') }}" method="POST" class="d-inline">
+                                            <button type="submit" class="btn btn-sm {% if u.puo_vedere_lavori_interni is not defined or u.puo_vedere_lavori_interni == 1 %}btn-primary{% else %}btn-outline-danger{% endif %}" title="Visualizzazione Lavori Interni">
+                                                <i class="fa-solid {% if u.puo_vedere_lavori_interni is not defined or u.puo_vedere_lavori_interni == 1 %}fa-check{% else %}fa-xmark{% endif %}"></i>
+                                            </button>
+                                        </form>
+                                    </td>
+
+                                    <!-- Fornitori -->
+                                    <td class="text-center">
+                                        <form action="{{ url_for('toggle_permesso', user_id=u.id, campo='puo_gestire_fornitori') }}" method="POST" class="d-inline">
+                                            <button type="submit" class="btn btn-sm {% if u.puo_gestire_fornitori %}btn-success{% else %}btn-outline-danger{% endif %}" title="Fornitori">
+                                                <i class="fa-solid {% if u.puo_gestire_fornitori %}fa-check{% else %}fa-xmark{% endif %}"></i>
+                                            </button>
+                                        </form>
+                                    </td>
+
+                                    <!-- Documenti -->
+                                    <td class="text-center">
+                                        <form action="{{ url_for('toggle_permesso', user_id=u.id, campo='puo_gestire_documenti') }}" method="POST" class="d-inline">
+                                            <button type="submit" class="btn btn-sm {% if u.puo_gestire_documenti %}btn-success{% else %}btn-outline-danger{% endif %}" title="Documenti">
+                                                <i class="fa-solid {% if u.puo_gestire_documenti %}fa-check{% else %}fa-xmark{% endif %}"></i>
+                                            </button>
+                                        </form>
+                                    </td>
+
+                                    <!-- Promemoria -->
+                                    <td class="text-center">
+                                        <form action="{{ url_for('toggle_permesso', user_id=u.id, campo='puo_vedere_promemoria') }}" method="POST" class="d-inline">
+                                            <button type="submit" class="btn btn-sm {% if u.puo_vedere_promemoria %}btn-success{% else %}btn-outline-danger{% endif %}" title="Promemoria">
+                                                <i class="fa-solid {% if u.puo_vedere_promemoria %}fa-check{% else %}fa-xmark{% endif %}"></i>
+                                            </button>
+                                        </form>
+                                    </td>
+
+                                    <!-- Report Ore -->
+                                    <td class="text-center">
+                                        <form action="{{ url_for('toggle_permesso', user_id=u.id, campo='puo_vedere_report_ore') }}" method="POST" class="d-inline">
+                                            <button type="submit" class="btn btn-sm {% if u.puo_vedere_report_ore %}btn-success{% else %}btn-outline-danger{% endif %}" title="Report Ore">
+                                                <i class="fa-solid {% if u.puo_vedere_report_ore %}fa-check{% else %}fa-xmark{% endif %}"></i>
+                                            </button>
+                                        </form>
+                                    </td>
+
+                                    <!-- Azioni (Reset Password / Elimina) -->
+                                    <td class="text-end">
+                                        {% if u.username != 'admin' %}
+                                        <div class="btn-group btn-group-sm">
+                                            <button class="btn btn-outline-warning text-dark" data-bs-toggle="modal" data-bs-target="#modalPassword_{{ u.id }}" title="Cambia Password">
+                                                <i class="fa-solid fa-key"></i>
+                                            </button>
+                                            <form action="{{ url_for('elimina_utente', user_id=u.id) }}" method="POST" class="d-inline" onsubmit="return confirm('Eliminare questo utente?');">
+                                                <button type="submit" class="btn btn-outline-danger" title="Elimina Utente">
+                                                    <i class="fa-solid fa-trash"></i>
+                                                </button>
+                                            </form>
+                                        </div>
+
+                                        <!-- MODAL CAMBIA PASSWORD -->
+                                        <div class="modal fade text-start" id="modalPassword_{{ u.id }}" tabindex="-1" aria-hidden="true">
+                                            <div class="modal-dialog">
+                                                <div class="modal-content">
+                                                    <form action="{{ url_for('reset_password', user_id=u.id) }}" method="POST">
+                                                        <div class="modal-header">
+                                                            <h5 class="modal-title fw-bold">Cambia Password per {{ u.username }}</h5>
+                                                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                                                        </div>
+                                                        <div class="modal-body">
+                                                            <div class="mb-3">
+                                                                <label class="form-label fw-bold">Nuova Password</label>
+                                                                <input type="password" class="form-control" name="nuova_password" required placeholder="Inserisci nuova password">
+                                                            </div>
+                                                        </div>
+                                                        <div class="modal-footer">
+                                                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annulla</button>
+                                                            <button type="submit" class="btn btn-primary"><i class="fa-solid fa-save me-1"></i> Aggiorna Password</button>
+                                                        </div>
+                                                    </form>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        {% else %}
+                                            <span class="text-muted small">-</span>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            {% else %}
+                                <tr>
+                                    <td colspan="14" class="text-center py-4 text-muted">Nessun utente registrato.</td>
+                                </tr>
+                            {% endif %}
+                        </tbody>
+                    </table>
+                </div>
             </div>
         </div>
 
-        <div class="card-body bg-white">
-            <div class="row g-3">
-                <!-- Magazzino -->
-                <div class="col-md-4">
-                    <div class="permission-group">
-                        <h6>📦 Magazzino</h6>
-                        <div class="perm-item"><span>Visualizza</span>
-                            <form action="{{ url_for('toggle_permesso', user_id=u.id, campo='puo_vedere_magazzino') }}" method="POST"><button type="submit" class="btn-toggle {% if u.puo_vedere_magazzino %}btn-on{% else %}btn-off{% endif %}">{{ 'Sì' if u.puo_vedere_magazzino else 'No' }}</button></form>
-                        </div>
-                        <div class="perm-item"><span>Aggiungi Prodotti</span>
-                            <form action="{{ url_for('toggle_permesso', user_id=u.id, campo='puo_aggiungere_prodotti') }}" method="POST"><button type="submit" class="btn-toggle {% if u.puo_aggiungere_prodotti %}btn-on{% else %}btn-off{% endif %}">{{ 'Sì' if u.puo_aggiungere_prodotti else 'No' }}</button></form>
-                        </div>
-                        <div class="perm-item"><span>Modifica Prodotti</span>
-                            <form action="{{ url_for('toggle_permesso', user_id=u.id, campo='puo_modificare_prodotti') }}" method="POST"><button type="submit" class="btn-toggle {% if u.puo_modificare_prodotti %}btn-on{% else %}btn-off{% endif %}">{{ 'Sì' if u.puo_modificare_prodotti else 'No' }}</button></form>
-                        </div>
-                        <div class="perm-item"><span>Carica / Scarica</span>
-                            <form action="{{ url_for('toggle_permesso', user_id=u.id, campo='puo_caricare_scaricare') }}" method="POST"><button type="submit" class="btn-toggle {% if u.puo_caricare_scaricare %}btn-on{% else %}btn-off{% endif %}">{{ 'Sì' if u.puo_caricare_scaricare else 'No' }}</button></form>
-                        </div>
-                        <div class="perm-item"><span>Elimina Prodotti</span>
-                            <form action="{{ url_for('toggle_permesso', user_id=u.id, campo='puo_eliminare') }}" method="POST"><button type="submit" class="btn-toggle {% if u.puo_eliminare %}btn-on{% else %}btn-off{% endif %}">{{ 'Sì' if u.puo_eliminare else 'No' }}</button></form>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Interventi & Officina -->
-                <div class="col-md-4">
-                    <div class="permission-group">
-                        <h6>🛠️ Interventi & Officina</h6>
-                        <div class="perm-item"><span>Visualizza</span>
-                            <form action="{{ url_for('toggle_permesso', user_id=u.id, campo='puo_vedere_manutenzione') }}" method="POST"><button type="submit" class="btn-toggle {% if u.puo_vedere_manutenzione %}btn-on{% else %}btn-off{% endif %}">{{ 'Sì' if u.puo_vedere_manutenzione else 'No' }}</button></form>
-                        </div>
-                        <div class="perm-item"><span>Apri Interventi</span>
-                            <form action="{{ url_for('toggle_permesso', user_id=u.id, campo='puo_aprire_manutenzioni') }}" method="POST"><button type="submit" class="btn-toggle {% if u.puo_aprire_manutenzioni %}btn-on{% else %}btn-off{% endif %}">{{ 'Sì' if u.puo_aprire_manutenzioni else 'No' }}</button></form>
-                        </div>
-                        <div class="perm-item"><span>Gestisci / Lavora</span>
-                            <form action="{{ url_for('toggle_permesso', user_id=u.id, campo='puo_gestire_interventi') }}" method="POST"><button type="submit" class="btn-toggle {% if u.puo_gestire_interventi %}btn-on{% else %}btn-off{% endif %}">{{ 'Sì' if u.puo_gestire_interventi else 'No' }}</button></form>
-                        </div>
-                        <div class="perm-item"><span>Assegna Tecnici</span>
-                            <form action="{{ url_for('toggle_permesso', user_id=u.id, campo='puo_assegnare_manutenzioni') }}" method="POST"><button type="submit" class="btn-toggle {% if u.puo_assegnare_manutenzioni %}btn-on{% else %}btn-off{% endif %}">{{ 'Sì' if u.puo_assegnare_manutenzioni else 'No' }}</button></form>
-                        </div>
-                        <div class="perm-item"><span>Elimina Interventi</span>
-                            <form action="{{ url_for('toggle_permesso', user_id=u.id, campo='puo_eliminare_interventi') }}" method="POST"><button type="submit" class="btn-toggle {% if u.puo_eliminare_interventi %}btn-on{% else %}btn-off{% endif %}">{{ 'Sì' if u.puo_eliminare_interventi else 'No' }}</button></form>
-                        </div>
-                        <div class="perm-item"><span>Report Ore</span>
-                            <form action="{{ url_for('toggle_permesso', user_id=u.id, campo='puo_vedere_report_ore') }}" method="POST"><button type="submit" class="btn-toggle {% if u.puo_vedere_report_ore %}btn-on{% else %}btn-off{% endif %}">{{ 'Sì' if u.puo_vedere_report_ore else 'No' }}</button></form>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Altro & Sezioni Speciali -->
-                <div class="col-md-4">
-                    <div class="permission-group">
-                        <h6>🏭 Reparti & Sezioni</h6>
-                        <div class="perm-item"><span>Magazzino Pesante</span>
-                            <form action="{{ url_for('toggle_permesso', user_id=u.id, campo='puo_vedere_pesante') }}" method="POST"><button type="submit" class="btn-toggle {% if u.puo_vedere_pesante %}btn-on{% else %}btn-off{% endif %}">{{ 'Sì' if u.puo_vedere_pesante else 'No' }}</button></form>
-                        </div>
-                        <div class="perm-item"><span>Manutenzioni Esterne</span>
-                            <form action="{{ url_for('toggle_permesso', user_id=u.id, campo='puo_vedere_manutenzioni_esterne') }}" method="POST"><button type="submit" class="btn-toggle {% if u.puo_vedere_manutenzioni_esterne %}btn-on{% else %}btn-off{% endif %}">{{ 'Sì' if u.puo_vedere_manutenzioni_esterne else 'No' }}</button></form>
-                        </div>
-                        <div class="perm-item"><span>Storico Manutenzioni</span>
-                            <form action="{{ url_for('toggle_permesso', user_id=u.id, campo='puo_vedere_storico_manutenzioni') }}" method="POST"><button type="submit" class="btn-toggle {% if u.puo_vedere_storico_manutenzioni %}btn-on{% else %}btn-off{% endif %}">{{ 'Sì' if u.puo_vedere_storico_manutenzioni else 'No' }}</button></form>
-                        </div>
-                    </div>
-
-                    <div class="permission-group">
-                        <h6>🚚 Fornitori & Documenti</h6>
-                        <div class="perm-item"><span>Gestisci Fornitori</span>
-                            <form action="{{ url_for('toggle_permesso', user_id=u.id, campo='puo_gestire_fornitori') }}" method="POST"><button type="submit" class="btn-toggle {% if u.puo_gestire_fornitori %}btn-on{% else %}btn-off{% endif %}">{{ 'Sì' if u.puo_gestire_fornitori else 'No' }}</button></form>
-                        </div>
-                        <div class="perm-item"><span>Importa Fornitori</span>
-                            <form action="{{ url_for('toggle_permesso', user_id=u.id, campo='puo_importare_fornitori') }}" method="POST"><button type="submit" class="btn-toggle {% if u.puo_importare_fornitori %}btn-on{% else %}btn-off{% endif %}">{{ 'Sì' if u.puo_importare_fornitori else 'No' }}</button></form>
-                        </div>
-                        <div class="perm-item"><span>Gestisci Documenti</span>
-                            <form action="{{ url_for('toggle_permesso', user_id=u.id, campo='puo_gestire_documenti') }}" method="POST"><button type="submit" class="btn-toggle {% if u.puo_gestire_documenti %}btn-on{% else %}btn-off{% endif %}">{{ 'Sì' if u.puo_gestire_documenti else 'No' }}</button></form>
-                        </div>
-                    </div>
-
-                    <div class="permission-group">
-                        <h6>📌 Promemoria & Agenda</h6>
-                        <div class="perm-item"><span>Vedi Promemoria</span>
-                            <form action="{{ url_for('toggle_permesso', user_id=u.id, campo='puo_vedere_promemoria') }}" method="POST"><button type="submit" class="btn-toggle {% if u.puo_vedere_promemoria %}btn-on{% else %}btn-off{% endif %}">{{ 'Sì' if u.puo_vedere_promemoria else 'No' }}</button></form>
-                        </div>
-                        <div class="perm-item"><span>Assegna Promemoria</span>
-                            <form action="{{ url_for('toggle_permesso', user_id=u.id, campo='puo_assegnare_promemoria') }}" method="POST"><button type="submit" class="btn-toggle {% if u.puo_assegnare_promemoria %}btn-on{% else %}btn-off{% endif %}">{{ 'Sì' if u.puo_assegnare_promemoria else 'No' }}</button></form>
-                        </div>
-                        <div class="perm-item"><span>Agenda (Vedi / Usa)</span>
-                            <form action="{{ url_for('toggle_permesso', user_id=u.id, campo='puo_gestire_agenda') }}" method="POST"><button type="submit" class="btn-toggle {% if u.puo_gestire_agenda %}btn-on{% else %}btn-off{% endif %}">{{ 'Sì' if u.puo_gestire_agenda else 'No' }}</button></form>
-                        </div>
-                    </div>
+        <!-- LOG ATTIVITA RECENTI -->
+        <div class="card shadow-sm mb-4">
+            <div class="card-header bg-white py-3">
+                <h5 class="fw-bold m-0 text-dark"><i class="fa-solid fa-clock-rotate-left me-2 text-primary"></i>Log Attività Recenti del Sistema</h5>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive" style="max-height: 400px; overflow-y: auto;">
+                    <table class="table table-striped table-hover align-middle mb-0 small">
+                        <thead class="table-light sticky-top">
+                            <tr>
+                                <th>Data / Ora</th>
+                                <th>Utente</th>
+                                <th>Descrizione Attività</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% if logs %}
+                                {% for l in logs %}
+                                <tr>
+                                    <td class="text-muted">{{ l.data_ora }}</td>
+                                    <td><strong class="text-dark">{{ l.username }}</strong></td>
+                                    <td>{{ l.descrizione }}</td>
+                                />
+                                </tr>
+                                {% endfor %}
+                            {% else %}
+                                <tr>
+                                    <td colspan="3" class="text-center py-3 text-muted">Nessun log recente registrato.</td>
+                                </tr>
+                            {% endif %}
+                        </tbody>
+                    </table>
                 </div>
             </div>
         </div>
     </div>
-    {% endfor %}
 
-    <!-- Log Attività Sistema -->
-    <div class="card p-3 mt-4">
-        <h4 class="h5 mb-3">📜 Log Attività Sistema</h4>
-        <div class="table-responsive" style="max-height: 250px; overflow-y: auto;">
-            <table class="table table-sm table-striped mb-0" style="font-size: 0.8rem;">
-                <thead class="table-dark">
-                    <tr>
-                        <th>Data / Ora</th>
-                        <th>Utente</th>
-                        <th>Descrizione Attività</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for l in logs %}
-                    <tr>
-                        <td style="width: 150px;">{{ l.data_ora.strftime('%d/%m/%Y %H:%M:%S') if l.data_ora else '-' }}</td>
-                        <td style="width: 120px;"><strong>{{ l.username }}</strong></td>
-                        <td>{{ l.descrizione }}</td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
-        </div>
-    </div>
+    <!-- Bootstrap JS Bundle -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>
