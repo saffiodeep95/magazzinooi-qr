@@ -62,6 +62,10 @@ def parse_data_flessibile(data_str):
             continue
     return None
 
+@app.context_processor
+def utility_processor():
+    return dict(parse_data_flessibile=parse_data_flessibile)
+
 def init_db():
     if not DATABASE_URL:
         print("DATABASE_URL non impostata!")
