@@ -188,7 +188,8 @@ def init_db():
                 puo_assegnare_promemoria INT DEFAULT 0,
                 puo_vedere_report_ore INT DEFAULT 1,
                 puo_vedere_omd INT DEFAULT 1,
-                puo_vedere_lavori_interni INT DEFAULT 1
+                puo_vedere_lavori_interni INT DEFAULT 1,
+                puo_gestire_agenda INT DEFAULT 1
             );
         """)
 
@@ -264,6 +265,7 @@ def init_db():
                 num_bottiglie_tempera_nuova INT DEFAULT 0,
                 quantita_trattamento VARCHAR(50),
                 misura_piastrina VARCHAR(50),
+                misura_piastrina_nuova VARCHAR(50),
                 creato_il TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             );
         """)
@@ -302,16 +304,7 @@ def init_db():
         """)
         
         cur.execute("ALTER TABLE agenda ADD COLUMN IF NOT EXISTS sezione VARCHAR(50) DEFAULT 'agenda';")
-        
-        colonne_cambi_serie = [
-            ("bottiglia_precedente", "VARCHAR(255)"),
-            ("bottiglia_nuova", "VARCHAR(255)"),
-            ("num_bottiglie_tempera_vecchia", "INT DEFAULT 0"),
-            ("num_bottiglie_tempera_nuova", "INT DEFAULT 0"),
-            ("misura_piastrina", "VARCHAR(50)")
-        ]
-        for c_col, c_type in colonne_cambi_serie:
-            cur.execute(f"ALTER TABLE cambi_serie ADD COLUMN IF NOT EXISTS {c_col} {c_type};")
+        cur.execute("ALTER TABLE cambi_serie ADD COLUMN IF NOT EXISTS misura_piastrina_nuova VARCHAR(50);")
 
         permessi_lista = [
             ("puo_vedere_magazzino", "INT DEFAULT 1"),
@@ -336,7 +329,8 @@ def init_db():
             ("puo_assegnare_promemoria", "INT DEFAULT 0"),
             ("puo_vedere_report_ore", "INT DEFAULT 1"),
             ("puo_vedere_omd", "INT DEFAULT 1"),
-            ("puo_vedere_lavori_interni", "INT DEFAULT 1")
+            ("puo_vedere_lavori_interni", "INT DEFAULT 1"),
+            ("puo_gestire_agenda", "INT DEFAULT 1")
         ]
         
         for p_col, p_type in permessi_lista:
@@ -346,8 +340,8 @@ def init_db():
         if not cur.fetchone():
             hashed_pw = generate_password_hash("admin")
             cur.execute("""
-                INSERT INTO utenti (username, password, is_admin, puo_vedere_magazzino, puo_aggiungere_prodotti, puo_modificare_prodotti, puo_caricare_scaricare, puo_eliminare, puo_vedere_pesante, puo_vedere_manutenzione, puo_aprire_manutenzioni, puo_gestire_interventi, puo_assegnare_manutenzioni, puo_eliminare_interventi, puo_vedere_manutenzioni_esterne, puo_vedere_storico_manutenzioni, puo_eliminare_storico, puo_gestire_fornitori, puo_importare_fornitori, puo_gestire_documenti, puo_eliminare_documenti, puo_vedere_promemoria, puo_assegnare_promemoria, puo_vedere_report_ore, puo_vedere_omd, puo_vedere_lavori_interni)
-                VALUES (%s, %s, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1);
+                INSERT INTO utenti (username, password, is_admin, puo_vedere_magazzino, puo_aggiungere_prodotti, puo_modificare_prodotti, puo_caricare_scaricare, puo_eliminare, puo_vedere_pesante, puo_vedere_manutenzione, puo_aprire_manutenzioni, puo_gestire_interventi, puo_assegnare_manutenzioni, puo_eliminare_interventi, puo_vedere_manutenzioni_esterne, puo_vedere_storico_manutenzioni, puo_eliminare_storico, puo_gestire_fornitori, puo_importare_fornitori, puo_gestire_documenti, puo_eliminare_documenti, puo_vedere_promemoria, puo_assegnare_promemoria, puo_vedere_report_ore, puo_vedere_omd, puo_vedere_lavori_interni, puo_gestire_agenda)
+                VALUES (%s, %s, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1);
             """, ('admin', hashed_pw))
 
         conn.commit()
@@ -502,8 +496,8 @@ def registra():
                 cur = conn.cursor()
                 hashed_pw = generate_password_hash(password)
                 cur.execute("""
-                    INSERT INTO utenti (username, password, is_admin, puo_vedere_magazzino, puo_aggiungere_prodotti, puo_modificare_prodotti, puo_caricare_scaricare, puo_eliminare, puo_vedere_pesante, puo_vedere_manutenzione, puo_aprire_manutenzioni, puo_gestire_interventi, puo_assegnare_manutenzioni, puo_eliminare_interventi, puo_vedere_manutenzioni_esterne, puo_vedere_storico_manutenzioni, puo_eliminare_storico, puo_gestire_fornitori, puo_importare_fornitori, puo_gestire_documenti, puo_eliminare_documenti, puo_vedere_promemoria, puo_assegnare_promemoria, puo_vedere_report_ore, puo_vedere_omd, puo_vedere_lavori_interni)
-                    VALUES (%s, %s, 0, 1, 1, 1, 1, 0, 1, 1, 1, 1, 1, 0, 1, 1, 0, 1, 1, 1, 0, 1, 0, 1, 1, 1);
+                    INSERT INTO utenti (username, password, is_admin, puo_vedere_magazzino, puo_aggiungere_prodotti, puo_modificare_prodotti, puo_caricare_scaricare, puo_eliminare, puo_vedere_pesante, puo_vedere_manutenzione, puo_aprire_manutenzioni, puo_gestire_interventi, puo_assegnare_manutenzioni, puo_eliminare_interventi, puo_vedere_manutenzioni_esterne, puo_vedere_storico_manutenzioni, puo_eliminare_storico, puo_gestire_fornitori, puo_importare_fornitori, puo_gestire_documenti, puo_eliminare_documenti, puo_vedere_promemoria, puo_assegnare_promemoria, puo_vedere_report_ore, puo_vedere_omd, puo_vedere_lavori_interni, puo_gestire_agenda)
+                    VALUES (%s, %s, 0, 1, 1, 1, 1, 0, 1, 1, 1, 1, 1, 0, 1, 1, 0, 1, 1, 1, 0, 1, 0, 1, 1, 1, 1);
                 """, (username, hashed_pw))
                 conn.commit()
                 cur.close()
@@ -912,6 +906,21 @@ def elimina_agenda(agenda_id):
     except Exception as e:
         flash(f"Errore eliminazione: {e}", "error")
         return redirect(url_for("agenda"))
+
+# --- ROTTA QR SCAFFALE (UBICAZIONE) ---
+@app.route("/qr_scaffale", methods=["GET"])
+@app.route("/qr_scaffale.html", methods=["GET"])
+def qr_scaffale():
+    ubicazione = request.args.get("ubicazione", "")
+    conn = get_db_connection()
+    cur = conn.cursor()
+    prodotti = []
+    if ubicazione:
+        cur.execute("SELECT * FROM prodotti WHERE posizione ILIKE %s ORDER BY nome ASC;", (f"%{ubicazione}%",))
+        prodotti = cur.fetchall()
+    cur.close()
+    conn.close()
+    return render_template("qr_scaffale.html", prodotti=prodotti, ubicazione=ubicazione)
 
 # --- CAMBI SERIE & API ULTIMA BOTTIGLIA ---
 @app.route("/api/ultima_bottiglia/<forno>/<linea>")
