@@ -862,7 +862,8 @@ def agenda():
                            utenti=utenti, 
                            fornitori=fornitori, 
                            titolo_sezione=titolo_sezione, 
-                           sezione_corrente=sezione_corrente)
+                           sezione_corrente=sezione_corrente,
+                           codice_sezione="agenda")
 
 # --- ALIAS DIRETTO PER OMD E LAVORI INTERNI (Evita BuildError nei template) ---
 @app.route("/omd")
