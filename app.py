@@ -864,6 +864,17 @@ def agenda():
                            titolo_sezione=titolo_sezione, 
                            sezione_corrente=sezione_corrente)
 
+# --- ALIAS DIRETTO PER OMD E LAVORI INTERNI (Evita BuildError nei template) ---
+@app.route("/omd")
+@app.route("/omd.html")
+def omd():
+    return redirect(url_for('agenda', sezione='omd'))
+
+@app.route("/lavori_interni")
+@app.route("/lavori_interni.html")
+def lavori_interni():
+    return redirect(url_for('agenda', sezione='lavori_interni'))
+
 @app.route("/completa_agenda/<int:agenda_id>", methods=["POST"])
 def completa_agenda(agenda_id):
     try:
