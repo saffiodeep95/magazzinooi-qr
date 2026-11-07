@@ -52,6 +52,16 @@ def crea_notifica(destinatario, titolo, messaggio, link=""):
     except Exception as e:
         print(f"Errore inserimento notifica: {e}")
 
+def parse_data_flessibile(data_str):
+    if not data_str:
+        return None
+    for fmt in ('%Y-%m-%d', '%d/%m/%Y', '%Y/%m/%d', '%d-%m-%Y'):
+        try:
+            return datetime.strptime(data_str.strip(), fmt).date()
+        except ValueError:
+            continue
+    return None
+
 def init_db():
     if not DATABASE_URL:
         print("DATABASE_URL non impostata!")
@@ -176,7 +186,9 @@ def init_db():
                 puo_eliminare_documenti INT DEFAULT 0,
                 puo_vedere_promemoria INT DEFAULT 1,
                 puo_assegnare_promemoria INT DEFAULT 0,
-                puo_vedere_report_ore INT DEFAULT 1
+                puo_vedere_report_ore INT DEFAULT 1,
+                puo_vedere_omd INT DEFAULT 1,
+                puo_vedere_lavori_interni INT DEFAULT 1
             );
         """)
 
@@ -290,7 +302,7 @@ def init_db():
         """)
         
         cur.execute("ALTER TABLE agenda ADD COLUMN IF NOT EXISTS sezione VARCHAR(50) DEFAULT 'agenda';")
-
+        
         colonne_cambi_serie = [
             ("bottiglia_precedente", "VARCHAR(255)"),
             ("bottiglia_nuova", "VARCHAR(255)"),
@@ -322,7 +334,9 @@ def init_db():
             ("puo_eliminare_documenti", "INT DEFAULT 0"),
             ("puo_vedere_promemoria", "INT DEFAULT 1"),
             ("puo_assegnare_promemoria", "INT DEFAULT 0"),
-            ("puo_vedere_report_ore", "INT DEFAULT 1")
+            ("puo_vedere_report_ore", "INT DEFAULT 1"),
+            ("puo_vedere_omd", "INT DEFAULT 1"),
+            ("puo_vedere_lavori_interni", "INT DEFAULT 1")
         ]
         
         for p_col, p_type in permessi_lista:
@@ -332,8 +346,8 @@ def init_db():
         if not cur.fetchone():
             hashed_pw = generate_password_hash("admin")
             cur.execute("""
-                INSERT INTO utenti (username, password, is_admin, puo_vedere_magazzino, puo_aggiungere_prodotti, puo_modificare_prodotti, puo_caricare_scaricare, puo_eliminare, puo_vedere_pesante, puo_vedere_manutenzione, puo_aprire_manutenzioni, puo_gestire_interventi, puo_assegnare_manutenzioni, puo_eliminare_interventi, puo_vedere_manutenzioni_esterne, puo_vedere_storico_manutenzioni, puo_eliminare_storico, puo_gestire_fornitori, puo_importare_fornitori, puo_gestire_documenti, puo_eliminare_documenti, puo_vedere_promemoria, puo_assegnare_promemoria, puo_vedere_report_ore)
-                VALUES (%s, %s, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1);
+                INSERT INTO utenti (username, password, is_admin, puo_vedere_magazzino, puo_aggiungere_prodotti, puo_modificare_prodotti, puo_caricare_scaricare, puo_eliminare, puo_vedere_pesante, puo_vedere_manutenzione, puo_aprire_manutenzioni, puo_gestire_interventi, puo_assegnare_manutenzioni, puo_eliminare_interventi, puo_vedere_manutenzioni_esterne, puo_vedere_storico_manutenzioni, puo_eliminare_storico, puo_gestire_fornitori, puo_importare_fornitori, puo_gestire_documenti, puo_eliminare_documenti, puo_vedere_promemoria, puo_assegnare_promemoria, puo_vedere_report_ore, puo_vedere_omd, puo_vedere_lavori_interni)
+                VALUES (%s, %s, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1);
             """, ('admin', hashed_pw))
 
         conn.commit()
@@ -372,19 +386,14 @@ def api_notifiche():
 @app.route("/api/notifiche/segna_lette", methods=["POST"])
 def api_segna_lette():
     username = session.get('username')
-    if not username:
-        return jsonify({"status": "error", "message": "Utente non autenticato"}), 401
-    try:
+    if username:
         conn = get_db_connection()
         cur = conn.cursor()
-        cur.execute("DELETE FROM notifiche WHERE destinatario = %s;", (username,))
+        cur.execute("UPDATE notifiche SET letta = TRUE WHERE destinatario = %s;", (username,))
         conn.commit()
         cur.close()
         conn.close()
-        return jsonify({"status": "ok"})
-    except Exception as e:
-        print(f"Errore eliminazione notifiche: {e}")
-        return jsonify({"status": "error", "message": str(e)}), 500
+    return jsonify({"status": "ok"})
 
 @app.route("/")
 @app.route("/index")
@@ -493,8 +502,8 @@ def registra():
                 cur = conn.cursor()
                 hashed_pw = generate_password_hash(password)
                 cur.execute("""
-                    INSERT INTO utenti (username, password, is_admin, puo_vedere_magazzino, puo_aggiungere_prodotti, puo_modificare_prodotti, puo_caricare_scaricare, puo_eliminare, puo_vedere_pesante, puo_vedere_manutenzione, puo_aprire_manutenzioni, puo_gestire_interventi, puo_assegnare_manutenzioni, puo_eliminare_interventi, puo_vedere_manutenzioni_esterne, puo_vedere_storico_manutenzioni, puo_eliminare_storico, puo_gestire_fornitori, puo_importare_fornitori, puo_gestire_documenti, puo_eliminare_documenti, puo_vedere_promemoria, puo_assegnare_promemoria, puo_vedere_report_ore)
-                    VALUES (%s, %s, 0, 1, 1, 1, 1, 0, 1, 1, 1, 1, 1, 0, 1, 1, 0, 1, 1, 1, 0, 1, 0, 1);
+                    INSERT INTO utenti (username, password, is_admin, puo_vedere_magazzino, puo_aggiungere_prodotti, puo_modificare_prodotti, puo_caricare_scaricare, puo_eliminare, puo_vedere_pesante, puo_vedere_manutenzione, puo_aprire_manutenzioni, puo_gestire_interventi, puo_assegnare_manutenzioni, puo_eliminare_interventi, puo_vedere_manutenzioni_esterne, puo_vedere_storico_manutenzioni, puo_eliminare_storico, puo_gestire_fornitori, puo_importare_fornitori, puo_gestire_documenti, puo_eliminare_documenti, puo_vedere_promemoria, puo_assegnare_promemoria, puo_vedere_report_ore, puo_vedere_omd, puo_vedere_lavori_interni)
+                    VALUES (%s, %s, 0, 1, 1, 1, 1, 0, 1, 1, 1, 1, 1, 0, 1, 1, 0, 1, 1, 1, 0, 1, 0, 1, 1, 1);
                 """, (username, hashed_pw))
                 conn.commit()
                 cur.close()
@@ -506,6 +515,7 @@ def registra():
                 flash("Username già esistente o errore di registrazione.", "error")
     return render_template("registra.html")
 
+# --- PANNELLO PERMESSI ADMIN & LOGS ---
 @app.route("/admin_utenti")
 @app.route("/admin_utenti.html")
 def admin_utenti():
@@ -599,6 +609,7 @@ def elimina_utente(user_id):
         flash(f"Errore eliminazione utente: {e}", "error")
     return redirect(url_for('admin_utenti'))
 
+# --- GESTIONE NASTRI E TAPPETI ---
 @app.route("/nastri", methods=["GET", "POST"])
 @app.route("/nastri.html", methods=["GET", "POST"])
 def nastri():
@@ -766,28 +777,33 @@ def stampa_nastri():
     conn.close()
     return render_template("stampa_nastri.html", nastri=lista, sezione=sezione)
 
-# SEZIONI AGENDA, OMD E LAVORI INTERNI
+# --- PANNELLO AGENDA UNIFICATA CON SEZIONI INTERNE E PERMESSI ---
 @app.route("/agenda", methods=["GET", "POST"])
 @app.route("/agenda.html", methods=["GET", "POST"])
 def agenda():
-    return gestisci_sezioni_agenda("agenda", "Agenda")
-
-@app.route("/omd", methods=["GET", "POST"])
-@app.route("/omd.html", methods=["GET", "POST"])
-def omd():
-    return gestisci_sezioni_agenda("omd", "OMD")
-
-@app.route("/lavori_interni", methods=["GET", "POST"])
-@app.route("/lavori_interni.html", methods=["GET", "POST"])
-def lavori_interni():
-    return gestisci_sezioni_agenda("lavori_interni", "Lavori Interni")
-
-def gestisci_sezioni_agenda(codice_sezione, titolo_sezione):
     if not session.get('username'):
         return redirect(url_for('login'))
     
     username_corrente = session.get('username')
     is_admin = session.get('is_admin')
+    
+    sezione_corrente = request.args.get("sezione", "agenda")
+    
+    # CONTROLLO PERMESSI PER LE SEZIONI INTERNE
+    if not is_admin:
+        if sezione_corrente == 'omd' and not session.get('puo_vedere_omd', 1):
+            flash("Non disponi dei permessi per accedere alla sezione OMD.", "error")
+            return redirect(url_for('agenda', sezione='agenda'))
+        if sezione_corrente == 'lavori_interni' and not session.get('puo_vedere_lavori_interni', 1):
+            flash("Non disponi dei permessi per accedere alla sezione Lavori Interni.", "error")
+            return redirect(url_for('agenda', sezione='agenda'))
+
+    titoli_mappa = {
+        "agenda": "Agenda",
+        "omd": "OMD",
+        "lavori_interni": "Lavori Interni"
+    }
+    titolo_sezione = titoli_mappa.get(sezione_corrente, "Agenda")
     
     conn = get_db_connection()
     cur = conn.cursor()
@@ -799,13 +815,14 @@ def gestisci_sezioni_agenda(codice_sezione, titolo_sezione):
         nome_azienda = request.form.get("fornitore_input", "")
         utenti_selezionati = request.form.getlist("utenti_visibili[]")
         
+        sezione_form = request.form.get("sezione_target", "agenda")
         utenti_visibili = ", ".join(utenti_selezionati) if utenti_selezionati else "Tutti"
         
         if titolo:
             cur.execute("""
                 INSERT INTO agenda (titolo, descrizione, data_scadenza, nome_azienda, utenti_visibili, sezione, creato_da)
                 VALUES (%s, %s, %s, %s, %s, %s, %s);
-            """, (titolo, descrizione, data_scadenza, nome_azienda, utenti_visibili, codice_sezione, username_corrente))
+            """, (titolo, descrizione, data_scadenza, nome_azienda, utenti_visibili, sezione_form, username_corrente))
             conn.commit()
             
             if "Tutti" not in utenti_selezionati:
@@ -814,25 +831,28 @@ def gestisci_sezioni_agenda(codice_sezione, titolo_sezione):
                     if tec_clean and tec_clean != username_corrente:
                         crea_notifica(
                             destinatario=tec_clean,
-                            titolo=f"📅 Nuova Attività ({titolo_sezione})",
-                            messaggio=f"Ti è stata assegnata un'attività in {titolo_sezione}: {titolo}",
-                            link=f"/{codice_sezione}"
+                            titolo=f"📅 Nuova Attività ({titoli_mappa.get(sezione_form, 'Agenda')})",
+                            messaggio=f"Ti è stata assegnata un'attività: {titolo}",
+                            link=f"/agenda?sezione={sezione_form}"
                         )
             
-            registra_log(f"Creata attività in {titolo_sezione}: {titolo}")
-            flash(f"Attività aggiunta in {titolo_sezione} con successo!", "success")
-        return redirect(url_for(codice_sezione))
+            registra_log(f"Creata attività in {sezione_form}: {titolo}")
+            flash("Attività aggiunta con successo!", "success")
+        return redirect(url_for('agenda', sezione=sezione_form))
 
-    if is_admin:
-        cur.execute("SELECT * FROM agenda WHERE sezione = %s ORDER BY data_scadenza ASC NULLS LAST, id DESC;", (codice_sezione,))
-    else:
-        cur.execute("""
-            SELECT * FROM agenda 
-            WHERE sezione = %s AND (utenti_visibili LIKE %s OR utenti_visibili = 'Tutti' OR utenti_visibili = '')
-            ORDER BY data_scadenza ASC NULLS LAST, id DESC;
-        """, (codice_sezione, f"%{username_corrente}%"))
-    
-    attivita = cur.fetchall()
+    try:
+        if is_admin:
+            cur.execute("SELECT * FROM agenda WHERE sezione = %s ORDER BY data_scadenza ASC NULLS LAST, id DESC;", (sezione_corrente,))
+        else:
+            cur.execute("""
+                SELECT * FROM agenda 
+                WHERE sezione = %s AND (utenti_visibili LIKE %s OR utenti_visibili = 'Tutti' OR utenti_visibili = '')
+                ORDER BY data_scadenza ASC NULLS LAST, id DESC;
+            """, (sezione_corrente, f"%{username_corrente}%"))
+        attivita = cur.fetchall()
+    except Exception:
+        cur.execute("SELECT * FROM agenda ORDER BY data_scadenza ASC NULLS LAST, id DESC;")
+        attivita = cur.fetchall()
 
     cur.execute("SELECT username FROM utenti ORDER BY username ASC;")
     utenti = cur.fetchall()
@@ -848,7 +868,7 @@ def gestisci_sezioni_agenda(codice_sezione, titolo_sezione):
                            utenti=utenti, 
                            fornitori=fornitori, 
                            titolo_sezione=titolo_sezione, 
-                           codice_sezione=codice_sezione)
+                           sezione_corrente=sezione_corrente)
 
 @app.route("/completa_agenda/<int:agenda_id>", methods=["POST"])
 def completa_agenda(agenda_id):
@@ -857,7 +877,7 @@ def completa_agenda(agenda_id):
         cur = conn.cursor()
         cur.execute("SELECT sezione FROM agenda WHERE id = %s;", (agenda_id,))
         res = cur.fetchone()
-        sezione = res['sezione'] if res else 'agenda'
+        sezione = res['sezione'] if res and 'sezione' in res else 'agenda'
         
         cur.execute("DELETE FROM agenda WHERE id = %s;", (agenda_id,))
         conn.commit()
@@ -865,7 +885,7 @@ def completa_agenda(agenda_id):
         conn.close()
         registra_log(f"Completata ed eliminata attività ID {agenda_id}")
         flash("Attività completata e rimossa.", "success")
-        return redirect(url_for(sezione))
+        return redirect(url_for('agenda', sezione=sezione))
     except Exception as e:
         flash(f"Errore completamento attività: {e}", "error")
         return redirect(url_for('agenda'))
@@ -880,7 +900,7 @@ def elimina_agenda(agenda_id):
         cur = conn.cursor()
         cur.execute("SELECT sezione FROM agenda WHERE id = %s;", (agenda_id,))
         res = cur.fetchone()
-        sezione = res['sezione'] if res else 'agenda'
+        sezione = res['sezione'] if res and 'sezione' in res else 'agenda'
         
         cur.execute("DELETE FROM agenda WHERE id = %s;", (agenda_id,))
         conn.commit()
@@ -888,11 +908,12 @@ def elimina_agenda(agenda_id):
         conn.close()
         registra_log(f"Eliminata attività ID {agenda_id}")
         flash("Attività eliminata con successo.", "success")
-        return redirect(url_for(sezione))
+        return redirect(url_for('agenda', sezione=sezione))
     except Exception as e:
         flash(f"Errore eliminazione: {e}", "error")
         return redirect(url_for("agenda"))
 
+# --- CAMBI SERIE & API ULTIMA BOTTIGLIA ---
 @app.route("/api/ultima_bottiglia/<forno>/<linea>")
 def ultima_bottiglia(forno, linea):
     try:
@@ -930,14 +951,13 @@ def cambi_serie():
     query = "SELECT * FROM cambi_serie WHERE 1=1"
     params = []
 
-    if forno_filtro and forno_filtro != "Tutti":
+    if forno_filtro != "Tutti":
         query += " AND forno = %s"
         params.append(forno_filtro)
     
     if settimana_filtro:
-        settimana_pulita = settimana_filtro.replace("W", "")
         query += " AND TO_CHAR(data_cambio::DATE, 'IYYY-IW') = %s"
-        params.append(settimana_pulita)
+        params.append(settimana_filtro)
 
     query += " ORDER BY data_cambio DESC, id DESC;"
     cur.execute(query, tuple(params))
@@ -949,8 +969,7 @@ def cambi_serie():
     return render_template("cambi_serie.html", 
                            record_serie=record_serie, 
                            forno_filtro=forno_filtro, 
-                           settimana_filtro=settimana_filtro,
-                           now_date=datetime.now().strftime('%Y-%m-%d'))
+                           settimana_filtro=settimana_filtro)
 
 @app.route("/aggiungi_cambio_serie", methods=["POST"])
 def aggiungi_cambio_serie():
@@ -1060,6 +1079,7 @@ def esporta_cambi_serie_csv():
         headers={"Content-disposition": "attachment; filename=Cambi_Serie_OMG.csv"}
     )
 
+# --- MODULO: REPORT ORE & STATISTICHE MANUTENZIONI ---
 @app.route("/report_ore")
 @app.route("/report_ore.html")
 def report_ore():
@@ -1159,6 +1179,7 @@ def report_ore():
                            chart_tipi_labels=chart_tipi_labels,
                            chart_tipi_values=chart_tipi_values)
 
+# --- RICHIESTE INTERVENTO MANUTENZIONE OFFICINA ---
 @app.route("/richieste_manutenzione", methods=["GET", "POST"])
 @app.route("/richieste_manutenzione.html", methods=["GET", "POST"])
 def richieste_manutenzione():
@@ -1425,6 +1446,7 @@ def elimina_intervento(intervento_id):
     flash("Intervento eliminato.", "success")
     return redirect(url_for("richieste_manutenzione"))
 
+# --- GESTIONE PROMEMORIA ---
 @app.route("/promemoria", methods=["GET", "POST"])
 @app.route("/promemoria.html", methods=["GET", "POST"])
 def promemoria():
@@ -1556,6 +1578,7 @@ def elimina_promemoria(promemoria_id):
     flash("Promemoria eliminato.", "success")
     return redirect(url_for("promemoria"))
 
+# --- GESTIONE FORNITORI E CONTATTI ---
 @app.route("/fornitori", methods=["GET", "POST"])
 @app.route("/fornitori.html", methods=["GET", "POST"])
 def fornitori():
@@ -1848,6 +1871,7 @@ def esporta_fornitori_csv():
         headers={"Content-disposition": "attachment; filename=Fornitori_Gestionale_OMG.csv"}
     )
 
+# --- GESTIONE DOCUMENTI ---
 @app.route("/documenti", defaults={"cartella_id": None}, methods=["GET", "POST"])
 @app.route("/documenti/<int:cartella_id>", methods=["GET", "POST"])
 @app.route("/documenti.html", defaults={"cartella_id": None}, methods=["GET", "POST"])
@@ -1992,20 +2016,7 @@ def elimina_file(file_id):
         return redirect(url_for("documenti", cartella_id=cartella_id))
     return redirect(url_for("documenti"))
 
-@app.route("/qr_scaffale", methods=["GET"])
-@app.route("/qr_scaffale.html", methods=["GET"])
-def qr_scaffale():
-    ubicazione = request.args.get("ubicazione", "")
-    conn = get_db_connection()
-    cur = conn.cursor()
-    prodotti = []
-    if ubicazione:
-        cur.execute("SELECT * FROM prodotti WHERE posizione ILIKE %s ORDER BY nome ASC;", (f"%{ubicazione}%",))
-        prodotti = cur.fetchall()
-    cur.close()
-    conn.close()
-    return render_template("qr_scaffale.html", prodotti=prodotti, ubicazione=ubicazione)
-
+# --- ALTRE ROTTE GESTIONALE E ESPORTAZIONI CSV ---
 @app.route("/esportazioni")
 @app.route("/esportazioni.html")
 def esportazioni():
@@ -2368,30 +2379,18 @@ def scarico():
 @app.route("/scanner_globale.html", methods=["GET", "POST"])
 def scanner_globale():
     if request.method == "POST":
-        codice = request.form.get("qr_code", "").strip()
-        if codice:
+        qr_code = request.form.get("qr_code", "").strip()
+        if qr_code:
             conn = get_db_connection()
             cur = conn.cursor()
-            
-            cur.execute("SELECT * FROM prodotti WHERE qr_code = %s;", (codice,))
+            cur.execute("SELECT * FROM prodotti WHERE qr_code = %s;", (qr_code,))
             prodotto = cur.fetchone()
-            
-            if prodotto:
-                cur.close()
-                conn.close()
-                return redirect(url_for("gestisci_prodotto", qr_code=codice))
-            
-            cur.execute("SELECT DISTINCT posizione FROM prodotti WHERE posizione ILIKE %s;", (f"%{codice}%",))
-            pos_trovata = cur.fetchone()
-            
             cur.close()
             conn.close()
-            
-            if pos_trovata:
-                return redirect(url_for("qr_scaffale", ubicazione=pos_trovata['posizione']))
+            if prodotto:
+                return redirect(url_for("gestisci_prodotto", qr_code=qr_code))
             else:
-                flash(f"Nessun articolo o ubicazione trovata con il codice: {codice}", "error")
-                
+                flash(f"Nessun articolo trovato con QR Code: {qr_code}", "error")
     return render_template("scanner_globale.html")
 
 @app.route("/gestisci/<qr_code>")
