@@ -41,32 +41,51 @@
             {% endif %}
         {% endwith %}
 
-        <!-- Intestazione e Tabs Sezioni -->
+        <!-- Intestazione e Pulsante Nuova Attività -->
         <div class="d-flex justify-content-between align-items-center mb-4">
-            <h2><i class="fas fa-calendar-alt text-primary me-2"></i> {{ titolo_sezione }}</h2>
+            <h2><i class="fas fa-calendar-alt text-primary me-2"></i> {{ titolo_sezione }} {% if filtro_stato == 'completate' %}<span class="text-muted fs-5">(Archivio)</span>{% endif %}</h2>
             <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#modalNuovaAttivita">
                 <i class="fas fa-plus me-1"></i> Nuova Attività
             </button>
         </div>
 
-        <!-- Selettore rapido sezioni -->
-        <ul class="nav nav-pills mb-4">
+        <!-- Selettore rapido sezioni (Agenda / OMD / Lavori Interni) -->
+        <ul class="nav nav-pills mb-3">
             <li class="nav-item">
-                <a class="nav-link {% if sezione_corrente == 'agenda' %}active{% endif %}" href="{{ url_for('agenda', sezione='agenda') }}">
+                <a class="nav-link {% if sezione_corrente == 'agenda' %}active{% endif %}" href="{{ url_for('agenda', sezione='agenda', stato=filtro_stato) }}">
                     <i class="fas fa-calendar me-1"></i> Agenda
                 </a>
             </li>
             <li class="nav-item">
-                <a class="nav-link {% if sezione_corrente == 'omd' %}active{% endif %}" href="{{ url_for('agenda', sezione='omd') }}">
+                <a class="nav-link {% if sezione_corrente == 'omd' %}active{% endif %}" href="{{ url_for('agenda', sezione='omd', stato=filtro_stato) }}">
                     <i class="fas fa-tasks me-1"></i> OMD
                 </a>
             </li>
             <li class="nav-item">
-                <a class="nav-link {% if sezione_corrente == 'lavori_interni' %}active{% endif %}" href="{{ url_for('agenda', sezione='lavori_interni') }}">
+                <a class="nav-link {% if sezione_corrente == 'lavori_interni' %}active{% endif %}" href="{{ url_for('agenda', sezione='lavori_interni', stato=filtro_stato) }}">
                     <i class="fas fa-tools me-1"></i> Lavori Interni
                 </a>
             </li>
         </ul>
+
+        <!-- Sotto-barra: Filtro Attive / Archivio e Pulsante Stampa -->
+        <div class="d-flex justify-content-between align-items-center mb-4 bg-white p-3 rounded shadow-sm">
+            <div class="btn-group" role="group">
+                <a href="{{ url_for('agenda', sezione=sezione_corrente, stato='attive') }}" class="btn btn-outline-primary {% if filtro_stato != 'completate' %}active{% endif %}">
+                    <i class="fas fa-list me-1"></i> In Corso
+                </a>
+                <a href="{{ url_for('agenda', sezione=sezione_corrente, stato='completate') }}" class="btn btn-outline-success {% if filtro_stato == 'completate' %}active{% endif %}">
+                    <i class="fas fa-archive me-1"></i> Archivio (Completate)
+                </a>
+            </div>
+
+            <!-- Pulsante Stampa Archivio (Disponibile solo per OMD e Lavori Interni quando si guarda l'archivio) -->
+            {% if sezione_corrente in ['omd', 'lavori_interni'] and filtro_stato == 'completate' %}
+            <a href="{{ url_for('stampa_archivio_agenda', sezione=sezione_corrente) }}" target="_blank" class="btn btn-dark">
+                <i class="fas fa-print me-1"></i> Stampa Archivio {{ titolo_sezione }}
+            </a>
+            {% endif %}
+        </div>
 
         <!-- Tabella Attività -->
         <div class="card shadow-sm border-0">
@@ -75,7 +94,7 @@
                     <table class="table table-hover align-middle mb-0">
                         <thead class="table-dark">
                             <tr>
-                                <th style="width: 100px;">Stato</th>
+                                <th style="width: 120px;">Stato</th>
                                 <th>Titolo / Descrizione</th>
                                 <th>Richiesto da</th>
                                 <th>Inizio</th>
@@ -103,7 +122,7 @@
                                         <br><small class="text-muted">{{ item.descrizione }}</small>
                                     {% endif %}
                                     {% if item.nome_azienda %}
-                                        <br><span class="badge bg-secondary">Azienda/Fornitore: {{ item.nome_azienda }}</span>
+                                        <br><span class="badge bg-secondary">Azienda: {{ item.nome_azienda }}</span>
                                     {% endif %}
                                 </td>
 
@@ -121,15 +140,15 @@
 
                                 <!-- Azioni -->
                                 <td class="text-end">
-                                    <!-- Pulsante Completa / Riattiva (Non cancella la riga) -->
+                                    <!-- Pulsante Riattiva o Completa (Sposta da/verso archivio senza cancellare) -->
                                     <form action="{{ url_for('completa_agenda', agenda_id=item.id) }}" method="POST" class="d-inline">
                                         {% if item.completato %}
-                                            <button type="submit" class="btn btn-sm btn-outline-secondary" title="Riattiva attività">
-                                                <i class="fas fa-undo"></i>
+                                            <button type="submit" class="btn btn-sm btn-outline-secondary" title="Riattiva (Sposta in In Corso)">
+                                                <i class="fas fa-undo"></i> Riattiva
                                             </button>
                                         {% else %}
-                                            <button type="submit" class="btn btn-sm btn-success" title="Segna come completato">
-                                                <i class="fas fa-check"></i>
+                                            <button type="submit" class="btn btn-sm btn-success" title="Completa (Sposta in Archivio)">
+                                                <i class="fas fa-check"></i> Completa
                                             </button>
                                         {% endif %}
                                     </form>
@@ -147,7 +166,7 @@
                             {% else %}
                             <tr>
                                 <td colspan="7" class="text-center text-muted py-4">
-                                    <i class="fas fa-info-circle me-1"></i> Nessuna attività presente in questa sezione.
+                                    <i class="fas fa-info-circle me-1"></i> Nessuna attività trovata in questa vista.
                                 </td>
                             </tr>
                             {% endfor %}
@@ -200,7 +219,6 @@
                             <div class="col-md-6 mb-3">
                                 <label for="data_fine" class="form-label">Data Fine / Scadenza</label>
                                 <input type="date" class="form-control" id="data_fine" name="data_fine">
-                                <!-- Mantenuto anche come fallback logico se usato altrove -->
                                 <input type="hidden" name="data_scadenza" id="data_scadenza_fallback">
                             </div>
                         </div>
