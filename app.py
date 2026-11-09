@@ -781,7 +781,7 @@ def stampa_nastri():
     conn.close()
     return render_template("stampa_nastri.html", nastri=lista, sezione=sezione)
 
-# --- FUNZIONE AGENDA / OMD / LAVORI INTERNI AGGIORNATA CON ARCHIVIO E DATA CHIUSURA AUTOMATICA ---
+# --- FUNZIONE AGENDA / OMD / LAVORI INTERNI CON NOTIFICHE AUTOMATICHE ---
 @app.route("/agenda", methods=["GET", "POST"])
 @app.route("/agenda.html", methods=["GET", "POST"])
 def agenda():
@@ -841,16 +841,28 @@ def agenda():
             """, (titolo, descrizione, data_scadenza, richiesto_da, data_inizio, data_fine, nome_azienda, utenti_visibili, sezione_form, username_corrente))
             conn.commit()
             
-            if utenti_selezionati and "Tutti" not in utenti_selezionati:
-                for tec in utenti_selezionati:
-                    tec_clean = tec.strip()
-                    if tec_clean and tec_clean != username_corrente:
+            # --- INVIAMO LA NOTIFICA AGLI UTENTI ASSEGNATI ---
+            if utenti_selezionati:
+                if "Tutti" in utenti_selezionati:
+                    cur.execute("SELECT username FROM utenti WHERE username != %s;", (username_corrente,))
+                    tutti_altri = cur.fetchall()
+                    for u_dict in tutti_altri:
                         crea_notifica(
-                            destinatario=tec_clean,
+                            destinatario=u_dict['username'],
                             titolo=f"📅 Nuova Attività ({titoli_mappa.get(sezione_form, 'Agenda')})",
-                            messaggio=f"Ti è stata assegnata un'attività: {titolo}",
+                            messaggio=f"{username_corrente} ha inserito una nuova attività: {titolo}",
                             link=f"/agenda?sezione={sezione_form}"
                         )
+                else:
+                    for tec in utenti_selezionati:
+                        tec_clean = tec.strip()
+                        if tec_clean and tec_clean != username_corrente:
+                            crea_notifica(
+                                destinatario=tec_clean,
+                                titolo=f"📅 Nuova Attività Assegnata ({titoli_mappa.get(sezione_form, 'Agenda')})",
+                                messaggio=f"Ti è stata assegnata un'attività da {username_corrente}: {titolo}",
+                                link=f"/agenda?sezione={sezione_form}"
+                            )
             
             registra_log(f"Creata attività in {sezione_form}: {titolo}")
             flash(f"Attività aggiunta con successo in {titoli_mappa.get(sezione_form, 'Agenda')}!", "success")
@@ -912,7 +924,7 @@ def completa_agenda(agenda_id):
     try:
         conn = get_db_connection()
         cur = conn.cursor()
-        cur.execute("SELECT sezione, completato FROM agenda WHERE id = %s;", (agenda_id,))
+        cur.execute("SELECT sezione, completato, titolo FROM agenda WHERE id = %s;", (agenda_id,))
         res = cur.fetchone()
         sezione = res['sezione'] if res and 'sezione' in res else 'agenda'
         stato_attuale = res['completato'] if res and 'completato' in res else False
@@ -920,7 +932,6 @@ def completa_agenda(agenda_id):
         nuovo_stato = not stato_attuale
         
         if nuovo_stato:
-            # Imposta automaticamente la data di oggi come data_fine (data chiusura) se non presente
             data_oggi = datetime.now().strftime('%Y-%m-%d')
             cur.execute("""
                 UPDATE agenda 
