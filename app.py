@@ -1626,11 +1626,8 @@ def promemoria():
         priorita = request.form.get("priorita", "Media")
         ricorrenza = request.form.get("ricorrenza", "Nessuna")
         
-        if is_admin or puo_assegnare:
-            assegnato_a = request.form.get("assegnato_a")
-            if not assegnato_a:
-                assegnato_a = username_corrente
-        else:
+        assegnato_a = request.form.get("assegnato_a")
+        if not assegnato_a:
             assegnato_a = username_corrente
         
         if titolo:
@@ -1640,7 +1637,7 @@ def promemoria():
             """, (titolo, descrizione, data_scadenza, priorita, ricorrenza, assegnato_a))
             conn.commit()
             
-            if assegnato_a and assegnato_a != username_corrente:
+            if assegnato_a:
                 crea_notifica(
                     destinatario=assegnato_a,
                     titolo="📌 Nuovo Promemoria Assegnato",
@@ -1653,9 +1650,10 @@ def promemoria():
         return redirect(url_for("promemoria"))
         
     lista_utenti = []
+    cur.execute("SELECT username FROM utenti ORDER BY username ASC;")
+    lista_utenti = cur.fetchall()
+
     if is_admin or puo_assegnare:
-        cur.execute("SELECT username FROM utenti ORDER BY username ASC;")
-        lista_utenti = cur.fetchall()
         cur.execute("SELECT * FROM promemoria ORDER BY completato ASC, data_scadenza ASC;")
     else:
         cur.execute("""
@@ -2621,7 +2619,7 @@ def aggiungi_prodotto():
     flag_sezione = 1 if request.form.get("magazzino_pesante") else 0
 
     if not nome:
-        flash(" Il nome dell'articolo è obbligatorio!", "error")
+        flash("Il nome dell'articolo è obbligatorio!", "error")
         return redirect(url_for("index"))
 
     try:
