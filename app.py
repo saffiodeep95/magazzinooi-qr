@@ -303,11 +303,20 @@ def init_db():
                 utenti_visibili VARCHAR(255) DEFAULT '',
                 sezione VARCHAR(50) DEFAULT 'agenda',
                 creato_da VARCHAR(255),
+                richiesto_da VARCHAR(255),
+                data_inizio VARCHAR(50),
+                data_fine VARCHAR(50),
+                completato BOOLEAN DEFAULT FALSE,
                 creato_il TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             );
         """)
         
+        # Migrazioni colonne per sicurezza se la tabella esisteva già
         cur.execute("ALTER TABLE agenda ADD COLUMN IF NOT EXISTS sezione VARCHAR(50) DEFAULT 'agenda';")
+        cur.execute("ALTER TABLE agenda ADD COLUMN IF NOT EXISTS richiesto_da VARCHAR(255);")
+        cur.execute("ALTER TABLE agenda ADD COLUMN IF NOT EXISTS data_inizio VARCHAR(50);")
+        cur.execute("ALTER TABLE agenda ADD COLUMN IF NOT EXISTS data_fine VARCHAR(50);")
+        cur.execute("ALTER TABLE agenda ADD COLUMN IF NOT EXISTS completato BOOLEAN DEFAULT FALSE;")
         cur.execute("ALTER TABLE cambi_serie ADD COLUMN IF NOT EXISTS misura_piastrina_nuova VARCHAR(50);")
 
         permessi_lista = [
@@ -773,7 +782,7 @@ def stampa_nastri():
     conn.close()
     return render_template("stampa_nastri.html", nastri=lista, sezione=sezione)
 
-# --- FUNZIONE AGENDA / OMD / LAVORI INTERNI CORRETTA DEFINITIVAMENTE ---
+# --- FUNZIONE AGENDA / OMD / LAVORI INTERNI AGGIORNATA CON CHI HA RICHIESTO, DATE E COMPLETAMENTO NON CANCELLABILE ---
 @app.route("/agenda", methods=["GET", "POST"])
 @app.route("/agenda.html", methods=["GET", "POST"])
 def agenda():
@@ -783,10 +792,8 @@ def agenda():
     username_corrente = session.get('username')
     is_admin = session.get('is_admin')
     
-    # Rileva correttamente la sezione sia dal Form (POST) che dall'URL (GET)
     sezione_corrente = request.form.get("sezione_target") or request.args.get("sezione", "agenda")
     
-    # 1. Recupera SEMPRE i permessi aggiornati in tempo reale dal Database
     conn = get_db_connection()
     cur = conn.cursor()
     cur.execute("SELECT puo_vedere_omd, puo_vedere_lavori_interni FROM utenti WHERE username = %s;", (username_corrente,))
@@ -795,7 +802,6 @@ def agenda():
     puo_omd = user_permessi.get('puo_vedere_omd', 1) if user_permessi else 1
     puo_lavori = user_permessi.get('puo_vedere_lavori_interni', 1) if user_permessi else 1
 
-    # 2. Controllo accesso condizionale in tempo reale per non-admin
     if not is_admin:
         if sezione_corrente == 'omd' and not puo_omd:
             cur.close()
@@ -819,20 +825,20 @@ def agenda():
         titolo = request.form.get("titolo")
         descrizione = request.form.get("descrizione", "")
         data_scadenza = request.form.get("data_scadenza", "")
+        richiesto_da = request.form.get("richiesto_da", "").strip()
+        data_inizio = request.form.get("data_inizio", "").strip()
+        data_fine = request.form.get("data_fine", "").strip()
         nome_azienda = request.form.get("fornitore_input", "")
         utenti_selezionati = request.form.getlist("utenti_visibili[]")
         
-        # Mantiene esattamente la sezione di partenza (omd / lavori_interni / agenda)
         sezione_form = request.form.get("sezione_target") or sezione_corrente
-        
-        # NON imposta più "Tutti" di default se la selezione è vuota
         utenti_visibili = ", ".join(utenti_selezionati) if utenti_selezionati else ""
         
         if titolo:
             cur.execute("""
-                INSERT INTO agenda (titolo, descrizione, data_scadenza, nome_azienda, utenti_visibili, sezione, creato_da)
-                VALUES (%s, %s, %s, %s, %s, %s, %s);
-            """, (titolo, descrizione, data_scadenza, nome_azienda, utenti_visibili, sezione_form, username_corrente))
+                INSERT INTO agenda (titolo, descrizione, data_scadenza, richiesto_da, data_inizio, data_fine, nome_azienda, utenti_visibili, sezione, creato_da, completato)
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, FALSE);
+            """, (titolo, descrizione, data_scadenza, richiesto_da, data_inizio, data_fine, nome_azienda, utenti_visibili, sezione_form, username_corrente))
             conn.commit()
             
             if utenti_selezionati and "Tutti" not in utenti_selezionati:
@@ -855,16 +861,16 @@ def agenda():
 
     try:
         if is_admin:
-            cur.execute("SELECT * FROM agenda WHERE sezione = %s ORDER BY data_scadenza ASC NULLS LAST, id DESC;", (sezione_corrente,))
+            cur.execute("SELECT * FROM agenda WHERE sezione = %s ORDER BY completato ASC, data_scadenza ASC NULLS LAST, id DESC;", (sezione_corrente,))
         else:
             cur.execute("""
                 SELECT * FROM agenda 
                 WHERE sezione = %s AND (utenti_visibili LIKE %s OR utenti_visibili = 'Tutti' OR utenti_visibili = '' OR utenti_visibili IS NULL)
-                ORDER BY data_scadenza ASC NULLS LAST, id DESC;
+                ORDER BY completato ASC, data_scadenza ASC NULLS LAST, id DESC;
             """, (sezione_corrente, f"%{username_corrente}%"))
         attivita = cur.fetchall()
     except Exception:
-        cur.execute("SELECT * FROM agenda WHERE sezione = %s ORDER BY data_scadenza ASC NULLS LAST, id DESC;", (sezione_corrente,))
+        cur.execute("SELECT * FROM agenda WHERE sezione = %s ORDER BY completato ASC, data_scadenza ASC NULLS LAST, id DESC;", (sezione_corrente,))
         attivita = cur.fetchall()
 
     cur.execute("SELECT username FROM utenti ORDER BY username ASC;")
@@ -899,19 +905,24 @@ def completa_agenda(agenda_id):
     try:
         conn = get_db_connection()
         cur = conn.cursor()
-        cur.execute("SELECT sezione FROM agenda WHERE id = %s;", (agenda_id,))
+        cur.execute("SELECT sezione, completato FROM agenda WHERE id = %s;", (agenda_id,))
         res = cur.fetchone()
         sezione = res['sezione'] if res and 'sezione' in res else 'agenda'
+        stato_attuale = res['completato'] if res and 'completato' in res else False
         
-        cur.execute("DELETE FROM agenda WHERE id = %s;", (agenda_id,))
+        # Inverte lo stato di completamento (da False a True e viceversa) SENZA CANCELLARE LA RIGA
+        nuovo_stato = not stato_attuale
+        cur.execute("UPDATE agenda SET completato = %s WHERE id = %s;", (nuovo_stato, agenda_id))
         conn.commit()
         cur.close()
         conn.close()
-        registra_log(f"Completata ed eliminata attività ID {agenda_id}")
-        flash("Attività completata e rimossa.", "success")
+        
+        testo_log = "completata" if nuovo_stato else "riattivata"
+        registra_log(f"Attività ID {agenda_id} contrassegnata come {testo_log}")
+        flash(f"Stato attività aggiornato con successo!", "success")
         return redirect(url_for('agenda', sezione=sezione))
     except Exception as e:
-        flash(f"Errore completamento attività: {e}", "error")
+        flash(f"Errore aggiornamento stato attività: {e}", "error")
         return redirect(url_for('agenda'))
 
 @app.route("/elimina_agenda/<int:agenda_id>", methods=["POST"])
@@ -930,7 +941,7 @@ def elimina_agenda(agenda_id):
         conn.commit()
         cur.close()
         conn.close()
-        registra_log(f"Eliminata attività ID {agenda_id}")
+        registra_log(f"Eliminata definitivamente attività ID {agenda_id}")
         flash("Attività eliminata con successo.", "success")
         return redirect(url_for('agenda', sezione=sezione))
     except Exception as e:
