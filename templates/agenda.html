@@ -4,44 +4,36 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Gestionale OMG - {{ titolo_sezione }}</title>
-    <!-- Bootstrap CSS -->
+    <!-- Bootstrap 5 CSS -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <!-- FontAwesome -->
+    <!-- FontAwesome Icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <style>
-        body { background-color: #f8f9fa; }
-        .card { border: none; border-radius: 10px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); }
-        .table-hover tbody tr:hover { background-color: rgba(13, 110, 253, 0.03); }
-        .badge-user { background-color: #e9ecef; color: #495057; font-weight: 500; margin-right: 3px; }
-    </style>
 </head>
-<body>
+<body class="bg-light">
 
     <!-- Navbar principale -->
-    <nav class="navbar navbar-expand-lg navbar-dark bg-dark mb-4">
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark shadow-sm">
         <div class="container-fluid">
-            <a class="navbar-brand" href="{{ url_for('index') }}"><i class="fa-solid fa-industry me-2"></i>Gestionale OMG</a>
+            <a class="navbar-brand" href="{{ url_for('index') }}"><i class="fas fa-industry me-2"></i>Gestionale OMG</a>
             <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
                 <span class="navbar-toggler-icon"></span>
             </button>
             <div class="collapse navbar-collapse" id="navbarNav">
                 <ul class="navbar-nav ms-auto">
-                    <li class="nav-item"><a class="nav-link" href="{{ url_for('index') }}">Home</a></li>
-                    <li class="nav-item"><a class="nav-link {% if codice_sezione == 'agenda' %}active{% endif %}" href="{{ url_for('agenda') }}">Agenda</a></li>
-                    <li class="nav-item"><a class="nav-link {% if codice_sezione == 'omd' %}active{% endif %}" href="{{ url_for('omd') }}">OMD</a></li>
-                    <li class="nav-item"><a class="nav-link {% if codice_sezione == 'lavori_interni' %}active{% endif %}" href="{{ url_for('lavori_interni') }}">Lavori Interni</a></li>
-                    <li class="nav-item"><a class="nav-link text-danger" href="{{ url_for('logout') }}"><i class="fa-solid fa-right-from-bracket"></i> Esci</a></li>
+                    <li class="nav-item"><a class="nav-link" href="{{ url_for('index') }}"><i class="fas fa-home me-1"></i> Home</a></li>
+                    <li class="nav-item"><a class="nav-link" href="{{ url_for('logout') }}"><i class="fas fa-sign-out-alt me-1"></i> Esci</a></li>
                 </ul>
             </div>
         </div>
     </nav>
 
-    <div class="container py-3">
-        <!-- Flash Messages -->
+    <div class="container my-4">
+
+        <!-- Flash messages -->
         {% with messages = get_flashed_messages(with_categories=true) %}
             {% if messages %}
                 {% for category, message in messages %}
-                    <div class="alert alert-{{ 'danger' if category == 'error' else 'success' }} alert-dismissible fade show" role="alert">
+                    <div class="alert alert-{{ 'success' if category == 'success' else 'danger' }} alert-dismissible fade show" role="alert">
                         {{ message }}
                         <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
                     </div>
@@ -49,153 +41,210 @@
             {% endif %}
         {% endwith %}
 
-        <div class="row mb-4 align-items-center">
-            <div class="col">
-                <h2 class="fw-bold text-primary"><i class="fa-solid fa-calendar-days me-2"></i>{{ titolo_sezione }}</h2>
-                <p class="text-muted">Gestione e pianificazione attività per la sezione {{ titolo_sezione }}.</p>
-            </div>
-            <div class="col-auto">
-                <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#modalNuovaAttivita">
-                    <i class="fa-solid fa-plus me-1"></i> Nuova Attività
-                </button>
-            </div>
+        <!-- Intestazione e Tabs Sezioni -->
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h2><i class="fas fa-calendar-alt text-primary me-2"></i> {{ titolo_sezione }}</h2>
+            <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#modalNuovaAttivita">
+                <i class="fas fa-plus me-1"></i> Nuova Attività
+            </button>
         </div>
 
+        <!-- Selettore rapido sezioni -->
+        <ul class="nav nav-pills mb-4">
+            <li class="nav-item">
+                <a class="nav-link {% if sezione_corrente == 'agenda' %}active{% endif %}" href="{{ url_for('agenda', sezione='agenda') }}">
+                    <i class="fas fa-calendar me-1"></i> Agenda
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link {% if sezione_corrente == 'omd' %}active{% endif %}" href="{{ url_for('agenda', sezione='omd') }}">
+                    <i class="fas fa-tasks me-1"></i> OMD
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link {% if sezione_corrente == 'lavori_interni' %}active{% endif %}" href="{{ url_for('agenda', sezione='lavori_interni') }}">
+                    <i class="fas fa-tools me-1"></i> Lavori Interni
+                </a>
+            </li>
+        </ul>
+
         <!-- Tabella Attività -->
-        <div class="card shadow-sm">
-            <div class="card-body">
+        <div class="card shadow-sm border-0">
+            <div class="card-body p-0">
                 <div class="table-responsive">
-                    <table class="table table-hover align-middle">
-                        <thead class="table-light">
+                    <table class="table table-hover align-middle mb-0">
+                        <thead class="table-dark">
                             <tr>
-                                <th>Scadenza</th>
+                                <th style="width: 100px;">Stato</th>
                                 <th>Titolo / Descrizione</th>
-                                <th>Azienda / Fornitore</th>
-                                <th>Visibile a</th>
-                                <th>Inserito da</th>
-                                <th class="text-end">Azioni</th>
+                                <th>Richiesto da</th>
+                                <th>Inizio</th>
+                                <th>Fine / Scadenza</th>
+                                <th>Assegnato a</th>
+                                <th class="text-end" style="width: 140px;">Azioni</th>
                             </tr>
                         </thead>
                         <tbody>
-                            {% if attivita %}
-                                {% for item in attivita %}
-                                <tr>
-                                    <td>
-                                        {% if item.data_scadenza %}
-                                            <span class="badge bg-light text-dark border"><i class="fa-regular fa-calendar me-1"></i>{{ item.data_scadenza }}</span>
+                            {% for item in attivita %}
+                            <tr class="{% if item.completato %}table-success text-muted text-decoration-line-through{% endif %}">
+                                <!-- Stato -->
+                                <td>
+                                    {% if item.completato %}
+                                        <span class="badge bg-success"><i class="fas fa-check me-1"></i>Completato</span>
+                                    {% else %}
+                                        <span class="badge bg-warning text-dark"><i class="fas fa-clock me-1"></i>In Corso</span>
+                                    {% endif %}
+                                </td>
+
+                                <!-- Titolo e Descrizione -->
+                                <td>
+                                    <strong class="{% if item.completato %}text-decoration-line-through{% endif %}">{{ item.titolo }}</strong>
+                                    {% if item.descrizione %}
+                                        <br><small class="text-muted">{{ item.descrizione }}</small>
+                                    {% endif %}
+                                    {% if item.nome_azienda %}
+                                        <br><span class="badge bg-secondary">Azienda/Fornitore: {{ item.nome_azienda }}</span>
+                                    {% endif %}
+                                </td>
+
+                                <!-- Richiesto da -->
+                                <td>{{ item.richiesto_da or '-' }}</td>
+
+                                <!-- Data Inizio -->
+                                <td>{{ item.data_inizio or '-' }}</td>
+
+                                <!-- Data Fine / Scadenza -->
+                                <td>{{ item.data_fine or item.data_scadenza or '-' }}</td>
+
+                                <!-- Assegnato a -->
+                                <td>{{ item.utenti_visibili or 'Tutti' }}</td>
+
+                                <!-- Azioni -->
+                                <td class="text-end">
+                                    <!-- Pulsante Completa / Riattiva (Non cancella la riga) -->
+                                    <form action="{{ url_for('completa_agenda', agenda_id=item.id) }}" method="POST" class="d-inline">
+                                        {% if item.completato %}
+                                            <button type="submit" class="btn btn-sm btn-outline-secondary" title="Riattiva attività">
+                                                <i class="fas fa-undo"></i>
+                                            </button>
                                         {% else %}
-                                            <span class="text-muted small">Nessuna data</span>
+                                            <button type="submit" class="btn btn-sm btn-success" title="Segna come completato">
+                                                <i class="fas fa-check"></i>
+                                            </button>
                                         {% endif %}
-                                    </td>
-                                    <td>
-                                        <strong>{{ item.titolo }}</strong>
-                                        {% if item.descrizione %}
-                                            <div class="text-muted small text-truncate" style="max-width: 300px;" title="{{ item.descrizione }}">{{ item.descrizione }}</div>
-                                        {% endif %}
-                                    </td>
-                                    <td>
-                                        {% if item.nome_azienda %}
-                                            <span class="text-secondary"><i class="fa-solid fa-building me-1"></i>{{ item.nome_azienda }}</span>
-                                        {% else %}
-                                            <span class="text-muted small">-</span>
-                                        {% endif %}
-                                    </td>
-                                    <td>
-                                        {% if item.utenti_visibili and item.utenti_visibili != 'Tutti' %}
-                                            {% for u in item.utenti_visibili.split(',') %}
-                                                <span class="badge badge-user">{{ u.strip() }}</span>
-                                            {% endfor %}
-                                        {% else %}
-                                            <span class="badge bg-info text-dark">Tutti</span>
-                                        {% endif %}
-                                    </td>
-                                    <td><small class="text-muted">{{ item.creato_da or '-' }}</small></td>
-                                    <td class="text-end">
-                                        <!-- Pulsante Completa / Elimina -->
-                                        <form action="{{ url_for('completa_agenda', agenda_id=item.id) }}" method="POST" class="d-inline">
-                                            <button type="submit" class="btn btn-sm btn-outline-success" title="Completata (Rimuovi)"><i class="fa-solid fa-check"></i></button>
-                                        </form>
-                                        {% if session.get('is_admin') %}
-                                        <form action="{{ url_for('elimina_agenda', agenda_id=item.id) }}" method="POST" class="d-inline" onsubmit="return confirm('Eliminare definitivamente questa attività?');">
-                                            <button type="submit" class="btn btn-sm btn-outline-danger" title="Elimina"><i class="fa-solid fa-trash"></i></button>
-                                        </form>
-                                        {% endif %}
-                                    </td>
-                                </tr>
-                                {% endfor %}
+                                    </form>
+
+                                    <!-- Eliminazione definitiva (Riservata admin) -->
+                                    {% if session.get('is_admin') %}
+                                    <form action="{{ url_for('elimina_agenda', agenda_id=item.id) }}" method="POST" class="d-inline" onsubmit="return confirm('Vuoi eliminare definitivamente questa attività dal database?');">
+                                        <button type="submit" class="btn btn-sm btn-outline-danger" title="Elimina definitivamente">
+                                            <i class="fas fa-trash"></i>
+                                        </button>
+                                    </form>
+                                    {% endif %}
+                                </td>
+                            </tr>
                             {% else %}
-                                <tr>
-                                    <td colspan="6" class="text-center py-4 text-muted">Nessuna attività presente in {{ titolo_sezione }}.</td>
-                                </tr>
-                            {% endif %}
+                            <tr>
+                                <td colspan="7" class="text-center text-muted py-4">
+                                    <i class="fas fa-info-circle me-1"></i> Nessuna attività presente in questa sezione.
+                                </td>
+                            </tr>
+                            {% endfor %}
                         </tbody>
                     </table>
                 </div>
             </div>
         </div>
+
     </div>
 
     <!-- Modal Nuova Attività -->
     <div class="modal fade" id="modalNuovaAttivita" tabindex="-1" aria-hidden="true">
         <div class="modal-dialog modal-lg">
             <div class="modal-content">
-                <form action="{{ url_for(codice_sezione) }}" method="POST">
-                    <div class="modal-header">
-                        <h5 class="modal-title"><i class="fa-solid fa-plus-circle me-2"></i>Nuova Attività - {{ titolo_sezione }}</h5>
-                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                <form action="{{ url_for('agenda') }}" method="POST">
+                    <input type="hidden" name="sezione_target" value="{{ sezione_corrente }}">
+                    <div class="modal-header bg-dark text-white">
+                        <h5 class="modal-title"><i class="fas fa-plus-circle me-2"></i>Nuova Attività ({{ titolo_sezione }})</h5>
+                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
                     </div>
                     <div class="modal-body">
+                        
                         <div class="mb-3">
-                            <label class="form-label fw-bold">Titolo Attività *</label>
-                            <input type="text" class="form-control" name="titolo" required placeholder="Es. Manutenzione straordinaria...">
+                            <label for="titolo" class="form-label">Titolo Attività *</label>
+                            <input type="text" class="form-control" id="titolo" name="titolo" required placeholder="Inserisci il titolo del lavoro o evento...">
                         </div>
-                        <div class="mb-3">
-                            <label class="form-label fw-bold">Descrizione / Note</label>
-                            <textarea class="form-control" name="descrizione" rows="3" placeholder="Dettagli dell'attività..."></textarea>
-                        </div>
+
                         <div class="row">
                             <div class="col-md-6 mb-3">
-                                <label class="form-label fw-bold">Data Scadenza</label>
-                                <input type="date" class="form-control" name="data_scadenza">
+                                <label for="richiesto_da" class="form-label">Richiesto da</label>
+                                <input type="text" class="form-control" id="richiesto_da" name="richiesto_da" placeholder="Chi ha fatto la richiesta">
                             </div>
                             <div class="col-md-6 mb-3">
-                                <label class="form-label fw-bold">Azienda / Fornitore</label>
-                                <select class="form-select" name="fornitore_input">
-                                    <option value="">-- Seleziona Azienda --</option>
+                                <label for="fornitore_input" class="form-label">Azienda / Fornitore (Opzionale)</label>
+                                <select class="form-select" id="fornitore_input" name="fornitore_input">
+                                    <option value="">-- Seleziona --</option>
                                     {% for f in fornitori %}
                                         <option value="{{ f.nome_azienda }}">{{ f.nome_azienda }}</option>
                                     {% endfor %}
                                 </select>
                             </div>
                         </div>
+
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label for="data_inizio" class="form-label">Data Inizio</label>
+                                <input type="date" class="form-control" id="data_inizio" name="data_inizio">
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label for="data_fine" class="form-label">Data Fine / Scadenza</label>
+                                <input type="date" class="form-control" id="data_fine" name="data_fine">
+                                <!-- Mantenuto anche come fallback logico se usato altrove -->
+                                <input type="hidden" name="data_scadenza" id="data_scadenza_fallback">
+                            </div>
+                        </div>
+
                         <div class="mb-3">
-                            <label class="form-label fw-bold">Visibile a (Utenti)</label>
-                            <div class="p-2 border rounded bg-light" style="max-height: 150px; overflow-y: auto;">
-                                <div class="form-check">
-                                    <input class="form-check-input" type="checkbox" name="utenti_visibili[]" value="Tutti" id="checkTutti" checked>
-                                    <label class="form-check-label fw-bold" for="checkTutti">Tutti gli utenti</label>
+                            <label for="descrizione" class="form-label">Descrizione / Note</label>
+                            <textarea class="form-control" id="descrizione" name="descrizione" rows="3" placeholder="Dettagli aggiuntivi sul lavoro..."></textarea>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label">Visibile a / Assegnato a</label>
+                            <div class="border p-3 rounded bg-light" style="max-height: 150px; overflow-y: auto;">
+                                <div class="form-check mb-2">
+                                    <input class="form-check-input" type="checkbox" name="utenti_visibili[]" value="Tutti" id="utente_tutti" checked>
+                                    <label class="form-check-label fw-bold" for="utente_tutti">Tutti gli utenti</label>
                                 </div>
                                 <hr class="my-1">
                                 {% for u in utenti %}
-                                    <div class="form-check">
-                                        <input class="form-check-input" type="checkbox" name="utenti_visibili[]" value="{{ u.username }}" id="user_{{ u.id }}">
-                                        <label class="form-check-label" for="user_{{ u.id }}">{{ u.username }}</label>
-                                    </div>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" name="utenti_visibili[]" value="{{ u.username }}" id="user_{{ u.id }}">
+                                    <label class="form-check-label" for="user_{{ u.id }}">{{ u.username }}</label>
+                                </div>
                                 {% endfor %}
                             </div>
-                            <div class="form-text">Se non selezioni utenti specifici (o lasci "Tutti"), l'attività sarà visibile a chiunque.</div>
                         </div>
+
                     </div>
                     <div class="modal-footer">
                         <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annulla</button>
-                        <button type="submit" class="btn btn-primary"><i class="fa-solid fa-save me-1"></i> Salva Attività</button>
+                        <button type="submit" class="btn btn-primary"><i class="fas fa-save me-1"></i>Salva Attività</button>
                     </div>
                 </form>
             </div>
         </div>
     </div>
 
-    <!-- Bootstrap JS Bundle -->
+    <!-- Sincronizza data_fine con data_scadenza per retrocompatibilità -->
+    <script>
+        document.getElementById('data_fine').addEventListener('change', function() {
+            document.getElementById('data_scadenza_fallback').value = this.value;
+        });
+    </script>
+
+    <!-- Bootstrap 5 JS Bundle -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>
