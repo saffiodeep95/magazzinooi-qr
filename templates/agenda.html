@@ -140,7 +140,7 @@
 
                                 <!-- Azioni -->
                                 <td class="text-end">
-                                    <!-- Pulsante Riattiva o Completa (Sposta da/verso archivio senza cancellare) -->
+                                    <!-- Pulsante Riattiva o Completa -->
                                     <form action="{{ url_for('completa_agenda', agenda_id=item.id) }}" method="POST" class="d-inline">
                                         {% if item.completato %}
                                             <button type="submit" class="btn btn-sm btn-outline-secondary" title="Riattiva (Sposta in In Corso)">
@@ -231,8 +231,9 @@
                         <div class="mb-3">
                             <label class="form-label">Visibile a / Assegnato a</label>
                             <div class="border p-3 rounded bg-light" style="max-height: 150px; overflow-y: auto;">
+                                <!-- SENZA CHECKED DI DEFAULT -->
                                 <div class="form-check mb-2">
-                                    <input class="form-check-input" type="checkbox" name="utenti_visibili[]" value="Tutti" id="utente_tutti" checked>
+                                    <input class="form-check-input" type="checkbox" name="utenti_visibili[]" value="Tutti" id="utente_tutti">
                                     <label class="form-check-label fw-bold" for="utente_tutti">Tutti gli utenti</label>
                                 </div>
                                 <hr class="my-1">
