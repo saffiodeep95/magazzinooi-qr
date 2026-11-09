@@ -68,7 +68,7 @@
                         <tbody>
                             {% for p in promemoria %}
                             <tr class="{% if p.completato %}table-success text-muted text-decoration-line-through{% endif %}">
-                                <!-- Stato (Completato / Da fare) -->
+                                <!-- Stato -->
                                 <td>
                                     {% if p.completato %}
                                         <span class="badge bg-success"><i class="fas fa-check me-1"></i>Completato</span>
@@ -107,20 +107,18 @@
 
                                 <!-- Azioni -->
                                 <td class="text-end">
-                                    <!-- Pulsante Completa / Avanza -->
                                     <form action="{{ url_for('completa_promemoria', promemoria_id=p.id) }}" method="POST" class="d-inline">
                                         {% if p.completato %}
                                             <button type="submit" class="btn btn-sm btn-outline-secondary" title="Riattiva promemoria">
                                                 <i class="fas fa-undo"></i>
                                             </button>
                                         {% else %}
-                                            <button type="submit" class="btn btn-sm btn-success" title="Completa (e avanza scadenza se riccorrente)">
+                                            <button type="submit" class="btn btn-sm btn-success" title="Completa">
                                                 <i class="fas fa-check"></i>
                                             </button>
                                         {% endif %}
                                     </form>
 
-                                    <!-- Eliminazione promemoria -->
                                     <form action="{{ url_for('elimina_promemoria', promemoria_id=p.id) }}" method="POST" class="d-inline" onsubmit="return confirm('Eliminare definitivamente questo promemoria?');">
                                         <button type="submit" class="btn btn-sm btn-outline-danger" title="Elimina">
                                             <i class="fas fa-trash"></i>
@@ -143,7 +141,7 @@
 
     </div>
 
-    <!-- Modal Nuovo Promemoria (CON CAMPO ASSEGNAZIONE RIPRISTINATO) -->
+    <!-- Modal Nuovo Promemoria -->
     <div class="modal fade" id="modalNuovoPromemoria" tabindex="-1" aria-hidden="true">
         <div class="modal-dialog modal-lg">
             <div class="modal-content">
@@ -182,12 +180,12 @@
                                     <option value="Giorno">Ogni Giorno</option>
                                     <option value="Settimana">Ogni Settimana</option>
                                     <option value="Mese">Ogni Mese</option>
+                                    <option value="6 Mesi">Ogni 6 Mesi</option>
                                     <option value="Anno">Ogni Anno</option>
                                 </select>
                             </div>
 
-                            <!-- CAMPO ASSEGNAZIONE UTENTE RIPRISTINATO -->
-                            {% if puo_assegnare %}
+                            <!-- Assegnazione utente -->
                             <div class="col-md-6 mb-3">
                                 <label for="assegnato_a" class="form-label">Assegna a Utente</label>
                                 <select class="form-select" id="assegnato_a" name="assegnato_a">
@@ -197,7 +195,6 @@
                                     {% endfor %}
                                 </select>
                             </div>
-                            {% endif %}
                         </div>
 
                         <div class="mb-3">
