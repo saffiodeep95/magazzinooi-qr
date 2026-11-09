@@ -71,25 +71,46 @@
             {% endif %}
         {% endwith %}
 
-        <!-- Sezione Benvenuto & Riepilogo Rapido -->
+        <!-- Sezione Benvenuto e Pannello Operativo Principale -->
         <div class="row mb-4">
             <div class="col-md-12">
-                <div class="p-4 bg-white rounded shadow-sm border-start border-primary border-4">
-                    <h3>Benvenuto, <strong>{{ session.get('username') }}</strong>!</h3>
-                    <p class="text-muted mb-0">Gestionale Officina Meccanica Generale OMG - Sistema Integrato di Magazzino, Manutenzioni e Scadenze.</p>
+                <div class="p-4 bg-white rounded shadow-sm border-start border-primary border-4 d-flex justify-content-between align-items-center flex-wrap gap-3">
+                    <div>
+                        <h3>Benvenuto, <strong>{{ session.get('username') }}</strong>!</h3>
+                        <p class="text-muted mb-0">Gestionale Officina Meccanica Generale OMG - Sistema Integrato</p>
+                    </div>
+                    <div class="d-flex gap-2 flex-wrap">
+                        <a href="{{ url_for('scanner_globale') }}" class="btn btn-outline-dark">
+                            <i class="fas fa-qrcode me-1"></i> Scanner QR
+                        </a>
+                        <a href="{{ url_for('carico') }}" class="btn btn-success">
+                            <i class="fas fa-plus-circle me-1"></i> Carico
+                        </a>
+                        <a href="{{ url_for('scarico') }}" class="btn btn-danger">
+                            <i class="fas fa-minus-circle me-1"></i> Scarico
+                        </a>
+                        <a href="{{ url_for('esportazioni') }}" class="btn btn-secondary">
+                            <i class="fas fa-file-export me-1"></i> Esportazioni
+                        </a>
+                        {% if session.get('is_admin') %}
+                        <a href="{{ url_for('admin_utenti') }}" class="btn btn-outline-primary">
+                            <i class="fas fa-users-cog me-1"></i> Pannello Admin
+                        </a>
+                        {% endif %}
+                    </div>
                 </div>
             </div>
         </div>
 
-        <!-- Pulsanti di accesso rapido ai moduli principali -->
+        <!-- Riepilogo e Scadenze Rapide -->
         <div class="row g-3 mb-4">
             <div class="col-md-3">
                 <a href="{{ url_for('richieste_manutenzione') }}" class="text-decoration-none">
                     <div class="card shadow-sm border-0 bg-primary text-white h-100 py-3">
                         <div class="card-body text-center">
                             <i class="fas fa-tools fa-2x mb-2"></i>
-                            <h5>Manutenzione</h5>
-                            <p class="small mb-0 text-white-50">Gestione interventi officina</p>
+                            <h5>Manutenzioni</h5>
+                            <p class="small mb-0 text-white-50">Aperte: {{ interventi_aperti_count }} | In Lavoro: {{ interventi_in_lavoro_count }}</p>
                         </div>
                     </div>
                 </a>
@@ -101,7 +122,7 @@
                         <div class="card-body text-center">
                             <i class="fas fa-bell fa-2x mb-2"></i>
                             <h5>Promemoria</h5>
-                            <p class="small mb-0 text-dark-50">Scadenze e attività ({{ promemoria_urgenti }})</p>
+                            <p class="small mb-0 text-dark">Da completare: {{ promemoria_urgenti }}</p>
                         </div>
                     </div>
                 </a>
@@ -113,19 +134,19 @@
                         <div class="card-body text-center">
                             <i class="fas fa-address-book fa-2x mb-2"></i>
                             <h5>Fornitori</h5>
-                            <p class="small mb-0 text-white-50">Contatti e tecnici esterni</p>
+                            <p class="small mb-0 text-white-50">Rubrica e contatti tecnici</p>
                         </div>
                     </div>
                 </a>
             </div>
 
             <div class="col-md-3">
-                <a href="{{ url_for('documenti') }}" class="text-decoration-none">
+                <a href="{{ url_for('magazzino_pesante') }}" class="text-decoration-none">
                     <div class="card shadow-sm border-0 bg-secondary text-white h-100 py-3">
                         <div class="card-body text-center">
-                            <i class="fas fa-folder-open fa-2x mb-2"></i>
-                            <h5>Documenti</h5>
-                            <p class="small mb-0 text-white-50">Archivio file e cartelle</p>
+                            <i class="fas fa-weight-hanging fa-2x mb-2"></i>
+                            <h5>Magazzino Pesante</h5>
+                            <p class="small mb-0 text-white-50">Sezione dedicata carichi pesanti</p>
                         </div>
                     </div>
                 </a>
@@ -139,7 +160,7 @@
             <hr>
             <ul class="mb-0">
                 {% for p in prodotti_sotto_soglia %}
-                <li><strong>{{ p.nome }}</strong> (Codice SAP: {{ p.sap or 'N/D' }}) - Quantità attuale: <span class="badge bg-danger">{{ p.quantita }}</span> (Soglia: {{ p.soglia_minima or 3 }}) - Posizione: {{ p.posizione or 'Non definita' }}</li>
+                <li><strong>{{ p.nome }}</strong> (SAP: {{ p.sap or 'N/D' }}) - Q.tà attuale: <span class="badge bg-danger">{{ p.quantita }}</span> (Soglia: {{ p.soglia_minima or 3 }}) - Posizione: {{ p.posizione or 'Non definita' }}</li>
                 {% endfor %}
             </ul>
         </div>
@@ -148,7 +169,7 @@
         <!-- Tabella Inventario Magazzino -->
         <div class="card shadow-sm border-0">
             <div class="card-header bg-dark text-white d-flex justify-content-between align-items-center py-3">
-                <h5 class="mb-0"><i class="fas boxes me-2"></i>Inventario Magazzino</h5>
+                <h5 class="mb-0"><i class="fas fa-boxes me-2"></i>Inventario Magazzino</h5>
                 <div class="d-flex gap-2">
                     {% if session.get('is_admin') or session.get('puo_aggiungere_prodotti', 1) %}
                     <button class="btn btn-sm btn-primary" data-bs-toggle="modal" data-bs-target="#modalNuovoProdotto">
