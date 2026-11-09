@@ -781,7 +781,7 @@ def stampa_nastri():
     conn.close()
     return render_template("stampa_nastri.html", nastri=lista, sezione=sezione)
 
-# --- FUNZIONE AGENDA / OMD / LAVORI INTERNI CON NOTIFICHE AUTOMATICHE ---
+# --- FUNZIONE AGENDA / OMD / LAVORI INTERNI CON NOTIFICHE & MODIFICA ---
 @app.route("/agenda", methods=["GET", "POST"])
 @app.route("/agenda.html", methods=["GET", "POST"])
 def agenda():
@@ -844,23 +844,23 @@ def agenda():
             # --- INVIAMO LA NOTIFICA AGLI UTENTI ASSEGNATI ---
             if utenti_selezionati:
                 if "Tutti" in utenti_selezionati:
-                    cur.execute("SELECT username FROM utenti WHERE username != %s;", (username_corrente,))
-                    tutti_altri = cur.fetchall()
-                    for u_dict in tutti_altri:
+                    cur.execute("SELECT username FROM utenti;")
+                    tutti_utenti = cur.fetchall()
+                    for u_dict in tutti_utenti:
                         crea_notifica(
                             destinatario=u_dict['username'],
                             titolo=f"📅 Nuova Attività ({titoli_mappa.get(sezione_form, 'Agenda')})",
-                            messaggio=f"{username_corrente} ha inserito una nuova attività: {titolo}",
+                            messaggio=f"È stata inserita una nuova attività: {titolo}",
                             link=f"/agenda?sezione={sezione_form}"
                         )
                 else:
                     for tec in utenti_selezionati:
                         tec_clean = tec.strip()
-                        if tec_clean and tec_clean != username_corrente:
+                        if tec_clean:
                             crea_notifica(
                                 destinatario=tec_clean,
                                 titolo=f"📅 Nuova Attività Assegnata ({titoli_mappa.get(sezione_form, 'Agenda')})",
-                                messaggio=f"Ti è stata assegnata un'attività da {username_corrente}: {titolo}",
+                                messaggio=f"Ti è stata assegnata un'attività: {titolo}",
                                 link=f"/agenda?sezione={sezione_form}"
                             )
             
@@ -951,6 +951,41 @@ def completa_agenda(agenda_id):
         return redirect(url_for('agenda', sezione=sezione, stato=('completate' if nuovo_stato else 'attive')))
     except Exception as e:
         flash(f"Errore aggiornamento stato attività: {e}", "error")
+        return redirect(url_for('agenda'))
+
+@app.route("/modifica_agenda/<int:agenda_id>", methods=["POST"])
+def modifica_agenda(agenda_id):
+    try:
+        conn = get_db_connection()
+        cur = conn.cursor()
+        cur.execute("SELECT sezione FROM agenda WHERE id = %s;", (agenda_id,))
+        res = cur.fetchone()
+        sezione = res['sezione'] if res and 'sezione' in res else 'agenda'
+        
+        titolo = request.form.get("titolo")
+        descrizione = request.form.get("descrizione", "")
+        richiesto_da = request.form.get("richiesto_da", "").strip()
+        data_inizio = request.form.get("data_inizio", "").strip()
+        data_fine = request.form.get("data_fine", "").strip()
+        nome_azienda = request.form.get("fornitore_input", "")
+        utenti_selezionati = request.form.getlist("utenti_visibili[]")
+        utenti_visibili = ", ".join(utenti_selezionati) if utenti_selezionati else ""
+        
+        cur.execute("""
+            UPDATE agenda 
+            SET titolo = %s, descrizione = %s, richiesto_da = %s, data_inizio = %s, data_fine = %s, data_scadenza = %s, nome_azienda = %s, utenti_visibili = %s
+            WHERE id = %s;
+        """, (titolo, descrizione, richiesto_da, data_inizio, data_fine, data_fine, nome_azienda, utenti_visibili, agenda_id))
+        
+        conn.commit()
+        cur.close()
+        conn.close()
+        
+        registra_log(f"Modificata attività ID {agenda_id}: {titolo}")
+        flash("Attività modificata con successo!", "success")
+        return redirect(url_for('agenda', sezione=sezione))
+    except Exception as e:
+        flash(f"Errore modifica attività: {e}", "error")
         return redirect(url_for('agenda'))
 
 @app.route("/stampa_archivio_agenda")
@@ -1660,6 +1695,11 @@ def completa_promemoria(promemoria_id):
                 elif ricorrenza == 'Mese':
                     anno = dt_scadenza.year + (dt_scadenza.month // 12)
                     mese = (dt_scadenza.month % 12) + 1
+                    giorno = min(dt_scadenza.day, 28)
+                    nuova_dt = dt_scadenza.replace(year=anno, month=mese, day=giorno)
+                elif ricorrenza == '6 Mesi':
+                    anno = dt_scadenza.year + ((dt_scadenza.month + 5) // 12)
+                    mese = ((dt_scadenza.month + 5) % 12) + 1
                     giorno = min(dt_scadenza.day, 28)
                     nuova_dt = dt_scadenza.replace(year=anno, month=mese, day=giorno)
                 elif ricorrenza == 'Anno':
