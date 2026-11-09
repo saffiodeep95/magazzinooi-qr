@@ -974,7 +974,8 @@ def cambi_serie():
         query += " AND forno = %s"
         params.append(forno_filtro)
     
-    query += " ORDER BY data_cambio DESC, id DESC;"
+    # Ordinamento dal Lunedì alla Domenica (dal più vecchio al più recente)
+    query += " ORDER BY data_cambio ASC, id ASC;"
     cur.execute(query, tuple(params))
     tutti_record = cur.fetchall()
     
@@ -1097,7 +1098,7 @@ def elimina_cambio_serie(id_cambio):
 def esporta_cambi_serie_csv():
     conn = get_db_connection()
     cur = conn.cursor()
-    cur.execute("SELECT data_cambio, forno, linea, bottiglia_precedente, bottiglia_nuova, nome_bottiglia, tempo_cambio, num_bottiglie_tempera_vecchia, num_bottiglie_tempera_nuova, num_bottiglie_tempera, misura_piastrina, misura_piastrina_nuova FROM cambi_serie ORDER BY data_cambio DESC;")
+    cur.execute("SELECT data_cambio, forno, linea, bottiglia_precedente, bottiglia_nuova, nome_bottiglia, tempo_cambio, num_bottiglie_tempera_vecchia, num_bottiglie_tempera_nuova, num_bottiglie_tempera, misura_piastrina, misura_piastrina_nuova FROM cambi_serie ORDER BY data_cambio ASC;")
     righe = cur.fetchall()
     cur.close()
     conn.close()
