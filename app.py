@@ -783,6 +783,7 @@ def agenda():
     is_admin = session.get('is_admin')
     sezione_corrente = request.args.get("sezione", "agenda")
     
+    # CONTROLLO RIGOROSO DEI PERMESSI PER OMD E LAVORI INTERNI
     if not is_admin:
         if sezione_corrente == 'omd' and not session.get('puo_vedere_omd', 1):
             flash("Non disponi dei permessi per accedere alla sezione OMD.", "error")
@@ -974,7 +975,7 @@ def cambi_serie():
         query += " AND forno = %s"
         params.append(forno_filtro)
     
-    # Ordinamento dal Lunedì alla Domenica (dal più vecchio al più recente)
+    # Ordinamento cronologico dal Lunedì alla Domenica (ASC)
     query += " ORDER BY data_cambio ASC, id ASC;"
     cur.execute(query, tuple(params))
     tutti_record = cur.fetchall()
@@ -2503,7 +2504,7 @@ def aggiungi_prodotto():
     flag_sezione = 1 if request.form.get("magazzino_pesante") else 0
 
     if not nome:
-        flash("Il nome dell'articolo è obbligatorio!", "error")
+        flash(" Il nome dell'articolo è obbligatorio!", "error")
         return redirect(url_for("index"))
 
     try:
