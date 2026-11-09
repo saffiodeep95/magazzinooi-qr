@@ -100,7 +100,7 @@
                                 <th>Inizio</th>
                                 <th>Fine / Scadenza</th>
                                 <th>Assegnato a</th>
-                                <th class="text-end" style="width: 140px;">Azioni</th>
+                                <th class="text-end" style="width: 180px;">Azioni</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -140,15 +140,20 @@
 
                                 <!-- Azioni -->
                                 <td class="text-end">
+                                    <!-- Pulsante Modifica -->
+                                    <button type="button" class="btn btn-sm btn-outline-primary" data-bs-toggle="modal" data-bs-target="#modalModifica{{ item.id }}" title="Modifica attività">
+                                        <i class="fas fa-edit"></i>
+                                    </button>
+
                                     <!-- Pulsante Riattiva o Completa -->
                                     <form action="{{ url_for('completa_agenda', agenda_id=item.id) }}" method="POST" class="d-inline">
                                         {% if item.completato %}
-                                            <button type="submit" class="btn btn-sm btn-outline-secondary" title="Riattiva (Sposta in In Corso)">
-                                                <i class="fas fa-undo"></i> Riattiva
+                                            <button type="submit" class="btn btn-sm btn-outline-secondary" title="Riattiva">
+                                                <i class="fas fa-undo"></i>
                                             </button>
                                         {% else %}
-                                            <button type="submit" class="btn btn-sm btn-success" title="Completa (Sposta in Archivio)">
-                                                <i class="fas fa-check"></i> Completa
+                                            <button type="submit" class="btn btn-sm btn-success" title="Completa">
+                                                <i class="fas fa-check"></i>
                                             </button>
                                         {% endif %}
                                     </form>
@@ -163,6 +168,83 @@
                                     {% endif %}
                                 </td>
                             </tr>
+
+                            <!-- MODALE MODIFICA PER OGNI VOCE -->
+                            <div class="modal fade" id="modalModifica{{ item.id }}" tabindex="-1" aria-hidden="true">
+                                <div class="modal-dialog modal-lg">
+                                    <div class="modal-content">
+                                        <form action="{{ url_for('modifica_agenda', agenda_id=item.id) }}" method="POST">
+                                            <div class="modal-header bg-primary text-white">
+                                                <h5 class="modal-title"><i class="fas fa-edit me-2"></i>Modifica Attività: {{ item.titolo }}</h5>
+                                                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                                            </div>
+                                            <div class="modal-body text-start">
+                                                
+                                                <div class="mb-3">
+                                                    <label class="form-label">Titolo Attività *</label>
+                                                    <input type="text" class="form-control" name="titolo" value="{{ item.titolo }}" required>
+                                                </div>
+
+                                                <div class="row">
+                                                    <div class="col-md-6 mb-3">
+                                                        <label class="form-label">Richiesto da</label>
+                                                        <input type="text" class="form-control" name="richiesto_da" value="{{ item.richiesto_da or '' }}">
+                                                    </div>
+                                                    <div class="col-md-6 mb-3">
+                                                        <label class="form-label">Azienda / Fornitore</label>
+                                                        <select class="form-select" name="fornitore_input">
+                                                            <option value="">-- Seleziona --</option>
+                                                            {% for f in fornitori %}
+                                                                <option value="{{ f.nome_azienda }}" {% if item.nome_azienda == f.nome_azienda %}selected{% endif %}>{{ f.nome_azienda }}</option>
+                                                            {% endfor %}
+                                                        </select>
+                                                    </div>
+                                                </div>
+
+                                                <div class="row">
+                                                    <div class="col-md-6 mb-3">
+                                                        <label class="form-label">Data Inizio</label>
+                                                        <input type="date" class="form-control" name="data_inizio" value="{{ item.data_inizio or '' }}">
+                                                    </div>
+                                                    <div class="col-md-6 mb-3">
+                                                        <label class="form-label">Data Fine / Scadenza</label>
+                                                        <input type="date" class="form-control" name="data_fine" value="{{ item.data_fine or item.data_scadenza or '' }}">
+                                                    </div>
+                                                </div>
+
+                                                <div class="mb-3">
+                                                    <label class="form-label">Descrizione / Note</label>
+                                                    <textarea class="form-control" name="descrizione" rows="3">{{ item.descrizione or '' }}</textarea>
+                                                </div>
+
+                                                <div class="mb-3">
+                                                    <label class="form-label">Visibile a / Assegnato a</label>
+                                                    <div class="border p-3 rounded bg-light" style="max-height: 150px; overflow-y: auto;">
+                                                        <div class="form-check mb-2">
+                                                            <input class="form-check-input" type="checkbox" name="utenti_visibili[]" value="Tutti" id="edit_tutti_{{ item.id }}" {% if 'Tutti' in (item.utenti_visibili or '') %}checked{% endif %}>
+                                                            <label class="form-check-label fw-bold" for="edit_tutti_{{ item.id }}">Tutti gli utenti</label>
+                                                        </div>
+                                                        <hr class="my-1">
+                                                        {% for u in utenti %}
+                                                        <div class="form-check">
+                                                            <input class="form-check-input" type="checkbox" name="utenti_visibili[]" value="{{ u.username }}" id="edit_user_{{ item.id }}_{{ u.id }}" {% if u.username in (item.utenti_visibili or '') %}checked{% endif %}>
+                                                            <label class="form-check-label" for="edit_user_{{ item.id }}_{{ u.id }}">{{ u.username }}</label>
+                                                        </div>
+                                                        {% endfor %}
+                                                    </div>
+                                                </div>
+
+                                            </div>
+                                            <div class="modal-footer">
+                                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annulla</button>
+                                                <button type="submit" class="btn btn-primary"><i class="fas fa-save me-1"></i>Salva Modifiche</button>
+                                            </div>
+                                        </form>
+                                    </div>
+                                </div>
+                            </div>
+                            <!-- FINE MODALE MODIFICA -->
+
                             {% else %}
                             <tr>
                                 <td colspan="7" class="text-center text-muted py-4">
@@ -231,7 +313,6 @@
                         <div class="mb-3">
                             <label class="form-label">Visibile a / Assegnato a</label>
                             <div class="border p-3 rounded bg-light" style="max-height: 150px; overflow-y: auto;">
-                                <!-- SENZA CHECKED DI DEFAULT -->
                                 <div class="form-check mb-2">
                                     <input class="form-check-input" type="checkbox" name="utenti_visibili[]" value="Tutti" id="utente_tutti">
                                     <label class="form-check-label fw-bold" for="utente_tutti">Tutti gli utenti</label>
