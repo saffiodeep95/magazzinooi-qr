@@ -374,7 +374,7 @@ def require_login():
     if request.endpoint and request.endpoint not in allowed_routes and 'username' not in session:
         return redirect(url_for('login'))
 
-# --- API NOTIFICHE AGGIORNATE (CON SUPPORTO ELIMINAZIONE SINGOLA) ---
+# --- API NOTIFICHE CORRETTE (MOSTRANO UTENTE + TUTTI) ---
 @app.route("/api/notifiche")
 def api_notifiche():
     username = session.get('username')
@@ -385,12 +385,23 @@ def api_notifiche():
     cur.execute("""
         SELECT id, titolo, messaggio, link, letta, creato_il 
         FROM notifiche 
-        WHERE TRIM(destinatario) = %s 
+        WHERE TRIM(destinatario) = %s OR TRIM(destinatario) = 'Tutti' 
         ORDER BY creato_il DESC LIMIT 15;
     """, (str(username).strip(),))
-    notifiche = cur.fetchall()
+    rows = cur.fetchall()
     cur.close()
     conn.close()
+    
+    notifiche = []
+    for r in rows:
+        notifiche.append({
+            "id": r['id'],
+            "titolo": r['titolo'],
+            "messaggio": r['messaggio'],
+            "link": r['link'],
+            "letta": r['letta'],
+            "creato_il": r['creato_il'].isoformat() if r['creato_il'] else ""
+        })
     return jsonify(notifiche)
 
 @app.route("/api/notifiche/segna_lette", methods=["POST"])
@@ -399,7 +410,10 @@ def api_segna_lette():
     if username:
         conn = get_db_connection()
         cur = conn.cursor()
-        cur.execute("UPDATE notifiche SET letta = TRUE WHERE TRIM(destinatario) = %s;", (str(username).strip(),))
+        cur.execute(
+            "UPDATE notifiche SET letta = TRUE WHERE TRIM(destinatario) = %s OR TRIM(destinatario) = 'Tutti';",
+            (str(username).strip(),)
+        )
         conn.commit()
         cur.close()
         conn.close()
