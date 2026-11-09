@@ -40,12 +40,15 @@ def registra_log(descrizione):
 
 def crea_notifica(destinatario, titolo, messaggio, link=""):
     try:
+        if not destinatario:
+            return
+        destinatario_clean = str(destinatario).strip()
         conn = get_db_connection()
         cur = conn.cursor()
         cur.execute("""
-            INSERT INTO notifiche (destinatario, titolo, messaggio, link)
-            VALUES (%s, %s, %s, %s);
-        """, (destinatario, titolo, messaggio, link))
+            INSERT INTO notifiche (destinatario, titolo, messaggio, link, letta)
+            VALUES (%s, %s, %s, %s, FALSE);
+        """, (destinatario_clean, titolo, messaggio, link))
         conn.commit()
         cur.close()
         conn.close()
@@ -381,9 +384,9 @@ def api_notifiche():
     cur.execute("""
         SELECT id, titolo, messaggio, link, letta, creato_il 
         FROM notifiche 
-        WHERE destinatario = %s 
+        WHERE TRIM(destinatario) = %s 
         ORDER BY creato_il DESC LIMIT 15;
-    """, (username,))
+    """, (str(username).strip(),))
     notifiche = cur.fetchall()
     cur.close()
     conn.close()
@@ -395,7 +398,7 @@ def api_segna_lette():
     if username:
         conn = get_db_connection()
         cur = conn.cursor()
-        cur.execute("UPDATE notifiche SET letta = TRUE WHERE destinatario = %s;", (username,))
+        cur.execute("UPDATE notifiche SET letta = TRUE WHERE TRIM(destinatario) = %s;", (str(username).strip(),))
         conn.commit()
         cur.close()
         conn.close()
@@ -781,7 +784,7 @@ def stampa_nastri():
     conn.close()
     return render_template("stampa_nastri.html", nastri=lista, sezione=sezione)
 
-# --- FUNZIONE AGENDA / OMD / LAVORI INTERNI CON NOTIFICHE & MODIFICA ---
+# --- FUNZIONE AGENDA / OMD / LAVORI INTERNI CON INVIO NOTIFICHE GARANTITO ---
 @app.route("/agenda", methods=["GET", "POST"])
 @app.route("/agenda.html", methods=["GET", "POST"])
 def agenda():
@@ -792,7 +795,7 @@ def agenda():
     is_admin = session.get('is_admin')
     
     sezione_corrente = request.form.get("sezione_target") or request.args.get("sezione", "agenda")
-    filtro_stato = request.args.get("stato", "attive") # 'attive' o 'completate'
+    filtro_stato = request.args.get("stato", "attive")
     
     conn = get_db_connection()
     cur = conn.cursor()
@@ -841,7 +844,7 @@ def agenda():
             """, (titolo, descrizione, data_scadenza, richiesto_da, data_inizio, data_fine, nome_azienda, utenti_visibili, sezione_form, username_corrente))
             conn.commit()
             
-            # --- INVIAMO LA NOTIFICA AGLI UTENTI ASSEGNATI ---
+            # NOTIFICHE AGENDA: Invio a tutti o al singolo assegnatario
             if utenti_selezionati:
                 if "Tutti" in utenti_selezionati:
                     cur.execute("SELECT username FROM utenti;")
@@ -1044,7 +1047,7 @@ def qr_scaffale():
     conn.close()
     return render_template("qr_scaffale.html", prodotti=prodotti, ubicazione=ubicazione)
 
-# --- CAMBI SERIE & API ULTIMA BOTTIGLIA (FORNI 1, 3 e 4) ---
+# --- CAMBI SERIE & API ULTIMA BOTTIGLIA ---
 @app.route("/api/ultima_bottiglia/<forno>/<linea>")
 def ultima_bottiglia(forno, linea):
     try:
@@ -1237,7 +1240,7 @@ def esporta_cambi_serie_csv():
         headers={"Content-disposition": "attachment; filename=Cambi_Serie_OMG.csv"}
     )
 
-# --- MODULO: REPORT ORE & STATISTICHE MANUTENZIONI ---
+# --- REPORT ORE & STATISTICHE ---
 @app.route("/report_ore")
 @app.route("/report_ore.html")
 def report_ore():
@@ -1604,7 +1607,7 @@ def elimina_intervento(intervento_id):
     flash("Intervento eliminato.", "success")
     return redirect(url_for("richieste_manutenzione"))
 
-# --- GESTIONE PROMEMORIA ---
+# --- GESTIONE PROMEMORIA CON NOTIFICA ANCHE PER AUTO-ASSEGNAZIONE ---
 @app.route("/promemoria", methods=["GET", "POST"])
 @app.route("/promemoria.html", methods=["GET", "POST"])
 def promemoria():
@@ -1626,7 +1629,7 @@ def promemoria():
         priorita = request.form.get("priorita", "Media")
         ricorrenza = request.form.get("ricorrenza", "Nessuna")
         
-        assegnato_a = request.form.get("assegnato_a")
+        assegnato_a = request.form.get("assegnato_a", "").strip()
         if not assegnato_a:
             assegnato_a = username_corrente
         
@@ -1637,6 +1640,7 @@ def promemoria():
             """, (titolo, descrizione, data_scadenza, priorita, ricorrenza, assegnato_a))
             conn.commit()
             
+            # INVIA LA NOTIFICA (ANCHE SE AUTO-ASSEGNATO O ASSEGNATO DA ADMIN)
             if assegnato_a:
                 crea_notifica(
                     destinatario=assegnato_a,
@@ -1647,6 +1651,8 @@ def promemoria():
                 
             registra_log(f"Creato promemoria: {titolo} per utente {assegnato_a}")
             flash("Promemoria aggiunto con successo!", "success")
+        cur.close()
+        conn.close()
         return redirect(url_for("promemoria"))
         
     lista_utenti = []
@@ -1669,7 +1675,7 @@ def promemoria():
     return render_template("promemoria.html", 
                            promemoria=lista_promemoria, 
                            lista_utenti=lista_utenti, 
-                           puo_assegnare=(is_admin or puo_assegnare))
+                           puo_assegnare=True)
 
 @app.route("/completa_promemoria/<int:promemoria_id>", methods=["POST"])
 def completa_promemoria(promemoria_id):
