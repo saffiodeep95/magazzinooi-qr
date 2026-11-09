@@ -374,6 +374,7 @@ def require_login():
     if request.endpoint and request.endpoint not in allowed_routes and 'username' not in session:
         return redirect(url_for('login'))
 
+# --- API NOTIFICHE AGGIORNATE (CON SUPPORTO ELIMINAZIONE SINGOLA) ---
 @app.route("/api/notifiche")
 def api_notifiche():
     username = session.get('username')
@@ -399,6 +400,18 @@ def api_segna_lette():
         conn = get_db_connection()
         cur = conn.cursor()
         cur.execute("UPDATE notifiche SET letta = TRUE WHERE TRIM(destinatario) = %s;", (str(username).strip(),))
+        conn.commit()
+        cur.close()
+        conn.close()
+    return jsonify({"status": "ok"})
+
+@app.route("/api/notifiche/elimina/<int:notifica_id>", methods=["POST"])
+def api_elimina_notifica(notifica_id):
+    username = session.get('username')
+    if username:
+        conn = get_db_connection()
+        cur = conn.cursor()
+        cur.execute("DELETE FROM notifiche WHERE id = %s;", (notifica_id,))
         conn.commit()
         cur.close()
         conn.close()
@@ -784,7 +797,7 @@ def stampa_nastri():
     conn.close()
     return render_template("stampa_nastri.html", nastri=lista, sezione=sezione)
 
-# --- FUNZIONE AGENDA / OMD / LAVORI INTERNI CON INVIO NOTIFICHE GARANTITO ---
+# --- AGENDA / OMD / LAVORI INTERNI (CON NOTIFICHE ATTIVE) ---
 @app.route("/agenda", methods=["GET", "POST"])
 @app.route("/agenda.html", methods=["GET", "POST"])
 def agenda():
@@ -844,7 +857,7 @@ def agenda():
             """, (titolo, descrizione, data_scadenza, richiesto_da, data_inizio, data_fine, nome_azienda, utenti_visibili, sezione_form, username_corrente))
             conn.commit()
             
-            # NOTIFICHE AGENDA: Invio a tutti o al singolo assegnatario
+            # --- INVIO NOTIFICHE AGENDA ---
             if utenti_selezionati:
                 if "Tutti" in utenti_selezionati:
                     cur.execute("SELECT username FROM utenti;")
@@ -1340,7 +1353,7 @@ def report_ore():
                            chart_tipi_labels=chart_tipi_labels,
                            chart_tipi_values=chart_tipi_values)
 
-# --- RICHIESTE INTERVENTO MANUTENZIONE OFFICINA ---
+# --- RICHIESTE INTERVENTO MANUTENZIONE OFFICINA (CON NOTIFICHE ATTIVE) ---
 @app.route("/richieste_manutenzione", methods=["GET", "POST"])
 @app.route("/richieste_manutenzione.html", methods=["GET", "POST"])
 def richieste_manutenzione():
@@ -1391,6 +1404,7 @@ def richieste_manutenzione():
             """, (titolo, impianto_macchina, descrizione, priorita, tipo_guasto, assegnato_a, username_corrente, allegato_nome, allegato_dati))
             conn.commit()
             
+            # --- INVIO NOTIFICHE OFFICINA ---
             for tec in tecnici_selezionati:
                 tec_clean = tec.strip()
                 if tec_clean:
@@ -1607,7 +1621,7 @@ def elimina_intervento(intervento_id):
     flash("Intervento eliminato.", "success")
     return redirect(url_for("richieste_manutenzione"))
 
-# --- GESTIONE PROMEMORIA CON NOTIFICA ANCHE PER AUTO-ASSEGNAZIONE ---
+# --- PROMEMORIA (CON NOTIFICHE ATTIVE) ---
 @app.route("/promemoria", methods=["GET", "POST"])
 @app.route("/promemoria.html", methods=["GET", "POST"])
 def promemoria():
@@ -1640,7 +1654,7 @@ def promemoria():
             """, (titolo, descrizione, data_scadenza, priorita, ricorrenza, assegnato_a))
             conn.commit()
             
-            # INVIA LA NOTIFICA (ANCHE SE AUTO-ASSEGNATO O ASSEGNATO DA ADMIN)
+            # --- INVIO NOTIFICA PROMEMORIA ---
             if assegnato_a:
                 crea_notifica(
                     destinatario=assegnato_a,
