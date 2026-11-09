@@ -311,7 +311,6 @@ def init_db():
             );
         """)
         
-        # Migrazioni colonne per sicurezza se la tabella esisteva già
         cur.execute("ALTER TABLE agenda ADD COLUMN IF NOT EXISTS sezione VARCHAR(50) DEFAULT 'agenda';")
         cur.execute("ALTER TABLE agenda ADD COLUMN IF NOT EXISTS richiesto_da VARCHAR(255);")
         cur.execute("ALTER TABLE agenda ADD COLUMN IF NOT EXISTS data_inizio VARCHAR(50);")
@@ -782,7 +781,7 @@ def stampa_nastri():
     conn.close()
     return render_template("stampa_nastri.html", nastri=lista, sezione=sezione)
 
-# --- FUNZIONE AGENDA / OMD / LAVORI INTERNI AGGIORNATA CON CHI HA RICHIESTO, DATE E COMPLETAMENTO NON CANCELLABILE ---
+# --- FUNZIONE AGENDA / OMD / LAVORI INTERNI AGGIORNATA CON ARCHIVIO E DATA CHIUSURA AUTOMATICA ---
 @app.route("/agenda", methods=["GET", "POST"])
 @app.route("/agenda.html", methods=["GET", "POST"])
 def agenda():
@@ -793,6 +792,7 @@ def agenda():
     is_admin = session.get('is_admin')
     
     sezione_corrente = request.form.get("sezione_target") or request.args.get("sezione", "agenda")
+    filtro_stato = request.args.get("stato", "attive") # 'attive' o 'completate'
     
     conn = get_db_connection()
     cur = conn.cursor()
@@ -857,20 +857,27 @@ def agenda():
             
         cur.close()
         conn.close()
-        return redirect(url_for('agenda', sezione=sezione_form))
+        return redirect(url_for('agenda', sezione=sezione_form, stato=filtro_stato))
+
+    bool_completato = True if filtro_stato == "completate" else False
 
     try:
         if is_admin:
-            cur.execute("SELECT * FROM agenda WHERE sezione = %s ORDER BY completato ASC, data_scadenza ASC NULLS LAST, id DESC;", (sezione_corrente,))
+            cur.execute("""
+                SELECT * FROM agenda 
+                WHERE sezione = %s AND completato = %s 
+                ORDER BY data_scadenza ASC NULLS LAST, id DESC;
+            """, (sezione_corrente, bool_completato))
         else:
             cur.execute("""
                 SELECT * FROM agenda 
-                WHERE sezione = %s AND (utenti_visibili LIKE %s OR utenti_visibili = 'Tutti' OR utenti_visibili = '' OR utenti_visibili IS NULL)
-                ORDER BY completato ASC, data_scadenza ASC NULLS LAST, id DESC;
-            """, (sezione_corrente, f"%{username_corrente}%"))
+                WHERE sezione = %s AND completato = %s 
+                  AND (utenti_visibili LIKE %s OR utenti_visibili = 'Tutti' OR utenti_visibili = '' OR utenti_visibili IS NULL)
+                ORDER BY data_scadenza ASC NULLS LAST, id DESC;
+            """, (sezione_corrente, bool_completato, f"%{username_corrente}%"))
         attivita = cur.fetchall()
     except Exception:
-        cur.execute("SELECT * FROM agenda WHERE sezione = %s ORDER BY completato ASC, data_scadenza ASC NULLS LAST, id DESC;", (sezione_corrente,))
+        cur.execute("SELECT * FROM agenda WHERE sezione = %s AND completato = %s ORDER BY id DESC;", (sezione_corrente, bool_completato))
         attivita = cur.fetchall()
 
     cur.execute("SELECT username FROM utenti ORDER BY username ASC;")
@@ -888,7 +895,7 @@ def agenda():
                            fornitori=fornitori, 
                            titolo_sezione=titolo_sezione, 
                            sezione_corrente=sezione_corrente,
-                           codice_sezione="agenda")
+                           filtro_stato=filtro_stato)
 
 @app.route("/omd")
 @app.route("/omd.html")
@@ -910,20 +917,49 @@ def completa_agenda(agenda_id):
         sezione = res['sezione'] if res and 'sezione' in res else 'agenda'
         stato_attuale = res['completato'] if res and 'completato' in res else False
         
-        # Inverte lo stato di completamento (da False a True e viceversa) SENZA CANCELLARE LA RIGA
         nuovo_stato = not stato_attuale
-        cur.execute("UPDATE agenda SET completato = %s WHERE id = %s;", (nuovo_stato, agenda_id))
+        
+        if nuovo_stato:
+            # Imposta automaticamente la data di oggi come data_fine (data chiusura) se non presente
+            data_oggi = datetime.now().strftime('%Y-%m-%d')
+            cur.execute("""
+                UPDATE agenda 
+                SET completato = TRUE, data_fine = COALESCE(NULLIF(data_fine, ''), %s) 
+                WHERE id = %s;
+            """, (data_oggi, agenda_id))
+        else:
+            cur.execute("UPDATE agenda SET completato = FALSE WHERE id = %s;", (agenda_id,))
+            
         conn.commit()
         cur.close()
         conn.close()
         
-        testo_log = "completata" if nuovo_stato else "riattivata"
+        testo_log = "completata e archiviata" if nuovo_stato else "riattivata"
         registra_log(f"Attività ID {agenda_id} contrassegnata come {testo_log}")
         flash(f"Stato attività aggiornato con successo!", "success")
-        return redirect(url_for('agenda', sezione=sezione))
+        return redirect(url_for('agenda', sezione=sezione, stato=('completate' if nuovo_stato else 'attive')))
     except Exception as e:
         flash(f"Errore aggiornamento stato attività: {e}", "error")
         return redirect(url_for('agenda'))
+
+@app.route("/stampa_archivio_agenda")
+def stampa_archivio_agenda():
+    sezione = request.args.get("sezione", "omd")
+    conn = get_db_connection()
+    cur = conn.cursor()
+    cur.execute("""
+        SELECT * FROM agenda 
+        WHERE sezione = %s AND completato = TRUE 
+        ORDER BY data_fine DESC NULLS LAST, id DESC;
+    """, (sezione,))
+    lista = cur.fetchall()
+    cur.close()
+    conn.close()
+    
+    titoli_mappa = {"omd": "OMD", "lavori_interni": "Lavori Interni", "agenda": "Agenda"}
+    nome_sezione = titoli_mappa.get(sezione, sezione.upper())
+    
+    return render_template("stampa_archivio_agenda.html", attivita=lista, nome_sezione=nome_sezione)
 
 @app.route("/elimina_agenda/<int:agenda_id>", methods=["POST"])
 def elimina_agenda(agenda_id):
