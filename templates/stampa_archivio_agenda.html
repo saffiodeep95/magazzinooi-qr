@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <title>Archivio Storico - {{ nome_sezione }}</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        @media print {
+            .no-print { display: none; }
+            body { background: white !important; font-size: 12pt; }
+        }
+    </style>
+</head>
+<body class="bg-white p-4">
+    <div class="container">
+        <div class="d-flex justify-content-between align-items-center border-bottom pb-3 mb-4">
+            <div>
+                <h2>Gestionale OMG - Archivio Storico</h2>
+                <h4 class="text-muted">Sezione: {{ nome_sezione }} (Attività Completate)</h4>
+            </div>
+            <button onclick="window.print();" class="btn btn-primary no-print">
+                <i class="fas fa-print me-1"></i> Stampa Pagina
+            </button>
+        </div>
+
+        <table class="table table-bordered align-middle">
+            <thead class="table-dark">
+                <tr>
+                    <th>Titolo Attività</th>
+                    <th>Richiesto da</th>
+                    <th>Data Inizio</th>
+                    <th>Data Fine</th>
+                    <th>Descrizione / Note</th>
+                    <th>Assegnato a</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for item in attivita %}
+                <tr>
+                    <td><strong>{{ item.titolo }}</strong></td>
+                    <td>{{ item.richiesto_da or '-' }}</td>
+                    <td>{{ item.data_inizio or '-' }}</td>
+                    <td>{{ item.data_fine or item.data_scadenza or '-' }}</td>
+                    <td>{{ item.descrizione or '-' }}</td>
+                    <td>{{ item.utenti_visibili or 'Tutti' }}</td>
+                </tr>
+                {% else %}
+                <tr>
+                    <td colspan="6" class="text-center text-muted py-4">Nessuna attività archiviata trovata in questa sezione.</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+
+        <div class="mt-4 text-muted text-end small">
+            Stampato il: <span id="data-stampa"></span>
+        </div>
+    </div>
+
+    <script>
+        document.getElementById('data-stampa').innerText = new Date().toLocaleString();
+    </script>
+</body>
+</html>
