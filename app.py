@@ -300,7 +300,7 @@ def init_db():
                 descrizione TEXT,
                 data_scadenza VARCHAR(50),
                 nome_azienda VARCHAR(255),
-                utenti_visibili VARCHAR(255) DEFAULT 'Tutti',
+                utenti_visibili VARCHAR(255) DEFAULT '',
                 sezione VARCHAR(50) DEFAULT 'agenda',
                 creato_da VARCHAR(255),
                 creato_il TIMESTAMP DEFAULT CURRENT_TIMESTAMP
@@ -773,6 +773,7 @@ def stampa_nastri():
     conn.close()
     return render_template("stampa_nastri.html", nastri=lista, sezione=sezione)
 
+# --- FUNZIONE AGENDA / OMD / LAVORI INTERNI CORRETTA DEFINITIVAMENTE ---
 @app.route("/agenda", methods=["GET", "POST"])
 @app.route("/agenda.html", methods=["GET", "POST"])
 def agenda():
@@ -781,14 +782,29 @@ def agenda():
     
     username_corrente = session.get('username')
     is_admin = session.get('is_admin')
-    sezione_corrente = request.args.get("sezione", "agenda")
     
-    # CONTROLLO RIGOROSO DEI PERMESSI PER OMD E LAVORI INTERNI
+    # Rileva correttamente la sezione sia dal Form (POST) che dall'URL (GET)
+    sezione_corrente = request.form.get("sezione_target") or request.args.get("sezione", "agenda")
+    
+    # 1. Recupera SEMPRE i permessi aggiornati in tempo reale dal Database
+    conn = get_db_connection()
+    cur = conn.cursor()
+    cur.execute("SELECT puo_vedere_omd, puo_vedere_lavori_interni FROM utenti WHERE username = %s;", (username_corrente,))
+    user_permessi = cur.fetchone()
+    
+    puo_omd = user_permessi.get('puo_vedere_omd', 1) if user_permessi else 1
+    puo_lavori = user_permessi.get('puo_vedere_lavori_interni', 1) if user_permessi else 1
+
+    # 2. Controllo accesso condizionale in tempo reale per non-admin
     if not is_admin:
-        if sezione_corrente == 'omd' and not session.get('puo_vedere_omd', 1):
+        if sezione_corrente == 'omd' and not puo_omd:
+            cur.close()
+            conn.close()
             flash("Non disponi dei permessi per accedere alla sezione OMD.", "error")
             return redirect(url_for('agenda', sezione='agenda'))
-        if sezione_corrente == 'lavori_interni' and not session.get('puo_vedere_lavori_interni', 1):
+        if sezione_corrente == 'lavori_interni' and not puo_lavori:
+            cur.close()
+            conn.close()
             flash("Non disponi dei permessi per accedere alla sezione Lavori Interni.", "error")
             return redirect(url_for('agenda', sezione='agenda'))
 
@@ -799,17 +815,18 @@ def agenda():
     }
     titolo_sezione = titoli_mappa.get(sezione_corrente, "Agenda")
     
-    conn = get_db_connection()
-    cur = conn.cursor()
-    
     if request.method == "POST":
         titolo = request.form.get("titolo")
         descrizione = request.form.get("descrizione", "")
         data_scadenza = request.form.get("data_scadenza", "")
         nome_azienda = request.form.get("fornitore_input", "")
         utenti_selezionati = request.form.getlist("utenti_visibili[]")
-        sezione_form = request.form.get("sezione_target", "agenda")
-        utenti_visibili = ", ".join(utenti_selezionati) if utenti_selezionati else "Tutti"
+        
+        # Mantiene esattamente la sezione di partenza (omd / lavori_interni / agenda)
+        sezione_form = request.form.get("sezione_target") or sezione_corrente
+        
+        # NON imposta più "Tutti" di default se la selezione è vuota
+        utenti_visibili = ", ".join(utenti_selezionati) if utenti_selezionati else ""
         
         if titolo:
             cur.execute("""
@@ -818,7 +835,7 @@ def agenda():
             """, (titolo, descrizione, data_scadenza, nome_azienda, utenti_visibili, sezione_form, username_corrente))
             conn.commit()
             
-            if "Tutti" not in utenti_selezionati:
+            if utenti_selezionati and "Tutti" not in utenti_selezionati:
                 for tec in utenti_selezionati:
                     tec_clean = tec.strip()
                     if tec_clean and tec_clean != username_corrente:
@@ -830,7 +847,10 @@ def agenda():
                         )
             
             registra_log(f"Creata attività in {sezione_form}: {titolo}")
-            flash("Attività aggiunta con successo!", "success")
+            flash(f"Attività aggiunta con successo in {titoli_mappa.get(sezione_form, 'Agenda')}!", "success")
+            
+        cur.close()
+        conn.close()
         return redirect(url_for('agenda', sezione=sezione_form))
 
     try:
@@ -839,12 +859,12 @@ def agenda():
         else:
             cur.execute("""
                 SELECT * FROM agenda 
-                WHERE sezione = %s AND (utenti_visibili LIKE %s OR utenti_visibili = 'Tutti' OR utenti_visibili = '')
+                WHERE sezione = %s AND (utenti_visibili LIKE %s OR utenti_visibili = 'Tutti' OR utenti_visibili = '' OR utenti_visibili IS NULL)
                 ORDER BY data_scadenza ASC NULLS LAST, id DESC;
             """, (sezione_corrente, f"%{username_corrente}%"))
         attivita = cur.fetchall()
     except Exception:
-        cur.execute("SELECT * FROM agenda ORDER BY data_scadenza ASC NULLS LAST, id DESC;")
+        cur.execute("SELECT * FROM agenda WHERE sezione = %s ORDER BY data_scadenza ASC NULLS LAST, id DESC;", (sezione_corrente,))
         attivita = cur.fetchall()
 
     cur.execute("SELECT username FROM utenti ORDER BY username ASC;")
@@ -975,7 +995,6 @@ def cambi_serie():
         query += " AND forno = %s"
         params.append(forno_filtro)
     
-    # Ordinamento cronologico dal Lunedì alla Domenica (ASC)
     query += " ORDER BY data_cambio ASC, id ASC;"
     cur.execute(query, tuple(params))
     tutti_record = cur.fetchall()
