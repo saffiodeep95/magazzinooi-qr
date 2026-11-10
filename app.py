@@ -273,6 +273,8 @@ def init_db():
                 quantita_trattamento VARCHAR(50),
                 misura_piastrina VARCHAR(50),
                 misura_piastrina_nuova VARCHAR(50),
+                diametro_bottiglia VARCHAR(50),
+                diametro_bottiglia_nuova VARCHAR(50),
                 creato_il TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             );
         """)
@@ -320,6 +322,8 @@ def init_db():
         cur.execute("ALTER TABLE agenda ADD COLUMN IF NOT EXISTS data_fine VARCHAR(50);")
         cur.execute("ALTER TABLE agenda ADD COLUMN IF NOT EXISTS completato BOOLEAN DEFAULT FALSE;")
         cur.execute("ALTER TABLE cambi_serie ADD COLUMN IF NOT EXISTS misura_piastrina_nuova VARCHAR(50);")
+        cur.execute("ALTER TABLE cambi_serie ADD COLUMN IF NOT EXISTS diametro_bottiglia VARCHAR(50);")
+        cur.execute("ALTER TABLE cambi_serie ADD COLUMN IF NOT EXISTS diametro_bottiglia_nuova VARCHAR(50);")
 
         permessi_lista = [
             ("puo_vedere_magazzino", "INT DEFAULT 1"),
@@ -784,7 +788,7 @@ def stampa_nastri():
     conn.close()
     return render_template("stampa_nastri.html", nastri=lista, sezione=sezione)
 
-# --- FUNZIONE AGENDA / OMD / LAVORI INTERNI CON CONTROLLI PERMESSI ADMIN ---
+# --- FUNZIONE AGENDA / OMD / LAVORI INTERNI ---
 @app.route("/agenda", methods=["GET", "POST"])
 @app.route("/agenda.html", methods=["GET", "POST"])
 def agenda():
@@ -957,7 +961,6 @@ def completa_agenda(agenda_id):
 
 @app.route("/modifica_agenda/<int:agenda_id>", methods=["POST"])
 def modifica_agenda(agenda_id):
-    # Controllo permessi lato server: Admin oppure utente con permesso puo_gestire_agenda abilitato
     if not session.get('is_admin') and not session.get('puo_gestire_agenda', 1):
         flash("Non hai i permessi per modificare questa attività.", "error")
         return redirect(url_for('agenda'))
@@ -1016,7 +1019,6 @@ def stampa_archivio_agenda():
 
 @app.route("/elimina_agenda/<int:agenda_id>", methods=["POST"])
 def elimina_agenda(agenda_id):
-    # Solo l'amministratore può eliminare definitivamente
     if not session.get('is_admin'):
         flash("Solo l'amministratore può eliminare le attività.", "error")
         return redirect(url_for("agenda"))
@@ -1052,6 +1054,7 @@ def qr_scaffale():
     conn.close()
     return render_template("qr_scaffale.html", prodotti=prodotti, ubicazione=ubicazione)
 
+# --- CAMBI SERIE & API ULTIMA BOTTIGLIA CON DIAMETRO ---
 @app.route("/api/ultima_bottiglia/<forno>/<linea>")
 def ultima_bottiglia(forno, linea):
     try:
@@ -1059,7 +1062,7 @@ def ultima_bottiglia(forno, linea):
         cur = conn.cursor()
         cur.execute("""
             SELECT bottiglia_nuova, nome_bottiglia, num_bottiglie_tempera_nuova, num_bottiglie_tempera, 
-                   misura_piastrina_nuova, misura_piastrina
+                   misura_piastrina_nuova, misura_piastrina, diametro_bottiglia_nuova, diametro_bottiglia
             FROM cambi_serie 
             WHERE forno = %s AND linea = %s 
             ORDER BY id DESC LIMIT 1;
@@ -1072,12 +1075,13 @@ def ultima_bottiglia(forno, linea):
             return jsonify({
                 "bottiglia": ultimo.get('bottiglia_nuova') or ultimo.get('nome_bottiglia') or "",
                 "tempera": ultimo.get('num_bottiglie_tempera_nuova') if ultimo.get('num_bottiglie_tempera_nuova') is not None else (ultimo.get('num_bottiglie_tempera') or 0),
-                "piastrina": ultimo.get('misura_piastrina_nuova') or ultimo.get('misura_piastrina') or ""
+                "piastrina": ultimo.get('misura_piastrina_nuova') or ultimo.get('misura_piastrina') or "",
+                "diametro": ultimo.get('diametro_bottiglia_nuova') or ultimo.get('diametro_bottiglia') or ""
             })
-        return jsonify({"bottiglia": "", "tempera": 0, "piastrina": ""})
+        return jsonify({"bottiglia": "", "tempera": 0, "piastrina": "", "diametro": ""})
     except Exception as e:
         print(f"Errore API ultima bottiglia: {e}")
-        return jsonify({"bottiglia": "", "tempera": 0, "piastrina": ""})
+        return jsonify({"bottiglia": "", "tempera": 0, "piastrina": "", "diametro": ""})
 
 @app.route("/cambi_serie", methods=["GET", "POST"])
 @app.route("/cambi_serie.html", methods=["GET", "POST"])
@@ -1147,14 +1151,16 @@ def aggiungi_cambio_serie():
     num_bottiglie_tempera_vecchia = int(request.form.get("num_bottiglie_tempera_vecchia", 0) or 0)
     num_bottiglie_tempera_nuova = int(request.form.get("num_bottiglie_tempera_nuova", 0) or 0)
     misura_piastrina = request.form.get("misura_piastrina", "").strip()
+    diametro_bottiglia = request.form.get("diametro_bottiglia", "").strip()
+    diametro_bottiglia_nuova = request.form.get("diametro_bottiglia_nuova", "").strip()
 
     try:
         conn = get_db_connection()
         cur = conn.cursor()
         cur.execute("""
-            INSERT INTO cambi_serie (forno, linea, data_cambio, bottiglia_precedente, bottiglia_nuova, nome_bottiglia, tempo_cambio, num_bottiglie_tempera_vecchia, num_bottiglie_tempera_nuova, num_bottiglie_tempera, misura_piastrina, misura_piastrina_nuova)
-            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s);
-        """, (forno, linea, data_cambio, bottiglia_precedente, bottiglia_nuova, bottiglia_nuova, tempo_cambio, num_bottiglie_tempera_vecchia, num_bottiglie_tempera_nuova, num_bottiglie_tempera_nuova, misura_piastrina, misura_piastrina))
+            INSERT INTO cambi_serie (forno, linea, data_cambio, bottiglia_precedente, bottiglia_nuova, nome_bottiglia, tempo_cambio, num_bottiglie_tempera_vecchia, num_bottiglie_tempera_nuova, num_bottiglie_tempera, misura_piastrina, misura_piastrina_nuova, diametro_bottiglia, diametro_bottiglia_nuova)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s);
+        """, (forno, linea, data_cambio, bottiglia_precedente, bottiglia_nuova, bottiglia_nuova, tempo_cambio, num_bottiglie_tempera_vecchia, num_bottiglie_tempera_nuova, num_bottiglie_tempera_nuova, misura_piastrina, misura_piastrina, diametro_bottiglia, diametro_bottiglia_nuova))
         
         conn.commit()
         cur.close()
@@ -1178,15 +1184,17 @@ def modifica_cambio_serie(id_cambio):
     num_bottiglie_tempera_vecchia = int(request.form.get("num_bottiglie_tempera_vecchia", 0) or 0)
     num_bottiglie_tempera_nuova = int(request.form.get("num_bottiglie_tempera_nuova", 0) or 0)
     misura_piastrina = request.form.get("misura_piastrina", "").strip()
+    diametro_bottiglia = request.form.get("diametro_bottiglia", "").strip()
+    diametro_bottiglia_nuova = request.form.get("diametro_bottiglia_nuova", "").strip()
 
     try:
         conn = get_db_connection()
         cur = conn.cursor()
         cur.execute("""
             UPDATE cambi_serie 
-            SET forno = %s, linea = %s, data_cambio = %s, bottiglia_precedente = %s, bottiglia_nuova = %s, nome_bottiglia = %s, tempo_cambio = %s, num_bottiglie_tempera_vecchia = %s, num_bottiglie_tempera_nuova = %s, num_bottiglie_tempera = %s, misura_piastrina = %s, misura_piastrina_nuova = %s
+            SET forno = %s, linea = %s, data_cambio = %s, bottiglia_precedente = %s, bottiglia_nuova = %s, nome_bottiglia = %s, tempo_cambio = %s, num_bottiglie_tempera_vecchia = %s, num_bottiglie_tempera_nuova = %s, num_bottiglie_tempera = %s, misura_piastrina = %s, misura_piastrina_nuova = %s, diametro_bottiglia = %s, diametro_bottiglia_nuova = %s
             WHERE id = %s;
-        """, (forno, linea, data_cambio, bottiglia_precedente, bottiglia_nuova, bottiglia_nuova, tempo_cambio, num_bottiglie_tempera_vecchia, num_bottiglie_tempera_nuova, num_bottiglie_tempera_nuova, misura_piastrina, misura_piastrina, id_cambio))
+        """, (forno, linea, data_cambio, bottiglia_precedente, bottiglia_nuova, bottiglia_nuova, tempo_cambio, num_bottiglie_tempera_vecchia, num_bottiglie_tempera_nuova, num_bottiglie_tempera_nuova, misura_piastrina, misura_piastrina, diametro_bottiglia, diametro_bottiglia_nuova, id_cambio))
         
         conn.commit()
         cur.close()
@@ -1218,14 +1226,14 @@ def elimina_cambio_serie(id_cambio):
 def esporta_cambi_serie_csv():
     conn = get_db_connection()
     cur = conn.cursor()
-    cur.execute("SELECT data_cambio, forno, linea, bottiglia_precedente, bottiglia_nuova, nome_bottiglia, tempo_cambio, num_bottiglie_tempera_vecchia, num_bottiglie_tempera_nuova, num_bottiglie_tempera, misura_piastrina, misura_piastrina_nuova FROM cambi_serie ORDER BY data_cambio ASC;")
+    cur.execute("SELECT data_cambio, forno, linea, bottiglia_precedente, bottiglia_nuova, nome_bottiglia, tempo_cambio, num_bottiglie_tempera_vecchia, num_bottiglie_tempera_nuova, num_bottiglie_tempera, misura_piastrina, misura_piastrina_nuova, diametro_bottiglia, diametro_bottiglia_nuova FROM cambi_serie ORDER BY data_cambio ASC;")
     righe = cur.fetchall()
     cur.close()
     conn.close()
 
     output = io.StringIO()
     writer = csv.writer(output)
-    writer.writerow(['Data Cambio', 'Forno', 'Linea', 'Bottiglia Smontante', 'Bottiglia Montante', 'Tempo Cambio', 'N° Bottiglie Tempera (Vecchia)', 'N° Bottiglie Tempera (Nuova)', 'Misura Piastrina'])
+    writer.writerow(['Data Cambio', 'Forno', 'Linea', 'Bottiglia Smontante', 'Bottiglia Montante', 'Tempo Cambio', 'N° Bottiglie Tempera (Vecchia)', 'N° Bottiglie Tempera (Nuova)', 'Misura Piastrina', 'Diametro Smontante', 'Diametro Montante'])
     for r in righe:
         writer.writerow([
             r.get('data_cambio', ''),
@@ -1236,7 +1244,9 @@ def esporta_cambi_serie_csv():
             r.get('tempo_cambio', ''),
             r.get('num_bottiglie_tempera_vecchia', 0),
             r.get('num_bottiglie_tempera_nuova') if r.get('num_bottiglie_tempera_nuova') is not None else r.get('num_bottiglie_tempera', 0),
-            r.get('misura_piastrina_nuova') or r.get('misura_piastrina', '')
+            r.get('misura_piastrina_nuova') or r.get('misura_piastrina', ''),
+            r.get('diametro_bottiglia', ''),
+            r.get('diametro_bottiglia_nuova', '')
         ])
     return Response(
         output.getvalue(),
