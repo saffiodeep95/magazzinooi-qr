@@ -162,6 +162,7 @@
                                 <th>Tempo Cambio</th>
                                 <th>N° Bottiglie Tempera (V / N)</th>
                                 <th>Misura Piastrina (Uscente / Entrante)</th>
+                                <th>Diametro (Smont. / Mont.)</th>
                                 <th class="no-print text-end">Azioni</th>
                             </tr>
                         </thead>
@@ -199,6 +200,11 @@
                                     <i class="fa-solid fa-arrow-right mx-1 text-muted"></i>
                                     <span class="fw-bold text-primary">{{ r.misura_piastrina_nuova or r.misura_piastrina or '-' }}</span>
                                 </td>
+                                <td>
+                                    <span class="small text-muted">{{ r.diametro_bottiglia or '-' }}</span>
+                                    <i class="fa-solid fa-arrow-right mx-1 text-muted"></i>
+                                    <span class="fw-bold text-success">{{ r.diametro_bottiglia_nuova or '-' }}</span>
+                                </td>
                                 <td class="no-print text-end">
                                     <form action="{{ url_for('elimina_cambio_serie', id_cambio=r.id) }}" method="POST" onsubmit="return confirm('Eliminare questo cambio serie?');" class="d-inline">
                                         <button type="submit" class="btn btn-sm btn-outline-danger" title="Elimina"><i class="fa-solid fa-trash-can"></i></button>
@@ -207,7 +213,7 @@
                             </tr>
                             {% else %}
                             <tr>
-                                <td colspan="7" class="text-center text-muted py-4">Nessun cambio serie trovato.</td>
+                                <td colspan="8" class="text-center text-muted py-4">Nessun cambio serie trovato.</td>
                             </tr>
                             {% endfor %}
                         </tbody>
@@ -279,11 +285,22 @@
                         <div class="row">
                             <div class="col-md-6 mb-3">
                                 <label class="form-label text-secondary">Misura Piastrina Uscente (Autocompilata)</label>
-                                <input type="text" class="form-control bg-light" name="misura_piastrina_vecchia" id="misura_piastrina_vecchia" readonly placeholder="-">
+                                <input type="text" class="form-control bg-light" name="misura_piastrina" id="misura_piastrina_vecchia" readonly placeholder="-">
                             </div>
                             <div class="col-md-6 mb-3">
                                 <label class="form-label text-primary">Misura Piastrina Entrante *</label>
                                 <input type="text" class="form-control" name="misura_piastrina_nuova" placeholder="Es. 150x80 mm..." required>
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label text-secondary">Diametro Smontante (mm) (Autocompilato)</label>
+                                <input type="text" class="form-control bg-light" name="diametro_bottiglia" id="diametro_smontante" readonly placeholder="-">
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label text-primary">Diametro Montante (mm) *</label>
+                                <input type="text" class="form-control" name="diametro_bottiglia_nuova" placeholder="Es. 75.5" required>
                             </div>
                         </div>
                     </div>
@@ -335,6 +352,7 @@
         const inputSmontante = document.getElementById("bottiglia_precedente");
         const inputTemperaVecchia = document.getElementById("num_bottiglie_tempera_vecchia");
         const inputPiastrinaVecchia = document.getElementById("misura_piastrina_vecchia");
+        const inputDiametroSmontante = document.getElementById("diametro_smontante");
 
         if (!selectForno || !selectLinea || !selectLinea.value) return;
 
@@ -350,12 +368,14 @@
                     if (inputSmontante) inputSmontante.value = data.bottiglia || "Nessuna precedente";
                     if (inputTemperaVecchia) inputTemperaVecchia.value = data.tempera || 0;
                     if (inputPiastrinaVecchia) inputPiastrinaVecchia.value = data.piastrina || "-";
+                    if (inputDiametroSmontante) inputDiametroSmontante.value = data.diametro || "-";
                 })
                 .catch(function(err) {
                     console.error("Errore recupero API:", err);
                     if (inputSmontante) inputSmontante.value = "-";
                     if (inputTemperaVecchia) inputTemperaVecchia.value = 0;
                     if (inputPiastrinaVecchia) inputPiastrinaVecchia.value = "-";
+                    if (inputDiametroSmontante) inputDiametroSmontante.value = "-";
                 });
         } catch (e) {
             console.error("Eccezione durante la richiesta:", e);
