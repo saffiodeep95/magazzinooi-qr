@@ -324,6 +324,7 @@ def init_db():
         cur.execute("ALTER TABLE cambi_serie ADD COLUMN IF NOT EXISTS misura_piastrina_nuova VARCHAR(50);")
         cur.execute("ALTER TABLE cambi_serie ADD COLUMN IF NOT EXISTS diametro_bottiglia VARCHAR(50);")
         cur.execute("ALTER TABLE cambi_serie ADD COLUMN IF NOT EXISTS diametro_bottiglia_nuova VARCHAR(50);")
+        cur.execute("ALTER TABLE nastri ADD COLUMN IF NOT EXISTS nome VARCHAR(255);")
 
         permessi_lista = [
             ("puo_vedere_magazzino", "INT DEFAULT 1"),
