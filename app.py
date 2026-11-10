@@ -788,7 +788,6 @@ def stampa_nastri():
     conn.close()
     return render_template("stampa_nastri.html", nastri=lista, sezione=sezione)
 
-# --- FUNZIONE AGENDA / OMD / LAVORI INTERNI ---
 @app.route("/agenda", methods=["GET", "POST"])
 @app.route("/agenda.html", methods=["GET", "POST"])
 def agenda():
@@ -961,10 +960,6 @@ def completa_agenda(agenda_id):
 
 @app.route("/modifica_agenda/<int:agenda_id>", methods=["POST"])
 def modifica_agenda(agenda_id):
-    if not session.get('is_admin') and not session.get('puo_gestire_agenda', 1):
-        flash("Non hai i permessi per modificare questa attività.", "error")
-        return redirect(url_for('agenda'))
-
     try:
         conn = get_db_connection()
         cur = conn.cursor()
@@ -1020,7 +1015,7 @@ def stampa_archivio_agenda():
 @app.route("/elimina_agenda/<int:agenda_id>", methods=["POST"])
 def elimina_agenda(agenda_id):
     if not session.get('is_admin'):
-        flash("Solo l'amministratore può eliminare le attività.", "error")
+        flash("Accesso non autorizzato.", "error")
         return redirect(url_for("agenda"))
     try:
         conn = get_db_connection()
@@ -1054,7 +1049,7 @@ def qr_scaffale():
     conn.close()
     return render_template("qr_scaffale.html", prodotti=prodotti, ubicazione=ubicazione)
 
-# --- CAMBI SERIE & API ULTIMA BOTTIGLIA CON DIAMETRO ---
+# --- CAMBI SERIE & API ULTIMA BOTTIGLIA ---
 @app.route("/api/ultima_bottiglia/<forno>/<linea>")
 def ultima_bottiglia(forno, linea):
     try:
@@ -1072,11 +1067,17 @@ def ultima_bottiglia(forno, linea):
         conn.close()
         
         if ultimo:
+            p_val = ultimo.get('misura_piastrina_nuova') or ultimo.get('misura_piastrina') or ""
+            if p_val in ["-", "None"]: p_val = ""
+            
+            d_val = ultimo.get('diametro_bottiglia_nuova') or ultimo.get('diametro_bottiglia') or ""
+            if d_val in ["-", "None"]: d_val = ""
+
             return jsonify({
                 "bottiglia": ultimo.get('bottiglia_nuova') or ultimo.get('nome_bottiglia') or "",
                 "tempera": ultimo.get('num_bottiglie_tempera_nuova') if ultimo.get('num_bottiglie_tempera_nuova') is not None else (ultimo.get('num_bottiglie_tempera') or 0),
-                "piastrina": ultimo.get('misura_piastrina_nuova') or ultimo.get('misura_piastrina') or "",
-                "diametro": ultimo.get('diametro_bottiglia_nuova') or ultimo.get('diametro_bottiglia') or ""
+                "piastrina": p_val,
+                "diametro": d_val
             })
         return jsonify({"bottiglia": "", "tempera": 0, "piastrina": "", "diametro": ""})
     except Exception as e:
@@ -1145,14 +1146,23 @@ def aggiungi_cambio_serie():
     forno = request.form.get("forno")
     linea = request.form.get("linea")
     data_cambio = request.form.get("data_cambio")
-    bottiglia_precedente = request.form.get("bottiglia_precedente", "")
-    bottiglia_nuova = request.form.get("bottiglia_nuova", "")
-    tempo_cambio = request.form.get("tempo_cambio", "")
+    bottiglia_precedente = request.form.get("bottiglia_precedente", "").strip()
+    bottiglia_nuova = request.form.get("bottiglia_nuova", "").strip()
+    tempo_cambio = request.form.get("tempo_cambio", "").strip()
     num_bottiglie_tempera_vecchia = int(request.form.get("num_bottiglie_tempera_vecchia", 0) or 0)
     num_bottiglie_tempera_nuova = int(request.form.get("num_bottiglie_tempera_nuova", 0) or 0)
+    
     misura_piastrina = request.form.get("misura_piastrina", "").strip()
+    if misura_piastrina in ["-", "None"]: misura_piastrina = ""
+    
+    misura_piastrina_nuova = request.form.get("misura_piastrina_nuova", "").strip()
+    if misura_piastrina_nuova in ["-", "None"]: misura_piastrina_nuova = ""
+
     diametro_bottiglia = request.form.get("diametro_bottiglia", "").strip()
+    if diametro_bottiglia in ["-", "None"]: diametro_bottiglia = ""
+
     diametro_bottiglia_nuova = request.form.get("diametro_bottiglia_nuova", "").strip()
+    if diametro_bottiglia_nuova in ["-", "None"]: diametro_bottiglia_nuova = ""
 
     try:
         conn = get_db_connection()
@@ -1160,7 +1170,7 @@ def aggiungi_cambio_serie():
         cur.execute("""
             INSERT INTO cambi_serie (forno, linea, data_cambio, bottiglia_precedente, bottiglia_nuova, nome_bottiglia, tempo_cambio, num_bottiglie_tempera_vecchia, num_bottiglie_tempera_nuova, num_bottiglie_tempera, misura_piastrina, misura_piastrina_nuova, diametro_bottiglia, diametro_bottiglia_nuova)
             VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s);
-        """, (forno, linea, data_cambio, bottiglia_precedente, bottiglia_nuova, bottiglia_nuova, tempo_cambio, num_bottiglie_tempera_vecchia, num_bottiglie_tempera_nuova, num_bottiglie_tempera_nuova, misura_piastrina, misura_piastrina, diametro_bottiglia, diametro_bottiglia_nuova))
+        """, (forno, linea, data_cambio, bottiglia_precedente, bottiglia_nuova, bottiglia_nuova, tempo_cambio, num_bottiglie_tempera_vecchia, num_bottiglie_tempera_nuova, num_bottiglie_tempera_nuova, misura_piastrina, misura_piastrina_nuova, diametro_bottiglia, diametro_bottiglia_nuova))
         
         conn.commit()
         cur.close()
@@ -1178,14 +1188,23 @@ def modifica_cambio_serie(id_cambio):
     forno = request.form.get("forno")
     linea = request.form.get("linea")
     data_cambio = request.form.get("data_cambio")
-    bottiglia_precedente = request.form.get("bottiglia_precedente", "")
-    bottiglia_nuova = request.form.get("bottiglia_nuova", "")
-    tempo_cambio = request.form.get("tempo_cambio", "")
+    bottiglia_precedente = request.form.get("bottiglia_precedente", "").strip()
+    bottiglia_nuova = request.form.get("bottiglia_nuova", "").strip()
+    tempo_cambio = request.form.get("tempo_cambio", "").strip()
     num_bottiglie_tempera_vecchia = int(request.form.get("num_bottiglie_tempera_vecchia", 0) or 0)
     num_bottiglie_tempera_nuova = int(request.form.get("num_bottiglie_tempera_nuova", 0) or 0)
+    
     misura_piastrina = request.form.get("misura_piastrina", "").strip()
+    if misura_piastrina in ["-", "None"]: misura_piastrina = ""
+
+    misura_piastrina_nuova = request.form.get("misura_piastrina_nuova", "").strip()
+    if misura_piastrina_nuova in ["-", "None"]: misura_piastrina_nuova = ""
+
     diametro_bottiglia = request.form.get("diametro_bottiglia", "").strip()
+    if diametro_bottiglia in ["-", "None"]: diametro_bottiglia = ""
+
     diametro_bottiglia_nuova = request.form.get("diametro_bottiglia_nuova", "").strip()
+    if diametro_bottiglia_nuova in ["-", "None"]: diametro_bottiglia_nuova = ""
 
     try:
         conn = get_db_connection()
@@ -1194,7 +1213,7 @@ def modifica_cambio_serie(id_cambio):
             UPDATE cambi_serie 
             SET forno = %s, linea = %s, data_cambio = %s, bottiglia_precedente = %s, bottiglia_nuova = %s, nome_bottiglia = %s, tempo_cambio = %s, num_bottiglie_tempera_vecchia = %s, num_bottiglie_tempera_nuova = %s, num_bottiglie_tempera = %s, misura_piastrina = %s, misura_piastrina_nuova = %s, diametro_bottiglia = %s, diametro_bottiglia_nuova = %s
             WHERE id = %s;
-        """, (forno, linea, data_cambio, bottiglia_precedente, bottiglia_nuova, bottiglia_nuova, tempo_cambio, num_bottiglie_tempera_vecchia, num_bottiglie_tempera_nuova, num_bottiglie_tempera_nuova, misura_piastrina, misura_piastrina, diametro_bottiglia, diametro_bottiglia_nuova, id_cambio))
+        """, (forno, linea, data_cambio, bottiglia_precedente, bottiglia_nuova, bottiglia_nuova, tempo_cambio, num_bottiglie_tempera_vecchia, num_bottiglie_tempera_nuova, num_bottiglie_tempera_nuova, misura_piastrina, misura_piastrina_nuova, diametro_bottiglia, diametro_bottiglia_nuova, id_cambio))
         
         conn.commit()
         cur.close()
@@ -1233,7 +1252,7 @@ def esporta_cambi_serie_csv():
 
     output = io.StringIO()
     writer = csv.writer(output)
-    writer.writerow(['Data Cambio', 'Forno', 'Linea', 'Bottiglia Smontante', 'Bottiglia Montante', 'Tempo Cambio', 'N° Bottiglie Tempera (Vecchia)', 'N° Bottiglie Tempera (Nuova)', 'Misura Piastrina', 'Diametro Smontante', 'Diametro Montante'])
+    writer.writerow(['Data Cambio', 'Forno', 'Linea', 'Bottiglia Smontante', 'Bottiglia Montante', 'Tempo Cambio', 'N° Bottiglie Tempera (Vecchia)', 'N° Bottiglie Tempera (Nuova)', 'Misura Piastrina (Uscente)', 'Misura Piastrina (Entrante)', 'Diametro Smontante', 'Diametro Montante'])
     for r in righe:
         writer.writerow([
             r.get('data_cambio', ''),
@@ -1244,7 +1263,8 @@ def esporta_cambi_serie_csv():
             r.get('tempo_cambio', ''),
             r.get('num_bottiglie_tempera_vecchia', 0),
             r.get('num_bottiglie_tempera_nuova') if r.get('num_bottiglie_tempera_nuova') is not None else r.get('num_bottiglie_tempera', 0),
-            r.get('misura_piastrina_nuova') or r.get('misura_piastrina', ''),
+            r.get('misura_piastrina', ''),
+            r.get('misura_piastrina_nuova', ''),
             r.get('diametro_bottiglia', ''),
             r.get('diametro_bottiglia_nuova', '')
         ])
@@ -1254,6 +1274,7 @@ def esporta_cambi_serie_csv():
         headers={"Content-disposition": "attachment; filename=Cambi_Serie_OMG.csv"}
     )
 
+# --- REPORT ORE & STATISTICHE ---
 @app.route("/report_ore")
 @app.route("/report_ore.html")
 def report_ore():
@@ -1353,6 +1374,7 @@ def report_ore():
                            chart_tipi_labels=chart_tipi_labels,
                            chart_tipi_values=chart_tipi_values)
 
+# --- RICHIESTE INTERVENTO MANUTENZIONE OFFICINA ---
 @app.route("/richieste_manutenzione", methods=["GET", "POST"])
 @app.route("/richieste_manutenzione.html", methods=["GET", "POST"])
 def richieste_manutenzione():
