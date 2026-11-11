@@ -1051,6 +1051,26 @@ def qr_scaffale():
     return render_template("qr_scaffale.html", prodotti=prodotti, ubicazione=ubicazione)
 
 # --- CAMBI SERIE & API ULTIMA BOTTIGLIA ---
+def ricalcola_catena_cambi(cur, forno, linea):
+    try:
+        cur.execute("""
+            SELECT id FROM cambi_serie 
+            WHERE forno = %s AND linea = %s 
+            ORDER BY data_cambio ASC, id ASC;
+        """, (forno, linea))
+        items = cur.fetchall()
+        ultima_nuova = ""
+        for idx, item in enumerate(items):
+            cur.execute("SELECT bottiglia_precedente, bottiglia_nuova FROM cambi_serie WHERE id = %s;", (item['id'],))
+            curr_row = cur.fetchone()
+            if idx == 0:
+                ultima_nuova = curr_row['bottiglia_nuova'] if curr_row else ""
+            else:
+                cur.execute("UPDATE cambi_serie SET bottiglia_precedente = %s WHERE id = %s;", (ultima_nuova, item['id']))
+                ultima_nuova = curr_row['bottiglia_nuova'] if curr_row else ""
+    except Exception as e:
+        print(f"Errore ricalcolo catena cambi: {e}")
+
 @app.route("/api/ultima_bottiglia/<forno>/<linea>")
 def ultima_bottiglia(forno, linea):
     try:
@@ -1174,6 +1194,8 @@ def aggiungi_cambio_serie():
         """, (forno, linea, data_cambio, bottiglia_precedente, bottiglia_nuova, bottiglia_nuova, tempo_cambio, num_bottiglie_tempera_vecchia, num_bottiglie_tempera_nuova, num_bottiglie_tempera_nuova, misura_piastrina, misura_piastrina_nuova, diametro_bottiglia, diametro_bottiglia_nuova))
         
         conn.commit()
+        ricalcola_catena_cambi(cur, forno, linea)
+        conn.commit()
         cur.close()
         conn.close()
         
@@ -1217,6 +1239,8 @@ def modifica_cambio_serie(id_cambio):
         """, (forno, linea, data_cambio, bottiglia_precedente, bottiglia_nuova, bottiglia_nuova, tempo_cambio, num_bottiglie_tempera_vecchia, num_bottiglie_tempera_nuova, num_bottiglie_tempera_nuova, misura_piastrina, misura_piastrina_nuova, diametro_bottiglia, diametro_bottiglia_nuova, id_cambio))
         
         conn.commit()
+        ricalcola_catena_cambi(cur, forno, linea)
+        conn.commit()
         cur.close()
         conn.close()
         
@@ -1232,8 +1256,18 @@ def elimina_cambio_serie(id_cambio):
     try:
         conn = get_db_connection()
         cur = conn.cursor()
+        cur.execute("SELECT forno, linea FROM cambi_serie WHERE id = %s;", (id_cambio,))
+        rec = cur.fetchone()
+        forno = rec['forno'] if rec else None
+        linea = rec['linea'] if rec else None
+
         cur.execute("DELETE FROM cambi_serie WHERE id = %s;", (id_cambio,))
         conn.commit()
+
+        if forno and linea:
+            ricalcola_catena_cambi(cur, forno, linea)
+            conn.commit()
+
         cur.close()
         conn.close()
         registra_log(f"Eliminato cambio serie ID {id_cambio}")
