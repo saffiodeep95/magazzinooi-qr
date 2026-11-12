@@ -29,6 +29,11 @@
             th, td { padding: 6px 4px !important; font-size: 10pt !important; }
             .badge { border: 1px solid #777 !important; color: black !important; background: transparent !important; }
             .riga-commento td { background-color: #fff !important; }
+            
+            /* Nasconde forzatamente le righe non selezionate durante la stampa */
+            tr.nascondi-stampa {
+                display: none !important;
+            }
         }
     </style>
 </head>
@@ -541,19 +546,24 @@
             let rigaCommento = document.querySelector(.riga-commento[data-parent-id="${idCambio}"]);
             
             if (!cb.checked) {
-                tr.style.display = 'none';
-                if (rigaCommento) rigaCommento.style.display = 'none';
+                tr.classList.add('nascondi-stampa');
+                if (rigaCommento) rigaCommento.classList.add('nascondi-stampa');
+            } else {
+                tr.classList.remove('nascondi-stampa');
+                if (rigaCommento) rigaCommento.classList.remove('nascondi-stampa');
             }
         });
 
         window.print();
 
-        tutteRighe.forEach(tr => {
-            let idCambio = tr.getAttribute('data-id');
-            let rigaCommento = document.querySelector(.riga-commento[data-parent-id="${idCambio}"]);
-            tr.style.display = '';
-            if (rigaCommento) rigaCommento.style.display = '';
-        });
+        setTimeout(() => {
+            tutteRighe.forEach(tr => {
+                let idCambio = tr.getAttribute('data-id');
+                let rigaCommento = document.querySelector(.riga-commento[data-parent-id="${idCambio}"]);
+                tr.classList.remove('nascondi-stampa');
+                if (rigaCommento) rigaCommento.classList.remove('nascondi-stampa');
+            });
+        }, 500);
     }
 
     document.addEventListener("DOMContentLoaded", function() {
