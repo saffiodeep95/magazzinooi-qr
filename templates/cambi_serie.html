@@ -183,7 +183,8 @@
                                 <th>Smontante / Montante</th>
                                 <th>Tempo Cambio</th>
                                 <th>N° Bottiglie Tempera (V / N)</th>
-                                <th>Misura Piastrina (Uscente / Entrante)</th>
+                                <th>Misura Piastrina</th>
+                                <th>Diametro Bottiglia</th>
                                 <th class="no-print text-end">Azioni</th>
                             </tr>
                         </thead>
@@ -222,7 +223,12 @@
                                 <td>
                                     <span class="small text-muted">{{ r.misura_piastrina_vecchia or r.misura_piastrina or '-' }}</span>
                                     <i class="fa-solid fa-arrow-right mx-1 text-muted"></i>
-                                    <span class="fw-bold text-primary">{{ r.misura_piastrina_nuova or r.misura_piastrina or '-' }}</span>
+                                    <span class="fw-bold text-primary">{{ r.misura_piastrina_nuova or '-' }}</span>
+                                </td>
+                                <td>
+                                    <span class="small text-muted">{{ r.diametro_bottiglia or '-' }}</span>
+                                    <i class="fa-solid fa-arrow-right mx-1 text-muted"></i>
+                                    <span class="fw-bold text-success">{{ r.diametro_bottiglia_nuova or '-' }}</span>
                                 </td>
                                 <td class="no-print text-end" {% if r.note %}rowspan="2"{% endif %}>
                                     <button type="button" class="btn btn-sm btn-outline-warning me-1" data-bs-toggle="modal" data-bs-target="#modalModifica-{{ r.id }}" title="Modifica">
@@ -235,7 +241,7 @@
                             </tr>
                             {% if r.note %}
                             <tr class="riga-commento" data-parent-id="{{ r.id }}">
-                                <td colspan="6">
+                                <td colspan="7">
                                     <i class="fa-solid fa-comment-dots text-primary me-1"></i> <strong>Note / Commenti:</strong> {{ r.note }}
                                 </td>
                             </tr>
@@ -311,6 +317,17 @@
                                                     </div>
                                                 </div>
 
+                                                <div class="row">
+                                                    <div class="col-md-6 mb-3">
+                                                        <label class="form-label text-secondary">Diametro Bottiglia Precedente</label>
+                                                        <input type="text" class="form-control" name="diametro_bottiglia" value="{{ r.diametro_bottiglia or '' }}">
+                                                    </div>
+                                                    <div class="col-md-6 mb-3">
+                                                        <label class="form-label text-success">Diametro Bottiglia Nuovo *</label>
+                                                        <input type="text" class="form-control" name="diametro_bottiglia_nuova" value="{{ r.diametro_bottiglia_nuova or '' }}" required>
+                                                    </div>
+                                                </div>
+
                                                 <div class="mb-3">
                                                     <label class="form-label fw-bold">Note / Commenti</label>
                                                     <textarea class="form-control" name="note" rows="2">{{ r.note or '' }}</textarea>
@@ -326,7 +343,7 @@
                             </div>
                             {% else %}
                             <tr>
-                                <td colspan="8" class="text-center text-muted py-4">Nessun cambio serie trovato.</td>
+                                <td colspan="9" class="text-center text-muted py-4">Nessun cambio serie trovato.</td>
                             </tr>
                             {% endfor %}
                         </tbody>
@@ -406,6 +423,17 @@
                             </div>
                         </div>
 
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label text-secondary">Diametro Bottiglia Precedente (Autocompilata)</label>
+                                <input type="text" class="form-control bg-light" name="diametro_bottiglia" id="diametro_bottiglia_vecchia" readonly placeholder="-">
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label text-success">Diametro Bottiglia Nuovo *</label>
+                                <input type="text" class="form-control" name="diametro_bottiglia_nuova" placeholder="Es. 75 mm..." required>
+                            </div>
+                        </div>
+
                         <div class="mb-3">
                             <label class="form-label fw-bold">Note / Commenti</label>
                             <textarea class="form-control" name="note" rows="2" placeholder="Eventuali annotazioni..."></textarea>
@@ -459,6 +487,7 @@
         const inputSmontante = document.getElementById("bottiglia_precedente");
         const inputTemperaVecchia = document.getElementById("num_bottiglie_tempera_vecchia");
         const inputPiastrinaVecchia = document.getElementById("misura_piastrina_vecchia");
+        const inputDiametroVecchio = document.getElementById("diametro_bottiglia_vecchia");
 
         if (!selectForno || !selectLinea || !selectLinea.value) return;
 
@@ -474,12 +503,14 @@
                     if (inputSmontante) inputSmontante.value = data.bottiglia || "Nessuna precedente";
                     if (inputTemperaVecchia) inputTemperaVecchia.value = data.tempera || 0;
                     if (inputPiastrinaVecchia) inputPiastrinaVecchia.value = data.piastrina || "-";
+                    if (inputDiametroVecchio) inputDiametroVecchio.value = data.diametro || "-";
                 })
                 .catch(function(err) {
                     console.error("Errore recupero API:", err);
                     if (inputSmontante) inputSmontante.value = "-";
                     if (inputTemperaVecchia) inputTemperaVecchia.value = 0;
                     if (inputPiastrinaVecchia) inputPiastrinaVecchia.value = "-";
+                    if (inputDiametroVecchio) inputDiametroVecchio.value = "-";
                 });
         } catch (e) {
             console.error("Eccezione durante la richiesta:", e);
