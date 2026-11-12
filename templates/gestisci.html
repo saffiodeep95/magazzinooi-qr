@@ -149,7 +149,7 @@
                     </div>
                 </div>
 
-                <!-- Se l'articolo È in manutenzione (AGGIORNATO CON ESITO E COMMENTO) -->
+                <!-- Se l'articolo È in manutenzione (AGGIORNATO CON SCELTA RIPARATO / NON RIPARATO E COMMENTO) -->
                 {% else %}
                 <div class="card shadow-sm mb-4 border-success">
                     <div class="card-header bg-success text-white">
@@ -165,7 +165,7 @@
                             </small>
                         </div>
 
-                        <!-- Form di Rientro aggiornato con Esito (Riparato/Non riparato) e Commento -->
+                        <!-- Form di Rientro con esito e commento -->
                         <form action="{{ url_for('ripristina_magazzino', qr_code=prodotto.qr_code) }}" method="POST">
                             <div class="mb-3">
                                 <label for="esito_riparazione" class="form-label"><strong>Esito Riparazione</strong></label>
