@@ -1831,30 +1831,36 @@ def fornitori():
     cur = conn.cursor()
     
     if request.method == "POST":
-        nome_azienda = request.form.get("nome_azienda")
-        settore_note = request.form.get("settore_note", "")
-        indirizzo = request.form.get("indirizzo", "")
-        p_iva = request.form.get("p_iva", "")
-        telefono = request.form.get("telefono", "")
-        email = request.form.get("email", "")
+        nome_azienda = request.form.get("nome_azienda", "").strip()
+        settore_note = request.form.get("settore_note", "").strip()
+        indirizzo = request.form.get("indirizzo", "").strip()
+        p_iva = request.form.get("p_iva", "").strip()
+        telefono = request.form.get("telefono", "").strip()
+        email = request.form.get("email", "").strip()
         
         if nome_azienda:
             try:
-                cur.execute("""
-                    INSERT INTO fornitori (nome_azienda, settore_note, indirizzo, p_iva, telefono, email) 
-                    VALUES (%s, %s, %s, %s, %s, %s)
-                    ON CONFLICT (nome_azienda) DO UPDATE SET
-                        settore_note = EXCLUDED.settore_note,
-                        indirizzo = EXCLUDED.indirizzo,
-                        p_iva = EXCLUDED.p_iva,
-                        telefono = EXCLUDED.telefono,
-                        email = EXCLUDED.email;
-                """, (nome_azienda, settore_note, indirizzo, p_iva, telefono, email))
+                cur.execute("SELECT id FROM fornitori WHERE LOWER(nome_azienda) = LOWER(%s);", (nome_azienda,))
+                esistente = cur.fetchone()
+                
+                if esistente:
+                    cur.execute("""
+                        UPDATE fornitori 
+                        SET settore_note = %s, indirizzo = %s, p_iva = %s, telefono = %s, email = %s
+                        WHERE id = %s;
+                    """, (settore_note, indirizzo, p_iva, telefono, email, esistente['id']))
+                else:
+                    cur.execute("""
+                        INSERT INTO fornitori (nome_azienda, settore_note, indirizzo, p_iva, telefono, email) 
+                        VALUES (%s, %s, %s, %s, %s, %s);
+                    """, (nome_azienda, settore_note, indirizzo, p_iva, telefono, email))
+                
                 conn.commit()
                 registra_log(f"Aggiunto/Aggiornato fornitore: {nome_azienda}")
                 flash("Fornitore salvato con successo!", "success")
             except Exception as e:
                 conn.rollback()
+                print(f"Errore dettagliato salvataggio fornitore: {e}")
                 flash(f"Errore salvataggio fornitore: {e}", "error")
                 
         cur.close()
