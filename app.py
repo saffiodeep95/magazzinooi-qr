@@ -110,6 +110,8 @@ def init_db():
                 email VARCHAR(255)
             );
         """)
+        
+        cur.execute("ALTER TABLE fornitori ADD COLUMN IF NOT EXISTS p_iva VARCHAR(255);")
 
         cur.execute("""
             CREATE TABLE IF NOT EXISTS contatti_tecnici (
@@ -275,6 +277,7 @@ def init_db():
                 misura_piastrina_nuova VARCHAR(50),
                 diametro_bottiglia VARCHAR(50),
                 diametro_bottiglia_nuova VARCHAR(50),
+                note TEXT,
                 creato_il TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             );
         """)
@@ -324,6 +327,7 @@ def init_db():
         cur.execute("ALTER TABLE cambi_serie ADD COLUMN IF NOT EXISTS misura_piastrina_nuova VARCHAR(50);")
         cur.execute("ALTER TABLE cambi_serie ADD COLUMN IF NOT EXISTS diametro_bottiglia VARCHAR(50);")
         cur.execute("ALTER TABLE cambi_serie ADD COLUMN IF NOT EXISTS diametro_bottiglia_nuova VARCHAR(50);")
+        cur.execute("ALTER TABLE cambi_serie ADD COLUMN IF NOT EXISTS note TEXT;")
         cur.execute("ALTER TABLE nastri ADD COLUMN IF NOT EXISTS nome VARCHAR(255);")
 
         permessi_lista = [
@@ -1172,6 +1176,7 @@ def aggiungi_cambio_serie():
     tempo_cambio = request.form.get("tempo_cambio", "").strip()
     num_bottiglie_tempera_vecchia = int(request.form.get("num_bottiglie_tempera_vecchia", 0) or 0)
     num_bottiglie_tempera_nuova = int(request.form.get("num_bottiglie_tempera_nuova", 0) or 0)
+    note = request.form.get("note", "").strip()
     
     misura_piastrina = request.form.get("misura_piastrina", "").strip()
     if misura_piastrina in ["-", "None"]: misura_piastrina = ""
@@ -1189,9 +1194,9 @@ def aggiungi_cambio_serie():
         conn = get_db_connection()
         cur = conn.cursor()
         cur.execute("""
-            INSERT INTO cambi_serie (forno, linea, data_cambio, bottiglia_precedente, bottiglia_nuova, nome_bottiglia, tempo_cambio, num_bottiglie_tempera_vecchia, num_bottiglie_tempera_nuova, num_bottiglie_tempera, misura_piastrina, misura_piastrina_nuova, diametro_bottiglia, diametro_bottiglia_nuova)
-            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s);
-        """, (forno, linea, data_cambio, bottiglia_precedente, bottiglia_nuova, bottiglia_nuova, tempo_cambio, num_bottiglie_tempera_vecchia, num_bottiglie_tempera_nuova, num_bottiglie_tempera_nuova, misura_piastrina, misura_piastrina_nuova, diametro_bottiglia, diametro_bottiglia_nuova))
+            INSERT INTO cambi_serie (forno, linea, data_cambio, bottiglia_precedente, bottiglia_nuova, nome_bottiglia, tempo_cambio, num_bottiglie_tempera_vecchia, num_bottiglie_tempera_nuova, num_bottiglie_tempera, misura_piastrina, misura_piastrina_nuova, diametro_bottiglia, diametro_bottiglia_nuova, note)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s);
+        """, (forno, linea, data_cambio, bottiglia_precedente, bottiglia_nuova, bottiglia_nuova, tempo_cambio, num_bottiglie_tempera_vecchia, num_bottiglie_tempera_nuova, num_bottiglie_tempera_nuova, misura_piastrina, misura_piastrina_nuova, diametro_bottiglia, diametro_bottiglia_nuova, note))
         
         conn.commit()
         ricalcola_catena_cambi(cur, forno, linea)
@@ -1216,6 +1221,7 @@ def modifica_cambio_serie(id_cambio):
     tempo_cambio = request.form.get("tempo_cambio", "").strip()
     num_bottiglie_tempera_vecchia = int(request.form.get("num_bottiglie_tempera_vecchia", 0) or 0)
     num_bottiglie_tempera_nuova = int(request.form.get("num_bottiglie_tempera_nuova", 0) or 0)
+    note = request.form.get("note", "").strip()
     
     misura_piastrina = request.form.get("misura_piastrina", "").strip()
     if misura_piastrina in ["-", "None"]: misura_piastrina = ""
@@ -1234,9 +1240,9 @@ def modifica_cambio_serie(id_cambio):
         cur = conn.cursor()
         cur.execute("""
             UPDATE cambi_serie 
-            SET forno = %s, linea = %s, data_cambio = %s, bottiglia_precedente = %s, bottiglia_nuova = %s, nome_bottiglia = %s, tempo_cambio = %s, num_bottiglie_tempera_vecchia = %s, num_bottiglie_tempera_nuova = %s, num_bottiglie_tempera = %s, misura_piastrina = %s, misura_piastrina_nuova = %s, diametro_bottiglia = %s, diametro_bottiglia_nuova = %s
+            SET forno = %s, linea = %s, data_cambio = %s, bottiglia_precedente = %s, bottiglia_nuova = %s, nome_bottiglia = %s, tempo_cambio = %s, num_bottiglie_tempera_vecchia = %s, num_bottiglie_tempera_nuova = %s, num_bottiglie_tempera = %s, misura_piastrina = %s, misura_piastrina_nuova = %s, diametro_bottiglia = %s, diametro_bottiglia_nuova = %s, note = %s
             WHERE id = %s;
-        """, (forno, linea, data_cambio, bottiglia_precedente, bottiglia_nuova, bottiglia_nuova, tempo_cambio, num_bottiglie_tempera_vecchia, num_bottiglie_tempera_nuova, num_bottiglie_tempera_nuova, misura_piastrina, misura_piastrina_nuova, diametro_bottiglia, diametro_bottiglia_nuova, id_cambio))
+        """, (forno, linea, data_cambio, bottiglia_precedente, bottiglia_nuova, bottiglia_nuova, tempo_cambio, num_bottiglie_tempera_vecchia, num_bottiglie_tempera_nuova, num_bottiglie_tempera_nuova, misura_piastrina, misura_piastrina_nuova, diametro_bottiglia, diametro_bottiglia_nuova, note, id_cambio))
         
         conn.commit()
         ricalcola_catena_cambi(cur, forno, linea)
@@ -1280,14 +1286,14 @@ def elimina_cambio_serie(id_cambio):
 def esporta_cambi_serie_csv():
     conn = get_db_connection()
     cur = conn.cursor()
-    cur.execute("SELECT data_cambio, forno, linea, bottiglia_precedente, bottiglia_nuova, nome_bottiglia, tempo_cambio, num_bottiglie_tempera_vecchia, num_bottiglie_tempera_nuova, num_bottiglie_tempera, misura_piastrina, misura_piastrina_nuova, diametro_bottiglia, diametro_bottiglia_nuova FROM cambi_serie ORDER BY data_cambio ASC;")
+    cur.execute("SELECT data_cambio, forno, linea, bottiglia_precedente, bottiglia_nuova, nome_bottiglia, tempo_cambio, num_bottiglie_tempera_vecchia, num_bottiglie_tempera_nuova, num_bottiglie_tempera, misura_piastrina, misura_piastrina_nuova, diametro_bottiglia, diametro_bottiglia_nuova, note FROM cambi_serie ORDER BY data_cambio ASC;")
     righe = cur.fetchall()
     cur.close()
     conn.close()
 
     output = io.StringIO()
     writer = csv.writer(output)
-    writer.writerow(['Data Cambio', 'Forno', 'Linea', 'Bottiglia Smontante', 'Bottiglia Montante', 'Tempo Cambio', 'N° Bottiglie Tempera (Vecchia)', 'N° Bottiglie Tempera (Nuova)', 'Misura Piastrina (Uscente)', 'Misura Piastrina (Entrante)', 'Diametro Smontante', 'Diametro Montante'])
+    writer.writerow(['Data Cambio', 'Forno', 'Linea', 'Bottiglia Smontante', 'Bottiglia Montante', 'Tempo Cambio', 'N° Bottiglie Tempera (Vecchia)', 'N° Bottiglie Tempera (Nuova)', 'Misura Piastrina (Uscente)', 'Misura Piastrina (Entrante)', 'Diametro Smontante', 'Diametro Montante', 'Note'])
     for r in righe:
         writer.writerow([
             r.get('data_cambio', ''),
@@ -1301,7 +1307,8 @@ def esporta_cambi_serie_csv():
             r.get('misura_piastrina', ''),
             r.get('misura_piastrina_nuova', ''),
             r.get('diametro_bottiglia', ''),
-            r.get('diametro_bottiglia_nuova', '')
+            r.get('diametro_bottiglia_nuova', ''),
+            r.get('note', '')
         ])
     return Response(
         output.getvalue(),
@@ -1821,6 +1828,7 @@ def fornitori():
 
     conn = get_db_connection()
     cur = conn.cursor()
+    
     if request.method == "POST":
         nome_azienda = request.form.get("nome_azienda")
         settore_note = request.form.get("settore_note", "")
@@ -1828,21 +1836,30 @@ def fornitori():
         p_iva = request.form.get("p_iva", "")
         telefono = request.form.get("telefono", "")
         email = request.form.get("email", "")
+        
         if nome_azienda:
-            cur.execute("""
-                INSERT INTO fornitori (nome_azienda, settore_note, indirizzo, p_iva, telefono, email) 
-                VALUES (%s, %s, %s, %s, %s, %s)
-                ON CONFLICT (nome_azienda) DO UPDATE SET
-                    settore_note = EXCLUDED.settore_note,
-                    indirizzo = EXCLUDED.indirizzo,
-                    p_iva = EXCLUDED.p_iva,
-                    telefono = EXCLUDED.telefono,
-                    email = EXCLUDED.email;
-            """, (nome_azienda, settore_note, indirizzo, p_iva, telefono, email))
-            conn.commit()
-            registra_log(f"Aggiunto/Aggiornato fornitore: {nome_azienda}")
-            flash("Fornitore salvato con successo!", "success")
+            try:
+                cur.execute("""
+                    INSERT INTO fornitori (nome_azienda, settore_note, indirizzo, p_iva, telefono, email) 
+                    VALUES (%s, %s, %s, %s, %s, %s)
+                    ON CONFLICT (nome_azienda) DO UPDATE SET
+                        settore_note = EXCLUDED.settore_note,
+                        indirizzo = EXCLUDED.indirizzo,
+                        p_iva = EXCLUDED.p_iva,
+                        telefono = EXCLUDED.telefono,
+                        email = EXCLUDED.email;
+                """, (nome_azienda, settore_note, indirizzo, p_iva, telefono, email))
+                conn.commit()
+                registra_log(f"Aggiunto/Aggiornato fornitore: {nome_azienda}")
+                flash("Fornitore salvato con successo!", "success")
+            except Exception as e:
+                conn.rollback()
+                flash(f"Errore salvataggio fornitore: {e}", "error")
+                
+        cur.close()
+        conn.close()
         return redirect(url_for("fornitori"))
+        
     cur.execute("SELECT * FROM fornitori ORDER BY nome_azienda ASC;")
     lista_fornitori = cur.fetchall()
     cur.close()
@@ -2784,14 +2801,12 @@ def manda_manutenzione(qr_code):
 @app.route("/ripristina_magazzino/<qr_code>", methods=["POST"])
 def ripristina_magazzino(qr_code):
     try:
-        # Leggiamo i campi relativi all'esito e al commento inviati dal form
         esito_riparazione = request.form.get("esito_riparazione", "Riparato")
         commento_rientro = request.form.get("commento_rientro", "").strip()
         
         conn = get_db_connection()
         cur = conn.cursor()
         
-        # Recuperiamo la data di riconsegna impostata o usiamo quella odierna
         data_oggi = datetime.now().strftime('%Y-%m-%d')
         
         cur.execute("SELECT data_riconsegna, cliente_manutenzione, note_manutenzione FROM prodotti WHERE qr_code = %s;", (qr_code,))
@@ -2801,7 +2816,6 @@ def ripristina_magazzino(qr_code):
         if prod and prod.get('data_riconsegna'):
             data_ric = prod.get('data_riconsegna')
 
-        # Prepariamo le note aggiornate unendo eventuali note esistenti con l'esito e il commento di rientro
         note_esistenti = prod.get('note_manutenzione') or ""
         nota_finale = f"Esito: {esito_riparazione}"
         if commento_rientro:
@@ -2809,7 +2823,6 @@ def ripristina_magazzino(qr_code):
         if note_esistenti:
             nota_finale = f"{note_esistenti} | {nota_finale}"
 
-        # 1. Aggiorniamo l'ultimo record dello storico per questo prodotto inserendo la data, l'esito e le note
         cur.execute("""
             UPDATE storico_manutenzioni 
             SET data_riconsegna = %s, 
@@ -2817,7 +2830,6 @@ def ripristina_magazzino(qr_code):
             WHERE qr_code = %s AND (data_riconsegna IS NULL OR data_riconsegna = '' OR data_riconsegna ILIKE 'In corso%%');
         """, (data_ric, nota_finale, qr_code))
 
-        # 2. Ripristiniamo il prodotto in magazzino azzerando i dati di manutenzione
         cur.execute("""
             UPDATE prodotti 
             SET quantita = quantita + quantita_manutenzione,
