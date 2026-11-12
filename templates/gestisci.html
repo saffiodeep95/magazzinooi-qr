@@ -4,324 +4,208 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Gestione Articolo - Gestionale OMG</title>
+    <!-- Bootstrap CSS -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- FontAwesome Icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <style>
-        body {
-            background-color: #f4f6f9;
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-        }
-        .navbar {
-            background: linear-gradient(135deg, #1e293b, #0f172a) !important;
-            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
-        }
-        .card {
-            border: none;
-            border-radius: 10px;
-            box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
-        }
-        .table th {
-            font-weight: 600;
-            color: #475569;
-            background-color: #f8fafc !important;
-        }
-    </style>
 </head>
-<body>
+<body class="bg-light">
 
-    <!-- Navbar di base -->
-    <nav class="navbar navbar-expand-lg navbar-dark mb-4">
-        <div class="container-fluid px-3">
-            <a class="navbar-brand fw-bold text-white" href="{{ url_for('index') }}">
-                <i class="fas fa-industry text-warning me-2"></i>OMG Gestionale
-            </a>
-            <div class="d-flex align-items-center">
-                <span class="navbar-text text-light me-3 small">Utente: {{ session.get('username') }}</span>
-                <a href="{{ url_for('logout') }}" class="btn btn-outline-light btn-sm"><i class="fas fa-sign-out-alt me-1"></i>Esci</a>
+    <!-- Navbar Superiore -->
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark mb-4">
+        <div class="container-fluid">
+            <a class="navbar-brand" href="{{ url_for('index') }}"><i class="fas fa-industry"></i> Gestionale OMG</a>
+            <div class="d-flex">
+                <a href="{{ url_for('index') }}" class="btn btn-outline-light btn-sm">
+                    <i class="fas fa-home"></i> Home Magazzino
+                </a>
             </div>
         </div>
     </nav>
 
-    <div class="container mb-5">
+    <div class="container pb-5">
         
         <!-- Messaggi Flash -->
-        {% with messages = get_flashed_messages(with_categories=true) %}
-            {% if messages %}
-                {% for category, message in messages %}
-                    <div class="alert alert-{{ 'danger' if category == 'error' else 'success' }} alert-dismissible fade show shadow-sm border-0" role="alert" style="border-radius: 8px;">
-                        {{ message }}
-                        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-                    </div>
-                {% endfor %}
-            {% endif %}
-        {% endwith %}
-
-        <!-- Intestazione e Pulsanti Superiori -->
-        <div class="row align-items-center mb-4 g-3">
-            <div class="col-12 col-lg-6">
-                <h3 class="fw-bold text-dark mb-0"><i class="fas fa-box text-primary me-2"></i>Articolo: {{ prodotto.nome }}</h3>
-            </div>
-            <div class="col-12 col-lg-6 text-lg-end">
-                <div class="d-flex flex-wrap gap-2 justify-content-lg-end">
-                    <a href="{{ url_for('stampa_singolo_qr', qr_code=prodotto.qr_code) }}" class="btn btn-secondary btn-sm shadow-sm"><i class="fas fa-qrcode me-1"></i>Stampa QR</a>
-                    <a href="{{ url_for('stampa_bolla', qr_code=prodotto.qr_code) }}" class="btn btn-info text-white btn-sm shadow-sm"><i class="fas fa-file-alt me-1"></i>Stampa Bolla</a>
-                    <a href="{{ url_for('index') }}" class="btn btn-outline-secondary btn-sm shadow-sm"><i class="fas fa-arrow-left me-1"></i>Torna alla Home</a>
+        with messages = get_flashed_messages(with_categories=true)
+        if messages:
+            for category, message in messages:
+                <div class="alert alert-{{ 'danger' if category == 'error' else 'success' }} alert-dismissible fade show" role="alert">
+                    {{ message }}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
                 </div>
-            </div>
-        </div>
+            endfor
+        endif
 
-        <!-- Tabella con le Informazioni Principali (Inclusa l'Ubicazione) -->
-        <div class="card shadow-sm mb-4">
-            <div class="card-header bg-dark text-white py-2">
-                <span class="fw-bold small"><i class="fas fa-info-circle me-1 text-warning"></i> Riepilogo Informazioni Articolo</span>
-            </div>
-            <div class="card-body p-0">
-                <div class="table-responsive">
-                    <table class="table table-bordered mb-0 text-center small align-middle">
-                        <thead>
-                            <tr>
-                                <th>QR Code</th>
-                                <th>Codice SAP</th>
-                                <th>Ubicazione</th>
-                                <th>Peso</th>
-                                <th>Giacenza Attuale</th>
-                                <th>Soglia Minima</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <tr>
-                                <td><code class="fw-bold text-primary">{{ prodotto.qr_code }}</code></td>
-                                <td>{{ prodotto.sap or '-' }}</td>
-                                <td>
-                                    {% if prodotto.posizione %}
-                                        <span class="badge bg-light text-dark border"><i class="fas fa-map-marker-alt text-danger me-1"></i>{{ prodotto.posizione }}</span>
-                                    {% else %}
-                                        -
-                                    {% endif %}
-                                </td>
-                                <td>{{ prodotto.peso or '-' }}</td>
-                                <td>
-                                    <span class="badge px-2 py-1 {{ 'bg-danger' if prodotto.quantita <= (prodotto.soglia_minima or 3) else 'bg-success' }}">
-                                        {{ prodotto.quantita }} pz
-                                    </span>
-                                </td>
-                                <td>{{ prodotto.soglia_minima or 3 }} pz</td>
-                            </tr>
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-        </div>
-
-        <div class="row g-4">
-            <!-- Colonna Modifiche Articolo -->
-            <div class="col-12 col-lg-6">
-                <div class="card shadow-sm border-0 h-100">
-                    <div class="card-header bg-primary text-white py-3">
-                        <h5 class="mb-0 fs-6"><i class="fas fa-pen-to-square me-2"></i>Modifica Dati Articolo</h5>
+        <div class="row">
+            <!-- Colonna Sinistra: Dettagli Articolo e Modifica -->
+            <div class="col-lg-7 mb-4">
+                <div class="card shadow-sm mb-4">
+                    <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+                        <h5 class="mb-0"><i class="fas fa-box"></i> Dettagli Articolo</h5>
+                        <span class="badge bg-light text-dark">QR: {{ prodotto.qr_code }}</span>
                     </div>
                     <div class="card-body">
-                        <form method="POST" action="{{ url_for('aggiorna_prodotto', qr_code=prodotto.qr_code) }}">
-                            
+                        <form action="{{ url_for('aggiorna_prodotto', qr_code=prodotto.qr_code) }}" method="POST">
                             <div class="mb-3">
-                                <label class="form-label small fw-bold text-muted">QR Code</label>
-                                <input type="text" class="form-control bg-light" value="{{ prodotto.qr_code }}" disabled>
+                                <label for="nome" class="form-label"><strong>Nome Articolo</strong></label>
+                                <input type="text" class="form-control" id="nome" name="nome" value="{{ prodotto.nome }}" required>
+                            </div>
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label for="sap" class="form-label"><strong>Codice SAP</strong></label>
+                                    <input type="text" class="form-control" id="sap" name="sap" value="{{ prodotto.sap or '' }}">
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label for="posizione" class="form-label"><strong>Posizione / Scaffale</strong></label>
+                                    <input type="text" class="form-control" id="posizione" name="posizione" value="{{ prodotto.posizione or '' }}">
+                                </div>
+                            </div>
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label for="peso" class="form-label"><strong>Peso</strong></label>
+                                    <input type="text" class="form-control" id="peso" name="peso" value="{{ prodotto.peso or '' }}">
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label for="soglia_minima" class="form-label"><strong>Soglia Scorta Minima</strong></label>
+                                    <input type="number" class="form-control" id="soglia_minima" name="soglia_minima" value="{{ prodotto.soglia_minima or 3 }}">
+                                </div>
+                            </div>
+                            <div class="mb-3 form-check">
+                                <input type="checkbox" class="form-check-input" id="magazzino_pesante" name="magazzino_pesante" value="1" {% if prodotto.magazzino_pesante in [1, '1', true, 1.0] %}checked{% endif %}>
+                                <label class="form-check-label" for="magazzino_pesante"><strong>Magazzino Pesante</strong></label>
                             </div>
 
-                            <div class="mb-3">
-                                <label class="form-label small fw-bold text-muted">Nome Articolo *</label>
-                                <input type="text" class="form-control" name="nome" value="{{ prodotto.nome }}" {% if not (session.get('is_admin') or session.get('puo_modificare_prodotti') == 1) %}disabled{% endif %} required>
-                            </div>
+                            <button type="submit" class="btn btn-primary w-100">
+                                <i class="fas fa-save"></i> Salva Modifiche Articolo
+                            </button>
+                        </form>
+                    </div>
+                </div>
 
-                            <div class="mb-3">
-                                <label class="form-label small fw-bold text-muted">Codice SAP</label>
-                                <input type="text" class="form-control" name="sap" value="{{ prodotto.sap or '' }}" {% if not (session.get('is_admin') or session.get('puo_modificare_prodotti') == 1) %}disabled{% endif %}>
-                            </div>
+                <!-- Azioni Rapide Stampa QR e Bolla -->
+                <div class="card shadow-sm">
+                    <div class="card-body d-flex justify-content-between">
+                        <a href="{{ url_for('stampa_singolo_qr', qr_code=prodotto.qr_code) }}" class="btn btn-outline-secondary w-48" target="_blank">
+                            <i class="fas fa-qrcode"></i> Stampa QR Code
+                        </a>
+                        <a href="{{ url_for('stampa_bolla', qr_code=prodotto.qr_code) }}" class="btn btn-outline-dark w-48" target="_blank">
+                            <i class="fas print"></i> <i class="fas fa-file-invoice"></i> Stampa Bolla Spedizione
+                        </a>
+                    </div>
+                </div>
+            </div>
 
+            <!-- Colonna Destra: Stato Manutenzione / Azioni -->
+            <div class="col-lg-5">
+                
+                <!-- Se l'articolo NON è in manutenzione -->
+                if not prodotto.in_manutenzione
+                <div class="card shadow-sm mb-4 border-warning">
+                    <div class="card-header bg-warning text-dark">
+                        <h5 class="mb-0"><i class="fas fa-tools"></i> Invia in Manutenzione / Esterno</h5>
+                    </div>
+                    <div class="card-body">
+                        <form action="{{ url_for('manda_manutenzione', qr_code=prodotto.qr_code) }}" method="POST">
                             <div class="mb-3">
-                                <label class="form-label small fw-bold text-muted">Posizione / Ubicazione</label>
-                                <input type="text" class="form-control" name="posizione" value="{{ prodotto.posizione or '' }}" list="lista_posizioni" {% if not (session.get('is_admin') or session.get('puo_modificare_prodotti') == 1) %}disabled{% endif %}>
-                                <datalist id="lista_posizioni">
-                                    {% for u in ubicazioni_disponibili %}
-                                        <option value="{{ u }}">
-                                    {% endfor %}
+                                <label for="cliente_manutenzione" class="form-label"><strong>Cliente / Fornitore Esterno</strong></label>
+                                <input type="text" class="form-control" id="cliente_manutenzione" name="cliente_manutenzione" list="fornitori_list" required placeholder="Inserisci o seleziona fornitore...">
+                                <datalist id="fornitori_list">
+                                    for f in fornitori
+                                    <option value="{{ f.nome_azienda }}">
+                                    endfor
                                 </datalist>
                             </div>
+                            <div class="mb-3">
+                                <label for="quantita_manutenzione" class="form-label"><strong>Quantità in Manutenzione</strong></label>
+                                <input type="number" class="form-control" id="quantita_manutenzione" name="quantita_manutenzione" value="1" min="1" max="{{ prodotto.quantita }}" required>
+                            </div>
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label for="data_spedizione" class="form-label"><strong>Data Spedizione</strong></label>
+                                    <input type="date" class="form-control" id="data_spedizione" name="data_spedizione">
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label for="data_riconsegna" class="form-label"><strong>Data Presunta Riconsegna</strong></label>
+                                    <input type="date" class="form-control" id="data_riconsegna" name="data_riconsegna">
+                                </div>
+                            </div>
+                            <div class="mb-3">
+                                <label for="vettore" class="form-label"><strong>Vettore / Corriere</strong></label>
+                                <input type="text" class="form-control" id="vettore" name="vettore" placeholder="Es. Bartolini, GLS...">
+                            </div>
+                            <div class="mb-3 form-check">
+                                <input type="checkbox" class="form-check-input" id="ordine_amministrativo" name="ordine_amministrativo" value="1">
+                                <label class="form-check-label" for="ordine_amministrativo"><strong>Richiede Ordine Amministrativo</strong></label>
+                            </div>
+                            <div class="mb-3">
+                                <label for="note_manutenzione" class="form-label"><strong>Note / Guasto Riscontrato</strong></label>
+                                <textarea class="form-control" id="note_manutenzione" name="note_manutenzione" rows="2" placeholder="Dettagli sulla riparazione..."></textarea>
+                            </div>
+                            <button type="submit" class="btn btn-warning w-100 text-dark fw-bold">
+                                <i class="fas fa-paper-plane"></i> Conferma Invio in Manutenzione
+                            </button>
+                        </form>
+                    </div>
+                </div>
+
+                <!-- Se l'articolo È in manutenzione (AGGIORNATO CON ESITO E COMMENTO) -->
+                else
+                <div class="card shadow-sm mb-4 border-success">
+                    <div class="card-header bg-success text-white">
+                        <h5 class="mb-0"><i class="fas fa-undo"></i> Articolo in Manutenzione (Rientro)</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="alert alert-info py-2 mb-3">
+                            <small>
+                                <strong>Cliente/Fornitore:</strong> {{ prodotto.cliente_manutenzione or 'N/D' }}<br>
+                                <strong>Quantità fuori:</strong> {{ prodotto.quantita_manutenzione or 0 }} pz<br>
+                                <strong>Spedizione:</strong> {{ prodotto.data_spedizione or 'N/D' }}<br>
+                                <strong>Riconsegna Prevista:</strong> {{ prodotto.data_riconsegna or 'In corso' }}
+                            </small>
+                        </div>
+
+                        <!-- Form di Rientro aggiornato con Esito (Riparato/Non riparato) e Commento -->
+                        <form action="{{ url_for('ripristina_magazzino', qr_code=prodotto.qr_code) }}" method="POST">
+                            <div class="mb-3">
+                                <label for="esito_riparazione" class="form-label"><strong>Esito Riparazione</strong></label>
+                                <select class="form-select" id="esito_riparazione" name="esito_riparazione" required>
+                                    <option value="Riparato" selected>Riparato</option>
+                                    <option value="Non riparato">Non riparato</option>
+                                </select>
+                            </div>
 
                             <div class="mb-3">
-                                <label class="form-label small fw-bold text-muted">Peso</label>
-                                <input type="text" class="form-control" name="peso" value="{{ prodotto.peso or '' }}" {% if not (session.get('is_admin') or session.get('puo_modificare_prodotti') == 1) %}disabled{% endif %}>
+                                <label for="commento_rientro" class="form-label"><strong>Commento / Note di Rientro</strong></label>
+                                <textarea class="form-control" id="commento_rientro" name="commento_rientro" rows="2" placeholder="Inserisci eventuali dettagli sul rientro o motivazione..."></textarea>
                             </div>
 
-                            <div class="row">
-                                <div class="col-6 mb-3">
-                                    <label class="form-label small fw-bold text-muted">Quantità Attuale</label>
-                                    <input type="number" class="form-control" name="quantita" value="{{ prodotto.quantita }}" min="0" {% if not (session.get('is_admin') or session.get('puo_modificare_prodotti') == 1) %}disabled{% endif %} required>
-                                </div>
-                                <div class="col-6 mb-3">
-                                    <label class="form-label small fw-bold text-muted">Soglia Minima</label>
-                                    <input type="number" class="form-control" name="soglia_minima" value="{{ prodotto.soglia_minima or 3 }}" min="0" {% if not (session.get('is_admin') or session.get('puo_modificare_prodotti') == 1) %}disabled{% endif %}>
-                                </div>
-                            </div>
-
-                            <div class="mb-4 form-check">
-                                <input type="checkbox" class="form-check-input" id="magazzino_pesante" name="magazzino_pesante" value="1" {% if prodotto.magazzino_pesante == 1 or prodotto.magazzino_pesante == true %}checked{% endif %} {% if not (session.get('is_admin') or session.get('puo_modificare_prodotti') == 1) %}disabled{% endif %}>
-                                <label class="form-check-label text-secondary small" for="magazzino_pesante">Magazzino Pesante</label>
-                            </div>
-
-                            {% if session.get('is_admin') or session.get('puo_modificare_prodotti') == 1 %}
-                                <button type="submit" class="btn btn-primary w-100 py-2 fw-semibold"><i class="fas fa-save me-1"></i> Salva Modifiche</button>
-                            {% endif %}
+                            <button type="submit" class="btn btn-success w-100 fw-bold">
+                                <i class="fas fa-check-circle"></i> Conferma Rientro in Magazzino
+                            </button>
                         </form>
                     </div>
                 </div>
-            </div>
+                endif
 
-            <!-- Colonna Carico/Scarico Rapido, Manutenzione e Area Pericolosa -->
-            <div class="col-12 col-lg-6">
-                
-                <!-- Carico / Scarico Rapido (Senza Fotocamera) -->
-                {% if session.get('is_admin') or session.get('puo_caricare_scaricare') == 1 %}
-                <div class="card shadow-sm border-0 mb-4">
-                    <div class="card-header bg-success text-white py-3">
-                        <h5 class="mb-0 fs-6"><i class="fas fa-arrows-up-down me-2"></i>Carico / Scarico Rapido Articolo</h5>
-                    </div>
-                    <div class="card-body">
-                        <div class="row g-3">
-                            <!-- Form Carico Diretto -->
-                            <div class="col-md-6">
-                                <form action="{{ url_for('carico') }}" method="POST" class="border p-3 rounded bg-light h-100 d-flex flex-column justify-content-between">
-                                    <input type="hidden" name="qr_code" value="{{ prodotto.qr_code }}">
-                                    <div>
-                                        <label class="form-label small fw-bold text-success"><i class="fas fa-plus me-1"></i> Carico Rapido</label>
-                                        <input type="number" class="form-control form-control-sm mb-2" name="quantita" value="1" min="1" required>
-                                    </div>
-                                    <button type="submit" class="btn btn-success btn-sm w-100"><i class="fas fa-plus me-1"></i> Conferma Carico</button>
-                                </form>
-                            </div>
-                            <!-- Form Scarico Diretto -->
-                            <div class="col-md-6">
-                                <form action="{{ url_for('scarico') }}" method="POST" class="border p-3 rounded bg-light h-100 d-flex flex-column justify-content-between">
-                                    <input type="hidden" name="qr_code" value="{{ prodotto.qr_code }}">
-                                    <div>
-                                        <label class="form-label small fw-bold text-danger"><i class="fas fa-minus me-1"></i> Scarico Rapido</label>
-                                        <input type="number" class="form-control form-control-sm mb-2" name="quantita" value="1" min="1" max="{{ prodotto.quantita }}" required>
-                                    </div>
-                                    <button type="submit" class="btn btn-danger btn-sm w-100"><i class="fas fa-minus me-1"></i> Conferma Scarico</button>
-                                </form>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                {% endif %}
-
-                <!-- Stato Manutenzione -->
-                {% if session.get('is_admin') or session.get('puo_vedere_manutenzioni_esterne') == 1 %}
-                <div class="card shadow-sm border-0 mb-4">
-                    <div class="card-header bg-warning text-dark py-3">
-                        <h5 class="mb-0 fs-6"><i class="fas fa-wrench me-2"></i>Stato Manutenzione Esterna</h5>
-                    </div>
-                    <div class="card-body">
-                        {% if prodotto.in_manutenzione %}
-                            <div class="alert alert-info border-0 bg-info-subtle text-info-emphasis small">
-                                <p class="mb-1"><strong>In Manutenzione presso:</strong> {{ prodotto.cliente_manutenzione }}</p>
-                                <p class="mb-1"><strong>Quantità Inviata:</strong> {{ prodotto.quantita_manutenzione }} pz</p>
-                                <p class="mb-1"><strong>Data Spedizione:</strong> {{ prodotto.data_spedizione or 'N.D.' }}</p>
-                                <p class="mb-1"><strong>Riconsegna Prevista:</strong> {{ prodotto.data_riconsegna or 'N.D.' }}</p>
-                                <p class="mb-1"><strong>Vettore:</strong> {{ prodotto.vettore or 'N.D.' }}</p>
-                                {% if prodotto.note_manutenzione %}
-                                    <p class="mb-0"><strong>Note:</strong> {{ prodotto.note_manutenzione }}</p>
-                                {% endif %}
-                            </div>
-                            <form action="{{ url_for('ripristina_magazzino', qr_code=prodotto.qr_code) }}" method="POST">
-                                <button type="submit" class="btn btn-success w-100 py-2 fw-semibold" onclick="return confirm('Confermi il rientro dell\'articolo in magazzino?');">
-                                    <i class="fas fa-arrow-down-long me-1"></i> Rientra in Magazzino
-                                </button>
-                            </form>
-                        {% else %}
-                            <p class="text-muted small mb-3">L'articolo è attualmente disponibile in magazzino.</p>
-                            <button type="button" class="btn btn-warning w-100 py-2 text-dark fw-semibold" data-bs-toggle="modal" data-bs-target="#modalManutenzione">
-                                <i class="fas fa-share-from-square me-1"></i> Manda in Manutenzione / Riparazione
-                            </button>
-                        {% endif %}
-                    </div>
-                </div>
-                {% endif %}
-
-                <!-- Area Pericolosa -->
-                {% if session.get('is_admin') or session.get('puo_eliminare') == 1 %}
+                <!-- Sezione Eliminazione Articolo -->
                 <div class="card shadow-sm border-danger">
-                    <div class="card-header bg-danger text-white py-3">
-                        <h5 class="mb-0 fs-6"><i class="fas fa-triangle-exclamation me-2"></i>Area Pericolosa</h5>
-                    </div>
                     <div class="card-body">
-                        <p class="text-muted small mb-3">L'eliminazione definitiva rimuoverà completamente l'articolo dal magazzino.</p>
-                        <form action="{{ url_for('elimina_prodotto', qr_code=prodotto.qr_code) }}" method="POST">
-                            <button type="submit" class="btn btn-outline-danger w-100 py-2 fw-semibold" onclick="return confirm('ATTENZIONE: Sei assolutamente sicuro di voler eliminare questo articolo?');">
-                                <i class="fas fa-trash-can me-1"></i> Elimina Articolo Definitivamente
+                        <h6 class="text-danger fw-bold"><i class="fas fa-exclamation-triangle"></i> Zona Pericolosa</h6>
+                        <p class="text-muted small mb-3">L'eliminazione dell'articolo è irreversibile e rimuoverà ogni dato associato dal magazzino.</p>
+                        <form action="{{ url_for('elimina_prodotto', qr_code=prodotto.qr_code) }}" method="POST" onsubmit="return confirm('Sei sicuro di voler eliminare definitivamente questo articolo?');">
+                            <button type="submit" class="btn btn-outline-danger btn-sm w-100">
+                                <i class="fas fa-trash-alt"></i> Elimina Articolo Definitivamente
                             </button>
                         </form>
                     </div>
                 </div>
-                {% endif %}
 
             </div>
         </div>
+
     </div>
 
-    <!-- Modal Manutenzione -->
-    <div class="modal fade" id="modalManutenzione" tabindex="-1" aria-hidden="true">
-        <div class="modal-dialog modal-dialog-centered">
-            <div class="modal-content border-0 shadow">
-                <form action="{{ url_for('manda_manutenzione', qr_code=prodotto.qr_code) }}" method="POST">
-                    <div class="modal-header bg-warning text-dark">
-                        <h5 class="modal-title fw-bold fs-6">Invio in Manutenzione Esterna</h5>
-                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                    </div>
-                    <div class="modal-body">
-                        <div class="mb-3">
-                            <label class="form-label small fw-bold">Cliente / Fornitore Riparatore *</label>
-                            <input type="text" class="form-control" name="cliente_manutenzione" required list="lista_fornitori_modal">
-                            <datalist id="lista_fornitori_modal">
-                                {% for f in fornitori %}
-                                    <option value="{{ f.nome_azienda }}">
-                                {% endfor %}
-                            </datalist>
-                        </div>
-                        <div class="mb-3">
-                            <label class="form-label small fw-bold">Quantità da Inviare</label>
-                            <input type="number" class="form-control" name="quantita_manutenzione" value="1" min="1" max="{{ prodotto.quantita }}" required>
-                        </div>
-                        <div class="mb-3">
-                            <label class="form-label small fw-bold">Vettore / Corriere</label>
-                            <input type="text" class="form-control" name="vettore" placeholder="Es. Bartolini / GLS">
-                        </div>
-                        <div class="mb-3">
-                            <label class="form-label small fw-bold">Data Spedizione</label>
-                            <input type="date" class="form-control" name="data_spedizione">
-                        </div>
-                        <div class="mb-3">
-                            <label class="form-label small fw-bold">Data Riconsegna Prevista</label>
-                            <input type="date" class="form-control" name="data_riconsegna">
-                        </div>
-                        <div class="mb-3">
-                            <label class="form-label small fw-bold">Note / Dettagli Guasto</label>
-                            <textarea class="form-control" name="note_manutenzione" rows="3" placeholder="Descrivi il motivo..."></textarea>
-                        </div>
-                        <div class="mb-3 form-check">
-                            <input type="checkbox" class="form-check-input" id="ordine_amministrativo" name="ordine_amministrativo" value="1">
-                            <label class="form-check-label text-secondary small" for="ordine_amministrativo">Richiede Ordine Amministrativo</label>
-                        </div>
-                    </div>
-                    <div class="modal-footer bg-light">
-                        <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Annulla</button>
-                        <button type="submit" class="btn btn-warning btn-sm fw-semibold">Conferma e Invia</button>
-                    </div>
-                </form>
-            </div>
-        </div>
-    </div>
-
+    <!-- Bootstrap JS Bundle -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>
