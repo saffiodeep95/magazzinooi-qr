@@ -1316,6 +1316,30 @@ def esporta_cambi_serie_csv():
         headers={"Content-disposition": "attachment; filename=Cambi_Serie_OMG.csv"}
     )
 
+@app.route("/stampa_selezionati_cambi_serie", methods=["POST"])
+def stampa_selezionati_cambi_serie():
+    ids = request.form.getlist("ids[]")
+    if not ids:
+        ids_str = request.form.get("ids_str", "")
+        if ids_str:
+            ids = [i.strip() for i in ids_str.split(",") if i.strip()]
+            
+    if not ids:
+        flash("Nessun cambio serie selezionato per la stampa.", "error")
+        return redirect(url_for("cambi_serie"))
+        
+    conn = get_db_connection()
+    cur = conn.cursor()
+    
+    placeholders = ','.join(['%s'] * len(ids))
+    cur.execute(f"SELECT * FROM cambi_serie WHERE id IN ({placeholders}) ORDER BY data_cambio ASC, id ASC;", tuple(ids))
+    record_selezionati = cur.fetchall()
+    
+    cur.close()
+    conn.close()
+    
+    return render_template("stampa_cambi_serie.html", record_serie=record_selezionati)
+
 # --- REPORT ORE & STATISTICHE ---
 @app.route("/report_ore")
 @app.route("/report_ore.html")
