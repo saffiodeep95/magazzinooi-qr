@@ -218,11 +218,109 @@
                                     <span class="fw-bold text-primary">{{ r.diametro_bottiglia_nuova or r.diametro_bottiglia or '-' }}</span>
                                 </td>
                                 <td class="no-print text-end">
+                                    <!-- TASTO MODIFICA -->
+                                    <button type="button" class="btn btn-sm btn-outline-warning" data-bs-toggle="modal" data-bs-target="#modalModifica{{ r.id }}" title="Modifica">
+                                        <i class="fa-solid fa-pen-to-square"></i>
+                                    </button>
+                                    <!-- TASTO ELIMINA -->
                                     <form action="{{ url_for('elimina_cambio_serie', id_cambio=r.id) }}" method="POST" onsubmit="return confirm('Eliminare questo cambio serie?');" class="d-inline">
                                         <button type="submit" class="btn btn-sm btn-outline-danger" title="Elimina"><i class="fa-solid fa-trash-can"></i></button>
                                     </form>
                                 </td>
                             </tr>
+
+                            <!-- MODALE MODIFICA CAMBIO SERIE -->
+                            <div class="modal fade" id="modalModifica{{ r.id }}" tabindex="-1">
+                                <div class="modal-dialog modal-lg">
+                                    <div class="modal-content">
+                                        <form action="{{ url_for('modifica_cambio_serie', id_cambio=r.id) }}" method="POST">
+                                            <div class="modal-header bg-warning text-dark">
+                                                <h5 class="modal-title"><i class="fa-solid fa-pen-to-square me-1"></i> Modifica Cambio Serie (ID: {{ r.id }})</h5>
+                                                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                                            </div>
+                                            <div class="modal-body text-start">
+                                                <div class="row">
+                                                    <div class="col-md-6 mb-3">
+                                                        <label class="form-label fw-bold">Forno *</label>
+                                                        <select class="form-select" name="forno" required>
+                                                            <option value="Forno 1" {% if r.forno == 'Forno 1' %}selected{% endif %}>Forno 1</option>
+                                                            <option value="Forno 3" {% if r.forno == 'Forno 3' %}selected{% endif %}>Forno 3</option>
+                                                            <option value="Forno 4" {% if r.forno == 'Forno 4' %}selected{% endif %}>Forno 4</option>
+                                                        </select>
+                                                    </div>
+                                                    <div class="col-md-6 mb-3">
+                                                        <label class="form-label fw-bold">Linea *</label>
+                                                        <input type="text" class="form-control" name="linea" value="{{ r.linea }}" required>
+                                                    </div>
+                                                </div>
+
+                                                <div class="mb-3">
+                                                    <label class="form-label fw-bold">Data Cambio *</label>
+                                                    <input type="date" class="form-control" name="data_cambio" value="{{ r.data_cambio }}" required>
+                                                </div>
+
+                                                <div class="row">
+                                                    <div class="col-md-6 mb-3">
+                                                        <label class="form-label fw-bold text-secondary">Bottiglia Smontante</label>
+                                                        <input type="text" class="form-control" name="bottiglia_precedente" value="{{ r.bottiglia_precedente or r.nome_bottiglia }}">
+                                                    </div>
+                                                    <div class="col-md-6 mb-3">
+                                                        <label class="form-label fw-bold text-primary">Bottiglia Montante *</label>
+                                                        <input type="text" class="form-control" name="bottiglia_nuova" value="{{ r.bottiglia_nuova }}" required>
+                                                    </div>
+                                                </div>
+
+                                                <div class="mb-3">
+                                                    <label class="form-label">Tempo Cambio</label>
+                                                    <input type="text" class="form-control" name="tempo_cambio" value="{{ r.tempo_cambio }}">
+                                                </div>
+
+                                                <div class="row">
+                                                    <div class="col-md-6 mb-3">
+                                                        <label class="form-label text-secondary">N° Bottiglie Tempera (Vecchia)</label>
+                                                        <input type="number" class="form-control" name="num_bottiglie_tempera_vecchia" value="{{ r.num_bottiglie_tempera_vecchia or 0 }}">
+                                                    </div>
+                                                    <div class="col-md-6 mb-3">
+                                                        <label class="form-label text-primary">N° Bottiglie Tempera (Nuova)</label>
+                                                        <input type="number" class="form-control" name="num_bottiglie_tempera_nuova" value="{{ r.num_bottiglie_tempera_nuova if r.num_bottiglie_tempera_nuova is not none else (r.num_bottiglie_tempera or 0) }}">
+                                                    </div>
+                                                </div>
+
+                                                <div class="row">
+                                                    <div class="col-md-6 mb-3">
+                                                        <label class="form-label text-secondary">Misura Piastrina (Uscente)</label>
+                                                        <input type="text" class="form-control" name="misura_piastrina" value="{{ r.misura_piastrina or '' }}">
+                                                    </div>
+                                                    <div class="col-md-6 mb-3">
+                                                        <label class="form-label text-primary">Misura Piastrina (Entrante)</label>
+                                                        <input type="text" class="form-control" name="misura_piastrina_nuova" value="{{ r.misura_piastrina_nuova or '' }}">
+                                                    </div>
+                                                </div>
+
+                                                <div class="row">
+                                                    <div class="col-md-6 mb-3">
+                                                        <label class="form-label text-secondary">Diametro Bottiglia (Uscente)</label>
+                                                        <input type="text" class="form-control" name="diametro_bottiglia" value="{{ r.diametro_bottiglia or '' }}">
+                                                    </div>
+                                                    <div class="col-md-6 mb-3">
+                                                        <label class="form-label text-primary">Diametro Bottiglia (Entrante)</label>
+                                                        <input type="text" class="form-control" name="diametro_bottiglia_nuova" value="{{ r.diametro_bottiglia_nuova or '' }}">
+                                                    </div>
+                                                </div>
+
+                                                <div class="mb-3">
+                                                    <label class="form-label">Note</label>
+                                                    <textarea class="form-control" name="note" rows="2">{{ r.note or '' }}</textarea>
+                                                </div>
+                                            </div>
+                                            <div class="modal-footer">
+                                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annulla</button>
+                                                <button type="submit" class="btn btn-warning">Salva Modifiche</button>
+                                            </div>
+                                        </form>
+                                    </div>
+                                </div>
+                            </div>
                             {% else %}
                             <tr>
                                 <td colspan="9" class="text-center text-muted py-4">Nessun cambio serie trovato.</td>
@@ -314,6 +412,11 @@
                                 <label class="form-label text-primary">Diametro Bottiglia Entrante *</label>
                                 <input type="text" class="form-control" name="diametro_bottiglia_nuova" placeholder="Es. 75 mm..." required>
                             </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label">Note</label>
+                            <textarea class="form-control" name="note" rows="2"></textarea>
                         </div>
                     </div>
                     <div class="modal-footer">
