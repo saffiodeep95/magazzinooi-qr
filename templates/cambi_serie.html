@@ -30,8 +30,8 @@
             .badge { border: 1px solid #777 !important; color: black !important; background: transparent !important; }
             .riga-commento td { background-color: #fff !important; }
             
-            /* Nasconde forzatamente le righe non selezionate durante la stampa */
-            tr.nascondi-stampa {
+            /* Nasconde le righe non stampabili */
+            tr.stampa-nascosta {
                 display: none !important;
             }
         }
@@ -124,10 +124,10 @@
                 <a href="{{ url_for('esporta_cambi_serie_csv') }}" class="btn btn-outline-success">
                     <i class="fa-solid fa-file-excel me-1"></i> Esporta CSV
                 </a>
-                <button onclick="stampaSelezionati()" class="btn btn-dark">
+                <button type="button" onclick="stampaSelezionati()" class="btn btn-dark">
                     <i class="fa-solid fa-print me-1"></i> Stampa Selezionati
                 </button>
-                <button onclick="window.print()" class="btn btn-outline-dark">
+                <button type="button" onclick="window.print()" class="btn btn-outline-dark">
                     <i class="fa-solid fa-print me-1"></i> Stampa Tutti
                 </button>
                 <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#modalNuovoCambio">
@@ -546,24 +546,26 @@
             let rigaCommento = document.querySelector(.riga-commento[data-parent-id="${idCambio}"]);
             
             if (!cb.checked) {
-                tr.classList.add('nascondi-stampa');
-                if (rigaCommento) rigaCommento.classList.add('nascondi-stampa');
+                tr.classList.add('stampa-nascosta');
+                if (rigaCommento) rigaCommento.classList.add('stampa-nascosta');
             } else {
-                tr.classList.remove('nascondi-stampa');
-                if (rigaCommento) rigaCommento.classList.remove('nascondi-stampa');
+                tr.classList.remove('stampa-nascosta');
+                if (rigaCommento) rigaCommento.classList.remove('stampa-nascosta');
             }
         });
 
-        window.print();
-
+        // Esegue la stampa in modo sicuro con un piccolo ritardo per consentire al browser di applicare i filtri CSS
         setTimeout(() => {
+            window.print();
+            
+            // Ripristina la visualizzazione normale dopo la stampa
             tutteRighe.forEach(tr => {
                 let idCambio = tr.getAttribute('data-id');
                 let rigaCommento = document.querySelector(.riga-commento[data-parent-id="${idCambio}"]);
-                tr.classList.remove('nascondi-stampa');
-                if (rigaCommento) rigaCommento.classList.remove('nascondi-stampa');
+                tr.classList.remove('stampa-nascosta');
+                if (rigaCommento) rigaCommento.classList.remove('stampa-nascosta');
             });
-        }, 500);
+        }, 100);
     }
 
     document.addEventListener("DOMContentLoaded", function() {
