@@ -14,7 +14,7 @@
 </head>
 <body class="bg-light">
 
-    <!-- NAVBAR INCLUSA (se presente nel tuo layout originale o barra di navigazione) -->
+    <!-- NAVBAR -->
     <nav class="navbar navbar-expand-lg navbar-dark bg-dark mb-4">
         <div class="container-fluid">
             <a class="navbar-brand" href="{{ url_for('index') }}">Gestionale OMG</a>
@@ -32,20 +32,20 @@
     <div class="container-fluid px-4">
         
         <!-- MESSAGGI FLASH -->
-        with messages = get_flashed_messages(with_categories=true)
-        {% if messages %}
-            {% for category, message in messages %}
-                <div class="alert alert-{{ 'success' if category == 'success' else 'danger' }} alert-dismissible fade show" role="alert">
-                    {{ message }}
-                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-                </div>
-            {% endfor %}
-        {% endif %}
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                    <div class="alert alert-{{ 'success' if category == 'success' else 'danger' }} alert-dismissible fade show" role="alert">
+                        {{ message }}
+                        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                    </div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
 
         <div class="d-flex justify-content-between align-items-center mb-4">
             <h2><i class="fas fa-exchange-alt"></i> Gestione Cambi Serie</h2>
             <div>
-                <!-- PULSANTE AGGIUNTO PER LA STAMPA DEI SELEZIONATI -->
                 <button type="button" onclick="stampaSelezionatiCambi()" class="btn btn-secondary me-2">
                     <i class="fas fa-print"></i> Stampa Selezionati
                 </button>
@@ -75,7 +75,7 @@
                         <input type="week" name="settimana" id="settimana" class="form-control" value="{{ settimana_filtro }}">
                     </div>
                     <div class="col-md-3">
-                        <button type="submit" class="btn btn-dark me-2"><i class="fas fa-filter">}}</i> Filtra</button>
+                        <button type="submit" class="btn btn-dark me-2"><i class="fas fa-filter"></i> Filtra</button>
                         <a href="{{ url_for('cambi_serie') }}" class="btn btn-outline-secondary"><i class="fas fa-undo"></i> Reset</a>
                     </div>
                 </form>
@@ -89,7 +89,6 @@
                     <table class="table table-striped table-bordered table-custom mb-0">
                         <thead>
                             <tr>
-                                <!-- COLONNA CHECKBOX AGGIUNTA -->
                                 <th style="width: 40px;">
                                     <input type="checkbox" id="selezionaTutti" onclick="toggleSelezionaTutti(this)" title="Seleziona tutti">
                                 </th>
@@ -109,7 +108,6 @@
                         <tbody>
                             {% for r in record_serie %}
                             <tr>
-                                <!-- CHECKBOX PER SINGOLA RIGA -->
                                 <td>
                                     <input type="checkbox" class="seleziona-cambio" value="{{ r.id }}">
                                 </td>
@@ -297,7 +295,7 @@
                                 <input type="text" name="diametro_bottiglia" id="nuovo_diametro_usc" class="form-control">
                             </div>
                             <div class="col-md-6">
-                                <label class="form-label">Diametro Bottiglia (Entrante)</label>
+                                <label class="file-label">Diametro Bottiglia (Entrante)</label>
                                 <input type="text" name="diametro_bottiglia_nuova" class="form-control">
                             </div>
                             <div class="col-12">
@@ -306,7 +304,7 @@
                             </div>
                         </div>
                     </div>
-                        <div class="modal-footer">
+                    <div class="modal-footer">
                         <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Chiudi</button>
                         <button type="submit" class="btn btn-primary">Salva Cambio Serie</button>
                     </div>
@@ -315,7 +313,7 @@
         </div>
     </div>
 
-    <!-- SCRIPT BOOTSTRAP E FUNZIONALITÀ DI STAMPA -->
+    <!-- SCRIPT -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script>
         function toggleSelezionaTutti(source) {
@@ -336,13 +334,22 @@
             form.action = "{{ url_for('stampa_selezionati_cambi_serie') }}";
             form.target = "_blank";
 
+            // Inserisce gli ID come array e anche come stringa separata da virgola per sicurezza massima
+            let idsArray = [];
             checkboxes.forEach(cb => {
+                idsArray.push(cb.value);
                 const input = document.createElement('input');
                 input.type = 'hidden';
                 input.name = 'ids[]';
                 input.value = cb.value;
                 form.appendChild(input);
             });
+
+            const inputStr = document.createElement('input');
+            inputStr.type = 'hidden';
+            inputStr.name = 'ids_str';
+            inputStr.value = idsArray.join(',');
+            form.appendChild(inputStr);
 
             document.body.appendChild(form);
             form.submit();
@@ -365,7 +372,6 @@
                 .catch(err => console.error("Errore recupero ultima bottiglia:", err));
         }
 
-        // Esegue al caricamento della pagina per popolare i dati iniziali del modale nuovo
         document.addEventListener("DOMContentLoaded", function() {
             if (document.getElementById('nuovo_forno')) {
                 aggiornaUltimaBottiglia();
