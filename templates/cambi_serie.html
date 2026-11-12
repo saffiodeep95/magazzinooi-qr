@@ -107,7 +107,6 @@
         <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
             <h2><i class="fa-solid fa-arrows-rotate me-2 text-primary"></i>Programmazione Cambi Serie</h2>
             <div class="d-flex gap-2 no-print">
-                <!-- TASTO AGGIUNTO PER LA STAMPA DEI SELEZIONATI -->
                 <button type="button" onclick="stampaSelezionatiCambi()" class="btn btn-outline-secondary">
                     <i class="fa-solid fa-print me-1"></i> Stampa Selezionati
                 </button>
@@ -163,7 +162,6 @@
                     <table class="table table-hover align-middle">
                         <thead class="table-light">
                             <tr>
-                                <!-- COLONNA CHECKBOX AGGIUNTA -->
                                 <th style="width: 40px;" class="no-print text-center">
                                     <input type="checkbox" id="selezionaTutti" onclick="toggleSelezionaTutti(this)" title="Seleziona tutti">
                                 </th>
@@ -172,14 +170,14 @@
                                 <th>Smontante / Montante</th>
                                 <th>Tempo Cambio</th>
                                 <th>N° Bottiglie Tempera (V / N)</th>
-                                <th>Misura Piastrina (Uscente / Entrante)</th>
+                                <th>Misura Piastrina (U / E)</th>
+                                <th>Diametro Bottiglia (U / E)</th>
                                 <th class="no-print text-end">Azioni</th>
                             </tr>
                         </thead>
                         <tbody>
                             {% for r in record_serie %}
                             <tr>
-                                <!-- CHECKBOX PER LA SINGOLA RIGA -->
                                 <td class="no-print text-center">
                                     <input type="checkbox" class="seleziona-cambio" value="{{ r.id }}">
                                 </td>
@@ -210,9 +208,14 @@
                                     <span class="badge bg-info text-dark fs-6">{{ r.num_bottiglie_tempera_nuova if r.num_bottiglie_tempera_nuova is not none else (r.num_bottiglie_tempera or 0) }} pz</span>
                                 </td>
                                 <td>
-                                    <span class="small text-muted">{{ r.misura_piastrina_vecchia or r.misura_piastrina or '-' }}</span>
+                                    <span class="small text-muted">{{ r.misura_piastrina or '-' }}</span>
                                     <i class="fa-solid fa-arrow-right mx-1 text-muted"></i>
                                     <span class="fw-bold text-primary">{{ r.misura_piastrina_nuova or r.misura_piastrina or '-' }}</span>
+                                </td>
+                                <td>
+                                    <span class="small text-muted">{{ r.diametro_bottiglia or '-' }}</span>
+                                    <i class="fa-solid fa-arrow-right mx-1 text-muted"></i>
+                                    <span class="fw-bold text-primary">{{ r.diametro_bottiglia_nuova or r.diametro_bottiglia or '-' }}</span>
                                 </td>
                                 <td class="no-print text-end">
                                     <form action="{{ url_for('elimina_cambio_serie', id_cambio=r.id) }}" method="POST" onsubmit="return confirm('Eliminare questo cambio serie?');" class="d-inline">
@@ -222,7 +225,7 @@
                             </tr>
                             {% else %}
                             <tr>
-                                <td colspan="8" class="text-center text-muted py-4">Nessun cambio serie trovato.</td>
+                                <td colspan="9" class="text-center text-muted py-4">Nessun cambio serie trovato.</td>
                             </tr>
                             {% endfor %}
                         </tbody>
@@ -294,11 +297,22 @@
                         <div class="row">
                             <div class="col-md-6 mb-3">
                                 <label class="form-label text-secondary">Misura Piastrina Uscente (Autocompilata)</label>
-                                <input type="text" class="form-control bg-light" name="misura_piastrina_vecchia" id="misura_piastrina_vecchia" readonly placeholder="-">
+                                <input type="text" class="form-control bg-light" name="misura_piastrina" id="misura_piastrina_vecchia" readonly placeholder="-">
                             </div>
                             <div class="col-md-6 mb-3">
                                 <label class="form-label text-primary">Misura Piastrina Entrante *</label>
                                 <input type="text" class="form-control" name="misura_piastrina_nuova" placeholder="Es. 150x80 mm..." required>
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label text-secondary">Diametro Bottiglia Uscente (Autocompilata)</label>
+                                <input type="text" class="form-control bg-light" name="diametro_bottiglia" id="diametro_bottiglia_vecchia" readonly placeholder="-">
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label text-primary">Diametro Bottiglia Entrante *</label>
+                                <input type="text" class="form-control" name="diametro_bottiglia_nuova" placeholder="Es. 75 mm..." required>
                             </div>
                         </div>
                     </div>
@@ -350,6 +364,7 @@
         const inputSmontante = document.getElementById("bottiglia_precedente");
         const inputTemperaVecchia = document.getElementById("num_bottiglie_tempera_vecchia");
         const inputPiastrinaVecchia = document.getElementById("misura_piastrina_vecchia");
+        const inputDiametroVecchio = document.getElementById("diametro_bottiglia_vecchia");
 
         if (!selectForno || !selectLinea || !selectLinea.value) return;
 
@@ -365,19 +380,21 @@
                     if (inputSmontante) inputSmontante.value = data.bottiglia || "Nessuna precedente";
                     if (inputTemperaVecchia) inputTemperaVecchia.value = data.tempera || 0;
                     if (inputPiastrinaVecchia) inputPiastrinaVecchia.value = data.piastrina || "-";
+                    if (inputDiametroVecchio) inputDiametroVecchio.value = data.diametro || "-";
                 })
                 .catch(function(err) {
                     console.error("Errore recupero API:", err);
                     if (inputSmontante) inputSmontante.value = "-";
                     if (inputTemperaVecchia) inputTemperaVecchia.value = 0;
                     if (inputPiastrinaVecchia) inputPiastrinaVecchia.value = "-";
+                    if (inputDiametroVecchio) inputDiametroVecchio.value = "-";
                 });
         } catch (e) {
             console.error("Eccezione durante la richiesta:", e);
         }
     }
 
-    // Funzioni aggiunte per gestire la selezione multipla e la stampa mirata
+    // Funzioni di selezione e stampa mirata dei record spuntati
     function toggleSelezionaTutti(source) {
         const checkboxes = document.querySelectorAll('input.seleziona-cambio');
         checkboxes.forEach(cb => cb.checked = source.checked);
