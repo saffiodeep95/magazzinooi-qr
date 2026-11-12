@@ -2784,27 +2784,40 @@ def manda_manutenzione(qr_code):
 @app.route("/ripristina_magazzino/<qr_code>", methods=["POST"])
 def ripristina_magazzino(qr_code):
     try:
+        # Leggiamo i campi relativi all'esito e al commento inviati dal form
+        esito_riparazione = request.form.get("esito_riparazione", "Riparato")
+        commento_rientro = request.form.get("commento_rientro", "").strip()
+        
         conn = get_db_connection()
         cur = conn.cursor()
         
-        # 1. Recuperiamo la data di riconsegna impostata (o mettiamo quella odierna se vuota)
+        # Recuperiamo la data di riconsegna impostata o usiamo quella odierna
         data_oggi = datetime.now().strftime('%Y-%m-%d')
         
-        cur.execute("SELECT data_riconsegna, cliente_manutenzione FROM prodotti WHERE qr_code = %s;", (qr_code,))
+        cur.execute("SELECT data_riconsegna, cliente_manutenzione, note_manutenzione FROM prodotti WHERE qr_code = %s;", (qr_code,))
         prod = cur.fetchone()
         
         data_ric = data_oggi
         if prod and prod.get('data_riconsegna'):
             data_ric = prod.get('data_riconsegna')
 
-        # 2. Aggiorniamo l'ultimo record dello storico per questo prodotto che ha data_riconsegna vuota o "In corso"
+        # Prepariamo le note aggiornate unendo eventuali note esistenti con l'esito e il commento di rientro
+        note_esistenti = prod.get('note_manutenzione') or ""
+        nota_finale = f"Esito: {esito_riparazione}"
+        if commento_rientro:
+            nota_finale += f" - Commento: {commento_rientro}"
+        if note_esistenti:
+            nota_finale = f"{note_esistenti} | {nota_finale}"
+
+        # 1. Aggiorniamo l'ultimo record dello storico per questo prodotto inserendo la data, l'esito e le note
         cur.execute("""
             UPDATE storico_manutenzioni 
-            SET data_riconsegna = %s 
+            SET data_riconsegna = %s, 
+                note = %s
             WHERE qr_code = %s AND (data_riconsegna IS NULL OR data_riconsegna = '' OR data_riconsegna ILIKE 'In corso%%');
-        """, (data_ric, qr_code))
+        """, (data_ric, nota_finale, qr_code))
 
-        # 3. Ripristiniamo il prodotto in magazzino
+        # 2. Ripristiniamo il prodotto in magazzino azzerando i dati di manutenzione
         cur.execute("""
             UPDATE prodotti 
             SET quantita = quantita + quantita_manutenzione,
@@ -2822,8 +2835,9 @@ def ripristina_magazzino(qr_code):
         conn.commit()
         cur.close()
         conn.close()
-        registra_log(f"Rientrato da manutenzione: {qr_code} (Aggiornata data riconsegna a {data_ric})")
-        flash("Articolo rientrato in magazzino e storico aggiornato con successo!", "success")
+        
+        registra_log(f"Rientrato da manutenzione ({esito_riparazione}): {qr_code}")
+        flash(f"Articolo rientrato in magazzino con successo ({esito_riparazione})!", "success")
     except Exception as e:
         flash(f"Errore: {e}", "error")
     return redirect(url_for("gestisci_prodotto", qr_code=qr_code))
