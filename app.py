@@ -2786,6 +2786,25 @@ def ripristina_magazzino(qr_code):
     try:
         conn = get_db_connection()
         cur = conn.cursor()
+        
+        # 1. Recuperiamo la data di riconsegna impostata (o mettiamo quella odierna se vuota)
+        data_oggi = datetime.now().strftime('%Y-%m-%d')
+        
+        cur.execute("SELECT data_riconsegna, cliente_manutenzione FROM prodotti WHERE qr_code = %s;", (qr_code,))
+        prod = cur.fetchone()
+        
+        data_ric = data_oggi
+        if prod and prod.get('data_riconsegna'):
+            data_ric = prod.get('data_riconsegna')
+
+        # 2. Aggiorniamo l'ultimo record dello storico per questo prodotto che ha data_riconsegna vuota o "In corso"
+        cur.execute("""
+            UPDATE storico_manutenzioni 
+            SET data_riconsegna = %s 
+            WHERE qr_code = %s AND (data_riconsegna IS NULL OR data_riconsegna = '' OR data_riconsegna ILIKE 'In corso%%');
+        """, (data_ric, qr_code))
+
+        # 3. Ripristiniamo il prodotto in magazzino
         cur.execute("""
             UPDATE prodotti 
             SET quantita = quantita + quantita_manutenzione,
@@ -2799,11 +2818,12 @@ def ripristina_magazzino(qr_code):
                 note_manutenzione = NULL
             WHERE qr_code = %s;
         """, (qr_code,))
+        
         conn.commit()
         cur.close()
         conn.close()
-        registra_log(f"Rientrato da manutenzione: {qr_code}")
-        flash("Articolo rientrato in magazzino con successo!", "success")
+        registra_log(f"Rientrato da manutenzione: {qr_code} (Aggiornata data riconsegna a {data_ric})")
+        flash("Articolo rientrato in magazzino e storico aggiornato con successo!", "success")
     except Exception as e:
         flash(f"Errore: {e}", "error")
     return redirect(url_for("gestisci_prodotto", qr_code=qr_code))
