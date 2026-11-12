@@ -26,15 +26,16 @@
     <div class="container pb-5">
         
         <!-- Messaggi Flash -->
-        with messages = get_flashed_messages(with_categories=true)
-        if messages:
-            for category, message in messages:
+        {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            {% for category, message in messages %}
                 <div class="alert alert-{{ 'danger' if category == 'error' else 'success' }} alert-dismissible fade show" role="alert">
                     {{ message }}
                     <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
                 </div>
-            endfor
-        endif
+            {% endfor %}
+        {% endif %}
+        {% endwith %}
 
         <div class="row">
             <!-- Colonna Sinistra: Dettagli Articolo e Modifica -->
@@ -89,7 +90,7 @@
                             <i class="fas fa-qrcode"></i> Stampa QR Code
                         </a>
                         <a href="{{ url_for('stampa_bolla', qr_code=prodotto.qr_code) }}" class="btn btn-outline-dark w-48" target="_blank">
-                            <i class="fas print"></i> <i class="fas fa-file-invoice"></i> Stampa Bolla Spedizione
+                            <i class="fas fa-file-invoice"></i> Stampa Bolla Spedizione
                         </a>
                     </div>
                 </div>
@@ -99,7 +100,7 @@
             <div class="col-lg-5">
                 
                 <!-- Se l'articolo NON è in manutenzione -->
-                if not prodotto.in_manutenzione
+                {% if not prodotto.in_manutenzione %}
                 <div class="card shadow-sm mb-4 border-warning">
                     <div class="card-header bg-warning text-dark">
                         <h5 class="mb-0"><i class="fas fa-tools"></i> Invia in Manutenzione / Esterno</h5>
@@ -110,9 +111,9 @@
                                 <label for="cliente_manutenzione" class="form-label"><strong>Cliente / Fornitore Esterno</strong></label>
                                 <input type="text" class="form-control" id="cliente_manutenzione" name="cliente_manutenzione" list="fornitori_list" required placeholder="Inserisci o seleziona fornitore...">
                                 <datalist id="fornitori_list">
-                                    for f in fornitori
+                                    {% for f in fornitori %}
                                     <option value="{{ f.nome_azienda }}">
-                                    endfor
+                                    {% endfor %}
                                 </datalist>
                             </div>
                             <div class="mb-3">
@@ -149,7 +150,7 @@
                 </div>
 
                 <!-- Se l'articolo È in manutenzione (AGGIORNATO CON ESITO E COMMENTO) -->
-                else
+                {% else %}
                 <div class="card shadow-sm mb-4 border-success">
                     <div class="card-header bg-success text-white">
                         <h5 class="mb-0"><i class="fas fa-undo"></i> Articolo in Manutenzione (Rientro)</h5>
@@ -185,7 +186,7 @@
                         </form>
                     </div>
                 </div>
-                endif
+                {% endif %}
 
                 <!-- Sezione Eliminazione Articolo -->
                 <div class="card shadow-sm border-danger">
