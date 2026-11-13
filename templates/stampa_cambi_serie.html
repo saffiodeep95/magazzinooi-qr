@@ -5,7 +5,7 @@
     <title>Stampa Cambi Serie - Gestionale OMG</title>
     <style>
         @page {
-            size: A4 landscape; /* Imposta il foglio in orizzontale */
+            size: A4 landscape; /* Orizzontale */
             margin: 1cm;
         }
         body { 
@@ -52,6 +52,14 @@
             color: #666; 
             font-size: 9pt; 
         }
+        .badge-print {
+            display: inline-block;
+            padding: 4px 8px;
+            background-color: #f8f9fa;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            text-align: center;
+        }
         @media print {
             .no-print { display: none !important; }
         }
@@ -82,7 +90,18 @@
         <tbody>
             {% for r in record_serie %}
             <tr>
-                <td class="text-center"><strong>{{ r.data_cambio }}</strong></td>
+                <td class="text-center">
+                    {% set dt = parse_data_flessibile(r.data_cambio) %}
+                    <div class="badge-print">
+                        <strong>{{ r.data_cambio or '-' }}</strong>
+                        {% if dt %}
+                            <br><small class="text-muted">
+                                {% set giorni = ['Lunedì', 'Martedì', 'Mercoledì', 'Giovedì', 'Venerdì', 'Sabato', 'Domenica'] %}
+                                {{ giorni[dt.weekday()] }}
+                            </small>
+                        {% endif %}
+                    </div>
+                </td>
                 <td><strong>{{ r.forno }}</strong><br><span class="text-muted">Linea {{ r.linea or '-' }}</span></td>
                 <td>
                     <div class="text-muted">Smont: {{ r.bottiglia_precedente or r.nome_bottiglia or '-' }}</div>
