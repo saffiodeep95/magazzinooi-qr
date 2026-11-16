@@ -393,7 +393,7 @@ def api_notifiche():
     cur.execute("""
         SELECT id, titolo, messaggio, link, letta, creato_il 
         FROM notifiche 
-        WHERE TRIM(destinatario) = %s 
+        WHERE LOWER(TRIM(destinatario)) = LOWER(%s) 
         ORDER BY creato_il DESC LIMIT 15;
     """, (str(username).strip(),))
     notifiche = cur.fetchall()
@@ -407,7 +407,7 @@ def api_segna_lette():
     if username:
         conn = get_db_connection()
         cur = conn.cursor()
-        cur.execute("UPDATE notifiche SET letta = TRUE WHERE TRIM(destinatario) = %s;", (str(username).strip(),))
+        cur.execute("UPDATE notifiche SET letta = TRUE WHERE LOWER(TRIM(destinatario)) = LOWER(%s);", (str(username).strip(),))
         conn.commit()
         cur.close()
         conn.close()
@@ -2739,7 +2739,7 @@ def aggiungi_prodotto():
     flag_sezione = 1 if request.form.get("magazzino_pesante") else 0
 
     if not nome:
-        flash("Il nome dell'articolo è obbligatorio!", "error")
+        flash(" Il nome dell'articolo è obbligatorio!", "error")
         return redirect(url_for("index"))
 
     try:
