@@ -45,21 +45,10 @@ def crea_notifica(destinatario, titolo, messaggio, link=""):
         destinatario_clean = str(destinatario).strip()
         conn = get_db_connection()
         cur = conn.cursor()
-        if destinatario_clean.lower() == "tutti":
-            cur.execute("SELECT username FROM utenti;")
-            utenti = cur.fetchall()
-            for u in utenti:
-                uname = str(u['username']).strip()
-                if uname:
-                    cur.execute("""
-                        INSERT INTO notifiche (destinatario, titolo, messaggio, link, letta)
-                        VALUES (%s, %s, %s, %s, FALSE);
-                    """, (uname, titolo, messaggio, link))
-        else:
-            cur.execute("""
-                INSERT INTO notifiche (destinatario, titolo, messaggio, link, letta)
-                VALUES (%s, %s, %s, %s, FALSE);
-            """, (destinatario_clean, titolo, messaggio, link))
+        cur.execute("""
+            INSERT INTO notifiche (destinatario, titolo, messaggio, link, letta)
+            VALUES (%s, %s, %s, %s, FALSE);
+        """, (destinatario_clean, titolo, messaggio, link))
         conn.commit()
         cur.close()
         conn.close()
@@ -399,66 +388,30 @@ def api_notifiche():
     username = session.get('username')
     if not username:
         return jsonify([])
-    try:
-        conn = get_db_connection()
-        cur = conn.cursor()
-        cur.execute("""
-            SELECT id, titolo, messaggio, COALESCE(link, '/agenda') AS link,
-                   COALESCE(letta, FALSE) AS letta,
-                   TO_CHAR(creato_il, 'DD/MM/YYYY HH24:MI') AS creato_il
-            FROM notifiche 
-            WHERE LOWER(TRIM(destinatario)) = LOWER(TRIM(%s))
-               OR LOWER(TRIM(destinatario)) = 'tutti'
-            ORDER BY id DESC LIMIT 25;
-        """, (str(username),))
-        notifiche = cur.fetchall()
-        cur.close()
-        conn.close()
-        return jsonify(notifiche)
-    except Exception as e:
-        print(f"Errore lettura notifiche: {e}")
-        return jsonify([])
+    conn = get_db_connection()
+    cur = conn.cursor()
+    cur.execute("""
+        SELECT id, titolo, messaggio, link, letta, creato_il 
+        FROM notifiche 
+        WHERE TRIM(destinatario) = %s 
+        ORDER BY creato_il DESC LIMIT 15;
+    """, (str(username).strip(),))
+    notifiche = cur.fetchall()
+    cur.close()
+    conn.close()
+    return jsonify(notifiche)
 
 @app.route("/api/notifiche/segna_lette", methods=["POST"])
 def api_segna_lette():
     username = session.get('username')
     if username:
-        try:
-            conn = get_db_connection()
-            cur = conn.cursor()
-            cur.execute("""
-                UPDATE notifiche 
-                SET letta = TRUE 
-                WHERE LOWER(TRIM(destinatario)) = LOWER(TRIM(%s))
-                   OR LOWER(TRIM(destinatario)) = 'tutti';
-            """, (str(username),))
-            conn.commit()
-            cur.close()
-            conn.close()
-        except Exception as e:
-            print(f"Errore segna lette: {e}")
-    return jsonify({"status": "ok"})
-
-@app.route("/api/notifiche/elimina/<int:notifica_id>", methods=["POST"])
-def api_elimina_notifica(notifica_id):
-    username = session.get('username')
-    if not username:
-        return jsonify({"status": "error"}), 401
-    try:
         conn = get_db_connection()
         cur = conn.cursor()
-        cur.execute("""
-            DELETE FROM notifiche 
-            WHERE id = %s 
-              AND (LOWER(TRIM(destinatario)) = LOWER(TRIM(%s)) OR LOWER(TRIM(destinatario)) = 'tutti');
-        """, (notifica_id, str(username)))
+        cur.execute("UPDATE notifiche SET letta = TRUE WHERE TRIM(destinatario) = %s;", (str(username).strip(),))
         conn.commit()
         cur.close()
         conn.close()
-        return jsonify({"status": "ok"})
-    except Exception as e:
-        print(f"Errore eliminazione notifica: {e}")
-        return jsonify({"status": "error"}), 500
+    return jsonify({"status": "ok"})
 
 @app.route("/")
 @app.route("/index")
@@ -523,12 +476,12 @@ def index():
 @app.route("/login.html", methods=["GET", "POST"])
 def login():
     if request.method == "POST":
-        username = (request.form.get("username") or "").strip()
+        username = request.form.get("username")
         password = request.form.get("password")
         try:
             conn = get_db_connection()
             cur = conn.cursor()
-            cur.execute("SELECT * FROM utenti WHERE LOWER(TRIM(username)) = LOWER(TRIM(%s));", (username,))
+            cur.execute("SELECT * FROM utenti WHERE username = %s;", (username,))
             user = cur.fetchone()
             cur.close()
             conn.close()
@@ -2955,6 +2908,44 @@ def elimina_prodotto(qr_code=None):
         except Exception as e:
             flash(f"Errore durante l'eliminazione: {e}", "error")
     return redirect(url_for("index"))
+
+
+@app.route("/spedizioni_nastri")
+@app.route("/spedizioni_nastri.html")
+def spedizioni_nastri():
+    if not (session.get('is_admin') or session.get('puo_vedere_magazzino', 1)):
+        flash("Accesso non autorizzato.", "error")
+        return redirect(url_for('index'))
+
+    conn = get_db_connection()
+    cur = conn.cursor()
+    cur.execute("""
+        SELECT * FROM nastri 
+        WHERE tappeto_presente = FALSE 
+           OR (note IS NOT NULL AND (note ILIKE '%spediz%' OR note ILIKE '%fuori%' OR note ILIKE '%riparaz%' OR note ILIKE '%manutenz%'))
+        ORDER BY sezione_impianto ASC, numero ASC;
+    """)
+    nastri_spediti = cur.fetchall()
+    cur.close()
+    conn.close()
+
+    return render_template("spedizioni_nastri.html", nastri=nastri_spediti)
+
+@app.route("/stampa_memo_spedizione_nastro/<int:nastro_id>")
+def stampa_memo_spedizione_nastro(nastro_id):
+    conn = get_db_connection()
+    cur = conn.cursor()
+    cur.execute("SELECT * FROM nastri WHERE id = %s;", (nastro_id,))
+    nastro = cur.fetchone()
+    cur.close()
+    conn.close()
+
+    if not nastro:
+        flash("Nastro non trovato.", "error")
+        return redirect(url_for("nastri"))
+
+    return render_template("stampa_memo_nastro.html", nastro=nastro)
+
 
 if __name__ == "__main__":
     app.run(debug=True)
