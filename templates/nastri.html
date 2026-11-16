@@ -114,6 +114,7 @@
                         <thead class="table-dark">
                             <tr>
                                 <th style="width: 110px;">Tappeto</th>
+                                <th style="width: 130px;">Stato Riparazione</th>
                                 <th>Cod. SAP</th>
                                 <th>N°</th>
                                 <th>Sezione Impianto</th>
@@ -142,6 +143,28 @@
                                             {% endif %}
                                         </button>
                                     </form>
+                                </td>
+                                <td>
+                                    {% if n.in_manutenzione %}
+                                        <span class="badge bg-danger mb-1" title="Spedito il: {{ n.data_spedizione or '-' }} | Vettore: {{ n.vettore or '-' }}">
+                                            <i class="fas fa-truck me-1"></i>In Riparazione
+                                        </span>
+                                        <div style="font-size: 11px;" class="text-muted">
+                                            Riconsegna: <strong>{{ n.data_riconsegna or 'N.D.' }}</strong>
+                                        </div>
+                                        <form action="{{ url_for('ripristina_nastro_magazzino', nastro_id=n.id) }}" method="POST" class="mt-1">
+                                            <button type="submit" class="btn btn-outline-success btn-sm py-0 px-1" style="font-size: 10px;" title="Registra avvenuta riconsegna">
+                                                <i class="fas fa-undo me-1"></i>Segna Rientrato
+                                            </button>
+                                        </form>
+                                    {% else %}
+                                        <span class="badge bg-success mb-1"><i class="fas fa-check me-1"></i>In Azienda</span>
+                                        <div>
+                                            <button class="btn btn-outline-danger btn-sm py-0 px-1" style="font-size: 10px;" data-bs-toggle="modal" data-bs-target="#modalReparto_{{ n.id }}">
+                                                <i class="fas fa-shipping-fast me-1"></i>Spedisci via
+                                            </button>
+                                        </div>
+                                    {% endif %}
                                 </td>
                                 <td class="font-monospace fw-bold">{{ n.codice_sap or '-' }}</td>
                                 <td><span class="badge bg-secondary">{{ n.numero or '-' }}</span></td>
@@ -176,7 +199,7 @@
                                                 <h5 class="modal-title">Modifica Nastro - N° {{ n.numero }}</h5>
                                                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
                                             </div>
-                                            <div class="modal-body">
+                                            <div class="modal-body text-start">
                                                 <div class="row">
                                                     <div class="col-md-4 mb-3">
                                                         <label class="form-label">Codice SAP</label>
@@ -232,9 +255,45 @@
                                     </div>
                                 </div>
                             </div>
+
+                            <!-- Modal Spedisci in Riparazione per Nastro {{ n.numero }} -->
+                            <div class="modal fade" id="modalReparto_{{ n.id }}" tabindex="-1">
+                                <div class="modal-dialog">
+                                    <div class="modal-content">
+                                        <form action="{{ url_for('manda_nastro_manutenzione', nastro_id=n.id) }}" method="POST">
+                                            <div class="modal-header bg-danger text-white">
+                                                <h5 class="modal-title"><i class="fas fa-shipping-fast me-2"></i>Spedisci Nastro N° {{ n.numero }} in Riparazione</h5>
+                                                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                                            </div>
+                                            <div class="modal-body text-start">
+                                                <div class="mb-3">
+                                                    <label class="form-label">Data Spedizione</label>
+                                                    <input type="date" class="form-control" name="data_spedizione">
+                                                </div>
+                                                <div class="mb-3">
+                                                    <label class="form-label">Data Prevista Riconsegna (Promemoria)</label>
+                                                    <input type="date" class="form-control" name="data_riconsegna">
+                                                </div>
+                                                <div class="mb-3">
+                                                    <label class="form-label">Vettore / Corriere</label>
+                                                    <input type="text" class="form-control" name="vettore" placeholder="Es. Bartolini, TNT, corriere interno...">
+                                                </div>
+                                                <div class="mb-3">
+                                                    <label class="form-label">Note Riparazione / Motivo</label>
+                                                    <textarea class="form-control" name="note_manutenzione" rows="3" placeholder="Es. Giuntatura rotta, vulcanizzazione necessaria..."></textarea>
+                                                </div>
+                                            </div>
+                                            <div class="modal-footer">
+                                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annulla</button>
+                                                <button type="submit" class="btn btn-danger">Conferma Spedizione</button>
+                                            </div>
+                                        </form>
+                                    </div>
+                                </div>
+                            </div>
                             {% else %}
                             <tr>
-                                <td colspan="12" class="text-center py-4 text-muted">Nessun nastro trovato per questa sezione.</td>
+                                <td colspan="13" class="text-center py-4 text-muted">Nessun nastro trovato per questa sezione.</td>
                             </tr>
                             {% endfor %}
                         </tbody>
@@ -253,7 +312,7 @@
                         <h5 class="modal-title"><i class="fas fa-plus-circle me-2"></i>Aggiungi Nuovo Nastro</h5>
                         <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
                     </div>
-                    <div class="modal-body">
+                    <div class="modal-body text-start">
                         <div class="row">
                             <div class="col-md-4 mb-3">
                                 <label class="form-label">Codice SAP</label>
