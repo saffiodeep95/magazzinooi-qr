@@ -793,6 +793,25 @@ def stampa_nastri():
     conn.close()
     return render_template("stampa_nastri.html", nastri=lista, sezione=sezione)
 
+# --- ROTTA MEMO SPEDIZIONE / MANUTENZIONE NASTRO ---
+@app.route('/nastro/<int:nastro_id>/memo')
+def stampa_memo_nastro(nastro_id):
+    conn = get_db_connection()
+    cur = conn.cursor()
+    cur.execute("SELECT * FROM nastri WHERE id = %s;", (nastro_id,))
+    nastro = cur.fetchone()
+    cur.close()
+    conn.close()
+    if not nastro:
+        flash("Nastro non trovato.", "error")
+        return redirect(url_for("nastri"))
+    return render_template('stampa_memo_nastro.html', nastro=nastro)
+
+# Rotta di alias per totale retrocompatibilità con i log/nomi precedenti
+@app.route('/nastro/<int:nastro_id>/memo_spedizione')
+def stampa_memo_spedizione_nastro(nastro_id):
+    return stampa_memo_nastro(nastro_id)
+
 @app.route("/agenda", methods=["GET", "POST"])
 @app.route("/agenda.html", methods=["GET", "POST"])
 def agenda():
@@ -2908,44 +2927,6 @@ def elimina_prodotto(qr_code=None):
         except Exception as e:
             flash(f"Errore durante l'eliminazione: {e}", "error")
     return redirect(url_for("index"))
-
-
-@app.route("/spedizioni_nastri")
-@app.route("/spedizioni_nastri.html")
-def spedizioni_nastri():
-    if not (session.get('is_admin') or session.get('puo_vedere_magazzino', 1)):
-        flash("Accesso non autorizzato.", "error")
-        return redirect(url_for('index'))
-
-    conn = get_db_connection()
-    cur = conn.cursor()
-    cur.execute("""
-        SELECT * FROM nastri 
-        WHERE tappeto_presente = FALSE 
-           OR (note IS NOT NULL AND (note ILIKE '%spediz%' OR note ILIKE '%fuori%' OR note ILIKE '%riparaz%' OR note ILIKE '%manutenz%'))
-        ORDER BY sezione_impianto ASC, numero ASC;
-    """)
-    nastri_spediti = cur.fetchall()
-    cur.close()
-    conn.close()
-
-    return render_template("spedizioni_nastri.html", nastri=nastri_spediti)
-
-@app.route("/stampa_memo_spedizione_nastro/<int:nastro_id>")
-def stampa_memo_spedizione_nastro(nastro_id):
-    conn = get_db_connection()
-    cur = conn.cursor()
-    cur.execute("SELECT * FROM nastri WHERE id = %s;", (nastro_id,))
-    nastro = cur.fetchone()
-    cur.close()
-    conn.close()
-
-    if not nastro:
-        flash("Nastro non trovato.", "error")
-        return redirect(url_for("nastri"))
-
-    return render_template("stampa_memo_nastro.html", nastro=nastro)
-
 
 if __name__ == "__main__":
     app.run(debug=True)
