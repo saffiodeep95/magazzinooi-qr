@@ -45,10 +45,21 @@ def crea_notifica(destinatario, titolo, messaggio, link=""):
         destinatario_clean = str(destinatario).strip()
         conn = get_db_connection()
         cur = conn.cursor()
-        cur.execute("""
-            INSERT INTO notifiche (destinatario, titolo, messaggio, link, letta)
-            VALUES (%s, %s, %s, %s, FALSE);
-        """, (destinatario_clean, titolo, messaggio, link))
+        if destinatario_clean.lower() == "tutti":
+            cur.execute("SELECT username FROM utenti;")
+            utenti = cur.fetchall()
+            for u in utenti:
+                uname = str(u['username']).strip()
+                if uname:
+                    cur.execute("""
+                        INSERT INTO notifiche (destinatario, titolo, messaggio, link, letta)
+                        VALUES (%s, %s, %s, %s, FALSE);
+                    """, (uname, titolo, messaggio, link))
+        else:
+            cur.execute("""
+                INSERT INTO notifiche (destinatario, titolo, messaggio, link, letta)
+                VALUES (%s, %s, %s, %s, FALSE);
+            """, (destinatario_clean, titolo, messaggio, link))
         conn.commit()
         cur.close()
         conn.close()
@@ -329,13 +340,6 @@ def init_db():
         cur.execute("ALTER TABLE cambi_serie ADD COLUMN IF NOT EXISTS diametro_bottiglia_nuova VARCHAR(50);")
         cur.execute("ALTER TABLE cambi_serie ADD COLUMN IF NOT EXISTS note TEXT;")
         cur.execute("ALTER TABLE nastri ADD COLUMN IF NOT EXISTS nome VARCHAR(255);")
-        
-        # Nuove colonne per gestione riparazione nastri
-        cur.execute("ALTER TABLE nastri ADD COLUMN IF NOT EXISTS in_manutenzione BOOLEAN DEFAULT FALSE;")
-        cur.execute("ALTER TABLE nastri ADD COLUMN IF NOT EXISTS data_spedizione VARCHAR(255);")
-        cur.execute("ALTER TABLE nastri ADD COLUMN IF NOT EXISTS data_riconsegna VARCHAR(255);")
-        cur.execute("ALTER TABLE nastri ADD COLUMN IF NOT EXISTS vettore VARCHAR(255);")
-        cur.execute("ALTER TABLE nastri ADD COLUMN IF NOT EXISTS note_manutenzione TEXT;")
 
         permessi_lista = [
             ("puo_vedere_magazzino", "INT DEFAULT 1"),
@@ -395,30 +399,66 @@ def api_notifiche():
     username = session.get('username')
     if not username:
         return jsonify([])
-    conn = get_db_connection()
-    cur = conn.cursor()
-    cur.execute("""
-        SELECT id, titolo, messaggio, link, letta, creato_il 
-        FROM notifiche 
-        WHERE TRIM(destinatario) = %s 
-        ORDER BY creato_il DESC LIMIT 15;
-    """, (str(username).strip(),))
-    notifiche = cur.fetchall()
-    cur.close()
-    conn.close()
-    return jsonify(notifiche)
+    try:
+        conn = get_db_connection()
+        cur = conn.cursor()
+        cur.execute("""
+            SELECT id, titolo, messaggio, COALESCE(link, '/agenda') AS link,
+                   COALESCE(letta, FALSE) AS letta,
+                   TO_CHAR(creato_il, 'DD/MM/YYYY HH24:MI') AS creato_il
+            FROM notifiche 
+            WHERE LOWER(TRIM(destinatario)) = LOWER(TRIM(%s))
+               OR LOWER(TRIM(destinatario)) = 'tutti'
+            ORDER BY id DESC LIMIT 25;
+        """, (str(username),))
+        notifiche = cur.fetchall()
+        cur.close()
+        conn.close()
+        return jsonify(notifiche)
+    except Exception as e:
+        print(f"Errore lettura notifiche: {e}")
+        return jsonify([])
 
 @app.route("/api/notifiche/segna_lette", methods=["POST"])
 def api_segna_lette():
     username = session.get('username')
     if username:
+        try:
+            conn = get_db_connection()
+            cur = conn.cursor()
+            cur.execute("""
+                UPDATE notifiche 
+                SET letta = TRUE 
+                WHERE LOWER(TRIM(destinatario)) = LOWER(TRIM(%s))
+                   OR LOWER(TRIM(destinatario)) = 'tutti';
+            """, (str(username),))
+            conn.commit()
+            cur.close()
+            conn.close()
+        except Exception as e:
+            print(f"Errore segna lette: {e}")
+    return jsonify({"status": "ok"})
+
+@app.route("/api/notifiche/elimina/<int:notifica_id>", methods=["POST"])
+def api_elimina_notifica(notifica_id):
+    username = session.get('username')
+    if not username:
+        return jsonify({"status": "error"}), 401
+    try:
         conn = get_db_connection()
         cur = conn.cursor()
-        cur.execute("UPDATE notifiche SET letta = TRUE WHERE TRIM(destinatario) = %s;", (str(username).strip(),))
+        cur.execute("""
+            DELETE FROM notifiche 
+            WHERE id = %s 
+              AND (LOWER(TRIM(destinatario)) = LOWER(TRIM(%s)) OR LOWER(TRIM(destinatario)) = 'tutti');
+        """, (notifica_id, str(username)))
         conn.commit()
         cur.close()
         conn.close()
-    return jsonify({"status": "ok"})
+        return jsonify({"status": "ok"})
+    except Exception as e:
+        print(f"Errore eliminazione notifica: {e}")
+        return jsonify({"status": "error"}), 500
 
 @app.route("/")
 @app.route("/index")
@@ -483,12 +523,12 @@ def index():
 @app.route("/login.html", methods=["GET", "POST"])
 def login():
     if request.method == "POST":
-        username = request.form.get("username")
+        username = (request.form.get("username") or "").strip()
         password = request.form.get("password")
         try:
             conn = get_db_connection()
             cur = conn.cursor()
-            cur.execute("SELECT * FROM utenti WHERE username = %s;", (username,))
+            cur.execute("SELECT * FROM utenti WHERE LOWER(TRIM(username)) = LOWER(TRIM(%s));", (username,))
             user = cur.fetchone()
             cur.close()
             conn.close()
@@ -752,85 +792,6 @@ def elimina_nastro(nastro_id):
         flash("Nastro eliminato con successo.", "success")
     except Exception as e:
         flash(f"Errore eliminazione nastro: {e}", "error")
-    return redirect(url_for("nastri"))
-
-@app.route("/manda_nastro_manutenzione/<int:nastro_id>", methods=["POST"])
-def manda_nastro_manutenzione(nastro_id):
-    data_spedizione = request.form.get("data_spedizione", "").strip() or None
-    data_riconsegna = request.form.get("data_riconsegna", "").strip() or None
-    vettore = request.form.get("vettore", "").strip()
-    note_manutenzione = request.form.get("note_manutenzione", "").strip()
-
-    try:
-        conn = get_db_connection()
-        cur = conn.cursor()
-        cur.execute("SELECT * FROM nastri WHERE id = %s;", (nastro_id,))
-        nastro = cur.fetchone()
-
-        cur.execute("""
-            UPDATE nastri 
-            SET in_manutenzione = TRUE,
-                data_spedizione = %s,
-                data_riconsegna = %s,
-                vettore = %s,
-                note_manutenzione = %s
-            WHERE id = %s;
-        """, (data_spedizione, data_riconsegna, vettore, note_manutenzione, nastro_id))
-
-        if nastro:
-            nome_nastro = f"Nastro N° {nastro.get('numero')} ({nastro.get('sezione_impianto')})"
-            cur.execute("""
-                INSERT INTO storico_manutenzioni (nome_prodotto, qr_code, sap, cliente, quantita, data_spedizione, data_riconsegna, vettore, note)
-                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s);
-            """, (nome_nastro, nastro.get('codice_sap'), nastro.get('codice_sap'), 'Riparazione Esterna Nastro', 1, data_spedizione, data_riconsegna, vettore, note_manutenzione))
-
-        conn.commit()
-        cur.close()
-        conn.close()
-        registra_log(f"Nastro ID {nastro_id} inviato in riparazione")
-        flash("Nastro inviato in riparazione con successo e registrato nello storico!", "success")
-    except Exception as e:
-        flash(f"Errore invio in riparazione: {e}", "error")
-    return redirect(url_for("nastri"))
-
-@app.route("/ripristina_nastro_magazzino/<int:nastro_id>", methods=["POST"])
-def ripristina_nastro_magazzino(nastro_id):
-    try:
-        conn = get_db_connection()
-        cur = conn.cursor()
-        
-        data_oggi = datetime.now().strftime('%Y-%m-%d')
-        cur.execute("SELECT data_riconsegna, numero, sezione_impianto FROM nastri WHERE id = %s;", (nastro_id,))
-        nastro = cur.fetchone()
-        
-        data_ric = data_oggi
-        if nastro and nastro.get('data_riconsegna'):
-            data_ric = nastro.get('data_riconsegna')
-
-        nome_nastro = f"Nastro N° {nastro.get('numero')} ({nastro.get('sezione_impianto')})" if nastro else ""
-        cur.execute("""
-            UPDATE storico_manutenzioni 
-            SET data_riconsegna = %s, note = COALESCE(note, '') || ' - Rientrato in magazzino'
-            WHERE nome_prodotto = %s AND (data_riconsegna IS NULL OR data_riconsegna = '' OR data_riconsegna ILIKE 'In corso%%');
-        """, (data_ric, nome_nastro))
-
-        cur.execute("""
-            UPDATE nastri 
-            SET in_manutenzione = FALSE,
-                data_spedizione = NULL,
-                data_riconsegna = NULL,
-                vettore = NULL,
-                note_manutenzione = NULL
-            WHERE id = %s;
-        """, (nastro_id,))
-        
-        conn.commit()
-        cur.close()
-        conn.close()
-        registra_log(f"Nastro ID {nastro_id} rientrato dalla riparazione")
-        flash("Nastro riconsegnato e rientrato in magazzino con successo!", "success")
-    except Exception as e:
-        flash(f"Errore rientro nastro: {e}", "error")
     return redirect(url_for("nastri"))
 
 @app.route("/esporta_nastri_csv")
@@ -1140,6 +1101,7 @@ def qr_scaffale():
     conn.close()
     return render_template("qr_scaffale.html", prodotti=prodotti, ubicazione=ubicazione)
 
+# --- CAMBI SERIE & API ULTIMA BOTTIGLIA ---
 def ricalcola_catena_cambi(cur, forno, linea):
     try:
         cur.execute("""
@@ -1425,6 +1387,7 @@ def stampa_selezionati_cambi_serie():
     
     return render_template("stampa_cambi_serie.html", record_serie=record_selezionati)
 
+# --- REPORT ORE & STATISTICHE ---
 @app.route("/report_ore")
 @app.route("/report_ore.html")
 def report_ore():
@@ -1524,6 +1487,7 @@ def report_ore():
                            chart_tipi_labels=chart_tipi_labels,
                            chart_tipi_values=chart_tipi_values)
 
+# --- RICHIESTE INTERVENTO MANUTENZIONE OFFICINA ---
 @app.route("/richieste_manutenzione", methods=["GET", "POST"])
 @app.route("/richieste_manutenzione.html", methods=["GET", "POST"])
 def richieste_manutenzione():
@@ -1926,6 +1890,7 @@ def elimina_promemoria(promemoria_id):
     flash("Promemoria eliminato.", "success")
     return redirect(url_for("promemoria"))
 
+# --- FORNITORI ---
 @app.route("/fornitori", methods=["GET", "POST"])
 @app.route("/fornitori.html", methods=["GET", "POST"])
 def fornitori():
