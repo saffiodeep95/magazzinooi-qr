@@ -1,4 +1,23 @@
-<!DOCTYPE html>
+[11:40, 16/11/2026] Marco Pavan: <!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gestione Nastri - Gestionale OMG</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        body {
+            background-color: #f4f6f9;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            color: #333;
+        }
+        .navbar {
+            background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%) !important;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        }
+        .navbar-n…
+[11:46, 16/11/2026] Marco Pavan: <!DOCTYPE html>
 <html lang="it">
 <head>
     <meta charset="UTF-8">
@@ -155,14 +174,14 @@
         <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-3 page-header">
             <div>
                 <h2 class="mb-1"><i class="fas fa-stream me-2 text-primary"></i>Magazzino Nastri e Tappeti</h2>
-                <p class="text-muted small mb-0">Gestione e monitoraggio dei nastri trasportatori e delle sezioni d'impianto</p>
+                <p class="text-muted small mb-0">Gestione e monitoraggio dei nastri trasportatori, sezioni d'impianto e spedizioni per manutenzione</p>
             </div>
             <div class="d-flex gap-2">
                 <a href="{{ url_for('esporta_nastri_csv') }}" class="btn btn-outline-success btn-sm px-3 shadow-sm d-flex align-items-center gap-1">
                     <i class="fas fa-file-excel"></i>Esporta CSV
                 </a>
                 <a href="{{ url_for('stampa_nastri', sezione=sezione_filtro) }}" target="_blank" class="btn btn-outline-dark btn-sm px-3 shadow-sm d-flex align-items-center gap-1">
-                    <i class="fas fa-print"></i>Stampa
+                    <i class="fas fa-print"></i>Stampa Tabella
                 </a>
                 <button class="btn btn-primary btn-sm px-3 shadow-sm d-flex align-items-center gap-1" data-bs-toggle="modal" data-bs-target="#modalNuovoNastro">
                     <i class="fas fa-plus-circle"></i>Nuovo Nastro
@@ -207,7 +226,7 @@
                                 <th>Riduttore</th>
                                 <th>Motore</th>
                                 <th>Note</th>
-                                <th class="text-center pe-3">Azioni</th>
+                                <th class="text-center pe-3" style="width: 140px;">Azioni / Spedizione</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -237,10 +256,16 @@
                                 <td class="small text-muted">{{ n.tipo_di_motore or '-' }}</td>
                                 <td><small class="text-muted fst-italic">{{ n.note or '-' }}</small></td>
                                 <td class="text-center pe-3">
-                                    <div class="d-flex justify-content-center gap-2">
+                                    <div class="d-flex justify-content-center gap-1">
+                                        <!-- Pulsante Stampa Memo Spedizione / Manutenzione -->
+                                        <a href="{{ url_for('stampa_memo_nastro', nastro_id=n.id) }}" target="_blank" class="btn btn-action btn-outline-warning text-dark bg-light" title="Stampa Memo Spedizione / Manutenzione">
+                                            <i class="fas fa-shipping-fast"></i>
+                                        </a>
+                                        <!-- Pulsante Modifica -->
                                         <button class="btn btn-action btn-outline-primary" data-bs-toggle="modal" data-bs-target="#modalModifica_{{ n.id }}" title="Modifica">
                                             <i class="fas fa-edit"></i>
                                         </button>
+                                        <!-- Pulsante Elimina -->
                                         {% if session.get('is_admin') or session.get('puo_eliminare', 0) %}
                                         <form action="{{ url_for('elimina_nastro', nastro_id=n.id) }}" method="POST" class="d-inline" onsubmit="return confirm('Eliminare questo nastro?');">
                                             <button type="submit" class="btn btn-action btn-outline-danger" title="Elimina"><i class="fas fa-trash"></i></button>
