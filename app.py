@@ -296,6 +296,12 @@ def init_db():
                 tipo_di_riduttore VARCHAR(255),
                 tipo_di_motore VARCHAR(255),
                 tappeto_presente BOOLEAN DEFAULT TRUE,
+                in_manutenzione BOOLEAN DEFAULT FALSE,
+                cliente_manutenzione VARCHAR(255),
+                data_spedizione VARCHAR(255),
+                data_riconsegna VARCHAR(255),
+                vettore VARCHAR(255),
+                note_manutenzione TEXT,
                 note TEXT,
                 creato_il TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             );
@@ -329,6 +335,12 @@ def init_db():
         cur.execute("ALTER TABLE cambi_serie ADD COLUMN IF NOT EXISTS diametro_bottiglia_nuova VARCHAR(50);")
         cur.execute("ALTER TABLE cambi_serie ADD COLUMN IF NOT EXISTS note TEXT;")
         cur.execute("ALTER TABLE nastri ADD COLUMN IF NOT EXISTS nome VARCHAR(255);")
+        cur.execute("ALTER TABLE nastri ADD COLUMN IF NOT EXISTS in_manutenzione BOOLEAN DEFAULT FALSE;")
+        cur.execute("ALTER TABLE nastri ADD COLUMN IF NOT EXISTS cliente_manutenzione VARCHAR(255);")
+        cur.execute("ALTER TABLE nastri ADD COLUMN IF NOT EXISTS data_spedizione VARCHAR(255);")
+        cur.execute("ALTER TABLE nastri ADD COLUMN IF NOT EXISTS data_riconsegna VARCHAR(255);")
+        cur.execute("ALTER TABLE nastri ADD COLUMN IF NOT EXISTS vettore VARCHAR(255);")
+        cur.execute("ALTER TABLE nastri ADD COLUMN IF NOT EXISTS note_manutenzione TEXT;")
 
         permessi_lista = [
             ("puo_vedere_magazzino", "INT DEFAULT 1"),
@@ -676,10 +688,14 @@ def nastri():
         cur.execute("SELECT * FROM nastri ORDER BY sezione_impianto ASC, numero ASC;")
     
     lista_nastri = cur.fetchall()
+
+    cur.execute("SELECT nome_azienda FROM fornitori ORDER BY nome_azienda ASC;")
+    fornitori = cur.fetchall()
+
     cur.close()
     conn.close()
 
-    return render_template("nastri.html", nastri=lista_nastri, sezioni_disponibili=sezioni_disponibili, sezione_filtro=sezione_filtro)
+    return render_template("nastri.html", nastri=lista_nastri, sezioni_disponibili=sezioni_disponibili, sezione_filtro=sezione_filtro, fornitori=fornitori)
 
 @app.route("/toggle_tappeto/<int:nastro_id>", methods=["POST"])
 def toggle_tappeto(nastro_id):
@@ -729,6 +745,60 @@ def modifica_nastro(nastro_id):
         flash(f"Errore aggiornamento nastro: {e}", "error")
     return redirect(url_for("nastri"))
 
+@app.route("/manda_manutenzione_nastro/<int:nastro_id>", methods=["POST"])
+def manda_manutenzione_nastro(nastro_id):
+    cliente_manutenzione = request.form.get("cliente_manutenzione", "").strip()
+    data_spedizione = request.form.get("data_spedizione", "").strip() or None
+    data_riconsegna = request.form.get("data_riconsegna", "").strip() or None
+    vettore = request.form.get("vettore", "").strip()
+    note_manutenzione = request.form.get("note_manutenzione", "").strip()
+
+    try:
+        conn = get_db_connection()
+        cur = conn.cursor()
+        cur.execute("""
+            UPDATE nastri 
+            SET in_manutenzione = TRUE,
+                cliente_manutenzione = %s,
+                data_spedizione = %s,
+                data_riconsegna = %s,
+                vettore = %s,
+                note_manutenzione = %s
+            WHERE id = %s;
+        """, (cliente_manutenzione, data_spedizione, data_riconsegna, vettore, note_manutenzione, nastro_id))
+        conn.commit()
+        cur.close()
+        conn.close()
+        registra_log(f"Nastro ID {nastro_id} inviato in manutenzione/spedizione")
+        flash("Nastro inviato in manutenzione con successo!", "success")
+    except Exception as e:
+        flash(f"Errore invio nastro in manutenzione: {e}", "error")
+    return redirect(url_for("nastri"))
+
+@app.route("/ripristina_nastro/<int:nastro_id>", methods=["POST"])
+def ripristina_nastro(nastro_id):
+    try:
+        conn = get_db_connection()
+        cur = conn.cursor()
+        cur.execute("""
+            UPDATE nastri 
+            SET in_manutenzione = FALSE,
+                cliente_manutenzione = NULL,
+                data_spedizione = NULL,
+                data_riconsegna = NULL,
+                vettore = NULL,
+                note_manutenzione = NULL
+            WHERE id = %s;
+        """, (nastro_id,))
+        conn.commit()
+        cur.close()
+        conn.close()
+        registra_log(f"Nastro ID {nastro_id} rientrato da manutenzione")
+        flash("Nastro rientrato in magazzino con successo!", "success")
+    except Exception as e:
+        flash(f"Errore rientro nastro: {e}", "error")
+    return redirect(url_for("nastri"))
+
 @app.route("/elimina_nastro/<int:nastro_id>", methods=["POST"])
 def elimina_nastro(nastro_id):
     if not (session.get('is_admin') or session.get('puo_eliminare', 0)):
@@ -751,14 +821,14 @@ def elimina_nastro(nastro_id):
 def esporta_nastri_csv():
     conn = get_db_connection()
     cur = conn.cursor()
-    cur.execute("SELECT codice_sap, numero, sezione_impianto, misura, tipo, utilizzo, misura_nastro_finito, tipo_di_riduttore, tipo_di_motore, tappeto_presente, note FROM nastri ORDER BY sezione_impianto ASC, numero ASC;")
+    cur.execute("SELECT codice_sap, numero, sezione_impianto, misura, tipo, utilizzo, misura_nastro_finito, tipo_di_riduttore, tipo_di_motore, tappeto_presente, in_manutenzione, cliente_manutenzione, note FROM nastri ORDER BY sezione_impianto ASC, numero ASC;")
     nastri_list = cur.fetchall()
     cur.close()
     conn.close()
 
     output = io.StringIO()
     writer = csv.writer(output)
-    writer.writerow(['Codice SAP', 'Numero', 'Sezione Impianto', 'Misura', 'Tipo', 'Utilizzo', 'Misura Finito', 'Riduttore', 'Motore', 'Tappeto Presente', 'Note'])
+    writer.writerow(['Codice SAP', 'Numero', 'Sezione Impianto', 'Misura', 'Tipo', 'Utilizzo', 'Misura Finito', 'Riduttore', 'Motore', 'Tappeto Presente', 'In Manutenzione', 'Fornitore/Cliente', 'Note'])
     for n in nastri_list:
         writer.writerow([
             n.get('codice_sap', ''),
@@ -771,6 +841,8 @@ def esporta_nastri_csv():
             n.get('tipo_di_riduttore', ''),
             n.get('tipo_di_motore', ''),
             'Presente' if n.get('tappeto_presente', True) else 'Assente',
+            'Sì' if n.get('in_manutenzione', False) else 'No',
+            n.get('cliente_manutenzione', ''),
             n.get('note', '')
         ])
     return Response(
@@ -807,7 +879,6 @@ def stampa_memo_nastro(nastro_id):
         return redirect(url_for("nastri"))
     return render_template('stampa_memo_nastro.html', nastro=nastro)
 
-# Rotta di alias per totale retrocompatibilità con i log/nomi precedenti
 @app.route('/nastro/<int:nastro_id>/memo_spedizione')
 def stampa_memo_spedizione_nastro(nastro_id):
     return stampa_memo_nastro(nastro_id)
