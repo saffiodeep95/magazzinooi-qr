@@ -43,6 +43,7 @@
         }
         .dot-green { background-color: #10b981; box-shadow: 0 0 8px rgba(16, 185, 129, 0.6); }
         .dot-red { background-color: #ef4444; box-shadow: 0 0 8px rgba(239, 68, 68, 0.6); }
+        .dot-orange { background-color: #f59e0b; box-shadow: 0 0 8px rgba(245, 158, 11, 0.6); }
         
         .table thead th {
             background-color: #1e293b;
@@ -196,7 +197,7 @@
                     <table class="table table-hover mb-0 align-middle">
                         <thead>
                             <tr>
-                                <th style="width: 120px;" class="ps-3">Tappeto</th>
+                                <th style="width: 140px;" class="ps-3">Stato Tappeto</th>
                                 <th>Cod. SAP</th>
                                 <th>N°</th>
                                 <th>Sezione Impianto</th>
@@ -206,25 +207,31 @@
                                 <th>Misura Finito</th>
                                 <th>Riduttore</th>
                                 <th>Motore</th>
-                                <th>Note</th>
-                                <th class="text-center pe-3" style="width: 150px;">Azioni / Spedizione</th>
+                                <th>Note / Manutenzione</th>
+                                <th class="text-center pe-3" style="width: 180px;">Azioni / Spedizione</th>
                             </tr>
                         </thead>
                         <tbody>
                             {% for n in nastri %}
                             <tr>
                                 <td class="ps-3">
-                                    <form action="{{ url_for('toggle_tappeto', nastro_id=n.id) }}" method="POST" class="d-inline">
-                                        <button type="submit" class="btn btn-sm btn-light border py-1 px-2 d-inline-flex align-items-center shadow-sm rounded-pill" title="Clicca per cambiare stato tappeto" style="font-size: 11px; font-weight: 600;">
-                                            {% if n.tappeto_presente is none or n.tappeto_presente %}
-                                                <span class="status-dot dot-green"></span>
-                                                <span class="text-success">Presente</span>
-                                            {% else %}
-                                                <span class="status-dot dot-red"></span>
-                                                <span class="text-danger">Assente</span>
-                                            {% endif %}
-                                        </button>
-                                    </form>
+                                    {% if n.in_manutenzione %}
+                                        <span class="badge bg-warning text-dark border px-2 py-1 shadow-sm d-inline-flex align-items-center gap-1" style="font-size: 11px;">
+                                            <span class="status-dot dot-orange m-0"></span> In Manutenzione
+                                        </span>
+                                    {% else %}
+                                        <form action="{{ url_for('toggle_tappeto', nastro_id=n.id) }}" method="POST" class="d-inline">
+                                            <button type="submit" class="btn btn-sm btn-light border py-1 px-2 d-inline-flex align-items-center shadow-sm rounded-pill" title="Clicca per cambiare stato tappeto" style="font-size: 11px; font-weight: 600;">
+                                                {% if n.tappeto_presente is none or n.tappeto_presente %}
+                                                    <span class="status-dot dot-green"></span>
+                                                    <span class="text-success">Presente</span>
+                                                {% else %}
+                                                    <span class="status-dot dot-red"></span>
+                                                    <span class="text-danger">Assente</span>
+                                                {% endif %}
+                                            </button>
+                                        </form>
+                                    {% endif %}
                                 </td>
                                 <td><span class="badge-sap font-monospace">{{ n.codice_sap or '-' }}</span></td>
                                 <td><span class="badge bg-dark bg-opacity-75 px-2 py-1">{{ n.numero or '-' }}</span></td>
@@ -235,17 +242,39 @@
                                 <td class="text-secondary">{{ n.misura_nastro_finito or '-' }}</td>
                                 <td class="small text-muted">{{ n.tipo_di_riduttore or '-' }}</td>
                                 <td class="small text-muted">{{ n.tipo_di_motore or '-' }}</td>
-                                <td><small class="text-muted fst-italic">{{ n.note or '-' }}</small></td>
+                                <td>
+                                    {% if n.in_manutenzione %}
+                                        <small class="text-danger fw-bold d-block">Esterno: {{ n.cliente_manutenzione or 'N.D.' }}</small>
+                                        <small class="text-muted fst-italic">{{ n.note_manutenzione or n.note or '-' }}</small>
+                                    {% else %}
+                                        <small class="text-muted fst-italic">{{ n.note or '-' }}</small>
+                                    {% endif %}
+                                </td>
                                 <td class="text-center pe-3">
                                     <div class="d-flex justify-content-center gap-1">
-                                        <!-- Pulsante Stampa Memo Spedizione / Manutenzione -->
-                                        <a href="{{ url_for('stampa_memo_nastro', nastro_id=n.id) }}" target="_blank" class="btn btn-action btn-outline-warning text-dark bg-light border" title="Stampa Memo Spedizione / Manutenzione">
+                                        <!-- Pulsante Stampa Memo Spedizione -->
+                                        <a href="{{ url_for('stampa_memo_spedizione_nastro', nastro_id=n.id) }}" target="_blank" class="btn btn-action btn-outline-warning text-dark bg-light border" title="Stampa Memo Spedizione / Manutenzione">
                                             <i class="fas fa-shipping-fast text-warning"></i>
                                         </a>
+
+                                        <!-- Pulsante Invia in Manutenzione oppure Rientra -->
+                                        {% if n.in_manutenzione %}
+                                        <form action="{{ url_for('ripristina_nastro', nastro_id=n.id) }}" method="POST" class="d-inline" onsubmit="return confirm('Confermi il rientro di questo nastro in magazzino?');">
+                                            <button type="submit" class="btn btn-action btn-outline-success bg-light" title="Rientra in Magazzino">
+                                                <i class="fas fa-undo text-success"></i>
+                                            </button>
+                                        </form>
+                                        {% else %}
+                                        <button class="btn btn-action btn-outline-secondary bg-light" data-bs-toggle="modal" data-bs-target="#modalManutenzione_{{ n.id }}" title="Invia in Manutenzione / Spedizione">
+                                            <i class="fas fa-tools text-secondary"></i>
+                                        </button>
+                                        {% endif %}
+
                                         <!-- Pulsante Modifica -->
                                         <button class="btn btn-action btn-outline-primary" data-bs-toggle="modal" data-bs-target="#modalModifica_{{ n.id }}" title="Modifica">
                                             <i class="fas fa-edit"></i>
                                         </button>
+
                                         <!-- Pulsante Elimina -->
                                         {% if session.get('is_admin') or session.get('puo_eliminare', 0) %}
                                         <form action="{{ url_for('elimina_nastro', nastro_id=n.id) }}" method="POST" class="d-inline" onsubmit="return confirm('Eliminare questo nastro?');">
@@ -255,6 +284,53 @@
                                     </div>
                                 </td>
                             </tr>
+
+                            <!-- Modale Invia in Manutenzione / Spedizione -->
+                            <div class="modal fade" id="modalManutenzione_{{ n.id }}" tabindex="-1">
+                                <div class="modal-dialog modal-dialog-centered">
+                                    <div class="modal-content">
+                                        <form action="{{ url_for('manda_manutenzione_nastro', nastro_id=n.id) }}" method="POST">
+                                            <div class="modal-header bg-warning text-dark">
+                                                <h5 class="modal-title fw-bold"><i class="fas fa-shipping-fast me-2"></i>Invia Nastro in Manutenzione - N° {{ n.numero }}</h5>
+                                                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                                            </div>
+                                            <div class="modal-body p-4 text-start">
+                                                <div class="mb-3">
+                                                    <label class="form-label small fw-bold text-secondary">Fornitore / Officina Esterna</label>
+                                                    <input type="text" class="form-control" name="cliente_manutenzione" list="fornitori_list" placeholder="Nome fornitore o officina" required>
+                                                    <datalist id="fornitori_list">
+                                                        {% for f in fornitori %}
+                                                        <option value="{{ f.nome_azienda }}">
+                                                        {% endfor %}
+                                                    </datalist>
+                                                </div>
+                                                <div class="row g-2 mb-3">
+                                                    <div class="col-md-6">
+                                                        <label class="form-label small fw-bold text-secondary">Data Spedizione</label>
+                                                        <input type="date" class="form-control" name="data_spedizione" value="{{ now_date }}">
+                                                    </div>
+                                                    <div class="col-md-6">
+                                                        <label class="form-label small fw-bold text-secondary">Data Prevista Riconsegna</label>
+                                                        <input type="date" class="form-control" name="data_riconsegna">
+                                                    </div>
+                                                </div>
+                                                <div class="mb-3">
+                                                    <label class="form-label small fw-bold text-secondary">Vettore / Trasportatore</label>
+                                                    <input type="text" class="form-control" name="vettore" placeholder="Es. Corriere / Mezzo interno">
+                                                </div>
+                                                <div class="mb-3">
+                                                    <label class="form-label small fw-bold text-secondary">Note / Motivo Lavorazione</label>
+                                                    <textarea class="form-control" name="note_manutenzione" rows="3" placeholder="Es. Revisione completa rulli e giuntura termosaldata..."></textarea>
+                                                </div>
+                                            </div>
+                                            <div class="modal-footer bg-light px-4 py-3">
+                                                <button type="button" class="btn btn-secondary px-3" data-bs-dismiss="modal">Annulla</button>
+                                                <button type="submit" class="btn btn-warning px-4 fw-bold">Conferma Spedizione</button>
+                                            </div>
+                                        </form>
+                                    </div>
+                                </div>
+                            </div>
 
                             <!-- Modal Modifica Nastro -->
                             <div class="modal fade" id="modalModifica_{{ n.id }}" tabindex="-1">
