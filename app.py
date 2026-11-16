@@ -343,7 +343,6 @@ def init_db():
         cur.execute("ALTER TABLE nastri ADD COLUMN IF NOT EXISTS vettore VARCHAR(255);")
         cur.execute("ALTER TABLE nastri ADD COLUMN IF NOT EXISTS note_manutenzione TEXT;")
         
-        # Aggiunta colonna permessi nastri se non esiste
         cur.execute("ALTER TABLE utenti ADD COLUMN IF NOT EXISTS puo_vedere_nastri INT DEFAULT 1;")
 
         permessi_lista = [
@@ -870,7 +869,6 @@ def stampa_nastri():
     conn.close()
     return render_template("stampa_nastri.html", nastri=lista, sezione=sezione)
 
-# --- ROTTA MEMO SPEDIZIONE / MANUTENZIONE NASTRO ---
 @app.route('/nastro/<int:nastro_id>/memo')
 def stampa_memo_nastro(nastro_id):
     conn = get_db_connection()
@@ -1149,7 +1147,6 @@ def qr_scaffale():
     conn.close()
     return render_template("qr_scaffale.html", prodotti=prodotti, ubicazione=ubicazione)
 
-# --- CAMBI SERIE & API ULTIMA BOTTIGLIA ---
 def ricalcola_catena_cambi(cur, forno, linea):
     try:
         cur.execute("""
@@ -1435,7 +1432,6 @@ def stampa_selezionati_cambi_serie():
     
     return render_template("stampa_cambi_serie.html", record_serie=record_selezionati)
 
-# --- REPORT ORE & STATISTICHE ---
 @app.route("/report_ore")
 @app.route("/report_ore.html")
 def report_ore():
@@ -1535,7 +1531,6 @@ def report_ore():
                            chart_tipi_labels=chart_tipi_labels,
                            chart_tipi_values=chart_tipi_values)
 
-# --- RICHIESTE INTERVENTO MANUTENZIONE OFFICINA ---
 @app.route("/richieste_manutenzione", methods=["GET", "POST"])
 @app.route("/richieste_manutenzione.html", methods=["GET", "POST"])
 def richieste_manutenzione():
@@ -1938,7 +1933,6 @@ def elimina_promemoria(promemoria_id):
     flash("Promemoria eliminato.", "success")
     return redirect(url_for("promemoria"))
 
-# --- FORNITORI ---
 @app.route("/fornitori", methods=["GET", "POST"])
 @app.route("/fornitori.html", methods=["GET", "POST"])
 def fornitori():
@@ -2981,7 +2975,7 @@ def ripristina_magazzino(qr_code):
     return redirect(url_for("gestisci_prodotto", qr_code=qr_code))
 
 @app.route("/elimina", methods=["POST"])
-@app.route("/elimina_prodotto/<qr_code>", methods=["POST"]) apparati
+@app.route("/elimina_prodotto/<qr_code>", methods=["POST"])
 def elimina_prodotto(qr_code=None):
     if not (session.get('is_admin') or session.get('puo_eliminare', 0)):
         flash("Permesso negato per eliminare prodotti.", "error")
