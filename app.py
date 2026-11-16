@@ -176,6 +176,7 @@ def init_db():
                 password VARCHAR(255) NOT NULL,
                 is_admin INT DEFAULT 0,
                 puo_vedere_magazzino INT DEFAULT 1,
+                puo_vedere_nastri INT DEFAULT 1,
                 puo_aggiungere_prodotti INT DEFAULT 1,
                 puo_modificare_prodotti INT DEFAULT 1,
                 puo_caricare_scaricare INT DEFAULT 1,
@@ -341,9 +342,13 @@ def init_db():
         cur.execute("ALTER TABLE nastri ADD COLUMN IF NOT EXISTS data_riconsegna VARCHAR(255);")
         cur.execute("ALTER TABLE nastri ADD COLUMN IF NOT EXISTS vettore VARCHAR(255);")
         cur.execute("ALTER TABLE nastri ADD COLUMN IF NOT EXISTS note_manutenzione TEXT;")
+        
+        # Aggiunta colonna permessi nastri se non esiste
+        cur.execute("ALTER TABLE utenti ADD COLUMN IF NOT EXISTS puo_vedere_nastri INT DEFAULT 1;")
 
         permessi_lista = [
             ("puo_vedere_magazzino", "INT DEFAULT 1"),
+            ("puo_vedere_nastri", "INT DEFAULT 1"),
             ("puo_aggiungere_prodotti", "INT DEFAULT 1"),
             ("puo_modificare_prodotti", "INT DEFAULT 1"),
             ("puo_caricare_scaricare", "INT DEFAULT 1"),
@@ -376,8 +381,8 @@ def init_db():
         if not cur.fetchone():
             hashed_pw = generate_password_hash("admin")
             cur.execute("""
-                INSERT INTO utenti (username, password, is_admin, puo_vedere_magazzino, puo_aggiungere_prodotti, puo_modificare_prodotti, puo_caricare_scaricare, puo_eliminare, puo_vedere_pesante, puo_vedere_manutenzione, puo_aprire_manutenzioni, puo_gestire_interventi, puo_assegnare_manutenzioni, puo_eliminare_interventi, puo_vedere_manutenzioni_esterne, puo_vedere_storico_manutenzioni, puo_eliminare_storico, puo_gestire_fornitori, puo_importare_fornitori, puo_gestire_documenti, puo_eliminare_documenti, puo_vedere_promemoria, puo_assegnare_promemoria, puo_vedere_report_ore, puo_vedere_omd, puo_vedere_lavori_interni, puo_gestire_agenda)
-                VALUES (%s, %s, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1);
+                INSERT INTO utenti (username, password, is_admin, puo_vedere_magazzino, puo_vedere_nastri, puo_aggiungere_prodotti, puo_modificare_prodotti, puo_caricare_scaricare, puo_eliminare, puo_vedere_pesante, puo_vedere_manutenzione, puo_aprire_manutenzioni, puo_gestire_interventi, puo_assegnare_manutenzioni, puo_eliminare_interventi, puo_vedere_manutenzioni_esterne, puo_vedere_storico_manutenzioni, puo_eliminare_storico, puo_gestire_fornitori, puo_importare_fornitori, puo_gestire_documenti, puo_eliminare_documenti, puo_vedere_promemoria, puo_assegnare_promemoria, puo_vedere_report_ore, puo_vedere_omd, puo_vedere_lavori_interni, puo_gestire_agenda)
+                VALUES (%s, %s, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1);
             """, ('admin', hashed_pw))
 
         conn.commit()
@@ -532,8 +537,8 @@ def registra():
                 cur = conn.cursor()
                 hashed_pw = generate_password_hash(password)
                 cur.execute("""
-                    INSERT INTO utenti (username, password, is_admin, puo_vedere_magazzino, puo_aggiungere_prodotti, puo_modificare_prodotti, puo_caricare_scaricare, puo_eliminare, puo_vedere_pesante, puo_vedere_manutenzione, puo_aprire_manutenzioni, puo_gestire_interventi, puo_assegnare_manutenzioni, puo_eliminare_interventi, puo_vedere_manutenzioni_esterne, puo_vedere_storico_manutenzioni, puo_eliminare_storico, puo_gestire_fornitori, puo_importare_fornitori, puo_gestire_documenti, puo_eliminare_documenti, puo_vedere_promemoria, puo_assegnare_promemoria, puo_vedere_report_ore, puo_vedere_omd, puo_vedere_lavori_interni, puo_gestire_agenda)
-                    VALUES (%s, %s, 0, 1, 1, 1, 1, 0, 1, 1, 1, 1, 1, 0, 1, 1, 0, 1, 1, 1, 0, 1, 0, 1, 1, 1, 1);
+                    INSERT INTO utenti (username, password, is_admin, puo_vedere_magazzino, puo_vedere_nastri, puo_aggiungere_prodotti, puo_modificare_prodotti, puo_caricare_scaricare, puo_eliminare, puo_vedere_pesante, puo_vedere_manutenzione, puo_aprire_manutenzioni, puo_gestire_interventi, puo_assegnare_manutenzioni, puo_eliminare_interventi, puo_vedere_manutenzioni_esterne, puo_vedere_storico_manutenzioni, puo_eliminare_storico, puo_gestire_fornitori, puo_importare_fornitori, puo_gestire_documenti, puo_eliminare_documenti, puo_vedere_promemoria, puo_assegnare_promemoria, puo_vedere_report_ore, puo_vedere_omd, puo_vedere_lavori_interni, puo_gestire_agenda)
+                    VALUES (%s, %s, 0, 1, 1, 1, 1, 1, 0, 1, 1, 1, 1, 1, 0, 1, 1, 0, 1, 1, 1, 0, 1, 0, 1, 1, 1, 1);
                 """, (username, hashed_pw))
                 conn.commit()
                 cur.close()
@@ -641,7 +646,7 @@ def elimina_utente(user_id):
 @app.route("/nastri", methods=["GET", "POST"])
 @app.route("/nastri.html", methods=["GET", "POST"])
 def nastri():
-    if not (session.get('is_admin') or session.get('puo_vedere_magazzino', 1)):
+    if not (session.get('is_admin') or session.get('puo_vedere_nastri', 1)):
         flash("Accesso al modulo Nastri non autorizzato.", "error")
         return redirect(url_for('index'))
 
@@ -2976,7 +2981,7 @@ def ripristina_magazzino(qr_code):
     return redirect(url_for("gestisci_prodotto", qr_code=qr_code))
 
 @app.route("/elimina", methods=["POST"])
-@app.route("/elimina_prodotto/<qr_code>", methods=["POST"])
+@app.route("/elimina_prodotto/<qr_code>", methods=["POST"]) apparati
 def elimina_prodotto(qr_code=None):
     if not (session.get('is_admin') or session.get('puo_eliminare', 0)):
         flash("Permesso negato per eliminare prodotti.", "error")
