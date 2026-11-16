@@ -7,43 +7,77 @@
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
+        :root {
+            --bs-dark-bg: #0f172a;
+            --bs-card-border: #e2e8f0;
+        }
         body {
-            background-color: #f4f6f9;
+            background-color: #f8fafc;
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            color: #333;
+            color: #1e293b;
         }
         .navbar {
             background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%) !important;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+            box-shadow: 0 4px 20px rgba(0,0,0,0.15);
         }
         .card {
-            border: none;
-            border-radius: 12px;
-            box-shadow: 0 2px 12px rgba(0,0,0,0.04);
+            border: 1px solid var(--bs-card-border);
+            border-radius: 16px;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
+            background: #ffffff;
+        }
+        .stat-card {
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+        .stat-card:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.08);
         }
         .table thead th {
             background-color: #1e293b;
             color: #fff;
             font-weight: 600;
             text-transform: uppercase;
-            font-size: 0.75rem;
-            letter-spacing: 0.5px;
+            font-size: 0.7rem;
+            letter-spacing: 0.8px;
             border: none;
+            padding: 12px 8px;
+            white-space: nowrap;
+        }
+        .table tbody td {
+            padding: 12px 8px;
+            font-size: 0.85rem;
+            vertical-align: middle;
         }
         .permission-badge {
             cursor: pointer;
             transition: all 0.2s ease;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 32px;
+            height: 32px;
+            border-radius: 8px;
         }
         .permission-badge:hover {
-            transform: scale(1.05);
+            background-color: #f1f5f9;
+            transform: scale(1.15);
+        }
+        .table-responsive {
+            border-radius: 16px;
+            overflow-x: auto;
+        }
+        .search-box {
+            max-width: 320px;
+            border-radius: 10px;
         }
     </style>
 </head>
 <body>
     <!-- Navbar -->
     <nav class="navbar navbar-expand-lg navbar-dark sticky-top">
-        <div class="container-fluid px-3">
-            <a class="navbar-brand fw-bold fs-5" href="{{ url_for('index') }}"><i class="fas fa-industry me-2 text-info"></i>Gestionale OMG - Admin</a>
+        <div class="container-fluid px-4">
+            <a class="navbar-brand fw-bold fs-5" href="{{ url_for('index') }}"><i class="fas fa-industry me-2 text-info"></i>Gestionale OMG <span class="badge bg-danger fs-6 ms-2">Admin</span></a>
             <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
                 <span class="navbar-toggler-icon"></span>
             </button>
@@ -64,7 +98,7 @@
                         <a class="nav-link dropdown-toggle text-light px-2 d-flex align-items-center gap-1" href="#" role="button" data-bs-toggle="dropdown">
                             <i class="fas fa-user-circle fs-5 text-info"></i><span>{{ session.get('username', 'Admin') }}</span>
                         </a>
-                        <ul class="dropdown-menu dropdown-menu-end shadow border-0">
+                        <ul class="dropdown-menu dropdown-menu-end shadow border-0 rounded-3">
                             <li><a class="dropdown-item py-2" href="{{ url_for('logout') }}"><i class="fas fa-sign-out-alt me-2 text-danger"></i>Esci</a></li>
                         </ul>
                     </li>
@@ -73,11 +107,11 @@
         </div>
     </nav>
 
-    <div class="container-fluid my-4 px-3">
+    <div class="container-fluid my-4 px-4">
         {% with messages = get_flashed_messages(with_categories=true) %}
             {% if messages %}
                 {% for category, message in messages %}
-                    <div class="alert alert-{{ 'danger' if category == 'error' else 'success' }} alert-dismissible fade show shadow-sm border-0 py-2 mb-3" role="alert">
+                    <div class="alert alert-{{ 'danger' if category == 'error' else 'success' }} alert-dismissible fade show shadow-sm border-0 rounded-3 py-2 mb-3" role="alert">
                         <i class="fas fa-info-circle me-2"></i>{{ message }}
                         <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
                     </div>
@@ -85,43 +119,70 @@
             {% endif %}
         {% endwith %}
 
-        <div class="row mb-4">
-            <div class="col-12">
-                <h2 class="fw-bold text-dark mb-1"><i class="fas fa-user-shield me-2 text-warning"></i>Gestione Utenti e Permessi</h2>
-                <p class="text-muted small">Abilita o disabilita i permessi specifici per ciascun utente registrato nel sistema.</p>
+        <!-- Header e Statistiche -->
+        <div class="row align-items-center mb-4">
+            <div class="col-md-6">
+                <h2 class="fw-bold text-dark mb-1"><i class="fas fa-user-shield me-2 text-warning"></i>Gestione Utenti e Matrice Permessi</h2>
+                <p class="text-muted small mb-0">Abilita o disabilita in tempo reale i permessi specifici per ciascun utente registrato.</p>
+            </div>
+            <div class="col-md-6 text-md-end mt-3 mt-md-0">
+                <div class="d-inline-flex gap-3">
+                    <div class="card stat-card px-3 py-2 text-start bg-white">
+                        <span class="text-muted fs-7">Utenti Totali</span>
+                        <h4 class="fw-bold mb-0 text-primary">{{ utenti|length }}</h4>
+                    </div>
+                    <div class="card stat-card px-3 py-2 text-start bg-white">
+                        <span class="text-muted fs-7">Admin</span>
+                        <h4 class="fw-bold mb-0 text-danger">{{ utenti|selectattr('is_admin')|list|length }}</h4>
+                    </div>
+                </div>
             </div>
         </div>
 
         <!-- Tabella Gestione Utenti -->
-        <div class="card shadow-sm border-0 mb-4 overflow-hidden">
-            <div class="card-header bg-dark text-white py-3">
-                <h5 class="mb-0 fw-bold fs-6"><i class="fas fa-users-cog me-2"></i>Elenco Utenti e Matrice Permessi</h5>
+        <div class="card shadow-sm border-0 mb-4">
+            <div class="card-header bg-white py-3 d-flex flex-wrap justify-content-between align-items-center gap-3 border-bottom">
+                <h5 class="mb-0 fw-bold fs-6 text-dark"><i class="fas fa-users-cog me-2 text-primary"></i>Matrice Permessi Utenti</h5>
+                <div class="input-group search-box">
+                    <span class="input-group-text bg-light border-end-0"><i class="fas fa-search text-muted"></i></span>
+                    <input type="text" id="searchUser" class="form-control form-control-sm border-start-0 bg-light" placeholder="Cerca utente...">
+                </div>
             </div>
             <div class="card-body p-0">
                 <div class="table-responsive">
-                    <table class="table table-hover mb-0 align-middle text-center">
+                    <table class="table table-hover mb-0 align-middle text-center" id="usersTable">
                         <thead>
                             <tr>
                                 <th class="text-start ps-3">Username</th>
-                                <th class="text-center">Ruolo Admin</th>
-                                <th class="text-center">Magazzino</th>
-                                <th class="text-center">Nastri & Tappeti</th>
-                                <th class="text-center">Aggiungi Articoli</th>
-                                <th class="text-center">Modifica Articoli</th>
-                                <th class="text-center">Carico / Scarico</th>
-                                <th class="text-center">Elimina</th>
-                                <th class="text-center">Mag. Pesante</th>
-                                <th class="text-center">Manutenzioni</th>
-                                <th class="text-center">Gestione Agenda</th>
-                                <th class="text-center">Report Ore</th>
-                                <th class="text-center pe-3">Azioni</th>
+                                <th>Ruolo</th>
+                                <th>Magazzino</th>
+                                <th>Nastri</th>
+                                <th>Aggiungi</th>
+                                <th>Modifica</th>
+                                <th>Carico/Scarico</th>
+                                <th>Elimina</th>
+                                <th>Pesante</th>
+                                <th>Manutenzioni</th>
+                                <th>Interventi</th>
+                                <th>Storico</th>
+                                <th>Fornitori</th>
+                                <th>Documenti</th>
+                                <th>Promemoria</th>
+                                <th>Report Ore</th>
+                                <th>OMD</th>
+                                <th>Lavori Int.</th>
+                                <th>Agenda</th>
+                                <th class="pe-3">Azioni</th>
                             </tr>
                         </thead>
                         <tbody>
                             {% for u in utenti %}
                             <tr>
                                 <td class="text-start ps-3 fw-bold text-primary">
-                                    <i class="fas fa-user me-2 text-secondary"></i>{{ u.username }}
+                                    <div class="d-flex align-items-center gap-2">
+                                        <div class="bg-light rounded-circle p-2 text-secondary"><i class="fas fa-user"></i></div>
+                                        <span>{{ u.username }}</span>
+                                    </div>
                                 </td>
                                 <td>
                                     {% if u.is_admin %}
@@ -131,11 +192,32 @@
                                     {% endif %}
                                 </td>
 
-                                <!-- Permesso Magazzino -->
+                                <!-- Ciclo Permessi booleani -->
+                                {% set permessi = [
+                                    ('puo_vedere_magazzino', 'Magazzino Generale'),
+                                    ('puo_vedere_nastri', 'Magazzino Nastri'),
+                                    ('puo_aggiungere_prodotti', 'Aggiungi Prodotti'),
+                                    ('puo_modificare_prodotti', 'Modifica Prodotti'),
+                                    ('puo_caricare_scaricare', 'Carico / Scarico'),
+                                    ('puo_eliminare', 'Elimina Articoli'),
+                                    ('puo_vedere_pesante', 'Magazzino Pesante'),
+                                    ('puo_vedere_manutenzione', 'Manutenzione Esterna'),
+                                    ('puo_gestire_interventi', 'Gestione Interventi'),
+                                    ('puo_vedere_storico_manutenzioni', 'Storico Manutenzioni'),
+                                    ('puo_gestire_fornitori', 'Gestione Fornitori'),
+                                    ('puo_gestire_documenti', 'Gestione Documenti'),
+                                    ('puo_vedere_promemoria', 'Promemoria'),
+                                    ('puo_vedere_report_ore', 'Report Ore'),
+                                    ('puo_vedere_omd', 'Sezione OMD'),
+                                    ('puo_vedere_lavori_interni', 'Lavori Interni'),
+                                    ('puo_gestire_agenda', 'Gestione Agenda')
+                                ] %}
+
+                                {% for campo, etichetta in permessi %}
                                 <td>
-                                    <form action="{{ url_for('toggle_permesso', user_id=u.id, campo='puo_vedere_magazzino') }}" method="POST" class="d-inline">
-                                        <button type="submit" class="btn btn-sm border-0 permission-badge p-0" title="Clicca per invertire">
-                                            {% if u.puo_vedere_magazzino %}
+                                    <form action="{{ url_for('toggle_permesso', user_id=u.id, campo=campo) }}" method="POST" class="d-inline">
+                                        <button type="submit" class="btn btn-sm border-0 permission-badge p-0" title="Attiva/Disattiva: {{ etichetta }}">
+                                            {% if u[campo] %}
                                                 <i class="fas fa-check-circle text-success fs-5"></i>
                                             {% else %}
                                                 <i class="fas fa-times-circle text-danger fs-5"></i>
@@ -143,133 +225,17 @@
                                         </button>
                                     </form>
                                 </td>
+                                {% endfor %}
 
-                                <!-- Permesso Nastri e Tappeti -->
-                                <td>
-                                    <form action="{{ url_for('toggle_permesso', user_id=u.id, campo='puo_vedere_nastri') }}" method="POST" class="d-inline">
-                                        <button type="submit" class="btn btn-sm border-0 permission-badge p-0" title="Clicca per invertire">
-                                            {% if u.puo_vedere_nastri %}
-                                                <i class="fas fa-check-circle text-success fs-5"></i>
-                                            {% else %}
-                                                <i class="fas fa-times-circle text-danger fs-5"></i>
-                                            {% endif %}
-                                        </button>
-                                    </form>
-                                </td>
-
-                                <!-- Permesso Aggiungi -->
-                                <td>
-                                    <form action="{{ url_for('toggle_permesso', user_id=u.id, campo='puo_aggiungere_prodotti') }}" method="POST" class="d-inline">
-                                        <button type="submit" class="btn btn-sm border-0 permission-badge p-0" title="Clicca per invertire">
-                                            {% if u.puo_aggiungere_prodotti %}
-                                                <i class="fas fa-check-circle text-success fs-5"></i>
-                                            {% else %}
-                                                <i class="fas fa-times-circle text-danger fs-5"></i>
-                                            {% endif %}
-                                        </button>
-                                    </form>
-                                </td>
-
-                                <!-- Permesso Modifica -->
-                                <td>
-                                    <form action="{{ url_for('toggle_permesso', user_id=u.id, campo='puo_modificare_prodotti') }}" method="POST" class="d-inline">
-                                        <button type="submit" class="btn btn-sm border-0 permission-badge p-0" title="Clicca per invertire">
-                                            {% if u.puo_modificare_prodotti %}
-                                                <i class="fas fa-check-circle text-success fs-5"></i>
-                                            {% else %}
-                                                <i class="fas fa-times-circle text-danger fs-5"></i>
-                                            {% endif %}
-                                        </button>
-                                    </form>
-                                </td>
-
-                                <!-- Permesso Carico/Scarico -->
-                                <td>
-                                    <form action="{{ url_for('toggle_permesso', user_id=u.id, campo='puo_caricare_scaricare') }}" method="POST" class="d-inline">
-                                        <button type="submit" class="btn btn-sm border-0 permission-badge p-0" title="Clicca per invertire">
-                                            {% if u.puo_caricare_scaricare %}
-                                                <i class="fas fa-check-circle text-success fs-5"></i>
-                                            {% else %}
-                                                <i class="fas fa-times-circle text-danger fs-5"></i>
-                                            {% endif %}
-                                        </button>
-                                    </form>
-                                </td>
-
-                                <!-- Permesso Elimina -->
-                                <td>
-                                    <form action="{{ url_for('toggle_permesso', user_id=u.id, campo='puo_eliminare') }}" method="POST" class="d-inline">
-                                        <button type="submit" class="btn btn-sm border-0 permission-badge p-0" title="Clicca per invertire">
-                                            {% if u.puo_eliminare %}
-                                                <i class="fas fa-check-circle text-success fs-5"></i>
-                                            {% else %}
-                                                <i class="fas fa-times-circle text-danger fs-5"></i>
-                                            {% endif %}
-                                        </button>
-                                    </form>
-                                </td>
-
-                                <!-- Permesso Magazzino Pesante -->
-                                <td>
-                                    <form action="{{ url_for('toggle_permesso', user_id=u.id, campo='puo_vedere_pesante') }}" method="POST" class="d-inline">
-                                        <button type="submit" class="btn btn-sm border-0 permission-badge p-0" title="Clicca per invertire">
-                                            {% if u.puo_vedere_pesante %}
-                                                <i class="fas fa-check-circle text-success fs-5"></i>
-                                            {% else %}
-                                                <i class="fas fa-times-circle text-danger fs-5"></i>
-                                            {% endif %}
-                                        </button>
-                                    </form>
-                                </td>
-
-                                <!-- Permesso Manutenzione -->
-                                <td>
-                                    <form action="{{ url_for('toggle_permesso', user_id=u.id, campo='puo_vedere_manutenzione') }}" method="POST" class="d-inline">
-                                        <button type="submit" class="btn btn-sm border-0 permission-badge p-0" title="Clicca per invertire">
-                                            {% if u.puo_vedere_manutenzione %}
-                                                <i class="fas fa-check-circle text-success fs-5"></i>
-                                            {% else %}
-                                                <i class="fas fa-times-circle text-danger fs-5"></i>
-                                            {% endif %}
-                                        </button>
-                                    </form>
-                                </td>
-
-                                <!-- Permesso Gestire Agenda -->
-                                <td>
-                                    <form action="{{ url_for('toggle_permesso', user_id=u.id, campo='puo_gestire_agenda') }}" method="POST" class="d-inline">
-                                        <button type="submit" class="btn btn-sm border-0 permission-badge p-0" title="Clicca per invertire">
-                                            {% if u.puo_gestire_agenda %}
-                                                <i class="fas fa-check-circle text-success fs-5"></i>
-                                            {% else %}
-                                                <i class="fas fa-times-circle text-danger fs-5"></i>
-                                            {% endif %}
-                                        </button>
-                                    </form>
-                                </td>
-
-                                <!-- Permesso Report Ore -->
-                                <td>
-                                    <form action="{{ url_for('toggle_permesso', user_id=u.id, campo='puo_vedere_report_ore') }}" method="POST" class="d-inline">
-                                        <button type="submit" class="btn btn-sm border-0 permission-badge p-0" title="Clicca per invertire">
-                                            {% if u.puo_vedere_report_ore %}
-                                                <i class="fas fa-check-circle text-success fs-5"></i>
-                                            {% else %}
-                                                <i class="fas fa-times-circle text-danger fs-5"></i>
-                                            {% endif %}
-                                        </button>
-                                    </form>
-                                </td>
-
-                                <!-- Azioni (Reset Password / Elimina Utente) -->
+                                <!-- Azioni -->
                                 <td class="text-center pe-3">
                                     <div class="d-flex justify-content-center gap-1">
-                                        <button class="btn btn-sm btn-outline-primary py-0 px-2" data-bs-toggle="modal" data-bs-target="#modalPassword_{{ u.id }}" title="Reset Password">
+                                        <button class="btn btn-sm btn-outline-primary py-1 px-2 rounded-2" data-bs-toggle="modal" data-bs-target="#modalPassword_{{ u.id }}" title="Reset Password">
                                             <i class="fas fa-key"></i>
                                         </button>
                                         {% if u.username != 'admin' %}
-                                        <form action="{{ url_for('elimina_utente', user_id=u.id) }}" method="POST" class="d-inline" onsubmit="return confirm('Eliminare questo utente?');">
-                                            <button type="submit" class="btn btn-sm btn-outline-danger py-0 px-2" title="Elimina Utente">
+                                        <form action="{{ url_for('elimina_utente', user_id=u.id) }}" method="POST" class="d-inline" onsubmit="return confirm('Sei sicuro di voler eliminare questo utente?');">
+                                            <button type="submit" class="btn btn-sm btn-outline-danger py-1 px-2 rounded-2" title="Elimina Utente">
                                                 <i class="fas fa-trash"></i>
                                             </button>
                                         </form>
@@ -281,21 +247,24 @@
                             <!-- Modale Reset Password -->
                             <div class="modal fade" id="modalPassword_{{ u.id }}" tabindex="-1">
                                 <div class="modal-dialog modal-dialog-centered">
-                                    <div class="modal-content">
+                                    <div class="modal-content border-0 shadow-lg rounded-4">
                                         <form action="{{ url_for('reset_password', user_id=u.id) }}" method="POST">
-                                            <div class="modal-header bg-primary text-white">
-                                                <h5 class="modal-title fw-bold fs-6"><i class="fas fa-key me-2"></i>Reset Password - {{ u.username }}</h5>
+                                            <div class="modal-header bg-dark text-white px-4 py-3">
+                                                <h5 class="modal-title fw-bold fs-6"><i class="fas fa-key me-2 text-warning"></i>Reset Password - {{ u.username }}</h5>
                                                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
                                             </div>
-                                            <div class="modal-body p-3 text-start">
+                                            <div class="modal-body p-4 text-start">
                                                 <div class="mb-3">
                                                     <label class="form-label small fw-bold text-secondary">Nuova Password</label>
-                                                    <input type="password" class="form-control form-control-sm" name="nuova_password" required placeholder="Inserisci nuova password">
+                                                    <div class="input-group">
+                                                        <span class="input-group-text bg-light"><i class="fas fa-lock"></i></span>
+                                                        <input type="password" class="form-control" name="nuova_password" required placeholder="Inserisci nuova password">
+                                                    </div>
                                                 </div>
                                             </div>
-                                            <div class="modal-footer bg-light px-3 py-2">
-                                                <button type="button" class="btn btn-secondary btn-sm px-3" data-bs-dismiss="modal">Annulla</button>
-                                                <button type="submit" class="btn btn-primary btn-sm px-3">Aggiorna Password</button>
+                                            <div class="modal-footer bg-light px-4 py-3 rounded-bottom-4">
+                                                <button type="button" class="btn btn-secondary btn-sm px-4 rounded-pill" data-bs-dismiss="modal">Annulla</button>
+                                                <button type="submit" class="btn btn-primary btn-sm px-4 rounded-pill">Aggiorna Password</button>
                                             </div>
                                         </form>
                                     </div>
@@ -309,31 +278,31 @@
         </div>
 
         <!-- Sezione Log Attività Recenti -->
-        <div class="card shadow-sm border-0">
-            <div class="card-header bg-secondary text-white py-3 d-flex justify-content-between align-items-center">
-                <h5 class="mb-0 fw-bold fs-6"><i class="fas fa-history me-2"></i>Log Attività Recenti del Sistema</h5>
-                <a href="{{ url_for('log_attivita') }}" class="btn btn-sm btn-light text-dark fw-bold px-3">Visualizza Tutti</a>
+        <div class="card shadow-sm border-0 mb-4">
+            <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center border-bottom">
+                <h5 class="mb-0 fw-bold fs-6 text-dark"><i class="fas fa-history me-2 text-secondary"></i>Log Attività Recenti del Sistema</h5>
+                <a href="{{ url_for('log_attivita') }}" class="btn btn-sm btn-outline-dark fw-bold px-3 rounded-pill">Visualizza Tutti</a>
             </div>
             <div class="card-body p-0">
-                <div class="table-responsive" style="max-height: 300px; overflow-y: auto;">
+                <div class="table-responsive" style="max-height: 280px; overflow-y: auto;">
                     <table class="table table-sm table-striped mb-0 small">
                         <thead class="table-light">
                             <tr>
-                                <th class="ps-3">Data e Ora</th>
-                                <th>Utente</th>
-                                <th class="pe-3">Descrizione Attività</th>
+                                <th class="ps-3 py-2">Data e Ora</th>
+                                <th class="py-2">Utente</th>
+                                <th class="pe-3 py-2">Descrizione Attività</th>
                             </tr>
                         </thead>
                         <tbody>
                             {% for log in logs[:15] %}
                             <tr>
-                                <td class="ps-3 text-muted">{{ log.data_ora.strftime('%d/%m/%Y %H:%M:%S') if log.data_ora else '-' }}</td>
-                                <td class="fw-bold text-dark">{{ log.username }}</td>
-                                <td class="pe-3">{{ log.descrizione }}</td>
+                                <td class="ps-3 text-muted"><i class="far fa-clock me-1"></i>{{ log.data_ora.strftime('%d/%m/%Y %H:%M:%S') if log.data_ora else '-' }}</td>
+                                <td class="fw-bold text-dark"><span class="badge bg-light text-dark border px-2 py-1">{{ log.username }}</span></td>
+                                <td class="pe-3 text-secondary">{{ log.descrizione }}</td>
                             </tr>
                             {% else %}
                             <tr>
-                                <td colspan="3" class="text-center py-3 text-muted">Nessun log recente registrato.</td>
+                                <td colspan="3" class="text-center py-4 text-muted">Nessun log recente registrato.</td>
                             </tr>
                             {% endfor %}
                         </tbody>
@@ -344,5 +313,20 @@
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // Script di ricerca istantanea utenti
+        document.getElementById('searchUser').addEventListener('keyup', function() {
+            let filter = this.value.toLowerCase();
+            let rows = document.querySelectorAll('#usersTable tbody tr');
+            rows.forEach(row => {
+                let username = row.querySelector('td').textContent.toLowerCase();
+                if (username.includes(filter)) {
+                    row.style.display = '';
+                } else {
+                    row.style.display = 'none';
+                }
+            });
+        });
+    </script>
 </body>
 </html>
