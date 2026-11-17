@@ -176,7 +176,6 @@ def init_db():
                 password VARCHAR(255) NOT NULL,
                 is_admin INT DEFAULT 0,
                 puo_vedere_magazzino INT DEFAULT 1,
-                puo_vedere_nastri INT DEFAULT 1,
                 puo_aggiungere_prodotti INT DEFAULT 1,
                 puo_modificare_prodotti INT DEFAULT 1,
                 puo_caricare_scaricare INT DEFAULT 1,
@@ -297,12 +296,6 @@ def init_db():
                 tipo_di_riduttore VARCHAR(255),
                 tipo_di_motore VARCHAR(255),
                 tappeto_presente BOOLEAN DEFAULT TRUE,
-                in_manutenzione BOOLEAN DEFAULT FALSE,
-                cliente_manutenzione VARCHAR(255),
-                data_spedizione VARCHAR(255),
-                data_riconsegna VARCHAR(255),
-                vettore VARCHAR(255),
-                note_manutenzione TEXT,
                 note TEXT,
                 creato_il TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             );
@@ -336,18 +329,9 @@ def init_db():
         cur.execute("ALTER TABLE cambi_serie ADD COLUMN IF NOT EXISTS diametro_bottiglia_nuova VARCHAR(50);")
         cur.execute("ALTER TABLE cambi_serie ADD COLUMN IF NOT EXISTS note TEXT;")
         cur.execute("ALTER TABLE nastri ADD COLUMN IF NOT EXISTS nome VARCHAR(255);")
-        cur.execute("ALTER TABLE nastri ADD COLUMN IF NOT EXISTS in_manutenzione BOOLEAN DEFAULT FALSE;")
-        cur.execute("ALTER TABLE nastri ADD COLUMN IF NOT EXISTS cliente_manutenzione VARCHAR(255);")
-        cur.execute("ALTER TABLE nastri ADD COLUMN IF NOT EXISTS data_spedizione VARCHAR(255);")
-        cur.execute("ALTER TABLE nastri ADD COLUMN IF NOT EXISTS data_riconsegna VARCHAR(255);")
-        cur.execute("ALTER TABLE nastri ADD COLUMN IF NOT EXISTS vettore VARCHAR(255);")
-        cur.execute("ALTER TABLE nastri ADD COLUMN IF NOT EXISTS note_manutenzione TEXT;")
-        
-        cur.execute("ALTER TABLE utenti ADD COLUMN IF NOT EXISTS puo_vedere_nastri INT DEFAULT 1;")
 
         permessi_lista = [
             ("puo_vedere_magazzino", "INT DEFAULT 1"),
-            ("puo_vedere_nastri", "INT DEFAULT 1"),
             ("puo_aggiungere_prodotti", "INT DEFAULT 1"),
             ("puo_modificare_prodotti", "INT DEFAULT 1"),
             ("puo_caricare_scaricare", "INT DEFAULT 1"),
@@ -380,8 +364,8 @@ def init_db():
         if not cur.fetchone():
             hashed_pw = generate_password_hash("admin")
             cur.execute("""
-                INSERT INTO utenti (username, password, is_admin, puo_vedere_magazzino, puo_vedere_nastri, puo_aggiungere_prodotti, puo_modificare_prodotti, puo_caricare_scaricare, puo_eliminare, puo_vedere_pesante, puo_vedere_manutenzione, puo_aprire_manutenzioni, puo_gestire_interventi, puo_assegnare_manutenzioni, puo_eliminare_interventi, puo_vedere_manutenzioni_esterne, puo_vedere_storico_manutenzioni, puo_eliminare_storico, puo_gestire_fornitori, puo_importare_fornitori, puo_gestire_documenti, puo_eliminare_documenti, puo_vedere_promemoria, puo_assegnare_promemoria, puo_vedere_report_ore, puo_vedere_omd, puo_vedere_lavori_interni, puo_gestire_agenda)
-                VALUES (%s, %s, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1);
+                INSERT INTO utenti (username, password, is_admin, puo_vedere_magazzino, puo_aggiungere_prodotti, puo_modificare_prodotti, puo_caricare_scaricare, puo_eliminare, puo_vedere_pesante, puo_vedere_manutenzione, puo_aprire_manutenzioni, puo_gestire_interventi, puo_assegnare_manutenzioni, puo_eliminare_interventi, puo_vedere_manutenzioni_esterne, puo_vedere_storico_manutenzioni, puo_eliminare_storico, puo_gestire_fornitori, puo_importare_fornitori, puo_gestire_documenti, puo_eliminare_documenti, puo_vedere_promemoria, puo_assegnare_promemoria, puo_vedere_report_ore, puo_vedere_omd, puo_vedere_lavori_interni, puo_gestire_agenda)
+                VALUES (%s, %s, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1);
             """, ('admin', hashed_pw))
 
         conn.commit()
@@ -536,8 +520,8 @@ def registra():
                 cur = conn.cursor()
                 hashed_pw = generate_password_hash(password)
                 cur.execute("""
-                    INSERT INTO utenti (username, password, is_admin, puo_vedere_magazzino, puo_vedere_nastri, puo_aggiungere_prodotti, puo_modificare_prodotti, puo_caricare_scaricare, puo_eliminare, puo_vedere_pesante, puo_vedere_manutenzione, puo_aprire_manutenzioni, puo_gestire_interventi, puo_assegnare_manutenzioni, puo_eliminare_interventi, puo_vedere_manutenzioni_esterne, puo_vedere_storico_manutenzioni, puo_eliminare_storico, puo_gestire_fornitori, puo_importare_fornitori, puo_gestire_documenti, puo_eliminare_documenti, puo_vedere_promemoria, puo_assegnare_promemoria, puo_vedere_report_ore, puo_vedere_omd, puo_vedere_lavori_interni, puo_gestire_agenda)
-                    VALUES (%s, %s, 0, 1, 1, 1, 1, 1, 0, 1, 1, 1, 1, 1, 0, 1, 1, 0, 1, 1, 1, 0, 1, 0, 1, 1, 1, 1);
+                    INSERT INTO utenti (username, password, is_admin, puo_vedere_magazzino, puo_aggiungere_prodotti, puo_modificare_prodotti, puo_caricare_scaricare, puo_eliminare, puo_vedere_pesante, puo_vedere_manutenzione, puo_aprire_manutenzioni, puo_gestire_interventi, puo_assegnare_manutenzioni, puo_eliminare_interventi, puo_vedere_manutenzioni_esterne, puo_vedere_storico_manutenzioni, puo_eliminare_storico, puo_gestire_fornitori, puo_importare_fornitori, puo_gestire_documenti, puo_eliminare_documenti, puo_vedere_promemoria, puo_assegnare_promemoria, puo_vedere_report_ore, puo_vedere_omd, puo_vedere_lavori_interni, puo_gestire_agenda)
+                    VALUES (%s, %s, 0, 1, 1, 1, 1, 0, 1, 1, 1, 1, 1, 0, 1, 1, 0, 1, 1, 1, 0, 1, 0, 1, 1, 1, 1);
                 """, (username, hashed_pw))
                 conn.commit()
                 cur.close()
@@ -645,7 +629,7 @@ def elimina_utente(user_id):
 @app.route("/nastri", methods=["GET", "POST"])
 @app.route("/nastri.html", methods=["GET", "POST"])
 def nastri():
-    if not (session.get('is_admin') or session.get('puo_vedere_nastri', 1)):
+    if not (session.get('is_admin') or session.get('puo_vedere_magazzino', 1)):
         flash("Accesso al modulo Nastri non autorizzato.", "error")
         return redirect(url_for('index'))
 
@@ -692,14 +676,10 @@ def nastri():
         cur.execute("SELECT * FROM nastri ORDER BY sezione_impianto ASC, numero ASC;")
     
     lista_nastri = cur.fetchall()
-
-    cur.execute("SELECT nome_azienda FROM fornitori ORDER BY nome_azienda ASC;")
-    fornitori = cur.fetchall()
-
     cur.close()
     conn.close()
 
-    return render_template("nastri.html", nastri=lista_nastri, sezioni_disponibili=sezioni_disponibili, sezione_filtro=sezione_filtro, fornitori=fornitori)
+    return render_template("nastri.html", nastri=lista_nastri, sezioni_disponibili=sezioni_disponibili, sezione_filtro=sezione_filtro)
 
 @app.route("/toggle_tappeto/<int:nastro_id>", methods=["POST"])
 def toggle_tappeto(nastro_id):
@@ -749,60 +729,6 @@ def modifica_nastro(nastro_id):
         flash(f"Errore aggiornamento nastro: {e}", "error")
     return redirect(url_for("nastri"))
 
-@app.route("/manda_manutenzione_nastro/<int:nastro_id>", methods=["POST"])
-def manda_manutenzione_nastro(nastro_id):
-    cliente_manutenzione = request.form.get("cliente_manutenzione", "").strip()
-    data_spedizione = request.form.get("data_spedizione", "").strip() or None
-    data_riconsegna = request.form.get("data_riconsegna", "").strip() or None
-    vettore = request.form.get("vettore", "").strip()
-    note_manutenzione = request.form.get("note_manutenzione", "").strip()
-
-    try:
-        conn = get_db_connection()
-        cur = conn.cursor()
-        cur.execute("""
-            UPDATE nastri 
-            SET in_manutenzione = TRUE,
-                cliente_manutenzione = %s,
-                data_spedizione = %s,
-                data_riconsegna = %s,
-                vettore = %s,
-                note_manutenzione = %s
-            WHERE id = %s;
-        """, (cliente_manutenzione, data_spedizione, data_riconsegna, vettore, note_manutenzione, nastro_id))
-        conn.commit()
-        cur.close()
-        conn.close()
-        registra_log(f"Nastro ID {nastro_id} inviato in manutenzione/spedizione")
-        flash("Nastro inviato in manutenzione con successo!", "success")
-    except Exception as e:
-        flash(f"Errore invio nastro in manutenzione: {e}", "error")
-    return redirect(url_for("nastri"))
-
-@app.route("/ripristina_nastro/<int:nastro_id>", methods=["POST"])
-def ripristina_nastro(nastro_id):
-    try:
-        conn = get_db_connection()
-        cur = conn.cursor()
-        cur.execute("""
-            UPDATE nastri 
-            SET in_manutenzione = FALSE,
-                cliente_manutenzione = NULL,
-                data_spedizione = NULL,
-                data_riconsegna = NULL,
-                vettore = NULL,
-                note_manutenzione = NULL
-            WHERE id = %s;
-        """, (nastro_id,))
-        conn.commit()
-        cur.close()
-        conn.close()
-        registra_log(f"Nastro ID {nastro_id} rientrato da manutenzione")
-        flash("Nastro rientrato in magazzino con successo!", "success")
-    except Exception as e:
-        flash(f"Errore rientro nastro: {e}", "error")
-    return redirect(url_for("nastri"))
-
 @app.route("/elimina_nastro/<int:nastro_id>", methods=["POST"])
 def elimina_nastro(nastro_id):
     if not (session.get('is_admin') or session.get('puo_eliminare', 0)):
@@ -825,14 +751,14 @@ def elimina_nastro(nastro_id):
 def esporta_nastri_csv():
     conn = get_db_connection()
     cur = conn.cursor()
-    cur.execute("SELECT codice_sap, numero, sezione_impianto, misura, tipo, utilizzo, misura_nastro_finito, tipo_di_riduttore, tipo_di_motore, tappeto_presente, in_manutenzione, cliente_manutenzione, note FROM nastri ORDER BY sezione_impianto ASC, numero ASC;")
+    cur.execute("SELECT codice_sap, numero, sezione_impianto, misura, tipo, utilizzo, misura_nastro_finito, tipo_di_riduttore, tipo_di_motore, tappeto_presente, note FROM nastri ORDER BY sezione_impianto ASC, numero ASC;")
     nastri_list = cur.fetchall()
     cur.close()
     conn.close()
 
     output = io.StringIO()
     writer = csv.writer(output)
-    writer.writerow(['Codice SAP', 'Numero', 'Sezione Impianto', 'Misura', 'Tipo', 'Utilizzo', 'Misura Finito', 'Riduttore', 'Motore', 'Tappeto Presente', 'In Manutenzione', 'Fornitore/Cliente', 'Note'])
+    writer.writerow(['Codice SAP', 'Numero', 'Sezione Impianto', 'Misura', 'Tipo', 'Utilizzo', 'Misura Finito', 'Riduttore', 'Motore', 'Tappeto Presente', 'Note'])
     for n in nastri_list:
         writer.writerow([
             n.get('codice_sap', ''),
@@ -845,8 +771,6 @@ def esporta_nastri_csv():
             n.get('tipo_di_riduttore', ''),
             n.get('tipo_di_motore', ''),
             'Presente' if n.get('tappeto_presente', True) else 'Assente',
-            'Sì' if n.get('in_manutenzione', False) else 'No',
-            n.get('cliente_manutenzione', ''),
             n.get('note', '')
         ])
     return Response(
@@ -868,23 +792,6 @@ def stampa_nastri():
     cur.close()
     conn.close()
     return render_template("stampa_nastri.html", nastri=lista, sezione=sezione)
-
-@app.route('/nastro/<int:nastro_id>/memo')
-def stampa_memo_nastro(nastro_id):
-    conn = get_db_connection()
-    cur = conn.cursor()
-    cur.execute("SELECT * FROM nastri WHERE id = %s;", (nastro_id,))
-    nastro = cur.fetchone()
-    cur.close()
-    conn.close()
-    if not nastro:
-        flash("Nastro non trovato.", "error")
-        return redirect(url_for("nastri"))
-    return render_template('stampa_memo_nastro.html', nastro=nastro)
-
-@app.route('/nastro/<int:nastro_id>/memo_spedizione')
-def stampa_memo_spedizione_nastro(nastro_id):
-    return stampa_memo_nastro(nastro_id)
 
 @app.route("/agenda", methods=["GET", "POST"])
 @app.route("/agenda.html", methods=["GET", "POST"])
@@ -1147,6 +1054,7 @@ def qr_scaffale():
     conn.close()
     return render_template("qr_scaffale.html", prodotti=prodotti, ubicazione=ubicazione)
 
+# --- CAMBI SERIE & API ULTIMA BOTTIGLIA ---
 def ricalcola_catena_cambi(cur, forno, linea):
     try:
         cur.execute("""
@@ -1432,6 +1340,7 @@ def stampa_selezionati_cambi_serie():
     
     return render_template("stampa_cambi_serie.html", record_serie=record_selezionati)
 
+# --- REPORT ORE & STATISTICHE ---
 @app.route("/report_ore")
 @app.route("/report_ore.html")
 def report_ore():
@@ -1531,6 +1440,7 @@ def report_ore():
                            chart_tipi_labels=chart_tipi_labels,
                            chart_tipi_values=chart_tipi_values)
 
+# --- RICHIESTE INTERVENTO MANUTENZIONE OFFICINA ---
 @app.route("/richieste_manutenzione", methods=["GET", "POST"])
 @app.route("/richieste_manutenzione.html", methods=["GET", "POST"])
 def richieste_manutenzione():
@@ -1933,6 +1843,7 @@ def elimina_promemoria(promemoria_id):
     flash("Promemoria eliminato.", "success")
     return redirect(url_for("promemoria"))
 
+# --- FORNITORI ---
 @app.route("/fornitori", methods=["GET", "POST"])
 @app.route("/fornitori.html", methods=["GET", "POST"])
 def fornitori():
