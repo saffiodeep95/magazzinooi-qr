@@ -2747,18 +2747,31 @@ def scarico():
 @app.route("/scanner_globale.html", methods=["GET", "POST"])
 def scanner_globale():
     if request.method == "POST":
-        qr_code = request.form.get("qr_code", "").strip()
-        if qr_code:
+        codice = request.form.get("qr_code", "").strip()
+        if codice:
             conn = get_db_connection()
             cur = conn.cursor()
-            cur.execute("SELECT * FROM prodotti WHERE qr_code = %s;", (qr_code,))
+            
+            # 1. Controlla se è un articolo esistente
+            cur.execute("SELECT * FROM prodotti WHERE qr_code = %s;", (codice,))
             prodotto = cur.fetchone()
+            
+            if prodotto:
+                cur.close()
+                conn.close()
+                return redirect(url_for("gestisci_prodotto", qr_code=codice))
+            
+            # 2. Controlla se corrisponde a un'ubicazione/scaffale
+            cur.execute("SELECT * FROM prodotti WHERE posizione ILIKE %s;", (f"%{codice}%",))
+            prodotti_scaffale = cur.fetchall()
             cur.close()
             conn.close()
-            if prodotto:
-                return redirect(url_for("gestisci_prodotto", qr_code=qr_code))
+            
+            if prodotti_scaffale:
+                return redirect(url_for("qr_scaffale", ubicazione=codice))
             else:
-                flash(f"Nessun articolo trovato con QR Code: {qr_code}", "error")
+                flash(f"Nessun articolo o ubicazione trovata con il codice: {codice}", "error")
+                
     return render_template("scanner_globale.html")
 
 @app.route("/gestisci/<qr_code>")
