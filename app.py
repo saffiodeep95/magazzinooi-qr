@@ -627,7 +627,7 @@ def elimina_utente(user_id):
     return redirect(url_for('admin_utenti'))
 
 # ========================================================================
-# MODULO NASTRI & TAPPETI (Aggiornato con controllo sicurezza e try-except)
+# MODULO NASTRI & TAPPETI (Con gestione sicura e rotta stampa singolo nastro)
 # ========================================================================
 @app.route("/nastri", methods=["GET", "POST"])
 @app.route("/nastri.html", methods=["GET", "POST"])
@@ -640,7 +640,6 @@ def nastri():
         conn = get_db_connection()
         cur = conn.cursor()
 
-        # Controllo di sicurezza e creazione automatica colonne se mancanti
         cur.execute("ALTER TABLE nastri ADD COLUMN IF NOT EXISTS codice_sap VARCHAR(255);")
         cur.execute("ALTER TABLE nastri ADD COLUMN IF NOT EXISTS numero VARCHAR(255);")
         cur.execute("ALTER TABLE nastri ADD COLUMN IF NOT EXISTS nome VARCHAR(255);")
@@ -821,6 +820,24 @@ def stampa_nastri():
     except Exception:
         lista = []
     return render_template("stampa_nastri.html", nastri=lista, sezione=sezione)
+
+@app.route("/stampa_nastro_spedizione_nastro/<int:nastro_id>")
+def stampa_nastro_spedizione_nastro(nastro_id):
+    try:
+        conn = get_db_connection()
+        cur = conn.cursor()
+        cur.execute("SELECT * FROM nastri WHERE id = %s;", (nastro_id,))
+        nastro = cur.fetchone()
+        cur.close()
+        conn.close()
+    except Exception:
+        nastro = None
+
+    if not nastro:
+        flash("Nastro non trovato.", "error")
+        return redirect(url_for("nastri"))
+    
+    return render_template("stampa_nastri.html", nastri=[nastro], sezione="Dettaglio")
 
 
 @app.route("/agenda", methods=["GET", "POST"])
