@@ -627,7 +627,7 @@ def elimina_utente(user_id):
     return redirect(url_for('admin_utenti'))
 
 # ========================================================================
-# MODULO NASTRI & TAPPETI (Con gestione sicura e rotte di stampa alias)
+# MODULO NASTRI & TAPPETI (Con gestione sicura e rotte di stampa completate)
 # ========================================================================
 @app.route("/nastri", methods=["GET", "POST"])
 @app.route("/nastri.html", methods=["GET", "POST"])
@@ -840,7 +840,11 @@ def stampa_memo_spedizione_nastro(nastro_id):
         flash("Nastro non trovato.", "error")
         return redirect(url_for("nastri"))
     
-    return render_template("stampa_nastri.html", nastri=[nastro], sezione="Dettaglio")
+    # Priorità al file specifico stampa_memo_nastro.html se esiste, altrimenti ricade su stampa_nastri.html
+    try:
+        return render_template("stampa_memo_nastro.html", nastro=nastro, nastri=[nastro])
+    except Exception:
+        return render_template("stampa_nastri.html", nastri=[nastro], sezione="Dettaglio")
 
 
 @app.route("/agenda", methods=["GET", "POST"])
