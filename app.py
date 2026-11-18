@@ -627,7 +627,7 @@ def elimina_utente(user_id):
     return redirect(url_for('admin_utenti'))
 
 # ========================================================================
-# MODULO NASTRI & TAPPETI (Con gestione sicura e rotta stampa_memo_nastro)
+# MODULO NASTRI & TAPPETI (Con gestione sicura e rotte di stampa alias)
 # ========================================================================
 @app.route("/nastri", methods=["GET", "POST"])
 @app.route("/nastri.html", methods=["GET", "POST"])
@@ -821,10 +821,11 @@ def stampa_nastri():
         lista = []
     return render_template("stampa_nastri.html", nastri=lista, sezione=sezione)
 
+@app.route("/stampa_memo_spedizione_nastro/<int:nastro_id>")
 @app.route("/stampa_memo_nastro/<int:nastro_id>")
 @app.route("/stampa_nastro_spedizione_nastro/<int:nastro_id>")
 @app.route("/stampa_nastro_spedizione/<int:nastro_id>")
-def stampa_memo_nastro(nastro_id):
+def stampa_memo_spedizione_nastro(nastro_id):
     try:
         conn = get_db_connection()
         cur = conn.cursor()
