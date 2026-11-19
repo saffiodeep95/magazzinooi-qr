@@ -626,9 +626,6 @@ def elimina_utente(user_id):
         flash(f"Errore eliminazione utente: {e}", "error")
     return redirect(url_for('admin_utenti'))
 
-# ========================================================================
-# MODULO NASTRI & TAPPETI (Con tutte le rotte originali integrate)
-# ========================================================================
 @app.route("/nastri", methods=["GET", "POST"])
 @app.route("/nastri.html", methods=["GET", "POST"])
 def nastri():
@@ -636,38 +633,24 @@ def nastri():
         flash("Accesso al modulo Nastri non autorizzato.", "error")
         return redirect(url_for('index'))
 
-    try:
-        conn = get_db_connection()
-        cur = conn.cursor()
+    conn = get_db_connection()
+    cur = conn.cursor()
 
-        cur.execute("ALTER TABLE nastri ADD COLUMN IF NOT EXISTS codice_sap VARCHAR(255);")
-        cur.execute("ALTER TABLE nastri ADD COLUMN IF NOT EXISTS numero VARCHAR(255);")
-        cur.execute("ALTER TABLE nastri ADD COLUMN IF NOT EXISTS nome VARCHAR(255);")
-        cur.execute("ALTER TABLE nastri ADD COLUMN IF NOT EXISTS sezione_impianto VARCHAR(255);")
-        cur.execute("ALTER TABLE nastri ADD COLUMN IF NOT EXISTS misura VARCHAR(255);")
-        cur.execute("ALTER TABLE nastri ADD COLUMN IF NOT EXISTS tipo VARCHAR(255);")
-        cur.execute("ALTER TABLE nastri ADD COLUMN IF NOT EXISTS utilizzo VARCHAR(255);")
-        cur.execute("ALTER TABLE nastri ADD COLUMN IF NOT EXISTS misura_nastro_finito VARCHAR(255);")
-        cur.execute("ALTER TABLE nastri ADD COLUMN IF NOT EXISTS tipo_di_riduttore VARCHAR(255);")
-        cur.execute("ALTER TABLE nastri ADD COLUMN IF NOT EXISTS tipo_di_motore VARCHAR(255);")
-        cur.execute("ALTER TABLE nastri ADD COLUMN IF NOT EXISTS tappeto_presente BOOLEAN DEFAULT TRUE;")
-        cur.execute("ALTER TABLE nastri ADD COLUMN IF NOT EXISTS note TEXT;")
-        conn.commit()
+    if request.method == "POST":
+        codice_sap = request.form.get("codice_sap", "").strip()
+        numero = request.form.get("numero", "").strip()
+        sezione_impianto = request.form.get("sezione_impianto", "COMPOSIZIONE").strip()
+        misura = request.form.get("misura", "").strip()
+        tipo = request.form.get("tipo", "").strip()
+        utilizzo = request.form.get("utilizzo", "").strip()
+        misura_nastro_finito = request.form.get("misura_nastro_finito", "").strip()
+        tipo_di_riduttore = request.form.get("tipo_di_riduttore", "").strip()
+        tipo_di_motore = request.form.get("tipo_di_motore", "").strip()
+        tappeto_presente = True if request.form.get("tappeto_presente", "1") == "1" else False
+        note = request.form.get("note", "").strip()
+        nome = f"Nastro {numero} - {sezione_impianto}"
 
-        if request.method == "POST":
-            codice_sap = request.form.get("codice_sap", "").strip()
-            numero = request.form.get("numero", "").strip()
-            sezione_impianto = request.form.get("sezione_impianto", "COMPOSIZIONE").strip()
-            misura = request.form.get("misura", "").strip()
-            tipo = request.form.get("tipo", "").strip()
-            utilizzo = request.form.get("utilizzo", "").strip()
-            misura_nastro_finito = request.form.get("misura_nastro_finito", "").strip()
-            tipo_di_riduttore = request.form.get("tipo_di_riduttore", "").strip()
-            tipo_di_motore = request.form.get("tipo_di_motore", "").strip()
-            tappeto_presente = True if request.form.get("tappeto_presente", "1") == "1" else False
-            note = request.form.get("note", "").strip()
-            nome = f"Nastro {numero} - {sezione_impianto}"
-
+        try:
             cur.execute("""
                 INSERT INTO nastri (codice_sap, numero, nome, sezione_impianto, misura, tipo, utilizzo, misura_nastro_finito, tipo_di_riduttore, tipo_di_motore, tappeto_presente, note)
                 VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s);
@@ -675,30 +658,26 @@ def nastri():
             conn.commit()
             registra_log(f"Aggiunto nuovo nastro: {numero} ({sezione_impianto})")
             flash("Nastro aggiunto con successo!", "success")
-            cur.close()
-            conn.close()
-            return redirect(url_for("nastri"))
-
-        sezione_filtro = request.args.get("sezione", "Tutte")
-
-        cur.execute("SELECT DISTINCT sezione_impianto FROM nastri WHERE sezione_impianto IS NOT NULL AND sezione_impianto != '' ORDER BY sezione_impianto ASC;")
-        sezioni_disponibili = [r['sezione_impianto'] for r in cur.fetchall()]
-
-        if sezione_filtro != "Tutte":
-            cur.execute("SELECT * FROM nastri WHERE sezione_impianto = %s ORDER BY id DESC;", (sezione_filtro,))
-        else:
-            cur.execute("SELECT * FROM nastri ORDER BY sezione_impianto ASC, id DESC;")
+        except Exception as e:
+            flash(f"Errore durante l'inserimento del nastro: {e}", "error")
         
-        lista_nastri = cur.fetchall()
         cur.close()
         conn.close()
+        return redirect(url_for("nastri"))
 
-    except Exception as e:
-        print(f"Errore modulo nastri: {e}")
-        flash(f"Errore nel caricamento dei nastri: {e}", "error")
-        lista_nastri = []
-        sezioni_disponibili = []
-        sezione_filtro = "Tutte"
+    sezione_filtro = request.args.get("sezione", "Tutte")
+
+    cur.execute("SELECT DISTINCT sezione_impianto FROM nastri WHERE sezione_impianto IS NOT NULL AND sezione_impianto != '' ORDER BY sezione_impianto ASC;")
+    sezioni_disponibili = [r['sezione_impianto'] for r in cur.fetchall()]
+
+    if sezione_filtro != "Tutte":
+        cur.execute("SELECT * FROM nastri WHERE sezione_impianto = %s ORDER BY numero ASC, id DESC;", (sezione_filtro,))
+    else:
+        cur.execute("SELECT * FROM nastri ORDER BY sezione_impianto ASC, numero ASC;")
+    
+    lista_nastri = cur.fetchall()
+    cur.close()
+    conn.close()
 
     return render_template("nastri.html", nastri=lista_nastri, sezioni_disponibili=sezioni_disponibili, sezione_filtro=sezione_filtro)
 
@@ -732,16 +711,15 @@ def modifica_nastro(nastro_id):
     tipo_di_riduttore = request.form.get("tipo_di_riduttore", "").strip()
     tipo_di_motore = request.form.get("tipo_di_motore", "").strip()
     note = request.form.get("note", "").strip()
-    nome = f"Nastro {numero} - {sezione_impianto}" if numero else ""
 
     try:
         conn = get_db_connection()
         cur = conn.cursor()
         cur.execute("""
             UPDATE nastri 
-            SET codice_sap = %s, numero = %s, nome = %s, sezione_impianto = %s, misura = %s, tipo = %s, utilizzo = %s, misura_nastro_finito = %s, tipo_di_riduttore = %s, tipo_di_motore = %s, note = %s
+            SET codice_sap = %s, numero = %s, sezione_impianto = %s, misura = %s, tipo = %s, utilizzo = %s, misura_nastro_finito = %s, tipo_di_riduttore = %s, tipo_di_motore = %s, note = %s
             WHERE id = %s;
-        """, (codice_sap, numero, nome, sezione_impianto, misura, tipo, utilizzo, misura_nastro_finito, tipo_di_riduttore, tipo_di_motore, note, nastro_id))
+        """, (codice_sap, numero, sezione_impianto, misura, tipo, utilizzo, misura_nastro_finito, tipo_di_riduttore, tipo_di_motore, note, nastro_id))
         conn.commit()
         cur.close()
         conn.close()
@@ -771,15 +749,12 @@ def elimina_nastro(nastro_id):
 
 @app.route("/esporta_nastri_csv")
 def esporta_nastri_csv():
-    try:
-        conn = get_db_connection()
-        cur = conn.cursor()
-        cur.execute("SELECT codice_sap, numero, sezione_impianto, misura, tipo, utilizzo, misura_nastro_finito, tipo_di_riduttore, tipo_di_motore, tappeto_presente, note FROM nastri ORDER BY sezione_impianto ASC, id DESC;")
-        nastri_list = cur.fetchall()
-        cur.close()
-        conn.close()
-    except Exception:
-        nastri_list = []
+    conn = get_db_connection()
+    cur = conn.cursor()
+    cur.execute("SELECT codice_sap, numero, sezione_impianto, misura, tipo, utilizzo, misura_nastro_finito, tipo_di_riduttore, tipo_di_motore, tappeto_presente, note FROM nastri ORDER BY sezione_impianto ASC, numero ASC;")
+    nastri_list = cur.fetchall()
+    cur.close()
+    conn.close()
 
     output = io.StringIO()
     writer = csv.writer(output)
@@ -807,26 +782,23 @@ def esporta_nastri_csv():
 @app.route("/stampa_nastri")
 def stampa_nastri():
     sezione = request.args.get("sezione", "Tutte")
-    try:
-        conn = get_db_connection()
-        cur = conn.cursor()
-        if sezione != "Tutte":
-            cur.execute("SELECT * FROM nastri WHERE sezione_impianto = %s ORDER BY id DESC;", (sezione,))
-        else:
-            cur.execute("SELECT * FROM nastri ORDER BY sezione_impianto ASC, id DESC;")
-        lista = cur.fetchall()
-        cur.close()
-        conn.close()
-    except Exception:
-        lista = []
+    conn = get_db_connection()
+    cur = conn.cursor()
+    if sezione != "Tutte":
+        cur.execute("SELECT * FROM nastri WHERE sezione_impianto = %s ORDER BY numero ASC;", (sezione,))
+    else:
+        cur.execute("SELECT * FROM nastri ORDER BY sezione_impianto ASC, numero ASC;")
+    lista = cur.fetchall()
+    cur.close()
+    conn.close()
     return render_template("stampa_nastri.html", nastri=lista, sezione=sezione)
 
-# Rotte per la stampa memo nastro
-@app.route("/stampa_memo_spedizione_nastro/<int:nastro_id>")
-@app.route("/stampa_memo_nastro/<int:nastro_id>")
+@app.route("/stampa_memo_nastro/<int:nastro_id>", endpoint="stampa_memo_nastro")
+@app.route("/stampa_memo_spedizione_nastro/<int:nastro_id>", endpoint="stampa_memo_spedizione_nastro")
 @app.route("/stampa_nastro_spedizione_nastro/<int:nastro_id>")
 @app.route("/stampa_nastro_spedizione/<int:nastro_id>")
-def stampa_memo_spedizione_nastro(nastro_id):
+def stampa_memo_nastro(nastro_id):
+    nastro = None
     try:
         conn = get_db_connection()
         cur = conn.cursor()
@@ -834,16 +806,20 @@ def stampa_memo_spedizione_nastro(nastro_id):
         nastro = cur.fetchone()
         cur.close()
         conn.close()
-    except Exception:
-        nastro = None
+    except Exception as e:
+        print(f"Errore recupero nastro memo: {e}")
+        flash(f"Errore nel recupero del nastro: {e}", "error")
+        return redirect(url_for("nastri"))
 
     if not nastro:
         flash("Nastro non trovato.", "error")
         return redirect(url_for("nastri"))
-    
-    return render_template("stampa_memo_nastro.html", nastro=nastro, nastri=[nastro])
 
-# Rotta per manutenzione nastro
+    try:
+        return render_template("stampa_memo_nastro.html", nastro=nastro, nastri=[nastro])
+    except Exception:
+        return render_template("stampa_nastri.html", nastri=[nastro], sezione=nastro.get("sezione_impianto") or "Tutte")
+
 @app.route("/manda_manutenzione_nastro/<int:nastro_id>", methods=["POST"])
 def manda_manutenzione_nastro(nastro_id):
     try:
@@ -866,6 +842,7 @@ def manda_manutenzione_nastro(nastro_id):
         cur.close()
         conn.close()
     except Exception as e:
+        print(f"Errore manutenzione nastro: {e}")
         flash(f"Errore manutenzione nastro: {e}", "error")
     return redirect(url_for("nastri"))
 
@@ -2734,29 +2711,18 @@ def scarico():
 @app.route("/scanner_globale.html", methods=["GET", "POST"])
 def scanner_globale():
     if request.method == "POST":
-        codice = request.form.get("qr_code", "").strip()
-        if codice:
+        qr_code = request.form.get("qr_code", "").strip()
+        if qr_code:
             conn = get_db_connection()
             cur = conn.cursor()
-            
-            cur.execute("SELECT * FROM prodotti WHERE qr_code = %s;", (codice,))
+            cur.execute("SELECT * FROM prodotti WHERE qr_code = %s;", (qr_code,))
             prodotto = cur.fetchone()
-            
-            if prodotto:
-                cur.close()
-                conn.close()
-                return redirect(url_for("gestisci_prodotto", qr_code=codice))
-            
-            cur.execute("SELECT * FROM prodotti WHERE posizione ILIKE %s;", (f"%{codice}%",))
-            prodotti_scaffale = cur.fetchall()
             cur.close()
             conn.close()
-            
-            if prodotti_scaffale:
-                return redirect(url_for("qr_scaffale", ubicazione=codice))
+            if prodotto:
+                return redirect(url_for("gestisci_prodotto", qr_code=qr_code))
             else:
-                flash(f"Nessun articolo o ubicazione trovata con il codice: {codice}", "error")
-                
+                flash(f"Nessun articolo trovato con QR Code: {qr_code}", "error")
     return render_template("scanner_globale.html")
 
 @app.route("/gestisci/<qr_code>")
