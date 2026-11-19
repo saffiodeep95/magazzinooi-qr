@@ -2,130 +2,26 @@
 <html lang="it">
 <head>
     <meta charset="UTF-8">
-    <title>Memo Spedizione / Riparazione Nastro - {{ nastro.nome or nastro.numero }}</title>
+    <title>Memo Nastro {{ nastro.numero or nastro.id }}</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
-        body { background-color: #f8f9fa; color: #333; font-family: Arial, sans-serif; }
-        .memo-container { max-width: 800px; margin: 30px auto; background: #fff; padding: 40px; border: 1px solid #dee2e6; border-radius: 8px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); }
-        .header-title { border-bottom: 3px solid #0d6efd; padding-bottom: 15px; margin-bottom: 25px; }
-        .label-field { font-weight: bold; color: #555; font-size: 0.85rem; text-transform: uppercase; }
-        .value-field { font-size: 1.1rem; color: #000; font-weight: 600; }
-        .box-note { background: #f8f9fa; border-left: 4px solid #ffc107; padding: 15px; border-radius: 4px; min-height: 90px; }
-        @media print {
-            .no-print { display: none !important; }
-            .memo-container { border: none; box-shadow: none; margin: 0; padding: 10px; width: 100%; max-width: 100%; }
-            body { background-color: #fff; }
-        }
+        @media print { .no-print { display: none; } }
     </style>
 </head>
-<body>
-
-<div class="container my-4">
-    <!-- Pulsanti di controllo non stampabili -->
-    <div class="d-flex justify-content-between mb-4 no-print">
-        <a href="{{ url_for('nastri') }}" class="btn btn-secondary btn-sm">
-            <i class="fas fa-arrow-left me-2"></i>Torna ai Nastri
-        </a>
-        <button onclick="window.print()" class="btn btn-primary btn-sm">
-            <i class="fas fa-print me-2"></i>Stampa Memo Spedizione
-        </button>
+<body class="p-4 bg-white">
+    <div class="container">
+        <div class="d-flex justify-content-between align-items-center mb-4 no-print">
+            <h4>Memo Nastro</h4>
+            <button onclick="window.print()" class="btn btn-dark btn-sm">Stampa</button>
+        </div>
+        <h3 class="mb-3">Scheda / Memo Nastro — N° {{ nastro.numero or '-' }}</h3>
+        <table class="table table-bordered">
+            <tr><th>Codice SAP</th><td>{{ nastro.codice_sap or '-' }}</td><th>Sezione Impianto</th><td>{{ nastro.sezione_impianto or '-' }}</td></tr>
+            <tr><th>Misura</th><td>{{ nastro.misura or '-' }}</td><th>Misura Finito</th><td>{{ nastro.misura_nastro_finito or '-' }}</td></tr>
+            <tr><th>Tipo</th><td>{{ nastro.tipo or '-' }}</td><th>Utilizzo</th><td>{{ nastro.utilizzo or '-' }}</td></tr>
+            <tr><th>Riduttore</th><td>{{ nastro.tipo_di_riduttore or '-' }}</td><th>Motore</th><td>{{ nastro.tipo_di_motore or '-' }}</td></tr>
+            <tr><th>Note</th><td colspan="3">{{ nastro.note or '-' }}</td></tr>
+        </table>
     </div>
-
-    <div class="memo-container">
-        <!-- Intestazione Aziendale / Documento -->
-        <div class="row header-title align-items-center">
-            <div class="col-8">
-                <h4 class="text-primary fw-bold mb-1"><i class="fas fa-shipping-fast me-2"></i>MEMO ACCOMPAGNAMENTO / SPEDIZIONE NASTRO</h4>
-                <p class="text-muted small mb-0">Officina Manutenzione Generale - O-I S.p.A. | Gestione Nastri & Tappeti</p>
-            </div>
-            <div class="col-4 text-end">
-                <span class="badge bg-dark fs-6 px-3 py-2">RIF. ID: #{{ nastro.id }}</span>
-            </div>
-        </div>
-
-        <!-- Dettagli Impianto e Identificazione -->
-        <div class="row g-3 mb-4">
-            <div class="col-md-6">
-                <div class="p-3 border rounded bg-light">
-                    <span class="label-field d-block text-muted">Sezione Impianto</span>
-                    <span class="value-field text-dark">{{ nastro.sezione_impianto or 'N.D.' }}</span>
-                </div>
-            </div>
-            <div class="col-md-6">
-                <div class="p-3 border rounded bg-light">
-                    <span class="label-field d-block text-muted">Numero Nastro</span>
-                    <span class="value-field text-primary">N° {{ nastro.numero or 'N.D.' }}</span>
-                </div>
-            </div>
-            <div class="col-md-6">
-                <div class="p-3 border rounded bg-light">
-                    <span class="label-field d-block text-muted">Codice SAP</span>
-                    <span class="value-field font-monospace">{{ nastro.codice_sap or 'Non specificato' }}</span>
-                </div>
-            </div>
-            <div class="col-md-6">
-                <div class="p-3 border rounded bg-light">
-                    <span class="label-field d-block text-muted">Utilizzo / Posizione</span>
-                    <span class="value-field">{{ nastro.utilizzo or 'N.D.' }}</span>
-                </div>
-            </div>
-        </div>
-
-        <!-- Specifiche Tecniche -->
-        <h6 class="border-bottom pb-2 mb-3 text-secondary fw-bold"><i class="fas fa-cogs me-2"></i>Caratteristiche Tecniche Nastro</h6>
-        <div class="row g-3 mb-4">
-            <div class="col-md-4">
-                <div class="border p-2 rounded">
-                    <span class="label-field text-muted d-block">Misura Sviluppo</span>
-                    <span class="fs-6 fw-bold text-dark">{{ nastro.misura or '-' }}</span>
-                </div>
-            </div>
-            <div class="col-md-4">
-                <div class="border p-2 rounded">
-                    <span class="label-field text-muted d-block">Tipo Nastro</span>
-                    <span class="fs-6 fw-bold text-dark">{{ nastro.tipo or '-' }}</span>
-                </div>
-            </div>
-            <div class="col-md-4">
-                <div class="border p-2 rounded">
-                    <span class="label-field text-muted d-block">Misura Nastro Finito</span>
-                    <span class="fs-6 fw-bold text-dark">{{ nastro.misura_nastro_finito or '-' }}</span>
-                </div>
-            </div>
-            <div class="col-md-6">
-                <div class="border p-2 rounded">
-                    <span class="label-field text-muted d-block">Tipo Riduttore</span>
-                    <span class="fs-6 text-dark">{{ nastro.tipo_di_riduttore or '-' }}</span>
-                </div>
-            </div>
-            <div class="col-md-6">
-                <div class="border p-2 rounded">
-                    <span class="label-field text-muted d-block">Tipo Motore</span>
-                    <span class="fs-6 text-dark">{{ nastro.tipo_di_motore or '-' }}</span>
-                </div>
-            </div>
-        </div>
-
-        <!-- Note e Motivo Spedizione -->
-        <h6 class="border-bottom pb-2 mb-3 text-secondary fw-bold"><i class="fas fa-sticky-note me-2"></i>Note / Motivo della Spedizione / Lavorazione</h6>
-        <div class="box-note mb-5">
-            {{ nastro.note if nastro.note else 'Nessuna nota specifica inserita.' }}
-        </div>
-
-        <!-- Sezione Firme e Spazi di Controllo -->
-        <div class="row mt-5 pt-4 border-top">
-            <div class="col-6 text-center">
-                <div style="border-bottom: 1px solid #777; height: 45px; margin-bottom: 8px;"></div>
-                <span class="text-muted small fw-bold">Firma Consegna / Richiedente</span>
-            </div>
-            <div class="col-6 text-center">
-                <div style="border-bottom: 1px solid #777; height: 45px; margin-bottom: 8px;"></div>
-                <span class="text-muted small fw-bold">Firma Accettazione / Fornitore Esterno</span>
-            </div>
-        </div>
-    </div>
-</div>
-
 </body>
 </html>
