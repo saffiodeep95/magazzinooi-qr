@@ -627,7 +627,7 @@ def elimina_utente(user_id):
     return redirect(url_for('admin_utenti'))
 
 # ========================================================================
-# MODULO NASTRI & TAPPETI (Con tutte le rotte di stampa alias integrate)
+# MODULO NASTRI & TAPPETI (Con tutte le rotte originali integrate)
 # ========================================================================
 @app.route("/nastri", methods=["GET", "POST"])
 @app.route("/nastri.html", methods=["GET", "POST"])
@@ -821,7 +821,7 @@ def stampa_nastri():
         lista = []
     return render_template("stampa_nastri.html", nastri=lista, sezione=sezione)
 
-# Rotte complete e protette per qualsiasi variante di chiamata del memo nastro
+# Rotte per la stampa memo nastro
 @app.route("/stampa_memo_spedizione_nastro/<int:nastro_id>")
 @app.route("/stampa_memo_nastro/<int:nastro_id>")
 @app.route("/stampa_nastro_spedizione_nastro/<int:nastro_id>")
@@ -843,7 +843,7 @@ def stampa_memo_spedizione_nastro(nastro_id):
     
     return render_template("stampa_memo_nastro.html", nastro=nastro, nastri=[nastro])
 
-# Rotta alias aggiunta per intercettare l'endpoint cercato dai log di Render
+# Rotta di sicurezza per intercettare l'endpoint cercato dai log
 @app.route("/manda_manutenzione_nastro/<int:nastro_id>", methods=["POST"])
 def manda_manutenzione_nastro(nastro_id):
     flash("Funzione manutenzione nastro registrata.", "success")
