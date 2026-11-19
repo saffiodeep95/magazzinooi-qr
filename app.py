@@ -843,12 +843,31 @@ def stampa_memo_spedizione_nastro(nastro_id):
     
     return render_template("stampa_memo_nastro.html", nastro=nastro, nastri=[nastro])
 
-# Rotta di sicurezza per intercettare l'endpoint cercato dai log
+# Rotta per manutenzione nastro
 @app.route("/manda_manutenzione_nastro/<int:nastro_id>", methods=["POST"])
 def manda_manutenzione_nastro(nastro_id):
-    flash("Funzione manutenzione nastro registrata.", "success")
+    try:
+        conn = get_db_connection()
+        cur = conn.cursor()
+        cur.execute("SELECT * FROM nastri WHERE id = %s;", (nastro_id,))
+        nastro = cur.fetchone()
+        if nastro:
+            note_extra = request.form.get("note_manutenzione", "").strip()
+            cliente_man = request.form.get("cliente_manutenzione", "").strip()
+            testo_log = f"Nastro {nastro.get('numero') or nastro_id} ({nastro.get('sezione_impianto') or ''}) inviato in manutenzione"
+            if cliente_man:
+                testo_log += f" presso {cliente_man}"
+            if note_extra:
+                testo_log += f" - Note: {note_extra}"
+            registra_log(testo_log)
+            flash("Manutenzione nastro registrata con successo!", "success")
+        else:
+            flash("Nastro non trovato.", "error")
+        cur.close()
+        conn.close()
+    except Exception as e:
+        flash(f"Errore manutenzione nastro: {e}", "error")
     return redirect(url_for("nastri"))
-
 
 @app.route("/agenda", methods=["GET", "POST"])
 @app.route("/agenda.html", methods=["GET", "POST"])
