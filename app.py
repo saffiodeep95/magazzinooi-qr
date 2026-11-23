@@ -413,6 +413,18 @@ def api_segna_lette():
         conn.close()
     return jsonify({"status": "ok"})
 
+@app.route("/api/notifiche/elimina/<int:notifica_id>", methods=["POST"])
+def api_elimina_notifica(notifica_id):
+    username = session.get('username')
+    if username:
+        conn = get_db_connection()
+        cur = conn.cursor()
+        cur.execute("DELETE FROM notifiche WHERE id = %s AND TRIM(destinatario) = %s;", (notifica_id, str(username).strip()))
+        conn.commit()
+        cur.close()
+        conn.close()
+    return jsonify({"status": "ok"})
+
 @app.route("/")
 @app.route("/index")
 @app.route("/index.html")
