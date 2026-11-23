@@ -458,8 +458,20 @@ def index():
             is_pesante = (val_pesante == 1 or val_pesante == '1' or val_pesante is True or val_pesante == 1.0)
             if not is_pesante:
                 prodotti.append(p)
-            soglia = p.get('soglia_minima', 3) or 3
-            if p.get('quantita', 0) <= soglia:
+
+            qta_raw = p.get('quantita')
+            soglia_raw = p.get('soglia_minima')
+            try:
+                qta = int(qta_raw) if qta_raw is not None else 0
+            except (ValueError, TypeError):
+                qta = 0
+
+            try:
+                soglia = int(soglia_raw) if soglia_raw is not None else 3
+            except (ValueError, TypeError):
+                soglia = 3
+
+            if qta <= soglia:
                 prodotti_sotto_soglia.append(p)
     except Exception as e:
         print(f"Errore index: {e}")
