@@ -20,13 +20,14 @@
 </head>
 <body>
 
-    <!-- NAVBAR -->
+    <!-- NAVBAR ORIGINALE RIPRISTINATA (Senza OMD/Lavori Interni nel menu principale) -->
     <nav class="navbar navbar-expand-lg navbar-dark bg-dark mb-4 sticky-top shadow-sm py-2">
         <div class="container-fluid px-3">
             <a class="navbar-brand fw-bold fs-6 text-white" href="{{ url_for('index') }}">
                 <i class="fa-solid fa-boxes-stacked me-2 text-primary"></i>Gestionale OMG
             </a>
             
+            <!-- Pulsante Hamburger per Mobile -->
             <button class="navbar-toggler border-0 shadow-none" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
                 <span class="navbar-toggler-icon"></span>
             </button>
@@ -90,6 +91,7 @@
                 </ul>
 
                 <ul class="navbar-nav ms-auto align-items-lg-center flex-row">
+                    <!-- DROPDOWN NOTIFICHE AGGIORNATO CON TASTO CANCELLA -->
                     <li class="nav-item dropdown me-3 position-relative">
                         <a class="nav-link position-relative px-2 text-white" href="#" id="notificheDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false" onclick="segnaNotificheLette()">
                             <i class="fa-solid fa-bell fs-5"></i>
@@ -106,6 +108,7 @@
                         </div>
                     </li>
 
+                    <!-- MENU UTENTE -->
                     <li class="nav-item dropdown">
                         <a class="nav-link dropdown-toggle fw-semibold small text-white" href="#" id="userDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
                             <i class="fa-solid fa-circle-user me-1"></i> {{ session.get('username') }}
@@ -124,6 +127,7 @@
     <!-- CONTENUTO PRINCIPALE -->
     <div class="container-fluid px-4 py-2">
 
+        <!-- MESSAGGI FLASH -->
         {% with messages = get_flashed_messages(with_categories=true) %}
             {% if messages %}
                 {% for category, message in messages %}
@@ -226,8 +230,7 @@
             </div>
 
             <div class="table-responsive">
-                <!-- ID CORRETTO QUI: tabellaProdotti -->
-                <table class="table table-hover align-middle mb-0" id="tabellaProdotti">
+                <table class="table table-hover align-middle mb-0" id="tablaProdotti">
                     <thead class="table-light">
                         <tr>
                             <th>QR Code</th>
@@ -236,7 +239,7 @@
                             <th>Posizione / QR Scaffale</th>
                             <th class="text-center">Giacenza</th>
                             <th class="text-center">Soglia</th>
-                            <th>Stato Manutenzione</th>
+                            <th>Stato Manutenzione</th> <!-- COLONNA AGGIUNTA -->
                             <th class="text-end">Azioni</th>
                         </tr>
                     </thead>
@@ -278,6 +281,7 @@
                                 <td class="text-center">
                                     <span class="text-muted small">{{ soglia }}</span>
                                 </td>
+                                <!-- Cella Stato Manutenzione prelevata automaticamente dal DB -->
                                 <td>
                                     {% if p.in_manutenzione %}
                                         <span class="badge bg-warning text-dark"><i class="fa-solid fa-truck-fast me-1"></i>In Manutenzione</span>
@@ -398,12 +402,11 @@
     <!-- Bootstrap JS Bundle -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 
-    <!-- SCRIPT GESTIONE TABELLA E NOTIFICHE -->
+    <!-- SCRIPT GESTIONE TABELLA E NOTIFICHE CON TASTO CANCELLA -->
     <script>
         function filtraTabella() {
             let input = document.getElementById("searchInput").value.toLowerCase();
-            // SELETTORE CORRETTO QUI: #tabellaProdotti
-            let rows = document.querySelectorAll("#tabellaProdotti tbody tr");
+            let rows = document.querySelectorAll("#tablaProdotti tbody tr");
             
             rows.forEach(row => {
                 let text = row.innerText.toLowerCase();
@@ -465,7 +468,7 @@
         }
 
         function eliminaNotificaSingola(event, idNotifica) {
-            event.stopPropagation();
+            event.stopPropagation(); // Evita il reindirizzamento al link
             fetch(/api/notifiche/elimina/${idNotifica}, { method: 'POST' })
                 .then(response => response.json())
                 .then(() => {
