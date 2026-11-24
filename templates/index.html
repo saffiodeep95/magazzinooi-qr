@@ -196,7 +196,7 @@
                 <div class="col-12 col-md-5">
                     <div class="input-group">
                         <span class="input-group-text bg-white border-end-0"><i class="fa-solid fa-magnifying-glass text-muted"></i></span>
-                        <input type="text" id="searchInput" class="form-control border-start-0 ps-0" placeholder="Cerca articolo, SAP o posizione..." onkeyup="filtraTabella()">
+                        <input type="text" id="searchInput" class="form-control border-start-0 ps-0" placeholder="Cerca articolo, SAP o posizione..." oninput="filtraTabella()" onkeyup="filtraTabella()">
                     </div>
                 </div>
                 <div class="col-12 col-md-7 text-md-end d-flex flex-wrap gap-2 justify-content-md-end">
@@ -405,12 +405,16 @@
     <!-- SCRIPT GESTIONE TABELLA E NOTIFICHE CON TASTO CANCELLA -->
     <script>
         function filtraTabella() {
-            let input = document.getElementById("searchInput").value.toLowerCase();
-            let rows = document.querySelectorAll("#tablaProdotti tbody tr");
-            
+            const inputEl = document.getElementById("searchInput");
+            const rows = document.querySelectorAll("#tablaProdotti tbody tr");
+            if (!inputEl || !rows.length) return;
+
+            const testo = inputEl.value.toLowerCase().trim();
+
             rows.forEach(row => {
-                let text = row.innerText.toLowerCase();
-                row.style.display = text.includes(input) ? "" : "none";
+                if (row.cells.length <= 1) return;
+                const testoRiga = row.textContent.toLowerCase();
+                row.style.display = (!testo || testoRiga.includes(testo)) ? "" : "none";
             });
         }
 
@@ -482,6 +486,7 @@
         }
 
         document.addEventListener("DOMContentLoaded", () => {
+            filtraTabella();
             caricaNotifiche();
             setInterval(caricaNotifiche, 30000);
         });
