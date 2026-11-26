@@ -21,7 +21,7 @@
 </head>
 <body class="bg-light">
 
-    <!-- Navbar Pulita (Senza Nastri e Senza Campanella) -->
+    <!-- Navbar -->
     <nav class="navbar navbar-expand-lg navbar-dark bg-primary mb-4 shadow-sm">
         <div class="container-fluid">
             <a class="navbar-brand fw-bold" href="/index"><i class="fas fa-boxes me-2"></i>Gestionale OMG</a>
@@ -44,7 +44,6 @@
         </div>
     </nav>
 
-    <!-- Contenuto Originale Promemoria -->
     <div class="container-fluid px-4">
         {% with messages = get_flashed_messages(with_categories=true) %}
           {% if messages %}
@@ -64,7 +63,7 @@
             </span>
         </div>
 
-        <!-- Form Aggiunta Promemoria (Aggiornato con 15 giorni e 6 mesi) -->
+        <!-- Form Aggiunta Promemoria -->
         <div class="card shadow-sm border-0 mb-4">
             <div class="card-header bg-white fw-bold py-3">Nuovo Promemoria</div>
             <div class="card-body">
@@ -140,7 +139,7 @@
                             <tr class="{% if p.completato %}table-success text-decoration-line-through{% elif scadenza_rossa %}riga-scadenza-imminente{% endif %}">
                                 <td>
                                     <form action="/completa_promemoria/{{ p.id }}" method="POST" class="d-inline">
-                                        <button type="submit" class="btn btn-sm btn-{{ 'success' if p.completato else ('danger' if scadenza_rossa else 'outline-secondary') }}" title="Completa">
+                                        <button type="submit" class="btn btn-sm btn-{{ 'success' if p.completato else ('danger' if scadenza_rossa else 'outline-secondary') }}" title="{{ 'Riattiva' if p.completato else 'Completa' }}">
                                             <i class="fas fa-check"></i>
                                         </button>
                                     </form>
@@ -167,7 +166,22 @@
                                 </td>
                                 <td>{{ p.ricorrenza }}</td>
                                 <td>{{ p.assegnato_a }}</td>
-                                <td>
+                                <td class="text-nowrap">
+                                    <button type="button"
+                                            class="btn btn-sm btn-outline-primary me-1 btn-modifica-promemoria"
+                                            data-bs-toggle="modal"
+                                            data-bs-target="#modalModificaPromemoria"
+                                            data-id="{{ p.id }}"
+                                            data-titolo="{{ p.titolo|e }}"
+                                            data-descrizione="{{ (p.descrizione or '')|e }}"
+                                            data-scadenza="{{ (p.data_scadenza or '')|e }}"
+                                            data-priorita="{{ (p.priorita or 'Media')|e }}"
+                                            data-ricorrenza="{{ (p.ricorrenza or 'Nessuna')|e }}"
+                                            data-assegnato="{{ (p.assegnato_a or '')|e }}"
+                                            data-completato="{{ '1' if p.completato else '0' }}"
+                                            title="Modifica">
+                                        <i class="fas fa-edit"></i>
+                                    </button>
                                     <form action="/elimina_promemoria/{{ p.id }}" method="POST" class="d-inline" onsubmit="return confirm('Eliminare questo promemoria?');">
                                         <button type="submit" class="btn btn-sm btn-outline-danger" title="Elimina"><i class="fas fa-trash-alt"></i></button>
                                     </form>
@@ -185,7 +199,92 @@
         </div>
     </div>
 
+    <!-- Modale Modifica Promemoria -->
+    <div class="modal fade" id="modalModificaPromemoria" tabindex="-1" aria-labelledby="modalModificaPromemoriaLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <form id="formModificaPromemoria" method="POST" action="">
+                    <div class="modal-header">
+                        <h5 class="modal-title fw-bold" id="modalModificaPromemoriaLabel">
+                            <i class="fas fa-edit me-2 text-primary"></i>Modifica Promemoria
+                        </h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Chiudi"></button>
+                    </div>
+                    <div class="modal-body row g-3">
+                        <div class="col-md-6">
+                            <label class="form-label">Titolo</label>
+                            <input type="text" class="form-control" name="titolo" id="edit_titolo" required>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Data Scadenza</label>
+                            <input type="date" class="form-control" name="data_scadenza" id="edit_scadenza">
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">Priorità</label>
+                            <select class="form-select" name="priorita" id="edit_priorita">
+                                <option value="Bassa">Bassa</option>
+                                <option value="Media">Media</option>
+                                <option value="Alta">Alta</option>
+                            </select>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">Ricorrenza</label>
+                            <select class="form-select" name="ricorrenza" id="edit_ricorrenza">
+                                <option value="Nessuna">Nessuna</option>
+                                <option value="15 Giorni">15 Giorni</option>
+                                <option value="Giorno">Giorno</option>
+                                <option value="Settimana">Settimana</option>
+                                <option value="Mese">Mese</option>
+                                <option value="6 Mesi">6 Mesi</option>
+                                <option value="Anno">Anno</option>
+                            </select>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">Assegnato A</label>
+                            <select class="form-select" name="assegnato_a" id="edit_assegnato">
+                                {% for u in lista_utenti %}
+                                <option value="{{ u.username }}">{{ u.username }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label">Descrizione</label>
+                            <textarea class="form-control" name="descrizione" id="edit_descrizione" rows="3"></textarea>
+                        </div>
+                        <div class="col-12">
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" name="completato" value="1" id="edit_completato">
+                                <label class="form-check-label" for="edit_completato">
+                                    Segna come completato
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annulla</button>
+                        <button type="submit" class="btn btn-primary"><i class="fas fa-save me-1"></i>Salva Modifiche</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
     <!-- Bootstrap JS -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        document.querySelectorAll('.btn-modifica-promemoria').forEach(btn => {
+            btn.addEventListener('click', function () {
+                const id = this.dataset.id;
+                document.getElementById('formModificaPromemoria').action = /modifica_promemoria/${id};
+                document.getElementById('edit_titolo').value = this.dataset.titolo || '';
+                document.getElementById('edit_descrizione').value = this.dataset.descrizione || '';
+                document.getElementById('edit_scadenza').value = this.dataset.scadenza || '';
+                document.getElementById('edit_priorita').value = this.dataset.priorita || 'Media';
+                document.getElementById('edit_ricorrenza').value = this.dataset.ricorrenza || 'Nessuna';
+                document.getElementById('edit_assegnato').value = this.dataset.assegnato || '';
+                document.getElementById('edit_completato').checked = this.dataset.completato === '1';
+            });
+        });
+    </script>
 </body>
 </html>
