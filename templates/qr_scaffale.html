@@ -95,7 +95,7 @@
             display: inline-block;
         }
 
-        /* Di default la vista di stampa pura è nascosta a schermo */
+        /* Nascosto a schermo */
         .only-print {
             display: none;
         }
@@ -106,105 +106,125 @@
                 size: A4 portrait;
                 margin: 8mm;
             }
+
             .no-print {
                 display: none !important;
             }
-            .only-print {
-                display: block !important;
-            }
+
             body {
                 background-color: #ffffff !important;
-                color: #0f172a !important;
+                color: #000000 !important;
                 -webkit-print-color-adjust: exact;
                 print-color-adjust: exact;
                 margin: 0 !important;
                 padding: 0 !important;
             }
-            .card, .card-clean, .top-bar-card {
-                border: none !important;
-                box-shadow: none !important;
+
+            body .only-print {
+                display: block !important;
+                opacity: 1 !important;
+                color: #000000 !important;
+            }
+
+            body * {
+                opacity: 1 !important;
             }
 
             /* --- MODALITÀ 1: SOLO QR (Centrato sul foglio) --- */
             .print-container {
-                text-align: center;
-                margin-top: 4.5cm !important;
-                padding: 0 !important;
+                width: 100% !important;
                 max-width: 100% !important;
+                margin: 4.5cm auto 0 auto !important;
+                padding: 0 !important;
+                text-align: center !important;
             }
+
             .print-header-row {
                 display: flex !important;
                 justify-content: center !important;
                 align-items: center !important;
             }
+
             .print-qr-box {
-                border: 2px solid #0f172a !important;
-                border-radius: 14px !important;
+                border: 2px solid #000000 !important;
+                border-radius: 12px !important;
                 padding: 22px 30px !important;
                 background: #ffffff !important;
-                box-shadow: none !important;
                 display: inline-block !important;
                 text-align: center !important;
                 break-inside: avoid;
                 page-break-inside: avoid;
             }
+
             .print-qr-box .qr-badge-top {
-                display: inline-block;
-                font-size: 0.7rem;
-                font-weight: 700;
-                text-transform: uppercase;
-                letter-spacing: 1.2px;
-                color: #475569;
-                margin-bottom: 6px;
+                display: block !important;
+                font-size: 0.72rem !important;
+                font-weight: 700 !important;
+                text-transform: uppercase !important;
+                letter-spacing: 1.2px !important;
+                color: #000000 !important;
+                margin-bottom: 6px !important;
             }
+
             .print-qr-box h1 {
                 font-size: 2rem !important;
                 font-weight: 800 !important;
-                color: #0f172a !important;
+                color: #000000 !important;
                 margin: 0 0 6px 0 !important;
-                line-height: 1.1 !important;
+                line-height: 1.15 !important;
             }
+
             .print-qr-box .qr-img-wrap {
                 margin: 10px auto !important;
-                padding: 8px;
-                border: 1px solid #cbd5e1;
-                border-radius: 10px;
-                display: inline-block;
-                background: #ffffff;
+                padding: 8px !important;
+                border: 1.5px solid #000000 !important;
+                border-radius: 8px !important;
+                display: inline-block !important;
+                background: #ffffff !important;
             }
+
             .print-qr-box img {
                 max-width: 195px !important;
                 height: auto !important;
-                display: block;
-            }
-            .print-qr-box p {
-                font-size: 0.82rem !important;
-                color: #475569 !important;
-                margin: 8px 0 0 0 !important;
-                font-weight: 600;
+                display: block !important;
             }
 
-            /* --- MODALITÀ 2: QR + LISTA OGGETTI (Compatta, elegante e su UNA PAGINA A4) --- */
+            .print-qr-box p {
+                font-size: 0.82rem !important;
+                color: #000000 !important;
+                margin: 8px 0 0 0 !important;
+                font-weight: 600 !important;
+            }
+
+            .print-meta-right,
+            .print-lista-oggetti,
+            .print-prelievo-footer {
+                display: none !important;
+            }
+
+            /* --- MODALITÀ 2: QR + LISTA OGGETTI (Nitida, contrastata e su UNA PAGINA A4) --- */
             body.print-qr-lista .print-container {
                 margin-top: 0 !important;
                 text-align: left !important;
             }
+
             body.print-qr-lista .print-header-row {
                 display: flex !important;
                 align-items: center !important;
                 justify-content: space-between !important;
-                border: 1.5px solid #0f172a !important;
-                border-radius: 10px !important;
-                padding: 7px 14px !important;
+                border: 1.5px solid #000000 !important;
+                border-radius: 8px !important;
+                padding: 8px 14px !important;
                 margin-bottom: 8px !important;
                 background: #ffffff !important;
                 break-inside: avoid;
                 page-break-inside: avoid;
             }
+
             body.print-qr-lista .print-qr-box {
                 border: none !important;
                 border-radius: 0 !important;
-                background: transparent !important;
+                background: #ffffff !important;
                 padding: 0 !important;
                 margin: 0 !important;
                 display: flex !important;
@@ -212,144 +232,170 @@
                 gap: 14px !important;
                 text-align: left !important;
             }
+
             body.print-qr-lista .print-qr-box .qr-badge-top {
-                display: block;
-                font-size: 0.65rem;
-                margin-bottom: 2px;
-                color: #475569;
+                font-size: 0.65rem !important;
+                margin-bottom: 2px !important;
+                color: #000000 !important;
             }
+
             body.print-qr-lista .print-qr-box .qr-img-wrap {
                 margin: 0 !important;
-                padding: 4px;
-                border: 1px solid #cbd5e1;
-                border-radius: 8px;
-                background: #ffffff;
+                padding: 4px !important;
+                border: 1.5px solid #000000 !important;
+                border-radius: 6px !important;
+                background: #ffffff !important;
             }
+
             body.print-qr-lista .print-qr-box img {
                 max-width: 72px !important;
                 width: 72px !important;
                 height: auto !important;
             }
+
             body.print-qr-lista .print-qr-box h1 {
                 font-size: 1.35rem !important;
                 margin: 0 0 2px 0 !important;
-                color: #0f172a !important;
+                color: #000000 !important;
             }
+
             body.print-qr-lista .print-qr-box p {
-                font-size: 0.7rem !important;
+                font-size: 0.72rem !important;
                 margin: 0 !important;
-                color: #475569 !important;
-                font-weight: 500;
+                color: #000000 !important;
+                font-weight: 500 !important;
             }
+
             body.print-qr-lista .print-meta-right {
                 display: block !important;
-                text-align: right;
-                font-size: 0.7rem;
-                color: #334155;
+                text-align: right !important;
+                font-size: 0.72rem !important;
+                color: #000000 !important;
+                white-space: nowrap !important;
             }
+
             body.print-qr-lista .print-meta-right .count-badge {
-                display: inline-block;
+                display: inline-block !important;
                 background: #ffffff !important;
-                color: #0f172a !important;
-                border: 1.5px solid #0f172a !important;
-                font-weight: 700;
-                font-size: 0.72rem;
-                padding: 2px 9px;
-                border-radius: 999px;
-                margin-bottom: 2px;
+                color: #000000 !important;
+                border: 1.5px solid #000000 !important;
+                font-weight: 700 !important;
+                font-size: 0.74rem !important;
+                padding: 2px 10px !important;
+                border-radius: 999px !important;
+                margin-bottom: 3px !important;
             }
 
             body.print-qr-lista .print-lista-oggetti {
                 display: block !important;
                 margin-top: 4px !important;
-                border: 1.5px solid #0f172a;
-                border-radius: 10px;
-                overflow: hidden;
-                background: #ffffff;
+                border: 1.5px solid #000000 !important;
+                border-radius: 8px !important;
+                overflow: hidden !important;
+                background: #ffffff !important;
             }
+
             body.print-qr-lista .print-lista-title {
-                background: #f1f5f9 !important;
-                color: #0f172a !important;
-                border-bottom: 1.5px solid #0f172a !important;
-                font-size: 0.75rem !important;
+                background: #eaeef3 !important;
+                color: #000000 !important;
+                border-bottom: 1.5px solid #000000 !important;
+                font-size: 0.76rem !important;
                 font-weight: 800 !important;
-                padding: 4px 10px !important;
+                padding: 5px 10px !important;
                 margin: 0 !important;
-                letter-spacing: 0.2px;
             }
+
             body.print-qr-lista .print-lista-oggetti table {
                 width: 100% !important;
                 border-collapse: collapse !important;
-                font-size: 0.7rem !important;
-                line-height: 1.12 !important;
+                font-size: 0.72rem !important;
+                line-height: 1.15 !important;
                 margin-bottom: 0 !important;
+                color: #000000 !important;
+                --bs-table-bg: #ffffff !important;
+                --bs-table-color: #000000 !important;
+                --bs-table-striped-bg: #ffffff !important;
+                --bs-table-border-color: #000000 !important;
             }
+
             body.print-qr-lista .print-lista-oggetti thead th {
-                background: #ffffff !important;
-                color: #0f172a !important;
+                background: #f5f7fa !important;
+                color: #000000 !important;
                 font-weight: 800 !important;
-                padding: 4px 6px !important;
-                border-bottom: 1.5px solid #0f172a !important;
-                text-transform: uppercase;
-                font-size: 0.63rem;
-                letter-spacing: 0.03em;
+                padding: 5px 6px !important;
+                border: 1px solid #000000 !important;
+                border-bottom: 1.5px solid #000000 !important;
+                text-transform: uppercase !important;
+                font-size: 0.65rem !important;
+                letter-spacing: 0.03em !important;
             }
+
             body.print-qr-lista .print-lista-oggetti tbody tr:nth-child(even) td {
-                background: #f8fafc !important;
+                background: #fafafa !important;
             }
+
             body.print-qr-lista .print-lista-oggetti th,
             body.print-qr-lista .print-lista-oggetti td {
-                padding: 3px 6px !important;
-                border: 1px solid #cbd5e1 !important;
-                color: #0f172a !important;
+                padding: 4px 6px !important;
+                border: 1px solid #000000 !important;
+                color: #000000 !important;
                 vertical-align: middle !important;
             }
+
             body.print-qr-lista .print-lista-oggetti tr {
                 break-inside: avoid;
                 page-break-inside: avoid;
             }
-            body.print-qr-lista .print-col-prelievo {
-                display: table-cell !important;
-                width: 12%;
-                text-align: center;
-                font-weight: 700;
-            }
+
+            body.print-qr-lista .print-col-prelievo,
             body.print-qr-lista .print-col-data,
             body.print-qr-lista .print-col-ora,
             body.print-qr-lista .print-col-linea {
                 display: table-cell !important;
-                text-align: center;
-                font-weight: 600;
+                text-align: center !important;
+                font-weight: 700 !important;
+                color: #000000 !important;
             }
+
+            body.print-qr-lista .print-col-prelievo {
+                width: 11%;
+            }
+
             body.print-qr-lista .print-col-data {
-                width: 14%;
+                width: 15%;
             }
+
             body.print-qr-lista .print-col-ora {
                 width: 10%;
             }
+
             body.print-qr-lista .print-col-linea {
                 width: 12%;
             }
+
             body.print-qr-lista .print-write-line {
-                display: inline-block;
-                width: 100%;
-                min-height: 14px;
-                border-bottom: 1px dashed #475569;
+                display: inline-block !important;
+                width: 92% !important;
+                min-height: 14px !important;
+                border-bottom: 1px dashed #000000 !important;
             }
+
             body.print-qr-lista .print-prelievo-footer {
                 display: flex !important;
-                justify-content: space-between;
-                gap: 12px;
-                padding: 5px 10px;
-                border-top: 1px solid #cbd5e1;
-                background: #ffffff;
-                font-size: 0.68rem;
-                color: #334155;
+                justify-content: space-between !important;
+                gap: 18px !important;
+                padding: 7px 10px !important;
+                border-top: 1.5px solid #000000 !important;
+                background: #ffffff !important;
+                font-size: 0.72rem !important;
+                font-weight: 700 !important;
+                color: #000000 !important;
             }
+
             body.print-qr-lista .print-prelievo-footer span {
-                flex: 1;
-                border-bottom: 1px dotted #94a3b8;
-                padding-bottom: 2px;
+                flex: 1 !important;
+                border-bottom: 1px solid #000000 !important;
+                padding-bottom: 3px !important;
             }
         }
     </style>
@@ -393,7 +439,7 @@
                     <p>QR Code Ubicazione Magazzino OMG</p>
                 </div>
             </div>
-            <div class="only-print print-meta-right" style="display: none;">
+            <div class="only-print print-meta-right">
                 <span class="count-badge">{{ prodotti|length }} {{ 'oggetto' if prodotti|length == 1 else 'oggetti' }}</span>
                 <div>Elenco rapido armadio</div>
             </div>
@@ -408,12 +454,12 @@
                 <table class="table table-bordered table-sm align-middle">
                     <thead>
                         <tr>
-                            <th style="width: 15%;">QR Code</th>
-                            <th style="width: 37%;">Nome Articolo</th>
-                            <th class="print-col-prelievo" style="display: none;">Q.tà Prel.</th>
-                            <th class="print-col-data" style="display: none;">Data Prel.</th>
-                            <th class="print-col-ora" style="display: none;">Ora</th>
-                            <th class="print-col-linea" style="display: none;">Linea</th>
+                            <th style="width: 14%;">QR Code</th>
+                            <th style="width: 38%;">Nome Articolo</th>
+                            <th class="print-col-prelievo">Q.tà Prel.</th>
+                            <th class="print-col-data">Data Prel.</th>
+                            <th class="print-col-ora">Ora</th>
+                            <th class="print-col-linea">Linea</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -421,20 +467,20 @@
                         <tr>
                             <td><strong>{{ p.qr_code }}</strong></td>
                             <td>{{ p.nome }}</td>
-                            <td class="print-col-prelievo" style="display: none;"><span class="print-write-line"></span></td>
-                            <td class="print-col-data" style="display: none;"><span class="print-write-line"></span></td>
-                            <td class="print-col-ora" style="display: none;"><span class="print-write-line"></span></td>
-                            <td class="print-col-linea" style="display: none;"><span class="print-write-line"></span></td>
+                            <td class="print-col-prelievo"><span class="print-write-line"></span></td>
+                            <td class="print-col-data"><span class="print-write-line"></span></td>
+                            <td class="print-col-ora"><span class="print-write-line"></span></td>
+                            <td class="print-col-linea"><span class="print-write-line"></span></td>
                         </tr>
                         {% endfor %}
                     </tbody>
                 </table>
-                <div class="only-print print-prelievo-footer" style="display: none;">
+                <div class="only-print print-prelievo-footer">
                     <span>Operatore:</span>
                     <span>Note / Destinazione:</span>
                 </div>
             {% else %}
-                <p class="text-muted m-2">Nessun articolo registrato in questa ubicazione.</p>
+                <p class="m-2">Nessun articolo registrato in questa ubicazione.</p>
             {% endif %}
         </div>
     </div>
