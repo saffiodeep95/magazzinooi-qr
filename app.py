@@ -83,7 +83,7 @@ def utility_processor():
             cur.execute("""
                 SELECT id, titolo, messaggio, link, letta, creato_il
                 FROM notifiche
-                WHERE TRIM(destinatario) = %s
+                WHERE LOWER(TRIM(destinatario)) = LOWER(%s)
                 ORDER BY creato_il DESC
                 LIMIT 10;
             """, (username,))
@@ -469,7 +469,7 @@ def require_login():
 
 @app.route("/api/notifiche")
 def api_notifiche():
-    username = session.get('username')
+    username = (session.get('username') or '').strip()
     if not username:
         return jsonify([])
     conn = get_db_connection()
@@ -477,9 +477,9 @@ def api_notifiche():
     cur.execute("""
         SELECT id, titolo, messaggio, link, letta, creato_il 
         FROM notifiche 
-        WHERE TRIM(destinatario) = %s 
+        WHERE LOWER(TRIM(destinatario)) = LOWER(%s) 
         ORDER BY creato_il DESC LIMIT 15;
-    """, (str(username).strip(),))
+    """, (username,))
     notifiche = cur.fetchall()
     cur.close()
     conn.close()
@@ -487,11 +487,11 @@ def api_notifiche():
 
 @app.route("/api/notifiche/segna_lette", methods=["POST"])
 def api_segna_lette():
-    username = session.get('username')
+    username = (session.get('username') or '').strip()
     if username:
         conn = get_db_connection()
         cur = conn.cursor()
-        cur.execute("UPDATE notifiche SET letta = TRUE WHERE TRIM(destinatario) = %s;", (str(username).strip(),))
+        cur.execute("UPDATE notifiche SET letta = TRUE WHERE LOWER(TRIM(destinatario)) = LOWER(%s);", (username,))
         conn.commit()
         cur.close()
         conn.close()
@@ -499,15 +499,29 @@ def api_segna_lette():
 
 @app.route("/api/notifiche/elimina/<int:notifica_id>", methods=["POST"])
 def api_elimina_notifica(notifica_id):
-    username = session.get('username')
-    if username:
+    username = (session.get('username') or '').strip()
+    if not username:
+        return jsonify({"status": "error", "msg": "Non autenticato"}), 401
+    try:
         conn = get_db_connection()
         cur = conn.cursor()
-        cur.execute("DELETE FROM notifiche WHERE id = %s AND TRIM(destinatario) = %s;", (notifica_id, str(username).strip()))
+        if session.get('is_admin'):
+            cur.execute("DELETE FROM notifiche WHERE id = %s;", (notifica_id,))
+        else:
+            cur.execute(
+                "DELETE FROM notifiche WHERE id = %s AND LOWER(TRIM(destinatario)) = LOWER(%s);",
+                (notifica_id, username)
+            )
+        eliminati = cur.rowcount
         conn.commit()
         cur.close()
         conn.close()
-    return jsonify({"status": "ok"})
+        if eliminati > 0:
+            return jsonify({"status": "ok", "id": notifica_id})
+        return jsonify({"status": "not_found", "id": notifica_id}), 404
+    except Exception as e:
+        print(f"Errore api_elimina_notifica: {e}")
+        return jsonify({"status": "error", "msg": str(e)}), 500
 
 @app.route("/")
 @app.route("/index")
