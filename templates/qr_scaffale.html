@@ -11,6 +11,10 @@
     <style>
         /* Regole specifiche per la stampa: nasconde i dettagli e mostra solo l'essenziale */
         @media print {
+            @page {
+                size: A4 portrait;
+                margin: 8mm;
+            }
             .no-print {
                 display: none !important;
             }
@@ -21,6 +25,8 @@
                 background-color: white !important;
                 -webkit-print-color-adjust: exact;
                 print-color-adjust: exact;
+                margin: 0 !important;
+                padding: 0 !important;
             }
             .card {
                 border: none !important;
@@ -28,14 +34,96 @@
             }
             .print-container {
                 text-align: center;
-                margin-top: 5cm; /* Centra verticalmente il QR dell'ubicazione nel foglio stampato se desiderato */
+                margin-top: 5cm !important; /* Centra verticalmente il QR dell'ubicazione nel foglio stampato */
+                padding: 0 !important;
+                max-width: 100% !important;
             }
+            .print-qr-box {
+                padding: 12px !important;
+                margin: 0 auto !important;
+                break-inside: avoid;
+                page-break-inside: avoid;
+            }
+            .print-qr-box h1 {
+                font-size: 1.8rem !important;
+                margin-bottom: 6px !important;
+            }
+            .print-qr-box img {
+                max-width: 190px !important;
+                margin: 6px 0 !important;
+            }
+            .print-qr-box p {
+                font-size: 0.85rem !important;
+                margin: 4px 0 0 0 !important;
+            }
+
+            /* Modalità compatta su UNA SINGOLA PAGINA per etichetta armadio con lista essenziale */
             body.print-qr-lista .print-container {
-                margin-top: 0.5cm !important;
+                margin-top: 0 !important;
+                text-align: left !important;
+            }
+            body.print-qr-lista .print-header-row {
+                display: flex !important;
+                align-items: center !important;
+                justify-content: space-between !important;
+                gap: 14px !important;
+                border: 1.5px solid #212529 !important;
+                border-radius: 6px !important;
+                padding: 8px 12px !important;
+                margin-bottom: 10px !important;
+                break-inside: avoid;
+                page-break-inside: avoid;
+            }
+            body.print-qr-lista .print-qr-box {
+                border: none !important;
+                box-shadow: none !important;
+                padding: 0 !important;
+                margin: 0 !important;
+                text-align: center !important;
+                display: flex !important;
+                align-items: center !important;
+                gap: 12px !important;
+            }
+            body.print-qr-lista .print-qr-box h1 {
+                font-size: 1.45rem !important;
+                margin: 0 !important;
+                line-height: 1.1 !important;
+            }
+            body.print-qr-lista .print-qr-box .qr-img-wrap {
+                margin: 0 !important;
+            }
+            body.print-qr-lista .print-qr-box img {
+                max-width: 92px !important;
+                width: 92px !important;
+                height: auto !important;
+                margin: 0 !important;
+            }
+            body.print-qr-lista .print-qr-box p {
+                font-size: 0.75rem !important;
+                margin: 2px 0 0 0 !important;
             }
             body.print-qr-lista .print-lista-oggetti {
                 display: block !important;
-                margin-top: 1.5rem;
+                margin-top: 6px !important;
+            }
+            body.print-qr-lista .print-lista-oggetti h5 {
+                font-size: 0.85rem !important;
+                margin-bottom: 6px !important;
+            }
+            body.print-qr-lista .print-lista-oggetti table {
+                width: 100% !important;
+                font-size: 0.74rem !important;
+                line-height: 1.15 !important;
+                margin-bottom: 0 !important;
+            }
+            body.print-qr-lista .print-lista-oggetti th,
+            body.print-qr-lista .print-lista-oggetti td {
+                padding: 3px 6px !important;
+                vertical-align: middle !important;
+            }
+            body.print-qr-lista .print-lista-oggetti tr {
+                break-inside: avoid;
+                page-break-inside: avoid;
             }
         }
         /* Di default la vista di stampa pura è nascosta a schermo */
@@ -67,29 +155,30 @@
 
     <!-- VISTA DA STAMPARE: Comparirà unicamente sul foglio stampato (Solo QR e Ubicazione, oppure QR + Lista oggetti) -->
     <div class="container only-print print-container">
-        <div class="p-4 border rounded bg-white shadow-sm d-inline-block text-center">
-            <h1 class="display-4 fw-bold mb-3">{{ ubicazione }}</h1>
-            <div class="my-4">
-                <!-- QR code che rappresenta l'ubicazione stessa -->
-                <img src="https://barcode.tec-it.com/Barcode.ashx?data={{ ubicazione }}&code=QRCode&imagetype=Png&dpi=300" 
-                     alt="QR Ubicazione {{ ubicazione }}" 
-                     style="max-width: 250px; height: auto;">
+        <div class="print-header-row">
+            <div class="p-4 border rounded bg-white shadow-sm d-inline-block text-center print-qr-box">
+                <div class="qr-img-wrap my-4">
+                    <!-- QR code che rappresenta l'ubicazione stessa -->
+                    <img src="https://barcode.tec-it.com/Barcode.ashx?data={{ ubicazione }}&code=QRCode&imagetype=Png&dpi=300" 
+                         alt="QR Ubicazione {{ ubicazione }}" 
+                         style="max-width: 250px; height: auto;">
+                </div>
+                <div>
+                    <h1 class="display-4 fw-bold mb-3">{{ ubicazione }}</h1>
+                    <p class="text-muted fs-5 mt-2">QR Code Ubicazione Magazzino OMG</p>
+                </div>
             </div>
-            <p class="text-muted fs-5 mt-2">QR Code Ubicazione Magazzino OMG</p>
         </div>
 
         <!-- LISTA OGGETTI IN STAMPA (Visibile solo quando si sceglie Stampa QR + Lista oggetti) -->
         <div class="only-print print-lista-oggetti text-start mt-4">
-            <h5 class="fw-bold mb-3">Prodotti presenti in ubicazione {{ ubicazione }} (Totale: {{ prodotti|length }})</h5>
+            <h5 class="fw-bold mb-3">Oggetti presenti in ubicazione {{ ubicazione }} ({{ prodotti|length }})</h5>
             {% if prodotti %}
                 <table class="table table-bordered table-sm align-middle">
                     <thead class="table-light">
                         <tr>
                             <th>QR Code</th>
                             <th>Nome Articolo</th>
-                            <th>Codice SAP</th>
-                            <th>Quantità</th>
-                            <th>Peso</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -97,9 +186,6 @@
                         <tr>
                             <td><strong>{{ p.qr_code }}</strong></td>
                             <td>{{ p.nome }}</td>
-                            <td>{{ p.sap if p.sap else '-' }}</td>
-                            <td>{{ p.quantita }} pz</td>
-                            <td>{{ p.peso if p.peso else '-' }}</td>
                         </tr>
                         {% endfor %}
                     </tbody>
