@@ -67,7 +67,91 @@ def parse_data_flessibile(data_str):
 
 @app.context_processor
 def utility_processor():
-    return dict(parse_data_flessibile=parse_data_flessibile)
+    username = (session.get('username') or '').strip()
+    is_admin = bool(session.get('is_admin'))
+    notifiche_utente = []
+    conteggio_non_lette = 0
+    assegnati_utente = []
+    scadenze_imminenti_count = 0
+
+    if username and DATABASE_URL:
+        try:
+            oggi = datetime.now().date()
+            conn = get_db_connection()
+            cur = conn.cursor()
+
+            cur.execute("""
+                SELECT id, titolo, messaggio, link, letta, creato_il
+                FROM notifiche
+                WHERE TRIM(destinatario) = %s
+                ORDER BY creato_il DESC
+                LIMIT 10;
+            """, (username,))
+            notifiche_utente = cur.fetchall()
+            conteggio_non_lette = sum(1 for n in notifiche_utente if not n.get('letta'))
+
+            cur.execute("""
+                SELECT id, titolo, data_scadenza, priorita, ricorrenza, assegnato_a, 'Promemoria' AS origine, '/promemoria' AS url
+                FROM promemoria
+                WHERE COALESCE(completato, FALSE) = FALSE
+                  AND (LOWER(TRIM(COALESCE(assegnato_a, ''))) = LOWER(%s) OR LOWER(TRIM(COALESCE(assegnato_a, ''))) = 'tutti');
+            """, (username,))
+            for r in cur.fetchall():
+                dt_scad = parse_data_flessibile(r.get('data_scadenza'))
+                giorni = (dt_scad - oggi).days if dt_scad else None
+                r['giorni_alla_scadenza'] = giorni
+                if giorni is not None and giorni <= 2:
+                    scadenze_imminenti_count += 1
+                assegnati_utente.append(r)
+
+            cur.execute("""
+                SELECT id, titolo, COALESCE(NULLIF(data_scadenza, ''), NULLIF(data_fine, ''), data_inizio) AS data_scadenza,
+                       sezione, utenti_visibili
+                FROM agenda
+                WHERE COALESCE(completato, FALSE) = FALSE
+                  AND (
+                      utenti_visibili ILIKE %s
+                      OR LOWER(TRIM(COALESCE(utenti_visibili, ''))) = 'tutti'
+                      OR LOWER(TRIM(COALESCE(creato_da, ''))) = LOWER(%s)
+                  );
+            """, (f"%{username}%", username))
+            for a in cur.fetchall():
+                sez = (a.get('sezione') or 'agenda').strip()
+                etichetta_sez = {'omd': 'OMD', 'lavori_interni': 'Lavori Interni'}.get(sez, 'Agenda')
+                dt_scad = parse_data_flessibile(a.get('data_scadenza'))
+                giorni = (dt_scad - oggi).days if dt_scad else None
+                if giorni is not None and giorni <= 2:
+                    scadenze_imminenti_count += 1
+                assegnati_utente.append({
+                    'id': a.get('id'),
+                    'titolo': a.get('titolo'),
+                    'data_scadenza': a.get('data_scadenza'),
+                    'priorita': None,
+                    'ricorrenza': None,
+                    'assegnato_a': a.get('utenti_visibili'),
+                    'origine': etichetta_sez,
+                    'url': f"/agenda?sezione={sez}",
+                    'giorni_alla_scadenza': giorni
+                })
+
+            cur.close()
+            conn.close()
+
+            assegnati_utente.sort(key=lambda item: (
+                item['giorni_alla_scadenza'] is None,
+                item['giorni_alla_scadenza'] if item['giorni_alla_scadenza'] is not None else 999999
+            ))
+        except Exception as e:
+            print(f"Errore context_processor notifiche/assegnazioni: {e}")
+
+    return dict(
+        parse_data_flessibile=parse_data_flessibile,
+        notifiche_utente=notifiche_utente,
+        conteggio_notifiche_non_lette=conteggio_non_lette,
+        assegnati_utente=assegnati_utente,
+        scadenze_imminenti_count=scadenze_imminenti_count,
+        is_admin_session=is_admin
+    )
 
 def init_db():
     if not DATABASE_URL:
