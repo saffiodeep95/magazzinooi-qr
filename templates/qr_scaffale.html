@@ -195,7 +195,7 @@
                 justify-content: space-between !important;
                 border: 1.5px solid #0f172a !important;
                 border-radius: 10px !important;
-                padding: 8px 14px !important;
+                padding: 7px 14px !important;
                 margin-bottom: 8px !important;
                 background: #ffffff !important;
                 break-inside: avoid;
@@ -226,12 +226,12 @@
                 background: #ffffff;
             }
             body.print-qr-lista .print-qr-box img {
-                max-width: 76px !important;
-                width: 76px !important;
+                max-width: 72px !important;
+                width: 72px !important;
                 height: auto !important;
             }
             body.print-qr-lista .print-qr-box h1 {
-                font-size: 1.4rem !important;
+                font-size: 1.35rem !important;
                 margin: 0 0 2px 0 !important;
                 color: #0f172a !important;
             }
@@ -280,7 +280,7 @@
             body.print-qr-lista .print-lista-oggetti table {
                 width: 100% !important;
                 border-collapse: collapse !important;
-                font-size: 0.72rem !important;
+                font-size: 0.7rem !important;
                 line-height: 1.12 !important;
                 margin-bottom: 0 !important;
             }
@@ -288,18 +288,18 @@
                 background: #ffffff !important;
                 color: #0f172a !important;
                 font-weight: 800 !important;
-                padding: 4px 8px !important;
+                padding: 4px 6px !important;
                 border-bottom: 1.5px solid #0f172a !important;
                 text-transform: uppercase;
-                font-size: 0.66rem;
-                letter-spacing: 0.04em;
+                font-size: 0.63rem;
+                letter-spacing: 0.03em;
             }
             body.print-qr-lista .print-lista-oggetti tbody tr:nth-child(even) td {
                 background: #f8fafc !important;
             }
             body.print-qr-lista .print-lista-oggetti th,
             body.print-qr-lista .print-lista-oggetti td {
-                padding: 3px 8px !important;
+                padding: 3px 6px !important;
                 border: 1px solid #cbd5e1 !important;
                 color: #0f172a !important;
                 vertical-align: middle !important;
@@ -310,15 +310,31 @@
             }
             body.print-qr-lista .print-col-prelievo {
                 display: table-cell !important;
-                width: 20%;
+                width: 12%;
                 text-align: center;
                 font-weight: 700;
             }
-            body.print-qr-lista .print-prelievo-box {
+            body.print-qr-lista .print-col-data,
+            body.print-qr-lista .print-col-ora,
+            body.print-qr-lista .print-col-linea {
+                display: table-cell !important;
+                text-align: center;
+                font-weight: 600;
+            }
+            body.print-qr-lista .print-col-data {
+                width: 14%;
+            }
+            body.print-qr-lista .print-col-ora {
+                width: 10%;
+            }
+            body.print-qr-lista .print-col-linea {
+                width: 12%;
+            }
+            body.print-qr-lista .print-write-line {
                 display: inline-block;
-                min-width: 58px;
-                height: 15px;
-                border-bottom: 1px dashed #334155;
+                width: 100%;
+                min-height: 14px;
+                border-bottom: 1px dashed #475569;
             }
             body.print-qr-lista .print-prelievo-footer {
                 display: flex !important;
@@ -383,7 +399,7 @@
             </div>
         </div>
 
-        <!-- LISTA OGGETTI IN STAMPA (QR Code, Nome Articolo e spazio Q.tà Prelevata) -->
+        <!-- LISTA OGGETTI IN STAMPA (QR Code, Nome Articolo e campi compilabili a mano) -->
         <div class="only-print print-lista-oggetti text-start">
             <div class="print-lista-title">
                 <i class="fa-solid fa-boxes-stacked me-1"></i> Oggetti presenti in ubicazione {{ ubicazione }} ({{ prodotti|length }}) — Registro Prelievi
@@ -392,9 +408,12 @@
                 <table class="table table-bordered table-sm align-middle">
                     <thead>
                         <tr>
-                            <th style="width: 20%;">QR Code</th>
-                            <th>Nome Articolo</th>
-                            <th class="print-col-prelievo" style="display: none;">Q.tà Prelevata</th>
+                            <th style="width: 15%;">QR Code</th>
+                            <th style="width: 37%;">Nome Articolo</th>
+                            <th class="print-col-prelievo" style="display: none;">Q.tà Prel.</th>
+                            <th class="print-col-data" style="display: none;">Data Prel.</th>
+                            <th class="print-col-ora" style="display: none;">Ora</th>
+                            <th class="print-col-linea" style="display: none;">Linea</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -402,14 +421,16 @@
                         <tr>
                             <td><strong>{{ p.qr_code }}</strong></td>
                             <td>{{ p.nome }}</td>
-                            <td class="print-col-prelievo" style="display: none;"><span class="print-prelievo-box"></span> pz</td>
+                            <td class="print-col-prelievo" style="display: none;"><span class="print-write-line"></span></td>
+                            <td class="print-col-data" style="display: none;"><span class="print-write-line"></span></td>
+                            <td class="print-col-ora" style="display: none;"><span class="print-write-line"></span></td>
+                            <td class="print-col-linea" style="display: none;"><span class="print-write-line"></span></td>
                         </tr>
                         {% endfor %}
                     </tbody>
                 </table>
                 <div class="only-print print-prelievo-footer" style="display: none;">
                     <span>Operatore:</span>
-                    <span>Data:</span>
                     <span>Note / Destinazione:</span>
                 </div>
             {% else %}
