@@ -1846,6 +1846,14 @@ def promemoria():
     lista_promemoria = cur.fetchall()
     cur.close()
     conn.close()
+
+    oggi = datetime.now().date()
+    for p in lista_promemoria:
+        dt_scad = parse_data_flessibile(p.get('data_scadenza'))
+        if not p.get('completato') and dt_scad:
+            p['giorni_alla_scadenza'] = (dt_scad - oggi).days
+        else:
+            p['giorni_alla_scadenza'] = None
     
     return render_template("promemoria.html", 
                            promemoria=lista_promemoria, 
@@ -2971,3 +2979,20 @@ def elimina_prodotto(qr_code=None):
 
     if not qr_code:
         qr_code = request.form.get("qr_code")
+
+    if qr_code:
+        try:
+            conn = get_db_connection()
+            cur = conn.cursor()
+            cur.execute("DELETE FROM prodotti WHERE qr_code = %s;", (qr_code,))
+            conn.commit()
+            cur.close()
+            conn.close()
+            registra_log(f"Eliminato prodotto QR: {qr_code}")
+            flash("Articolo eliminato dal magazzino con successo!", "success")
+        except Exception as e:
+            flash(f"Errore durante l'eliminazione: {e}", "error")
+    return redirect(url_for("index"))
+
+if __name__ == "__main__":
+    app.run(debug=True)
