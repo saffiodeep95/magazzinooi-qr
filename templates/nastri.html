@@ -130,7 +130,7 @@
                         <tbody>
                             {% for n in nastri %}
                             {% set tappeto_ok = (n.tappeto_presente is none) or (n.tappeto_presente) %}
-                            <tr>
+                            <tr class="{% if n.in_manutenzione %}table-warning{% endif %}">
                                 <td>
                                     <form action="{{ url_for('toggle_tappeto', nastro_id=n.id) }}" method="POST" class="d-inline">
                                         <button type="submit" class="btn btn-sm btn-light border py-0 px-2 d-flex align-items-center" title="Clicca per cambiare stato tappeto">
@@ -145,7 +145,12 @@
                                     </form>
                                 </td>
                                 <td class="font-monospace fw-bold">{{ n.codice_sap or '-' }}</td>
-                                <td><span class="badge bg-secondary">{{ n.numero or '-' }}</span></td>
+                                <td>
+                                    <span class="badge bg-secondary">{{ n.numero or '-' }}</span>
+                                    {% if n.in_manutenzione %}
+                                        <span class="badge bg-warning text-dark d-block mt-1"><i class="fas fa-wrench me-1"></i>In Manutenzione</span>
+                                    {% endif %}
+                                </td>
                                 <td class="fw-bold text-primary">{{ n.sezione_impianto or '-' }}</td>
                                 <td>{{ n.misura or '-' }}</td>
                                 <td>{{ n.tipo or '-' }}</td>
@@ -153,15 +158,30 @@
                                 <td>{{ n.misura_nastro_finito or '-' }}</td>
                                 <td>{{ n.tipo_di_riduttore or '-' }}</td>
                                 <td>{{ n.tipo_di_motore or '-' }}</td>
-                                <td><small class="text-muted">{{ n.note or '-' }}</small></td>
+                                <td>
+                                    <small class="text-muted">{{ n.note or '-' }}</small>
+                                    {% if n.in_manutenzione and (n.cliente_manutenzione or n.note_manutenzione) %}
+                                        <div class="small text-dark mt-1">
+                                            <strong>Manutenzione:</strong> {{ n.cliente_manutenzione or '' }}{% if n.cliente_manutenzione and n.note_manutenzione %} - {% endif %}{{ n.note_manutenzione or '' }}
+                                        </div>
+                                    {% endif %}
+                                </td>
                                 <td class="text-center">
                                     <div class="d-flex justify-content-center gap-1 flex-wrap">
                                         <a href="{{ url_for('stampa_memo_nastro', nastro_id=n.id) }}" target="_blank" class="btn btn-sm btn-outline-secondary py-0 px-1" title="Stampa Memo Nastro">
                                             <i class="fas fa-file-alt"></i>
                                         </a>
+                                        {% if n.in_manutenzione %}
+                                        <form action="{{ url_for('rientra_manutenzione_nastro', nastro_id=n.id) }}" method="POST" class="d-inline" onsubmit="return confirm('Confermare il rientro del nastro da manutenzione?');">
+                                            <button type="submit" class="btn btn-sm btn-success py-0 px-1" title="Rientra da Manutenzione">
+                                                <i class="fas fa-check"></i>
+                                            </button>
+                                        </form>
+                                        {% else %}
                                         <button type="button" class="btn btn-sm btn-outline-warning py-0 px-1" data-bs-toggle="modal" data-bs-target="#modalManutenzione_{{ n.id }}" title="Manutenzione Nastro">
                                             <i class="fas fa-wrench"></i>
                                         </button>
+                                        {% endif %}
                                         <button type="button" class="btn btn-sm btn-outline-primary py-0 px-1" data-bs-toggle="modal" data-bs-target="#modalModifica_{{ n.id }}" title="Modifica">
                                             <i class="fas fa-edit"></i>
                                         </button>
@@ -198,11 +218,11 @@
                     <div class="modal-body">
                         <div class="mb-3">
                             <label class="form-label">Officina / Destinazione</label>
-                            <input type="text" class="form-control" name="cliente_manutenzione" placeholder="Es. Officina esterna / Fornitore">
+                            <input type="text" class="form-control" name="cliente_manutenzione" value="{{ n.cliente_manutenzione or '' }}" placeholder="Es. Officina esterna / Fornitore">
                         </div>
                         <div class="mb-3">
                             <label class="form-label">Note Manutenzione</label>
-                            <textarea class="form-control" name="note_manutenzione" rows="3" placeholder="Dettagli intervento o sostituzione tappeto..."></textarea>
+                            <textarea class="form-control" name="note_manutenzione" rows="3" placeholder="Dettagli intervento o sostituzione tappeto...">{{ n.note_manutenzione or '' }}</textarea>
                         </div>
                     </div>
                     <div class="modal-footer">
