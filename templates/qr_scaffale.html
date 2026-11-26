@@ -9,32 +9,90 @@
     <!-- FontAwesome Icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
-        body {
-            background-color: #f3f5f8;
-            color: #1e293b;
+        :root {
+            --surface-bg: #eef2f6;
+            --card-bg: #ffffff;
+            --ink-main: #0f172a;
+            --ink-muted: #64748b;
+            --accent: #2563eb;
+            --accent-soft: #eff6ff;
+            --line-soft: #e2e8f0;
         }
-        .card-modern {
-            border: 1px solid #e2e8f0;
-            border-radius: 14px;
-            box-shadow: 0 6px 18px rgba(15, 23, 42, 0.05);
+
+        body {
+            background-color: var(--surface-bg);
+            color: var(--ink-main);
+            font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+        }
+
+        .top-bar-card {
+            background: var(--card-bg);
+            border: 1px solid var(--line-soft);
+            border-radius: 16px;
+            box-shadow: 0 4px 16px rgba(15, 23, 42, 0.04);
+        }
+
+        .card-clean {
+            background: var(--card-bg);
+            border: 1px solid var(--line-soft);
+            border-radius: 18px;
+            box-shadow: 0 8px 24px rgba(15, 23, 42, 0.05);
             overflow: hidden;
         }
-        .qr-frame-screen {
+
+        .qr-showcase {
             display: inline-flex;
-            padding: 14px;
+            padding: 16px;
             background: #ffffff;
-            border: 2px solid #cbd5e1;
-            border-radius: 14px;
-            box-shadow: inset 0 0 0 4px #f8fafc;
+            border: 1.5px solid #cbd5e1;
+            border-radius: 18px;
+            box-shadow: 0 6px 18px rgba(37, 99, 235, 0.08);
         }
-        .ubicazione-pill {
-            display: inline-block;
-            background: #0f172a;
-            color: #ffffff;
-            padding: 6px 16px;
+
+        .loc-chip {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            background: var(--accent-soft);
+            color: var(--accent);
+            border: 1px solid #bfdbfe;
+            padding: 6px 14px;
             border-radius: 999px;
             font-weight: 700;
-            letter-spacing: 0.4px;
+            font-size: 0.95rem;
+        }
+
+        .table-clean thead th {
+            background-color: #f8fafc;
+            color: #334155;
+            font-size: 0.78rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            border-bottom: 1.5px solid #cbd5e1;
+            padding: 12px 14px;
+        }
+
+        .table-clean tbody td {
+            padding: 11px 14px;
+            border-color: #f1f5f9;
+            color: #1e293b;
+        }
+
+        .table-clean tbody tr:hover td {
+            background-color: #f8fafc;
+        }
+
+        .qr-code-pill {
+            font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+            font-size: 0.82rem;
+            font-weight: 700;
+            color: #0f172a;
+            background: #f1f5f9;
+            border: 1px solid #e2e8f0;
+            padding: 4px 10px;
+            border-radius: 8px;
+            display: inline-block;
         }
 
         /* Di default la vista di stampa pura è nascosta a schermo */
@@ -42,7 +100,7 @@
             display: none;
         }
 
-        /* Regole specifiche per la stampa: nasconde i dettagli e mostra solo l'essenziale */
+        /* Regole specifiche per la stampa */
         @media print {
             @page {
                 size: A4 portrait;
@@ -62,7 +120,7 @@
                 margin: 0 !important;
                 padding: 0 !important;
             }
-            .card, .card-modern {
+            .card, .card-clean, .top-bar-card {
                 border: none !important;
                 box-shadow: none !important;
             }
@@ -70,7 +128,7 @@
             /* --- MODALITÀ 1: SOLO QR (Centrato sul foglio) --- */
             .print-container {
                 text-align: center;
-                margin-top: 4.2cm !important;
+                margin-top: 4.5cm !important;
                 padding: 0 !important;
                 max-width: 100% !important;
             }
@@ -80,9 +138,9 @@
                 align-items: center !important;
             }
             .print-qr-box {
-                border: 2.5px solid #0f172a !important;
+                border: 2px solid #0f172a !important;
                 border-radius: 14px !important;
-                padding: 20px 28px !important;
+                padding: 22px 30px !important;
                 background: #ffffff !important;
                 box-shadow: none !important;
                 display: inline-block !important;
@@ -92,26 +150,24 @@
             }
             .print-qr-box .qr-badge-top {
                 display: inline-block;
-                font-size: 0.72rem;
+                font-size: 0.7rem;
                 font-weight: 700;
                 text-transform: uppercase;
-                letter-spacing: 1px;
+                letter-spacing: 1.2px;
                 color: #475569;
-                border-bottom: 1px solid #cbd5e1;
-                padding-bottom: 4px;
-                margin-bottom: 10px;
+                margin-bottom: 6px;
             }
             .print-qr-box h1 {
                 font-size: 2rem !important;
                 font-weight: 800 !important;
                 color: #0f172a !important;
-                margin: 0 0 8px 0 !important;
+                margin: 0 0 6px 0 !important;
                 line-height: 1.1 !important;
             }
             .print-qr-box .qr-img-wrap {
                 margin: 10px auto !important;
                 padding: 8px;
-                border: 1px solid #e2e8f0;
+                border: 1px solid #cbd5e1;
                 border-radius: 10px;
                 display: inline-block;
                 background: #ffffff;
@@ -122,13 +178,13 @@
                 display: block;
             }
             .print-qr-box p {
-                font-size: 0.85rem !important;
+                font-size: 0.82rem !important;
                 color: #475569 !important;
                 margin: 8px 0 0 0 !important;
                 font-weight: 600;
             }
 
-            /* --- MODALITÀ 2: QR + LISTA OGGETTI (Compatta su UNA PAGINA per armadio) --- */
+            /* --- MODALITÀ 2: QR + LISTA OGGETTI (Compatta, elegante e su UNA PAGINA A4) --- */
             body.print-qr-lista .print-container {
                 margin-top: 0 !important;
                 text-align: left !important;
@@ -137,11 +193,11 @@
                 display: flex !important;
                 align-items: center !important;
                 justify-content: space-between !important;
-                border: 2px solid #0f172a !important;
+                border: 1.5px solid #0f172a !important;
                 border-radius: 10px !important;
                 padding: 8px 14px !important;
-                margin-bottom: 10px !important;
-                background: #f8fafc !important;
+                margin-bottom: 8px !important;
+                background: #ffffff !important;
                 break-inside: avoid;
                 page-break-inside: avoid;
             }
@@ -160,8 +216,7 @@
                 display: block;
                 font-size: 0.65rem;
                 margin-bottom: 2px;
-                padding-bottom: 2px;
-                border-bottom: none;
+                color: #475569;
             }
             body.print-qr-lista .print-qr-box .qr-img-wrap {
                 margin: 0 !important;
@@ -171,65 +226,73 @@
                 background: #ffffff;
             }
             body.print-qr-lista .print-qr-box img {
-                max-width: 82px !important;
-                width: 82px !important;
+                max-width: 76px !important;
+                width: 76px !important;
                 height: auto !important;
             }
             body.print-qr-lista .print-qr-box h1 {
-                font-size: 1.45rem !important;
+                font-size: 1.4rem !important;
                 margin: 0 0 2px 0 !important;
+                color: #0f172a !important;
             }
             body.print-qr-lista .print-qr-box p {
-                font-size: 0.72rem !important;
+                font-size: 0.7rem !important;
                 margin: 0 !important;
+                color: #475569 !important;
                 font-weight: 500;
             }
             body.print-qr-lista .print-meta-right {
                 display: block !important;
                 text-align: right;
-                font-size: 0.72rem;
+                font-size: 0.7rem;
                 color: #334155;
             }
             body.print-qr-lista .print-meta-right .count-badge {
                 display: inline-block;
-                background: #0f172a !important;
-                color: #ffffff !important;
+                background: #ffffff !important;
+                color: #0f172a !important;
+                border: 1.5px solid #0f172a !important;
                 font-weight: 700;
-                font-size: 0.75rem;
-                padding: 3px 9px;
+                font-size: 0.72rem;
+                padding: 2px 9px;
                 border-radius: 999px;
-                margin-bottom: 3px;
+                margin-bottom: 2px;
             }
 
             body.print-qr-lista .print-lista-oggetti {
                 display: block !important;
-                margin-top: 6px !important;
-                border: 1.5px solid #cbd5e1;
-                border-radius: 8px;
+                margin-top: 4px !important;
+                border: 1.5px solid #0f172a;
+                border-radius: 10px;
                 overflow: hidden;
+                background: #ffffff;
             }
             body.print-qr-lista .print-lista-title {
-                background: #0f172a !important;
-                color: #ffffff !important;
-                font-size: 0.78rem !important;
-                font-weight: 700 !important;
-                padding: 5px 10px !important;
+                background: #f1f5f9 !important;
+                color: #0f172a !important;
+                border-bottom: 1.5px solid #0f172a !important;
+                font-size: 0.75rem !important;
+                font-weight: 800 !important;
+                padding: 4px 10px !important;
                 margin: 0 !important;
-                letter-spacing: 0.3px;
+                letter-spacing: 0.2px;
             }
             body.print-qr-lista .print-lista-oggetti table {
                 width: 100% !important;
                 border-collapse: collapse !important;
                 font-size: 0.72rem !important;
-                line-height: 1.15 !important;
+                line-height: 1.12 !important;
                 margin-bottom: 0 !important;
             }
             body.print-qr-lista .print-lista-oggetti thead th {
-                background: #e2e8f0 !important;
+                background: #ffffff !important;
                 color: #0f172a !important;
-                font-weight: 700 !important;
+                font-weight: 800 !important;
                 padding: 4px 8px !important;
-                border-bottom: 1.5px solid #94a3b8 !important;
+                border-bottom: 1.5px solid #0f172a !important;
+                text-transform: uppercase;
+                font-size: 0.66rem;
+                letter-spacing: 0.04em;
             }
             body.print-qr-lista .print-lista-oggetti tbody tr:nth-child(even) td {
                 background: #f8fafc !important;
@@ -238,11 +301,39 @@
             body.print-qr-lista .print-lista-oggetti td {
                 padding: 3px 8px !important;
                 border: 1px solid #cbd5e1 !important;
+                color: #0f172a !important;
                 vertical-align: middle !important;
             }
             body.print-qr-lista .print-lista-oggetti tr {
                 break-inside: avoid;
                 page-break-inside: avoid;
+            }
+            body.print-qr-lista .print-col-prelievo {
+                display: table-cell !important;
+                width: 20%;
+                text-align: center;
+                font-weight: 700;
+            }
+            body.print-qr-lista .print-prelievo-box {
+                display: inline-block;
+                min-width: 58px;
+                height: 15px;
+                border-bottom: 1px dashed #334155;
+            }
+            body.print-qr-lista .print-prelievo-footer {
+                display: flex !important;
+                justify-content: space-between;
+                gap: 12px;
+                padding: 5px 10px;
+                border-top: 1px solid #cbd5e1;
+                background: #ffffff;
+                font-size: 0.68rem;
+                color: #334155;
+            }
+            body.print-qr-lista .print-prelievo-footer span {
+                flex: 1;
+                border-bottom: 1px dotted #94a3b8;
+                padding-bottom: 2px;
             }
         }
     </style>
@@ -251,25 +342,26 @@
 
     <!-- BARRA SUPERIORE (Nascosta in stampa) -->
     <div class="container my-3 no-print">
-        <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 bg-white p-3 rounded-3 border shadow-sm">
-            <a href="javascript:history.back()" class="btn btn-outline-secondary btn-sm fw-semibold">
+        <div class="top-bar-card p-3 d-flex flex-wrap justify-content-between align-items-center gap-2">
+            <a href="javascript:history.back()" class="btn btn-light border btn-sm fw-semibold px-3 py-2 rounded-3">
                 <i class="fa-solid fa-arrow-left me-1"></i> Indietro
             </a>
-            <h4 class="mb-0 fw-bold text-dark">
-                <i class="fa-solid fa-location-dot text-primary me-2"></i>Ubicazione: <span class="ubicazione-pill ms-1">{{ ubicazione }}</span>
-            </h4>
+            <div class="loc-chip">
+                <i class="fa-solid fa-location-dot"></i>
+                <span>{{ ubicazione }}</span>
+            </div>
             <div class="d-flex flex-wrap gap-2">
-                <button type="button" onclick="stampaScaffale('solo-qr')" class="btn btn-primary btn-sm px-3 py-2 fw-semibold">
+                <button type="button" onclick="stampaScaffale('solo-qr')" class="btn btn-primary btn-sm px-3 py-2 fw-semibold rounded-3">
                     <i class="fa-solid fa-qrcode me-1"></i> Stampa solo QR
                 </button>
-                <button type="button" onclick="stampaScaffale('qr-lista')" class="btn btn-dark btn-sm px-3 py-2 fw-semibold">
+                <button type="button" onclick="stampaScaffale('qr-lista')" class="btn btn-dark btn-sm px-3 py-2 fw-semibold rounded-3">
                     <i class="fa-solid fa-print me-1"></i> Stampa QR + Lista oggetti
                 </button>
             </div>
         </div>
     </div>
 
-    <!-- VISTA DA STAMPARE: Comparirà unicamente sul foglio stampato (Solo QR e Ubicazione, oppure QR + Lista oggetti) -->
+    <!-- VISTA DA STAMPARE -->
     <div class="container only-print print-container">
         <div class="print-header-row">
             <div class="print-qr-box">
@@ -291,17 +383,18 @@
             </div>
         </div>
 
-        <!-- LISTA OGGETTI IN STAMPA (Visibile solo quando si sceglie Stampa QR + Lista oggetti) -->
+        <!-- LISTA OGGETTI IN STAMPA (QR Code, Nome Articolo e spazio Q.tà Prelevata) -->
         <div class="only-print print-lista-oggetti text-start">
             <div class="print-lista-title">
-                <i class="fa-solid fa-boxes-stacked me-1"></i> Oggetti presenti in ubicazione {{ ubicazione }} ({{ prodotti|length }})
+                <i class="fa-solid fa-boxes-stacked me-1"></i> Oggetti presenti in ubicazione {{ ubicazione }} ({{ prodotti|length }}) — Registro Prelievi
             </div>
             {% if prodotti %}
                 <table class="table table-bordered table-sm align-middle">
                     <thead>
                         <tr>
-                            <th style="width: 26%;">QR Code</th>
+                            <th style="width: 20%;">QR Code</th>
                             <th>Nome Articolo</th>
+                            <th class="print-col-prelievo" style="display: none;">Q.tà Prelevata</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -309,48 +402,61 @@
                         <tr>
                             <td><strong>{{ p.qr_code }}</strong></td>
                             <td>{{ p.nome }}</td>
+                            <td class="print-col-prelievo" style="display: none;"><span class="print-prelievo-box"></span> pz</td>
                         </tr>
                         {% endfor %}
                     </tbody>
                 </table>
+                <div class="only-print print-prelievo-footer" style="display: none;">
+                    <span>Operatore:</span>
+                    <span>Data:</span>
+                    <span>Note / Destinazione:</span>
+                </div>
             {% else %}
                 <p class="text-muted m-2">Nessun articolo registrato in questa ubicazione.</p>
             {% endif %}
         </div>
     </div>
 
-    <!-- VISTA A SCHERMO: Mostra il QR dell'ubicazione E TUTTI I DATI DEI PRODOTTI ALL'INTERNO -->
-    <div class="container no-print pb-4">
+    <!-- VISTA A SCHERMO -->
+    <div class="container no-print pb-5">
         
         <!-- Intestazione e QR dell'ubicazione a schermo -->
-        <div class="card card-modern bg-white mb-4">
+        <div class="card card-clean mb-4">
             <div class="card-body text-center py-4 px-3">
-                <span class="badge bg-primary-subtle text-primary border border-primary-subtle rounded-pill px-3 py-2 mb-2 fw-semibold">
+                <span class="badge rounded-pill bg-primary-subtle text-primary border border-primary-subtle px-3 py-2 mb-2 fw-semibold">
                     <i class="fa-solid fa-qrcode me-1"></i> Scheda Ubicazione
                 </span>
-                <h2 class="fw-bold text-dark mb-3">{{ ubicazione }}</h2>
+                <h2 class="fw-bold mb-3">{{ ubicazione }}</h2>
                 <div class="mb-3">
-                    <div class="qr-frame-screen">
+                    <div class="qr-showcase">
                         <img src="https://barcode.tec-it.com/Barcode.ashx?data={{ ubicazione }}&code=QRCode&imagetype=Png&dpi=150" 
                              alt="QR {{ ubicazione }}" 
-                             style="max-width: 155px; height: auto;">
+                             style="max-width: 156px; height: auto;">
                     </div>
                 </div>
-                <p class="text-muted small mb-0">Tutti i prodotti attualmente collocati in questa posizione:</p>
+                <p class="text-muted small mb-0">Articoli collocati in questa posizione:</p>
             </div>
         </div>
 
         <!-- Elenco completo dei prodotti all'interno dell'ubicazione -->
-        <div class="card card-modern bg-white">
-            <div class="card-header bg-dark text-white py-3 px-4 d-flex justify-content-between align-items-center">
-                <h5 class="mb-0 fw-semibold"><i class="fa-solid fa-boxes-stacked me-2 text-info"></i>Prodotti in questa Ubicazione</h5>
-                <span class="badge bg-light text-dark rounded-pill px-3 py-2">{{ prodotti|length }}</span>
+        <div class="card card-clean">
+            <div class="card-header bg-white border-bottom py-3 px-4 d-flex justify-content-between align-items-center">
+                <div class="d-flex align-items-center gap-2">
+                    <span class="d-inline-flex align-items-center justify-content-center rounded-3 bg-primary-subtle text-primary" style="width: 34px; height: 34px;">
+                        <i class="fa-solid fa-boxes-stacked"></i>
+                    </span>
+                    <h5 class="mb-0 fw-bold">Prodotti in questa Ubicazione</h5>
+                </div>
+                <span class="badge rounded-pill bg-secondary-subtle text-dark border px-3 py-2 fw-semibold">
+                    {{ prodotti|length }} {{ 'articolo' if prodotti|length == 1 else 'articoli' }}
+                </span>
             </div>
-            <div class="card-body p-3 p-md-4">
+            <div class="card-body p-0">
                 {% if prodotti %}
                     <div class="table-responsive">
-                        <table class="table table-hover align-middle mb-0">
-                            <thead class="table-light">
+                        <table class="table table-clean align-middle mb-0">
+                            <thead>
                                 <tr>
                                     <th>QR Code</th>
                                     <th>Nome Articolo</th>
@@ -363,18 +469,18 @@
                             <tbody>
                                 {% for p in prodotti %}
                                 <tr>
-                                    <td><span class="badge bg-dark font-monospace px-2 py-1">{{ p.qr_code }}</span></td>
-                                    <td class="fw-bold text-dark">{{ p.nome }}</td>
+                                    <td><span class="qr-code-pill">{{ p.qr_code }}</span></td>
+                                    <td class="fw-semibold">{{ p.nome }}</td>
                                     <td class="text-muted">{{ p.sap if p.sap else '-' }}</td>
                                     <td>
-                                        <span class="badge rounded-pill bg-{{ 'success' if p.quantita > 0 else 'danger' }} px-2 py-1">
+                                        <span class="badge rounded-pill bg-{{ 'success' if p.quantita > 0 else 'danger' }}-subtle text-{{ 'success' if p.quantita > 0 else 'danger' }} border border-{{ 'success' if p.quantita > 0 else 'danger' }}-subtle px-2.5 py-1">
                                             {{ p.quantita }} pz
                                         </span>
                                     </td>
                                     <td class="text-muted">{{ p.peso if p.peso else '-' }}</td>
                                     <td class="text-end">
-                                        <a href="{{ url_for('gestisci_prodotto', qr_code=p.qr_code) }}" class="btn btn-sm btn-outline-primary rounded-2" title="Gestisci">
-                                            <i class="fa-solid fa-gear"></i>
+                                        <a href="{{ url_for('gestisci_prodotto', qr_code=p.qr_code) }}" class="btn btn-sm btn-light border rounded-3 px-2.5 py-1" title="Gestisci">
+                                            <i class="fa-solid fa-gear text-primary"></i>
                                         </a>
                                     </td>
                                 </tr>
@@ -383,8 +489,8 @@
                         </table>
                     </div>
                 {% else %}
-                    <div class="alert alert-warning text-center my-2 mb-0 border-0" role="alert">
-                        <i class="fa-solid fa-triangle-exclamation me-2"></i>Nessun articolo registrato in questa ubicazione.
+                    <div class="alert alert-light border text-center m-4 mb-4" role="alert">
+                        <i class="fa-solid fa-triangle-exclamation text-warning me-2"></i>Nessun articolo registrato in questa ubicazione.
                     </div>
                 {% endif %}
             </div>
