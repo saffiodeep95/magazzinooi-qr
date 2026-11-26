@@ -497,7 +497,7 @@ def api_segna_lette():
         conn.close()
     return jsonify({"status": "ok"})
 
-@app.route("/api/notifiche/elimina/<int:notifica_id>", methods=["POST"])
+@app.route("/api/notifiche/elimina/<int:notifica_id>", methods=["POST", "DELETE"])
 def api_elimina_notifica(notifica_id):
     username = (session.get('username') or '').strip()
     if not username:
