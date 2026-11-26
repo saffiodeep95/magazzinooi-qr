@@ -491,7 +491,7 @@ def api_segna_lette():
     if username:
         conn = get_db_connection()
         cur = conn.cursor()
-        cur.execute("UPDATE notifiche SET letta = TRUE WHERE LOWER(TRIM(destinatario)) = LOWER(%s);", (username,))
+        cur.execute("DELETE FROM notifiche WHERE LOWER(TRIM(destinatario)) = LOWER(%s);", (username,))
         conn.commit()
         cur.close()
         conn.close()
@@ -521,6 +521,29 @@ def api_elimina_notifica(notifica_id):
         return jsonify({"status": "not_found", "id": notifica_id}), 404
     except Exception as e:
         print(f"Errore api_elimina_notifica: {e}")
+        return jsonify({"status": "error", "msg": str(e)}), 500
+
+@app.route("/api/notifiche/apri/<int:notifica_id>", methods=["POST"])
+def api_apri_notifica(notifica_id):
+    username = (session.get('username') or '').strip()
+    if not username:
+        return jsonify({"status": "error", "msg": "Non autenticato"}), 401
+    try:
+        conn = get_db_connection()
+        cur = conn.cursor()
+        if session.get('is_admin'):
+            cur.execute("DELETE FROM notifiche WHERE id = %s;", (notifica_id,))
+        else:
+            cur.execute(
+                "DELETE FROM notifiche WHERE id = %s AND LOWER(TRIM(destinatario)) = LOWER(%s);",
+                (notifica_id, username)
+            )
+        conn.commit()
+        cur.close()
+        conn.close()
+        return jsonify({"status": "ok", "id": notifica_id})
+    except Exception as e:
+        print(f"Errore api_apri_notifica: {e}")
         return jsonify({"status": "error", "msg": str(e)}), 500
 
 @app.route("/")
