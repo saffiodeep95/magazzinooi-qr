@@ -152,7 +152,7 @@
                     </span>
                     {% endif %}
                     {% if (conteggio_notifiche_non_lette or 0) > 0 %}
-                    <span class="badge bg-warning text-dark ms-1">
+                    <span class="badge bg-warning text-dark ms-1" id="bannerNuoveNotificheBadge">
                         <i class="fa-solid fa-bell me-1"></i>{{ conteggio_notifiche_non_lette }} nuove notifiche
                     </span>
                     {% endif %}
@@ -503,7 +503,10 @@
 
         function caricaNotifiche() {
             fetch('/api/notifiche', { cache: 'no-store' })
-                .then(res => res.json())
+                .then(res => {
+                    if (!res.ok) throw new Error(HTTP ${res.status});
+                    return res.json();
+                })
                 .then(data => {
                     let container = document.getElementById("listaNotifiche");
                     let badge = document.getElementById("notificheCount");
@@ -540,7 +543,7 @@
                     });
                     container.innerHTML = html;
                 })
-                .catch(err => console.error(err));
+                .catch(err => console.error("Errore caricamento notifiche:", err));
         }
 
         function segnaNotificheLette() {
@@ -548,6 +551,8 @@
                 .then(() => {
                     const badge = document.getElementById("notificheCount");
                     if (badge) badge.style.display = 'none';
+                    const bannerBadge = document.getElementById("bannerNuoveNotificheBadge");
+                    if (bannerBadge) bannerBadge.style.display = 'none';
                 })
                 .catch(err => console.error(err));
         }
@@ -557,7 +562,11 @@
                 event.preventDefault();
                 event.stopPropagation();
             }
-            fetch(/api/notifiche/elimina/${idNotifica}, { method: 'POST' })
+            fetch(/api/notifiche/elimina/${idNotifica}, {
+                method: 'POST',
+                cache: 'no-store',
+                headers: { 'X-Requested-With': 'XMLHttpRequest' }
+            })
                 .then(response => {
                     if (!response.ok) {
                         throw new Error(HTTP ${response.status});
@@ -566,9 +575,16 @@
                 })
                 .then(() => {
                     document.querySelectorAll([data-notifica-id="${idNotifica}"]).forEach(el => el.remove());
+                    const bannerLista = document.querySelector("#bannerNotificheLista .d-flex.flex-column");
+                    if (bannerLista && bannerLista.children.length === 0) {
+                        const bannerBox = document.getElementById("bannerNotificheLista");
+                        if (bannerBox) bannerBox.remove();
+                    }
                     caricaNotifiche();
                 })
-                .catch(err => console.error("Errore eliminazione notifica:", err));
+                .catch(err => {
+                    console.error("Errore eliminazione notifica:", err);
+                });
         }
 
         function eliminaTutteNotifiche() {
