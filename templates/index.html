@@ -196,11 +196,11 @@
             {% endif %}
 
             {% if notifiche_utente %}
-            <div class="mt-3 pt-2 border-top small">
+            <div class="mt-3 pt-2 border-top small" id="bannerNotificheLista">
                 <div class="fw-semibold text-muted mb-1">Notifiche recenti per {{ session.get('username') }}:</div>
                 <div class="d-flex flex-column gap-1">
                     {% for n in notifiche_utente[:4] %}
-                    <div class="d-flex justify-content-between align-items-center px-2 py-1 rounded {% if not n.letta %}bg-warning-subtle fw-semibold{% else %}bg-light text-muted{% endif %}">
+                    <div class="d-flex justify-content-between align-items-center px-2 py-1 rounded {% if not n.letta %}bg-warning-subtle fw-semibold{% else %}bg-light text-muted{% endif %}" data-notifica-id="{{ n.id }}">
                         <div>
                             <span>{{ n.titolo }}:</span> {{ n.messaggio }}
                             {% if n.link %}<a href="{{ n.link }}" class="ms-1 text-decoration-underline">Apri</a>{% endif %}
@@ -502,11 +502,12 @@
         }
 
         function caricaNotifiche() {
-            fetch('/api/notifiche')
+            fetch('/api/notifiche', { cache: 'no-store' })
                 .then(res => res.json())
                 .then(data => {
                     let container = document.getElementById("listaNotifiche");
                     let badge = document.getElementById("notificheCount");
+                    if (!container || !badge) return;
                     
                     if (!data || data.length === 0) {
                         container.innerHTML = '<p class="text-muted text-center my-3 small">Nessuna notifica</p>';
@@ -526,12 +527,12 @@
                     data.forEach(n => {
                         let linkUrl = n.link || '/agenda';
                         html += `
-                            <div class="p-2 border-bottom small d-flex align-items-center justify-content-between">
+                            <div class="p-2 border-bottom small d-flex align-items-center justify-content-between" data-notifica-id="${n.id}">
                                 <a href="${linkUrl}" class="text-decoration-none text-dark flex-grow-1">
                                     <div class="fw-bold text-primary">${n.titolo}</div>
                                     <div>${n.messaggio}</div>
                                 </a>
-                                <button class="btn btn-sm btn-outline-danger ms-2 border-0" onclick="eliminaNotificaSingola(event, ${n.id})" title="Elimina notifica">
+                                <button type="button" class="btn btn-sm btn-outline-danger ms-2 border-0" onclick="eliminaNotificaSingola(event, ${n.id})" title="Elimina notifica">
                                     <i class="fa-solid fa-trash-alt fa-xs"></i>
                                 </button>
                             </div>
@@ -544,14 +545,27 @@
 
         function segnaNotificheLette() {
             fetch('/api/notifiche/segna_lette', { method: 'POST' })
-                .then(() => caricaNotifiche());
+                .then(() => {
+                    const badge = document.getElementById("notificheCount");
+                    if (badge) badge.style.display = 'none';
+                })
+                .catch(err => console.error(err));
         }
 
         function eliminaNotificaSingola(event, idNotifica) {
-            event.stopPropagation(); // Evita il reindirizzamento al link
+            if (event) {
+                event.preventDefault();
+                event.stopPropagation();
+            }
             fetch(/api/notifiche/elimina/${idNotifica}, { method: 'POST' })
-                .then(response => response.json())
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error(HTTP ${response.status});
+                    }
+                    return response.json();
+                })
                 .then(() => {
+                    document.querySelectorAll([data-notifica-id="${idNotifica}"]).forEach(el => el.remove());
                     caricaNotifiche();
                 })
                 .catch(err => console.error("Errore eliminazione notifica:", err));
