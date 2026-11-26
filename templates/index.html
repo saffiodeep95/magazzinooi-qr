@@ -91,7 +91,7 @@
                 </ul>
 
                 <ul class="navbar-nav ms-auto align-items-lg-center flex-row">
-                    <!-- DROPDOWN NOTIFICHE AGGIORNATO CON TASTO CANCELLA -->
+                    <!-- DROPDOWN NOTIFICHE -->
                     <li class="nav-item dropdown me-3 position-relative">
                         <a class="nav-link position-relative px-2 text-white" href="#" id="notificheDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false" onclick="segnaNotificheLette()">
                             <i class="fa-solid fa-bell fs-5"></i>
@@ -100,7 +100,7 @@
                         <div class="dropdown-menu dropdown-menu-end notification-dropdown p-2 shadow-sm" aria-labelledby="notificheDropdown">
                             <div class="d-flex justify-content-between align-items-center mb-2 pb-2 border-bottom">
                                 <h6 class="m-0 fw-bold fs-6"><i class="fa-solid fa-bell me-1"></i> Notifiche</h6>
-                                <button class="btn btn-sm btn-link text-danger p-0 text-decoration-none small" onclick="eliminaTutteNotifiche()">Segna lette</button>
+                                <button type="button" class="btn btn-sm btn-link text-danger p-0 text-decoration-none small" onclick="eliminaTutteNotifiche()">Cancella tutte</button>
                             </div>
                             <div id="listaNotifiche">
                                 <p class="text-muted text-center my-3 small">Nessuna notifica</p>
@@ -203,11 +203,10 @@
                     <div class="d-flex justify-content-between align-items-center px-2 py-1 rounded {% if not n.letta %}bg-warning-subtle fw-semibold{% else %}bg-light text-muted{% endif %}" data-notifica-id="{{ n.id }}">
                         <div>
                             <span>{{ n.titolo }}:</span> {{ n.messaggio }}
-                            {% if n.link %}<a href="{{ n.link }}" class="ms-1 text-decoration-underline">Apri</a>{% endif %}
+                            {% if n.link %}
+                            <a href="{{ n.link }}" class="ms-1 text-decoration-underline" onclick="apriNotifica(event, {{ n.id }}, '{{ n.link }}')">Apri</a>
+                            {% endif %}
                         </div>
-                        <button type="button" class="btn btn-link btn-sm text-danger p-0 ms-2" onclick="eliminaNotificaSingola(event, {{ n.id }})" title="Elimina notifica">
-                            <i class="fa-solid fa-xmark"></i>
-                        </button>
                     </div>
                     {% endfor %}
                 </div>
@@ -478,7 +477,7 @@
     <!-- Bootstrap JS Bundle -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 
-    <!-- SCRIPT GESTIONE TABELLA E NOTIFICHE CON TASTO CANCELLA -->
+    <!-- SCRIPT GESTIONE TABELLA E NOTIFICHE ALL'APERTURA -->
     <script>
         function filtraTabella() {
             const inputEl = document.getElementById("searchInput");
@@ -499,6 +498,21 @@
             document.getElementById("eliminaNomeArticolo").innerText = nome;
             let modal = new bootstrap.Modal(document.getElementById("modalElimina"));
             modal.show();
+        }
+
+        function apriNotifica(event, idNotifica, linkUrl) {
+            if (event) {
+                event.preventDefault();
+            }
+            document.querySelectorAll([data-notifica-id="${idNotifica}"]).forEach(el => el.remove());
+            fetch(/api/notifiche/apri/${idNotifica}, {
+                method: 'POST',
+                cache: 'no-store'
+            }).finally(() => {
+                if (linkUrl) {
+                    window.location.href = linkUrl;
+                }
+            });
         }
 
         function caricaNotifiche() {
@@ -531,13 +545,10 @@
                         let linkUrl = n.link || '/agenda';
                         html += `
                             <div class="p-2 border-bottom small d-flex align-items-center justify-content-between" data-notifica-id="${n.id}">
-                                <a href="${linkUrl}" class="text-decoration-none text-dark flex-grow-1">
+                                <a href="${linkUrl}" class="text-decoration-none text-dark flex-grow-1" onclick="apriNotifica(event, ${n.id}, '${linkUrl}')">
                                     <div class="fw-bold text-primary">${n.titolo}</div>
                                     <div>${n.messaggio}</div>
                                 </a>
-                                <button type="button" class="btn btn-sm btn-outline-danger ms-2 border-0" onclick="eliminaNotificaSingola(event, ${n.id})" title="Elimina notifica">
-                                    <i class="fa-solid fa-trash-alt fa-xs"></i>
-                                </button>
                             </div>
                         `;
                     });
@@ -547,44 +558,18 @@
         }
 
         function segnaNotificheLette() {
-            fetch('/api/notifiche/segna_lette', { method: 'POST' })
+            fetch('/api/notifiche/segna_lette', { method: 'POST', cache: 'no-store' })
                 .then(() => {
                     const badge = document.getElementById("notificheCount");
                     if (badge) badge.style.display = 'none';
                     const bannerBadge = document.getElementById("bannerNuoveNotificheBadge");
                     if (bannerBadge) bannerBadge.style.display = 'none';
+                    const bannerBox = document.getElementById("bannerNotificheLista");
+                    if (bannerBox) bannerBox.remove();
+                    const container = document.getElementById("listaNotifiche");
+                    if (container) container.innerHTML = '<p class="text-muted text-center my-3 small">Nessuna notifica</p>';
                 })
                 .catch(err => console.error(err));
-        }
-
-        function eliminaNotificaSingola(event, idNotifica) {
-            if (event) {
-                event.preventDefault();
-                event.stopPropagation();
-            }
-            fetch(/api/notifiche/elimina/${idNotifica}, {
-                method: 'POST',
-                cache: 'no-store',
-                headers: { 'X-Requested-With': 'XMLHttpRequest' }
-            })
-                .then(response => {
-                    if (!response.ok) {
-                        throw new Error(HTTP ${response.status});
-                    }
-                    return response.json();
-                })
-                .then(() => {
-                    document.querySelectorAll([data-notifica-id="${idNotifica}"]).forEach(el => el.remove());
-                    const bannerLista = document.querySelector("#bannerNotificheLista .d-flex.flex-column");
-                    if (bannerLista && bannerLista.children.length === 0) {
-                        const bannerBox = document.getElementById("bannerNotificheLista");
-                        if (bannerBox) bannerBox.remove();
-                    }
-                    caricaNotifiche();
-                })
-                .catch(err => {
-                    console.error("Errore eliminazione notifica:", err);
-                });
         }
 
         function eliminaTutteNotifiche() {
