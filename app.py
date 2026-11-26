@@ -296,6 +296,9 @@ def init_db():
                 tipo_di_riduttore VARCHAR(255),
                 tipo_di_motore VARCHAR(255),
                 tappeto_presente BOOLEAN DEFAULT TRUE,
+                in_manutenzione BOOLEAN DEFAULT FALSE,
+                cliente_manutenzione VARCHAR(255),
+                note_manutenzione TEXT,
                 note TEXT,
                 creato_il TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             );
@@ -329,6 +332,9 @@ def init_db():
         cur.execute("ALTER TABLE cambi_serie ADD COLUMN IF NOT EXISTS diametro_bottiglia_nuova VARCHAR(50);")
         cur.execute("ALTER TABLE cambi_serie ADD COLUMN IF NOT EXISTS note TEXT;")
         cur.execute("ALTER TABLE nastri ADD COLUMN IF NOT EXISTS nome VARCHAR(255);")
+        cur.execute("ALTER TABLE nastri ADD COLUMN IF NOT EXISTS in_manutenzione BOOLEAN DEFAULT FALSE;")
+        cur.execute("ALTER TABLE nastri ADD COLUMN IF NOT EXISTS cliente_manutenzione VARCHAR(255);")
+        cur.execute("ALTER TABLE nastri ADD COLUMN IF NOT EXISTS note_manutenzione TEXT;")
 
         permessi_lista = [
             ("puo_vedere_magazzino", "INT DEFAULT 1"),
@@ -854,6 +860,24 @@ def manda_manutenzione_nastro(nastro_id):
         if nastro:
             note_extra = request.form.get("note_manutenzione", "").strip()
             cliente_man = request.form.get("cliente_manutenzione", "").strip()
+            data_oggi = datetime.now().strftime('%Y-%m-%d')
+            nome_nastro = nastro.get('nome') or f"Nastro {nastro.get('numero') or nastro_id} ({nastro.get('sezione_impianto') or ''})"
+            qr_nastro = f"NASTRO-{nastro.get('numero') or nastro_id}"
+
+            cur.execute("""
+                UPDATE nastri
+                SET in_manutenzione = TRUE,
+                    cliente_manutenzione = %s,
+                    note_manutenzione = %s
+                WHERE id = %s;
+            """, (cliente_man, note_extra, nastro_id))
+
+            cur.execute("""
+                INSERT INTO storico_manutenzioni (nome_prodotto, qr_code, sap, cliente, quantita, data_spedizione, data_riconsegna, vettore, ordine_amministrativo, note)
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s);
+            """, (nome_nastro, qr_nastro, nastro.get('codice_sap') or '', cliente_man, 1, data_oggi, None, '', False, note_extra))
+
+            conn.commit()
             testo_log = f"Nastro {nastro.get('numero') or nastro_id} ({nastro.get('sezione_impianto') or ''}) inviato in manutenzione"
             if cliente_man:
                 testo_log += f" presso {cliente_man}"
@@ -868,6 +892,48 @@ def manda_manutenzione_nastro(nastro_id):
     except Exception as e:
         print(f"Errore manutenzione nastro: {e}")
         flash(f"Errore manutenzione nastro: {e}", "error")
+    return redirect(url_for("nastri"))
+
+@app.route("/rientra_manutenzione_nastro/<int:nastro_id>", methods=["POST"])
+def rientra_manutenzione_nastro(nastro_id):
+    try:
+        conn = get_db_connection()
+        cur = conn.cursor()
+        cur.execute("SELECT * FROM nastri WHERE id = %s;", (nastro_id,))
+        nastro = cur.fetchone()
+        if nastro:
+            data_oggi = datetime.now().strftime('%Y-%m-%d')
+            qr_nastro = f"NASTRO-{nastro.get('numero') or nastro_id}"
+            nota_esistente = nastro.get('note_manutenzione') or ""
+            nota_rientro = f"Rientrato il {data_oggi}"
+            if nota_esistente:
+                nota_rientro = f"{nota_esistente} | {nota_rientro}"
+
+            cur.execute("""
+                UPDATE storico_manutenzioni
+                SET data_riconsegna = %s,
+                    note = CASE WHEN note IS NULL OR note = '' THEN %s ELSE note || ' | ' || %s END
+                WHERE qr_code = %s AND (data_riconsegna IS NULL OR data_riconsegna = '' OR data_riconsegna ILIKE 'In corso%%');
+            """, (data_oggi, nota_rientro, nota_rientro, qr_nastro))
+
+            cur.execute("""
+                UPDATE nastri
+                SET in_manutenzione = FALSE,
+                    cliente_manutenzione = NULL,
+                    note_manutenzione = NULL
+                WHERE id = %s;
+            """, (nastro_id,))
+
+            conn.commit()
+            registra_log(f"Nastro {nastro.get('numero') or nastro_id} rientrato da manutenzione")
+            flash("Nastro rientrato da manutenzione con successo!", "success")
+        else:
+            flash("Nastro non trovato.", "error")
+        cur.close()
+        conn.close()
+    except Exception as e:
+        print(f"Errore rientro manutenzione nastro: {e}")
+        flash(f"Errore rientro manutenzione nastro: {e}", "error")
     return redirect(url_for("nastri"))
 
 @app.route("/agenda", methods=["GET", "POST"])
@@ -2168,10 +2234,10 @@ def importa_intelligente():
                     """, (settore, indirizzo, telefono, email, current_fornitore_id))
                 else:
                     cur.execute("""
-                        INSERT INTO fornitori (nome_azienda, settore_note, indirizzo, telefono, email)
-                        VALUES (%s, %s, %s, %s, %s)
+                        INSERT INTO fornitori (nome_azienda, settore_note, indirizzo, p_iva, telefono, email)
+                        VALUES (%s, %s, %s, %s, %s, %s)
                         RETURNING id;
-                    """, (nome_azienda, settore, indirizzo, telefono, email))
+                    """, (nome_azienda, settore, indirizzo, '', telefono, email))
                     res = cur.fetchone()
                     current_fornitore_id = res['id'] if res else None
                     count_fornitori += 1
