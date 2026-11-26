@@ -1131,7 +1131,6 @@ def qr_scaffale():
     conn.close()
     return render_template("qr_scaffale.html", prodotti=prodotti, ubicazione=ubicazione)
 
-# --- CAMBI SERIE & API ULTIMA BOTTIGLIA ---
 def ricalcola_catena_cambi(cur, forno, linea):
     try:
         cur.execute("""
@@ -1417,7 +1416,6 @@ def stampa_selezionati_cambi_serie():
     
     return render_template("stampa_cambi_serie.html", record_serie=record_selezionati)
 
-# --- REPORT ORE & STATISTICHE ---
 @app.route("/report_ore")
 @app.route("/report_ore.html")
 def report_ore():
@@ -1517,7 +1515,6 @@ def report_ore():
                            chart_tipi_labels=chart_tipi_labels,
                            chart_tipi_values=chart_tipi_values)
 
-# --- RICHIESTE INTERVENTO MANUTENZIONE OFFICINA ---
 @app.route("/richieste_manutenzione", methods=["GET", "POST"])
 @app.route("/richieste_manutenzione.html", methods=["GET", "POST"])
 def richieste_manutenzione():
@@ -1811,8 +1808,8 @@ def promemoria():
         
         if titolo:
             cur.execute("""
-                INSERT INTO promemoria (titolo, descrizione, data_scadenza, priorita, ricorrenza, assegnato_a)
-                VALUES (%s, %s, %s, %s, %s, %s);
+                INSERT INTO promemoria (titolo, descrizione, data_scadenza, priorita, ricorrenza, assegnato_a, completato)
+                VALUES (%s, %s, %s, %s, %s, %s, FALSE);
             """, (titolo, descrizione, data_scadenza, priorita, ricorrenza, assegnato_a))
             conn.commit()
             
@@ -1835,12 +1832,12 @@ def promemoria():
     lista_utenti = cur.fetchall()
 
     if is_admin or puo_assegnare:
-        cur.execute("SELECT * FROM promemoria ORDER BY completato ASC, data_scadenza ASC;")
+        cur.execute("SELECT * FROM promemoria ORDER BY COALESCE(completato, FALSE) ASC, data_scadenza ASC NULLS LAST, id DESC;")
     else:
         cur.execute("""
             SELECT * FROM promemoria 
             WHERE assegnato_a = %s OR assegnato_a IS NULL OR assegnato_a = '' 
-            ORDER BY completato ASC, data_scadenza ASC;
+            ORDER BY COALESCE(completato, FALSE) ASC, data_scadenza ASC NULLS LAST, id DESC;
         """, (username_corrente,))
 
     lista_promemoria = cur.fetchall()
@@ -1849,8 +1846,10 @@ def promemoria():
 
     oggi = datetime.now().date()
     for p in lista_promemoria:
+        is_comp = bool(p.get('completato'))
+        p['completato'] = is_comp
         dt_scad = parse_data_flessibile(p.get('data_scadenza'))
-        if not p.get('completato') and dt_scad:
+        if not is_comp and dt_scad:
             p['giorni_alla_scadenza'] = (dt_scad - oggi).days
         else:
             p['giorni_alla_scadenza'] = None
@@ -1860,6 +1859,49 @@ def promemoria():
                            lista_utenti=lista_utenti, 
                            puo_assegnare=True)
 
+@app.route("/modifica_promemoria/<int:promemoria_id>", methods=["POST"])
+def modifica_promemoria(promemoria_id):
+    if not (session.get('is_admin') or session.get('puo_vedere_promemoria', 1)):
+        flash("Accesso non autorizzato.", "error")
+        return redirect(url_for('index'))
+
+    titolo = (request.form.get("titolo") or "").strip()
+    descrizione = (request.form.get("descrizione") or "").strip()
+    data_scadenza = (request.form.get("data_scadenza") or "").strip()
+    priorita = (request.form.get("priorita") or "Media").strip()
+    ricorrenza = (request.form.get("ricorrenza") or "Nessuna").strip()
+    assegnato_a = (request.form.get("assegnato_a") or session.get('username') or "").strip()
+    completato = True if request.form.get("completato") else False
+
+    if not titolo:
+        flash("Il titolo del promemoria è obbligatorio.", "error")
+        return redirect(url_for("promemoria"))
+
+    try:
+        conn = get_db_connection()
+        cur = conn.cursor()
+        cur.execute("""
+            UPDATE promemoria
+            SET titolo = %s,
+                descrizione = %s,
+                data_scadenza = %s,
+                priorita = %s,
+                ricorrenza = %s,
+                assegnato_a = %s,
+                completato = %s
+            WHERE id = %s;
+        """, (titolo, descrizione, data_scadenza, priorita, ricorrenza, assegnato_a, completato, promemoria_id))
+        conn.commit()
+        cur.close()
+        conn.close()
+
+        registra_log(f"Modificato promemoria ID {promemoria_id}: {titolo}")
+        flash("Promemoria aggiornato con successo!", "success")
+    except Exception as e:
+        flash(f"Errore durante la modifica del promemoria: {e}", "error")
+
+    return redirect(url_for("promemoria"))
+
 @app.route("/completa_promemoria/<int:promemoria_id>", methods=["POST"])
 def completa_promemoria(promemoria_id):
     conn = get_db_connection()
@@ -1868,29 +1910,33 @@ def completa_promemoria(promemoria_id):
     p = cur.fetchone()
     
     if p:
-        ricorrenza = p.get('ricorrenza', 'Nessuna')
-        data_attuale_str = p.get('data_scadenza')
+        ricorrenza_raw = (p.get('ricorrenza') or 'Nessuna').strip()
+        ricorrenza_norm = " ".join(ricorrenza_raw.lower().split())
+        dt_scadenza = parse_data_flessibile(p.get('data_scadenza'))
         
-        if ricorrenza and ricorrenza != 'Nessuna' and data_attuale_str:
+        if ricorrenza_norm not in ('', 'nessuna', 'none') and dt_scadenza:
             try:
-                dt_scadenza = datetime.strptime(data_attuale_str, '%Y-%m-%d')
-                
-                if ricorrenza == 'Giorno':
+                if ricorrenza_norm in ('giorno', 'giornaliera', '1 giorno'):
                     nuova_dt = dt_scadenza + timedelta(days=1)
-                elif ricorrenza == 'Settimana':
+                elif ricorrenza_norm in ('15 giorni', 'quindicinale', 'ogni 15 giorni'):
+                    nuova_dt = dt_scadenza + timedelta(days=15)
+                elif ricorrenza_norm in ('settimana', 'settimanale', '1 settimana', '7 giorni'):
                     nuova_dt = dt_scadenza + timedelta(weeks=1)
-                elif ricorrenza == 'Mese':
+                elif ricorrenza_norm in ('mese', 'mensile', '1 mese'):
                     anno = dt_scadenza.year + (dt_scadenza.month // 12)
                     mese = (dt_scadenza.month % 12) + 1
                     giorno = min(dt_scadenza.day, 28)
                     nuova_dt = dt_scadenza.replace(year=anno, month=mese, day=giorno)
-                elif ricorrenza == '6 Mesi':
+                elif ricorrenza_norm in ('6 mesi', 'semestrale', 'ogni 6 mesi'):
                     anno = dt_scadenza.year + ((dt_scadenza.month + 5) // 12)
                     mese = ((dt_scadenza.month + 5) % 12) + 1
                     giorno = min(dt_scadenza.day, 28)
                     nuova_dt = dt_scadenza.replace(year=anno, month=mese, day=giorno)
-                elif ricorrenza == 'Anno':
-                    nuova_dt = dt_scadenza.replace(year=dt_scadenza.year + 1)
+                elif ricorrenza_norm in ('anno', 'annuale', '1 anno'):
+                    try:
+                        nuova_dt = dt_scadenza.replace(year=dt_scadenza.year + 1)
+                    except ValueError:
+                        nuova_dt = dt_scadenza.replace(year=dt_scadenza.year + 1, day=28)
                 else:
                     nuova_dt = dt_scadenza
                 
@@ -1902,13 +1948,13 @@ def completa_promemoria(promemoria_id):
                     WHERE id = %s;
                 """, (nuova_data_str, promemoria_id))
                 
-                registra_log(f"Avanzata scadenza promemoria '{p['titolo']}' al {nuova_data_str} ({ricorrenza})")
+                registra_log(f"Avanzata scadenza promemoria '{p['titolo']}' al {nuova_data_str} ({ricorrenza_raw})")
                 flash(f"Promemoria completato! Prossima scadenza impostata al {nuova_data_str}.", "success")
                 
             except Exception as e:
-                cur.execute("UPDATE promemoria SET completato = NOT completato WHERE id = %s;", (promemoria_id,))
+                cur.execute("UPDATE promemoria SET completato = NOT COALESCE(completato, FALSE) WHERE id = %s;", (promemoria_id,))
         else:
-            cur.execute("UPDATE promemoria SET completato = NOT completato WHERE id = %s;", (promemoria_id,))
+            cur.execute("UPDATE promemoria SET completato = NOT COALESCE(completato, FALSE) WHERE id = %s;", (promemoria_id,))
             
         conn.commit()
     
@@ -1928,7 +1974,6 @@ def elimina_promemoria(promemoria_id):
     flash("Promemoria eliminato.", "success")
     return redirect(url_for("promemoria"))
 
-# --- FORNITORI ---
 @app.route("/fornitori", methods=["GET", "POST"])
 @app.route("/fornitori.html", methods=["GET", "POST"])
 def fornitori():
