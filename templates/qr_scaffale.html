@@ -9,6 +9,39 @@
     <!-- FontAwesome Icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
+        body {
+            background-color: #f3f5f8;
+            color: #1e293b;
+        }
+        .card-modern {
+            border: 1px solid #e2e8f0;
+            border-radius: 14px;
+            box-shadow: 0 6px 18px rgba(15, 23, 42, 0.05);
+            overflow: hidden;
+        }
+        .qr-frame-screen {
+            display: inline-flex;
+            padding: 14px;
+            background: #ffffff;
+            border: 2px solid #cbd5e1;
+            border-radius: 14px;
+            box-shadow: inset 0 0 0 4px #f8fafc;
+        }
+        .ubicazione-pill {
+            display: inline-block;
+            background: #0f172a;
+            color: #ffffff;
+            padding: 6px 16px;
+            border-radius: 999px;
+            font-weight: 700;
+            letter-spacing: 0.4px;
+        }
+
+        /* Di default la vista di stampa pura è nascosta a schermo */
+        .only-print {
+            display: none;
+        }
+
         /* Regole specifiche per la stampa: nasconde i dettagli e mostra solo l'essenziale */
         @media print {
             @page {
@@ -22,42 +55,80 @@
                 display: block !important;
             }
             body {
-                background-color: white !important;
+                background-color: #ffffff !important;
+                color: #0f172a !important;
                 -webkit-print-color-adjust: exact;
                 print-color-adjust: exact;
                 margin: 0 !important;
                 padding: 0 !important;
             }
-            .card {
+            .card, .card-modern {
                 border: none !important;
                 box-shadow: none !important;
             }
+
+            /* --- MODALITÀ 1: SOLO QR (Centrato sul foglio) --- */
             .print-container {
                 text-align: center;
-                margin-top: 5cm !important; /* Centra verticalmente il QR dell'ubicazione nel foglio stampato */
+                margin-top: 4.2cm !important;
                 padding: 0 !important;
                 max-width: 100% !important;
             }
+            .print-header-row {
+                display: flex !important;
+                justify-content: center !important;
+                align-items: center !important;
+            }
             .print-qr-box {
-                padding: 12px !important;
-                margin: 0 auto !important;
+                border: 2.5px solid #0f172a !important;
+                border-radius: 14px !important;
+                padding: 20px 28px !important;
+                background: #ffffff !important;
+                box-shadow: none !important;
+                display: inline-block !important;
+                text-align: center !important;
                 break-inside: avoid;
                 page-break-inside: avoid;
             }
+            .print-qr-box .qr-badge-top {
+                display: inline-block;
+                font-size: 0.72rem;
+                font-weight: 700;
+                text-transform: uppercase;
+                letter-spacing: 1px;
+                color: #475569;
+                border-bottom: 1px solid #cbd5e1;
+                padding-bottom: 4px;
+                margin-bottom: 10px;
+            }
             .print-qr-box h1 {
-                font-size: 1.8rem !important;
-                margin-bottom: 6px !important;
+                font-size: 2rem !important;
+                font-weight: 800 !important;
+                color: #0f172a !important;
+                margin: 0 0 8px 0 !important;
+                line-height: 1.1 !important;
+            }
+            .print-qr-box .qr-img-wrap {
+                margin: 10px auto !important;
+                padding: 8px;
+                border: 1px solid #e2e8f0;
+                border-radius: 10px;
+                display: inline-block;
+                background: #ffffff;
             }
             .print-qr-box img {
-                max-width: 190px !important;
-                margin: 6px 0 !important;
+                max-width: 195px !important;
+                height: auto !important;
+                display: block;
             }
             .print-qr-box p {
                 font-size: 0.85rem !important;
-                margin: 4px 0 0 0 !important;
+                color: #475569 !important;
+                margin: 8px 0 0 0 !important;
+                font-weight: 600;
             }
 
-            /* Modalità compatta su UNA SINGOLA PAGINA per etichetta armadio con lista essenziale */
+            /* --- MODALITÀ 2: QR + LISTA OGGETTI (Compatta su UNA PAGINA per armadio) --- */
             body.print-qr-lista .print-container {
                 margin-top: 0 !important;
                 text-align: left !important;
@@ -66,59 +137,107 @@
                 display: flex !important;
                 align-items: center !important;
                 justify-content: space-between !important;
-                gap: 14px !important;
-                border: 1.5px solid #212529 !important;
-                border-radius: 6px !important;
-                padding: 8px 12px !important;
+                border: 2px solid #0f172a !important;
+                border-radius: 10px !important;
+                padding: 8px 14px !important;
                 margin-bottom: 10px !important;
+                background: #f8fafc !important;
                 break-inside: avoid;
                 page-break-inside: avoid;
             }
             body.print-qr-lista .print-qr-box {
                 border: none !important;
-                box-shadow: none !important;
+                border-radius: 0 !important;
+                background: transparent !important;
                 padding: 0 !important;
                 margin: 0 !important;
-                text-align: center !important;
                 display: flex !important;
                 align-items: center !important;
-                gap: 12px !important;
+                gap: 14px !important;
+                text-align: left !important;
             }
-            body.print-qr-lista .print-qr-box h1 {
-                font-size: 1.45rem !important;
-                margin: 0 !important;
-                line-height: 1.1 !important;
+            body.print-qr-lista .print-qr-box .qr-badge-top {
+                display: block;
+                font-size: 0.65rem;
+                margin-bottom: 2px;
+                padding-bottom: 2px;
+                border-bottom: none;
             }
             body.print-qr-lista .print-qr-box .qr-img-wrap {
                 margin: 0 !important;
+                padding: 4px;
+                border: 1px solid #cbd5e1;
+                border-radius: 8px;
+                background: #ffffff;
             }
             body.print-qr-lista .print-qr-box img {
-                max-width: 92px !important;
-                width: 92px !important;
+                max-width: 82px !important;
+                width: 82px !important;
                 height: auto !important;
-                margin: 0 !important;
+            }
+            body.print-qr-lista .print-qr-box h1 {
+                font-size: 1.45rem !important;
+                margin: 0 0 2px 0 !important;
             }
             body.print-qr-lista .print-qr-box p {
-                font-size: 0.75rem !important;
-                margin: 2px 0 0 0 !important;
+                font-size: 0.72rem !important;
+                margin: 0 !important;
+                font-weight: 500;
             }
+            body.print-qr-lista .print-meta-right {
+                display: block !important;
+                text-align: right;
+                font-size: 0.72rem;
+                color: #334155;
+            }
+            body.print-qr-lista .print-meta-right .count-badge {
+                display: inline-block;
+                background: #0f172a !important;
+                color: #ffffff !important;
+                font-weight: 700;
+                font-size: 0.75rem;
+                padding: 3px 9px;
+                border-radius: 999px;
+                margin-bottom: 3px;
+            }
+
             body.print-qr-lista .print-lista-oggetti {
                 display: block !important;
                 margin-top: 6px !important;
+                border: 1.5px solid #cbd5e1;
+                border-radius: 8px;
+                overflow: hidden;
             }
-            body.print-qr-lista .print-lista-oggetti h5 {
-                font-size: 0.85rem !important;
-                margin-bottom: 6px !important;
+            body.print-qr-lista .print-lista-title {
+                background: #0f172a !important;
+                color: #ffffff !important;
+                font-size: 0.78rem !important;
+                font-weight: 700 !important;
+                padding: 5px 10px !important;
+                margin: 0 !important;
+                letter-spacing: 0.3px;
             }
             body.print-qr-lista .print-lista-oggetti table {
                 width: 100% !important;
-                font-size: 0.74rem !important;
+                border-collapse: collapse !important;
+                font-size: 0.72rem !important;
                 line-height: 1.15 !important;
                 margin-bottom: 0 !important;
             }
+            body.print-qr-lista .print-lista-oggetti thead th {
+                background: #e2e8f0 !important;
+                color: #0f172a !important;
+                font-weight: 700 !important;
+                padding: 4px 8px !important;
+                border-bottom: 1.5px solid #94a3b8 !important;
+            }
+            body.print-qr-lista .print-lista-oggetti tbody tr:nth-child(even) td {
+                background: #f8fafc !important;
+            }
             body.print-qr-lista .print-lista-oggetti th,
             body.print-qr-lista .print-lista-oggetti td {
-                padding: 3px 6px !important;
+                padding: 3px 8px !important;
+                border: 1px solid #cbd5e1 !important;
                 vertical-align: middle !important;
             }
             body.print-qr-lista .print-lista-oggetti tr {
@@ -126,58 +245,62 @@
                 page-break-inside: avoid;
             }
         }
-        /* Di default la vista di stampa pura è nascosta a schermo */
-        .only-print {
-            display: none;
-        }
     </style>
 </head>
-<body class="bg-light">
+<body>
 
     <!-- BARRA SUPERIORE (Nascosta in stampa) -->
     <div class="container my-3 no-print">
-        <div class="d-flex flex-wrap justify-content-between align-items-center gap-2">
-            <a href="javascript:history.back()" class="btn btn-secondary btn-sm">
+        <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 bg-white p-3 rounded-3 border shadow-sm">
+            <a href="javascript:history.back()" class="btn btn-outline-secondary btn-sm fw-semibold">
                 <i class="fa-solid fa-arrow-left me-1"></i> Indietro
             </a>
-            <h4 class="mb-0">Ubicazione: <strong>{{ ubicazione }}</strong></h4>
+            <h4 class="mb-0 fw-bold text-dark">
+                <i class="fa-solid fa-location-dot text-primary me-2"></i>Ubicazione: <span class="ubicazione-pill ms-1">{{ ubicazione }}</span>
+            </h4>
             <div class="d-flex flex-wrap gap-2">
-                <button type="button" onclick="stampaScaffale('solo-qr')" class="btn btn-primary">
+                <button type="button" onclick="stampaScaffale('solo-qr')" class="btn btn-primary btn-sm px-3 py-2 fw-semibold">
                     <i class="fa-solid fa-qrcode me-1"></i> Stampa solo QR
                 </button>
-                <button type="button" onclick="stampaScaffale('qr-lista')" class="btn btn-dark">
+                <button type="button" onclick="stampaScaffale('qr-lista')" class="btn btn-dark btn-sm px-3 py-2 fw-semibold">
                     <i class="fa-solid fa-print me-1"></i> Stampa QR + Lista oggetti
                 </button>
             </div>
         </div>
-        <hr>
     </div>
 
     <!-- VISTA DA STAMPARE: Comparirà unicamente sul foglio stampato (Solo QR e Ubicazione, oppure QR + Lista oggetti) -->
     <div class="container only-print print-container">
         <div class="print-header-row">
-            <div class="p-4 border rounded bg-white shadow-sm d-inline-block text-center print-qr-box">
-                <div class="qr-img-wrap my-4">
+            <div class="print-qr-box">
+                <div class="qr-img-wrap">
                     <!-- QR code che rappresenta l'ubicazione stessa -->
                     <img src="https://barcode.tec-it.com/Barcode.ashx?data={{ ubicazione }}&code=QRCode&imagetype=Png&dpi=300" 
                          alt="QR Ubicazione {{ ubicazione }}" 
                          style="max-width: 250px; height: auto;">
                 </div>
                 <div>
-                    <h1 class="display-4 fw-bold mb-3">{{ ubicazione }}</h1>
-                    <p class="text-muted fs-5 mt-2">QR Code Ubicazione Magazzino OMG</p>
+                    <span class="qr-badge-top">Etichetta Ubicazione</span>
+                    <h1>{{ ubicazione }}</h1>
+                    <p>QR Code Ubicazione Magazzino OMG</p>
                 </div>
+            </div>
+            <div class="only-print print-meta-right" style="display: none;">
+                <span class="count-badge">{{ prodotti|length }} {{ 'oggetto' if prodotti|length == 1 else 'oggetti' }}</span>
+                <div>Elenco rapido armadio</div>
             </div>
         </div>
 
         <!-- LISTA OGGETTI IN STAMPA (Visibile solo quando si sceglie Stampa QR + Lista oggetti) -->
-        <div class="only-print print-lista-oggetti text-start mt-4">
-            <h5 class="fw-bold mb-3">Oggetti presenti in ubicazione {{ ubicazione }} ({{ prodotti|length }})</h5>
+        <div class="only-print print-lista-oggetti text-start">
+            <div class="print-lista-title">
+                <i class="fa-solid fa-boxes-stacked me-1"></i> Oggetti presenti in ubicazione {{ ubicazione }} ({{ prodotti|length }})
+            </div>
             {% if prodotti %}
                 <table class="table table-bordered table-sm align-middle">
-                    <thead class="table-light">
+                    <thead>
                         <tr>
-                            <th>QR Code</th>
+                            <th style="width: 26%;">QR Code</th>
                             <th>Nome Articolo</th>
                         </tr>
                     </thead>
@@ -191,36 +314,42 @@
                     </tbody>
                 </table>
             {% else %}
-                <p class="text-muted">Nessun articolo registrato in questa ubicazione.</p>
+                <p class="text-muted m-2">Nessun articolo registrato in questa ubicazione.</p>
             {% endif %}
         </div>
     </div>
 
     <!-- VISTA A SCHERMO: Mostra il QR dell'ubicazione E TUTTI I DATI DEI PRODOTTI ALL'INTERNO -->
-    <div class="container no-print">
+    <div class="container no-print pb-4">
         
         <!-- Intestazione e QR dell'ubicazione a schermo -->
-        <div class="card shadow-sm mb-4">
-            <div class="card-body text-center py-4">
-                <h2 class="text-primary mb-3"><i class="fa-solid fa-location-dot me-2"></i>Ubicazione: {{ ubicazione }}</h2>
+        <div class="card card-modern bg-white mb-4">
+            <div class="card-body text-center py-4 px-3">
+                <span class="badge bg-primary-subtle text-primary border border-primary-subtle rounded-pill px-3 py-2 mb-2 fw-semibold">
+                    <i class="fa-solid fa-qrcode me-1"></i> Scheda Ubicazione
+                </span>
+                <h2 class="fw-bold text-dark mb-3">{{ ubicazione }}</h2>
                 <div class="mb-3">
-                    <img src="https://barcode.tec-it.com/Barcode.ashx?data={{ ubicazione }}&code=QRCode&imagetype=Png&dpi=150" 
-                         alt="QR {{ ubicazione }}" 
-                         style="max-width: 150px; height: auto;">
+                    <div class="qr-frame-screen">
+                        <img src="https://barcode.tec-it.com/Barcode.ashx?data={{ ubicazione }}&code=QRCode&imagetype=Png&dpi=150" 
+                             alt="QR {{ ubicazione }}" 
+                             style="max-width: 155px; height: auto;">
+                    </div>
                 </div>
-                <p class="text-muted mb-0">Tutti i prodotti attualmente collocati in questa posizione:</p>
+                <p class="text-muted small mb-0">Tutti i prodotti attualmente collocati in questa posizione:</p>
             </div>
         </div>
 
         <!-- Elenco completo dei prodotti all'interno dell'ubicazione -->
-        <div class="card shadow-sm">
-            <div class="card-header bg-dark text-white">
-                <h5 class="mb-0"><i class="fa-solid fa-boxes-stacked me-2"></i>Prodotti in questa Ubicazione (Totale: {{ prodotti|length }})</h5>
+        <div class="card card-modern bg-white">
+            <div class="card-header bg-dark text-white py-3 px-4 d-flex justify-content-between align-items-center">
+                <h5 class="mb-0 fw-semibold"><i class="fa-solid fa-boxes-stacked me-2 text-info"></i>Prodotti in questa Ubicazione</h5>
+                <span class="badge bg-light text-dark rounded-pill px-3 py-2">{{ prodotti|length }}</span>
             </div>
-            <div class="card-body">
+            <div class="card-body p-3 p-md-4">
                 {% if prodotti %}
                     <div class="table-responsive">
-                        <table class="table table-hover align-middle">
+                        <table class="table table-hover align-middle mb-0">
                             <thead class="table-light">
                                 <tr>
                                     <th>QR Code</th>
@@ -234,17 +363,17 @@
                             <tbody>
                                 {% for p in prodotti %}
                                 <tr>
-                                    <td><span class="badge bg-dark">{{ p.qr_code }}</span></td>
-                                    <td class="fw-bold">{{ p.nome }}</td>
-                                    <td>{{ p.sap if p.sap else '-' }}</td>
+                                    <td><span class="badge bg-dark font-monospace px-2 py-1">{{ p.qr_code }}</span></td>
+                                    <td class="fw-bold text-dark">{{ p.nome }}</td>
+                                    <td class="text-muted">{{ p.sap if p.sap else '-' }}</td>
                                     <td>
-                                        <span class="badge bg-{{ 'success' if p.quantita > 0 else 'danger' }}">
+                                        <span class="badge rounded-pill bg-{{ 'success' if p.quantita > 0 else 'danger' }} px-2 py-1">
                                             {{ p.quantita }} pz
                                         </span>
                                     </td>
-                                    <td>{{ p.peso if p.peso else '-' }}</td>
+                                    <td class="text-muted">{{ p.peso if p.peso else '-' }}</td>
                                     <td class="text-end">
-                                        <a href="{{ url_for('gestisci_prodotto', qr_code=p.qr_code) }}" class="btn btn-sm btn-outline-primary" title="Gestisci">
+                                        <a href="{{ url_for('gestisci_prodotto', qr_code=p.qr_code) }}" class="btn btn-sm btn-outline-primary rounded-2" title="Gestisci">
                                             <i class="fa-solid fa-gear"></i>
                                         </a>
                                     </td>
@@ -254,7 +383,7 @@
                         </table>
                     </div>
                 {% else %}
-                    <div class="alert alert-warning text-center my-3" role="alert">
+                    <div class="alert alert-warning text-center my-2 mb-0 border-0" role="alert">
                         <i class="fa-solid fa-triangle-exclamation me-2"></i>Nessun articolo registrato in questa ubicazione.
                     </div>
                 {% endif %}
